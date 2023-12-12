@@ -4,6 +4,8 @@ format: html
 editor: visual
 ---
 
+
+
 ```{r}
 #| include: false
 if (!require("pacman")) install.packages("pacman")
@@ -131,25 +133,26 @@ ggplot(temp, aes(x = x, y = 0)) +
   geom_text(data = ticks_df, aes(x = x, y = y, label = x), size = 4, vjust = 2, color = "black") +
   
   # Deviations from the mean arrows and lines
-  geom_segment(aes(x = mean_x, xend = x, y = 1:n, yend = 1:n), colour = "blue", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
-  geom_segment(aes(x = x, xend = x, y = 0.25, yend = 1:n - 0.25), colour = "blue", linewidth = 0.5, linetype = "dashed") +
+  geom_segment(aes(x = mean_x, xend = x, y = 1:n, yend = 1:n), colour = okabeito_colors_list[2], linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+  geom_segment(aes(x = x, xend = x, y = 0.25, yend = 1:n - 0.25), colour = okabeito_colors_list[2], linewidth = 0.5, linetype = "dashed") +
   geom_text(aes(x = (mean_x + x)/2, y = 1:n, label = round(deviations, 2)), size = 3, vjust = -0.5) +
   
   # Marker for the mean
-  annotate("segment", x = mean_x, xend = mean_x, y = -2.5, yend = -1.25, colour = "red", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
-  geom_segment(aes(x = mean_x, xend = mean_x, y = -0.75, yend = n + 1), colour = "red", linewidth = 0.5, linetype = "dashed") +
-  geom_text(aes(x = mean_x, y = -3),
-            # This label needs to be fixed. 
-            # It should be \bar x = 9.4, where 9.4 is a calculated value.
-            #
-            # label = paste0(expression(bar(x)), "=", round(mean_x, 2)), 
-            # parse = TRUE,
-            #
-            label = paste0("Mean = ", round(mean_x, 2)), 
-            parse = FALSE,
-            size = 5, color = "red") +
-  # Add points
-  geom_point(size = 3, color = "blue") + 
+  annotate("segment", x = mean_x, xend = mean_x, y = -2.5, yend = -1.25, colour = okabeito_colors_list[1], linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+  geom_segment(aes(x = mean_x, xend = mean_x, y = -0.75, yend = n + 1), colour = okabeito_colors_list[1], linewidth = 0.5, linetype = "dashed") +
+  # Add xbar
+  geom_label(
+    label=expression(bar(x) == " "),
+    x=mean_x-0.1,
+    y=-2.6,
+    color = okabeito_colors_list[1],parse = TRUE,label.size = NA, fill=NA)+
+  # add mean value
+  geom_label(
+    label=paste0(round(mean_x, 2)),
+    x=mean_x+0.3,
+    y=-2.6,
+    color = okabeito_colors_list[1],label.size = NA, fill=NA)+
+  geom_point(size = 3, color = okabeito_colors_list[2]) + 
   geom_text(aes(x = x, y = rep(0,n), label = x), size = 3, vjust = 1.75) +
   
   # theme
@@ -160,7 +163,8 @@ ggplot(temp, aes(x = x, y = 0)) +
   theme(aspect.ratio = 0.4) +
   labs(title = "Deviations from the Mean", 
        x = "Value",
-       y = "")
+       y = "")+
+  scale_color_okabe_ito()
 ```
 
 We can summarize this information in a table:
@@ -206,6 +210,76 @@ Could we make this into a shiny app? Students could use a slider or something to
 
 The table and scatterplot would update to match the values input into the app.
 :::
+
+##### Note (use shiny live)
+
+```{=html}
+ <iframe id="example1" src="https://gallery.shinyapps.io/goog-trend-index/" style="border: none; width: 100%; height: 720px" frameborder="0"></iframe>
+```
+
+
+
+```{shinylive-r}
+#| standalone: true
+#| viewerHeight: 600
+library(shiny)
+library(bslib)
+
+# Define UI for app that draws a histogram ----
+ui <- page_sidebar(
+  sidebar = sidebar(open = "open",
+    numericInput("n", "Sample count", 100),
+    checkboxInput("pause", "Pause", FALSE),
+  ),
+  plotOutput("plot", width=1100)
+)
+
+server <- function(input, output, session) {
+  data <- reactive({
+    input$resample
+    if (!isTRUE(input$pause)) {
+      invalidateLater(1000)
+    }
+    rnorm(input$n)
+  })
+  
+  output$plot <- renderPlot({
+    hist(data(),
+      breaks = 40,
+      xlim = c(-2, 2),
+      ylim = c(0, 1),
+      lty = "blank",
+      xlab = "value",
+      freq = FALSE,
+      main = ""
+    )
+    
+    x <- seq(from = -2, to = 2, length.out = 500)
+    y <- dnorm(x)
+    lines(x, y, lwd=1.5)
+    
+    lwd <- 5
+    abline(v=0, col="red", lwd=lwd, lty=2)
+    abline(v=mean(data()), col="blue", lwd=lwd, lty=1)
+
+    legend(legend = c("Normal", "Mean", "Sample mean"),
+      col = c("black", "red", "blue"),
+      lty = c(1, 2, 1),
+      lwd = c(1, lwd, lwd),
+      x = 1,
+      y = 0.9
+    )
+  }, res=140)
+}
+
+# Create Shiny app ----
+shinyApp(ui = ui, server = server)
+```
+
+
+
+
+
 
 The following code simulates $(x,y)$-pairs of random variables.
 
@@ -316,8 +390,8 @@ temp2 <- temp1 %>%
   mutate(
     xy = cell_spec(xy, 
                    color = case_when(
-                     sign == "positive" ~ "blue", 
-                     sign == "negative" ~ "orange",
+                     sign == "positive" ~ "#E69F00", 
+                     sign == "negative" ~ "#56B4E9",
                      TRUE ~ "Black"))) %>% 
   rename(
     "x-mean(x)" = xx, 
@@ -344,11 +418,11 @@ ggplot(cov_dat, aes(x = x, y = y, color = sign)) +
              size=4,
              colour="black") +
   geom_point() +
-  scale_color_manual(values = c("orange", "blue"),  
+  scale_color_manual(values = c("#E69F00", "#56B4E9"),  
                      labels = c(expression((x-bar(x))(y-bar(y))<0),
                                 expression((x-bar(x))(y-bar(y))>0))) +
-  geom_vline(xintercept = mean(cov_dat$x), color = "green") + 
-  geom_hline(yintercept = mean(cov_dat$y), color = "green") +
+  geom_vline(xintercept = mean(cov_dat$x), color = "#009E73") + 
+  geom_hline(yintercept = mean(cov_dat$y), color = "#009E73") +
   labs(x="x", y="y") +
   theme_bw() +  
   ggtitle(paste0("Simulated Data (n = ",n,", ρ = ",rho,")")) + 
