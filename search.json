@@ -726,5 +726,278 @@
     "title": "TS_HW1.2",
     "section": "Plots, Trends, and Seasonal Variation",
     "text": "Plots, Trends, and Seasonal Variation\nPlease contrast the trends and seasonal features of the US unemployment, term premium, and the chocolate Google search series. Please include illustrations.\n\n\nCode\nhead(unrate)\n\n\n# A tsibble: 6 x 2 [1D]\n  date       value\n  &lt;date&gt;     &lt;dbl&gt;\n1 1948-01-01   4  \n2 1948-02-01   4.7\n3 1948-03-01   4.5\n4 1948-04-01   4  \n5 1948-05-01   3.4\n6 1948-06-01   3.9\n\n\nCode\nclass(unrate)\n\n\n[1] \"tbl_ts\"     \"tbl_df\"     \"tbl\"        \"data.frame\"\n\n\nCode\nguess_frequency(unrate$date)\n\n\n[1] 7\n\n\nCode\nts_unrate_fig &lt;- autoplot(\n  summarise(\n    index_by(unrate,year(date)),\n    value = sum(value)/12\n    )\n  )\n\n\nPlot variable not specified, automatically selected `.vars = value`\n\n\nCode\nbox_unrate_fig &lt;- ggplot(unrate, aes(x = factor(month(date)), y = value)) + geom_boxplot()\n\n\nts_unrate_fig / box_unrate_fig"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Define covariance, autocovariance, autocorrelation\nUnderstand autocorrelation in time series\n\n\n\n\n\n\n\n\nMotivate studying autocorrelation\n\n\n\n\n\n\n\n\n\nFormally define autocovariance, autocorrelation\nExplain autocorrelation in time series context\n\n\n# Set random seed for reproducibility\nset.seed(123) \n\nn &lt;- 1000\nsigma &lt;- 0.1\na &lt;- 1\nx &lt;- rep(0,n)\ne &lt;- rnorm(n, 0, sigma)\n\nfor (i in 2:n) {\n  x[i] &lt;- a * x[i-1] + e[i]\n}\ntime &lt;- seq(1,n)\n\n# Create time variable  \ntime &lt;- 1:n  \n\n# Plot  \nplot(x, type=\"l\", \n     main=\"Simulated Stationary Time Series\",\n     xlab=\"Time\", ylab=\"Value\")\nlines(time, x)\n\n\n\n\n\n# Set random seed for reproducibility\nset.seed(123) \n\nn &lt;- 1000\nrealizations &lt;- 5\nsigma &lt;- 0.1\na &lt;- 1\nx &lt;- rep(0,n)\ne &lt;- rnorm(n, 0, sigma)\n\ndf1 &lt;- data.frame()\n\nfor (i in 2:n) {\n  x[i] &lt;- a * x[i-1] + e[i]\n}\ntime &lt;- seq(1,n)\n\n# Create time variable  \ntime &lt;- 1:n  \n\n# Plot  \nplot(x, type=\"l\", \n     main=\"Simulated Stationary Time Series\",\n     xlab=\"Time\", ylab=\"Value\")\nlines(time, x)\n\n\n\n\n\n# Define previous variables\nn &lt;- 100\nrealizations &lt;- 5\nsigma &lt;- 0.1\nm &lt;- 0.0005 * 0 # No drift\na &lt;- 1\n\n# Create data frames  \ndf1 &lt;- tibble(rep = 1:realizations)\ndf2 &lt;- tibble(x = 0, \n              i = 1:n)\n\n# Join \ndf &lt;- full_join(df1, df2, by = character()) %&gt;% \n  mutate(e = rnorm(n = nrow(.), mean = 0, sd = sigma)) %&gt;% \n  arrange(rep, i) %&gt;%\n  group_by(rep) %&gt;%\n  # mutate(x = ifelse(i == 1, 0, a*lag(x, 1) + e)) %&gt;%\n  # ungroup()\n  ungroup()\n\nWarning: Using `by = character()` to perform a cross join was deprecated in dplyr 1.1.0.\nℹ Please use `cross_join()` instead.\n\nfor (row_num in 1:nrow(df)) {\n  if (df$i[row_num] &gt; 1) {\n    df$x[row_num] &lt;- m * df$i[row_num] + a * df$x[row_num - 1] + df$e[row_num]\n  }\n}\n\nggplot(df, aes(x = i, y = x, color = factor(rep))) + \n  geom_line() +\n  scale_color_discrete() +\n  labs(title = \"Autocorrelated Data without Drift\",  \n       x = \"Time\",\n       y = \"x\") +\n  theme_bw() + \n  theme(plot.title = element_text(hjust = 0.5)) +\n  guides(color = guide_legend(title = \"Realization\"))\n\n\n\n\n\n# Define previous variables\nn &lt;- 100\nrealizations &lt;- 1\nsigma &lt;- 0.1 * 5\nm &lt;- 0.02 * 0 # No drift\na &lt;- 1 * 0\n\n# Create data frames  \ndf1 &lt;- tibble(rep = 1:realizations)\ndf2 &lt;- tibble(x = 0, \n              i = 1:n)\n\n# Join \ndf &lt;- full_join(df1, df2, by = character()) %&gt;% \n  mutate(e = rnorm(n = nrow(.), mean = 0, sd = sigma)) %&gt;% \n  arrange(rep, i) %&gt;%\n  group_by(rep) %&gt;%\n  # mutate(x = ifelse(i == 1, 0, a*lag(x, 1) + e)) %&gt;%\n  # ungroup()\n  ungroup()\n\nfor (row_num in 1:nrow(df)) {\n  if (df$i[row_num] &gt; 1) {\n    df$x[row_num] &lt;- m * df$i[row_num] + a * df$x[row_num - 1] + df$e[row_num]\n  }\n}\n\nggplot(df, aes(x = i, y = x, color = factor(rep))) + \n  geom_line() +\n  scale_color_discrete() +\n  labs(title = \"Independent Data without Drift\",  \n       x = \"Time\",\n       y = \"x\") +\n  theme_bw() + \n  theme(plot.title = element_text(hjust = 0.5)) +\n  guides(color = guide_legend(title = \"Realization\"))\n\n\n\n\n\nb &lt;- 0.5\nx &lt;- 1:100 * b + arima.sim(n=100-1,list(ar=0.1,ma=0.2,order=c(1,1,1)))\nplot(x)\n\n\n\ne &lt;- rnorm(100,0,2.5)\nb &lt;- 0.5\ny &lt;- 1:100 * b + e\n# Create time series\nlibrary(zoo) \n\n\nAttaching package: 'zoo'\n\n\nThe following object is masked from 'package:tsibble':\n\n    index\n\n\nThe following objects are masked from 'package:base':\n\n    as.Date, as.Date.numeric\n\nz &lt;- zoo(y, order.by = 1:100)\n\n# Plot\nplot(z) # , main=\"Simulated Time Series\", ylab=\"X\", xlab=\"Time\")\n\n\n\n\n\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n\n\n# Simulate data \n# set.seed(101)\nx &lt;- 1:100 * 0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))  \n\n# Simulate z\ne &lt;- rnorm(100,0,2.5) \ny &lt;- 1:100*0.5 + e\nz &lt;- zoo(y, order.by = 1:100)\n\n# Plot both series\nplot(x, type=\"l\", col=\"blue\", main=\"X vs Z Series\",\n     ylab=\"Values\", xlab=\"Time\") \nlines(z, col=\"red\")  \nlegend(\"topleft\", legend=c(\"X\", \"Z\"),\n       col=c(\"blue\", \"red\"), lty=1)\n\n\n\n\n\n\n\n\nlibrary(tidyverse)\nlibrary(zoo) \n\n# Generate data\nset.seed(101) \nx &lt;- 1:100*0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))\ne &lt;- rnorm(100, 0, 2.5)\ny &lt;- 1:100*0.5 + e  \nz &lt;- zoo(y, order.by = 1:100)\n\n# Create data frame  \ndf &lt;- data.frame(\n  time = 1:100,\n  x = x,\n  z = coredata(z)\n)\n\n# Plot  \nggplot(df, aes(x = time)) +\n  geom_line(aes(y = x, color = \"X\")) + \n  geom_line(aes(y = z, color = \"Z\")) +\n  labs(title=\"X vs Z Series\", \n       x=\"Time\",\n       y=\"Values\",\n       color=\"Series\") +\n  theme_bw()\n\nDon't know how to automatically pick scale for object of type &lt;ts&gt;. Defaulting\nto continuous.\n\n\n\n\n\n\n\n\nWalk through sample autocorrelation analysis\n\n\n\n\nReview objectives and key concepts\nClarify questions on autocorrelation\n\n\n\n\n\nWrite definitions of autocovariance and autocorrelation"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#objectives",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#objectives",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Define covariance, autocovariance, autocorrelation\nUnderstand autocorrelation in time series"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#introduction-5-mins",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#introduction-5-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Motivate studying autocorrelation"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#lecture-20-mins",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#lecture-20-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Formally define autocovariance, autocorrelation\nExplain autocorrelation in time series context\n\n\n# Set random seed for reproducibility\nset.seed(123) \n\nn &lt;- 1000\nsigma &lt;- 0.1\na &lt;- 1\nx &lt;- rep(0,n)\ne &lt;- rnorm(n, 0, sigma)\n\nfor (i in 2:n) {\n  x[i] &lt;- a * x[i-1] + e[i]\n}\ntime &lt;- seq(1,n)\n\n# Create time variable  \ntime &lt;- 1:n  \n\n# Plot  \nplot(x, type=\"l\", \n     main=\"Simulated Stationary Time Series\",\n     xlab=\"Time\", ylab=\"Value\")\nlines(time, x)\n\n\n\n\n\n# Set random seed for reproducibility\nset.seed(123) \n\nn &lt;- 1000\nrealizations &lt;- 5\nsigma &lt;- 0.1\na &lt;- 1\nx &lt;- rep(0,n)\ne &lt;- rnorm(n, 0, sigma)\n\ndf1 &lt;- data.frame()\n\nfor (i in 2:n) {\n  x[i] &lt;- a * x[i-1] + e[i]\n}\ntime &lt;- seq(1,n)\n\n# Create time variable  \ntime &lt;- 1:n  \n\n# Plot  \nplot(x, type=\"l\", \n     main=\"Simulated Stationary Time Series\",\n     xlab=\"Time\", ylab=\"Value\")\nlines(time, x)\n\n\n\n\n\n# Define previous variables\nn &lt;- 100\nrealizations &lt;- 5\nsigma &lt;- 0.1\nm &lt;- 0.0005 * 0 # No drift\na &lt;- 1\n\n# Create data frames  \ndf1 &lt;- tibble(rep = 1:realizations)\ndf2 &lt;- tibble(x = 0, \n              i = 1:n)\n\n# Join \ndf &lt;- full_join(df1, df2, by = character()) %&gt;% \n  mutate(e = rnorm(n = nrow(.), mean = 0, sd = sigma)) %&gt;% \n  arrange(rep, i) %&gt;%\n  group_by(rep) %&gt;%\n  # mutate(x = ifelse(i == 1, 0, a*lag(x, 1) + e)) %&gt;%\n  # ungroup()\n  ungroup()\n\nWarning: Using `by = character()` to perform a cross join was deprecated in dplyr 1.1.0.\nℹ Please use `cross_join()` instead.\n\nfor (row_num in 1:nrow(df)) {\n  if (df$i[row_num] &gt; 1) {\n    df$x[row_num] &lt;- m * df$i[row_num] + a * df$x[row_num - 1] + df$e[row_num]\n  }\n}\n\nggplot(df, aes(x = i, y = x, color = factor(rep))) + \n  geom_line() +\n  scale_color_discrete() +\n  labs(title = \"Autocorrelated Data without Drift\",  \n       x = \"Time\",\n       y = \"x\") +\n  theme_bw() + \n  theme(plot.title = element_text(hjust = 0.5)) +\n  guides(color = guide_legend(title = \"Realization\"))\n\n\n\n\n\n# Define previous variables\nn &lt;- 100\nrealizations &lt;- 1\nsigma &lt;- 0.1 * 5\nm &lt;- 0.02 * 0 # No drift\na &lt;- 1 * 0\n\n# Create data frames  \ndf1 &lt;- tibble(rep = 1:realizations)\ndf2 &lt;- tibble(x = 0, \n              i = 1:n)\n\n# Join \ndf &lt;- full_join(df1, df2, by = character()) %&gt;% \n  mutate(e = rnorm(n = nrow(.), mean = 0, sd = sigma)) %&gt;% \n  arrange(rep, i) %&gt;%\n  group_by(rep) %&gt;%\n  # mutate(x = ifelse(i == 1, 0, a*lag(x, 1) + e)) %&gt;%\n  # ungroup()\n  ungroup()\n\nfor (row_num in 1:nrow(df)) {\n  if (df$i[row_num] &gt; 1) {\n    df$x[row_num] &lt;- m * df$i[row_num] + a * df$x[row_num - 1] + df$e[row_num]\n  }\n}\n\nggplot(df, aes(x = i, y = x, color = factor(rep))) + \n  geom_line() +\n  scale_color_discrete() +\n  labs(title = \"Independent Data without Drift\",  \n       x = \"Time\",\n       y = \"x\") +\n  theme_bw() + \n  theme(plot.title = element_text(hjust = 0.5)) +\n  guides(color = guide_legend(title = \"Realization\"))\n\n\n\n\n\nb &lt;- 0.5\nx &lt;- 1:100 * b + arima.sim(n=100-1,list(ar=0.1,ma=0.2,order=c(1,1,1)))\nplot(x)\n\n\n\ne &lt;- rnorm(100,0,2.5)\nb &lt;- 0.5\ny &lt;- 1:100 * b + e\n# Create time series\nlibrary(zoo) \n\n\nAttaching package: 'zoo'\n\n\nThe following object is masked from 'package:tsibble':\n\n    index\n\n\nThe following objects are masked from 'package:base':\n\n    as.Date, as.Date.numeric\n\nz &lt;- zoo(y, order.by = 1:100)\n\n# Plot\nplot(z) # , main=\"Simulated Time Series\", ylab=\"X\", xlab=\"Time\")\n\n\n\n\n\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n\n\n# Simulate data \n# set.seed(101)\nx &lt;- 1:100 * 0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))  \n\n# Simulate z\ne &lt;- rnorm(100,0,2.5) \ny &lt;- 1:100*0.5 + e\nz &lt;- zoo(y, order.by = 1:100)\n\n# Plot both series\nplot(x, type=\"l\", col=\"blue\", main=\"X vs Z Series\",\n     ylab=\"Values\", xlab=\"Time\") \nlines(z, col=\"red\")  \nlegend(\"topleft\", legend=c(\"X\", \"Z\"),\n       col=c(\"blue\", \"red\"), lty=1)"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#shiny-app-in-which-students-can-change-the-autocorrelation-coefficient-slider-for-autocorrelation",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#shiny-app-in-which-students-can-change-the-autocorrelation-coefficient-slider-for-autocorrelation",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "library(tidyverse)\nlibrary(zoo) \n\n# Generate data\nset.seed(101) \nx &lt;- 1:100*0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))\ne &lt;- rnorm(100, 0, 2.5)\ny &lt;- 1:100*0.5 + e  \nz &lt;- zoo(y, order.by = 1:100)\n\n# Create data frame  \ndf &lt;- data.frame(\n  time = 1:100,\n  x = x,\n  z = coredata(z)\n)\n\n# Plot  \nggplot(df, aes(x = time)) +\n  geom_line(aes(y = x, color = \"X\")) + \n  geom_line(aes(y = z, color = \"Z\")) +\n  labs(title=\"X vs Z Series\", \n       x=\"Time\",\n       y=\"Values\",\n       color=\"Series\") +\n  theme_bw()\n\nDon't know how to automatically pick scale for object of type &lt;ts&gt;. Defaulting\nto continuous."
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#example-analysis-15-mins",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#example-analysis-15-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Walk through sample autocorrelation analysis"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#recap-20-mins",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#recap-20-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Review objectives and key concepts\nClarify questions on autocorrelation"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#assessment",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#assessment",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Write definitions of autocovariance and autocorrelation"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#objectives-1",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#objectives-1",
+    "title": "Chapter 2: Correlation",
+    "section": "Objectives:",
+    "text": "Objectives:\n\nCompute sample autocorrelations\nMake and interpret correlogram plots"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#agenda-1",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#agenda-1",
+    "title": "Chapter 2: Correlation",
+    "section": "Agenda:",
+    "text": "Agenda:"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#introduction-5-mins-1",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#introduction-5-mins-1",
+    "title": "Chapter 2: Correlation",
+    "section": "Introduction (5 mins)",
+    "text": "Introduction (5 mins)\n\nIntroduce correlogram plots"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#lecture-15-mins",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#lecture-15-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "Lecture (15 mins)",
+    "text": "Lecture (15 mins)\n\nDemonstrate computing acf/pacf in R\nExplain interpreting correlogram plots"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#hands-on-exercise-25-mins",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#hands-on-exercise-25-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "Hands-on Exercise (25 mins)",
+    "text": "Hands-on Exercise (25 mins)\n\nCompute acf/pacf on sample data\nMake correlogram plots in R\nIdentify significant lags/correlations"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#recap-15-mins",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#recap-15-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "Recap (15 mins)",
+    "text": "Recap (15 mins)\n\nReview objectives and key points\nClarify questions on correlograms"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#assessment-1",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#assessment-1",
+    "title": "Chapter 2: Correlation",
+    "section": "Assessment:",
+    "text": "Assessment:\n\nCompute and interpret acf/pacf on data\n\n\n\n\n\n\n\nNote\n\n\n\nSome important information….\n\n\n\n\n\n\n\n\nWarning\n\n\n\nSome important information….\n\n\n\n\n\n\n\n\nImportant\n\n\n\nSome important information….\n\n\n\n\n\n\n\n\nTip\n\n\n\nSome important information….\n\n\n\n\n\n\n\n\nCaution\n\n\n\nSome important information…."
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class_activity.html#tyson-please-build-a-shiny-app-in-which-students-can-change-the-autocorrelation-coefficient-slider-for-autocorrelation-from-0-to-1-and-watch-the-graph-update-in-real-time",
+    "href": "class_activities/chapter_2_lesson_2_class_activity.html#tyson-please-build-a-shiny-app-in-which-students-can-change-the-autocorrelation-coefficient-slider-for-autocorrelation-from-0-to-1-and-watch-the-graph-update-in-real-time",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "library(tidyverse)\nlibrary(zoo) \n\n# Generate data\nset.seed(101) \nx &lt;- 1:100*0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))\ne &lt;- rnorm(100, 0, 2.5)\ny &lt;- 1:100*0.5 + e  \nz &lt;- zoo(y, order.by = 1:100)\n\n# Create data frame  \ndf &lt;- data.frame(\n  time = 1:100,\n  x = x,\n  z = coredata(z)\n)\n\n# Plot  \nggplot(df, aes(x = time)) +\n  geom_line(aes(y = x, color = \"X\")) + \n  geom_line(aes(y = z, color = \"Z\")) +\n  labs(title=\"X vs Z Series\", \n       x=\"Time\",\n       y=\"Values\",\n       color=\"Series\") +\n  theme_bw()\n\nDon't know how to automatically pick scale for object of type &lt;ts&gt;. Defaulting\nto continuous."
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_1_class.html",
+    "href": "class_activities/chapter_2_lesson_1_class.html",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Caution\n\n\n\nPlease change the colors to be the okabeito scheme…\npalette(“okabeito”)\nokabeito_colors_list &lt;- c( orange = “#E69F00”, light blue = “#56B4E9”, green = “#009E73”, yellow = “#F0E442”, blue = “#0072B2”, red = “#D55E00”, purple = “#CC79A7”, grey = “#999999”, black = “#000000”, sky blue = “#56B4E9”, bluish green = “#009E73”, vermillion = “#D55E00”, reddish purple = “#CC79A7”, dark yellow = “#F5C710”, amber = “#F5C710” )"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_1_class.html#objectives",
+    "href": "class_activities/chapter_2_lesson_1_class.html#objectives",
+    "title": "Chapter 2: Correlation",
+    "section": "Objectives:",
+    "text": "Objectives:\n\nDefine covariance, correlation\nCompute covariance and correlation"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_1_class.html#agenda",
+    "href": "class_activities/chapter_2_lesson_1_class.html#agenda",
+    "title": "Chapter 2: Correlation",
+    "section": "Agenda:",
+    "text": "Agenda:\n\nIntroduction (5 mins)\nMotivate covariance and correlation"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_1_class.html#learning-journal-exchange-10-mins",
+    "href": "class_activities/chapter_2_lesson_1_class.html#learning-journal-exchange-10-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "Learning Journal Exchange (10 mins)",
+    "text": "Learning Journal Exchange (10 mins)"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_1_class.html#class-activity-variance-and-standard-deviation-15-mins",
+    "href": "class_activities/chapter_2_lesson_1_class.html#class-activity-variance-and-standard-deviation-15-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "Class Activity: Variance and Standard Deviation (15 mins)",
+    "text": "Class Activity: Variance and Standard Deviation (15 mins)\nWe will explore the variance and standard deviation in this section.\n\nWhat do the standard deviation and the variance measure?\n\nThe following code simulates observations of a random variable. We will use these data to explore the variance and standard deviation.\n\n# Set random seed\nset.seed(2412)\n\n# Specify means and standard deviation\nn &lt;- 5        # number of points\nmu &lt;- 10      # mean\nsigma &lt;- 3    # standard deviation\n\n# Simulate normal data\nsim_data &lt;- data.frame(x = round(rnorm(n, mu, sigma), 1)) %&gt;% \n  arrange(x)\n\nThe data simulated by this process are:\n\n6.9, 7.7, 8.1, 10.8, 13.5\n\n\nFind the mean of these numbers. \nWhat are some ways to interpret the mean?\n\nThe variance and standard deviation are individual numbers that summarize how far the data are from the mean. We first compute the deviations from the mean, \\(x - \\bar x\\). This is the directed distance from the mean to each data point.\n\n\nWarning in is.na(x): is.na() applied to non-(list or vector) of type\n'expression'\n\n\n\n\n\nWe can summarize this information in a table:\n\n\n\n\n\nx\nx - mean(x)\nWorkspace for your use\n\n\n\n\n6.9\n-2.5\n\n\n\n7.7\n-1.7\n\n\n\n8.1\n-1.3\n\n\n\n10.8\n1.4\n\n\n\n13.5\n4.1\n\n\n\n\n\n\n\n\nHow can we obtain one number that summarizes how spread out the data are from the mean? We may try averaging the deviations from the mean.\n\nWhat is the average deviation from the mean?\nWill we get the same value with other data sets, or is this just a coincidence?\nWhat could you do to prevent this from happening?\nApply your idea. Compute the resulting value that summarizes the spread. What do you get?\nWhat is the relationship between the sample variance and the sample standard deviation?\nUse the table above to verify that the sample variance is 7.4.\nShow that the sample standard deviation is 2.7203."
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_1_class.html#class-activity-covariance-and-correlation-15-mins",
+    "href": "class_activities/chapter_2_lesson_1_class.html#class-activity-covariance-and-correlation-15-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "Class Activity: Covariance and Correlation (15 mins)",
+    "text": "Class Activity: Covariance and Correlation (15 mins)\n\n\n\n\n\n\nCaution\n\n\n\nCould we make this into a shiny app? Students could use a slider or something to choose the values of the following:\n\n# n &lt;- 50             # number of points\n# mu &lt;- c(1.25, 2.5)  # mean vector (mu_x, mu_y)\n# sigma_x &lt;- 1        # standard deviation x\n# sigma_y &lt;- 3        # standard deviation y\n# rho &lt;- 0.8          # correlation coefficient\n\nThe table and scatterplot would update to match the values input into the app.\n\n\n\nNote (use shiny live)\n \n#| standalone: true\n#| viewerHeight: 600\nlibrary(shiny)\nlibrary(bslib)\n\n# Define UI for app that draws a histogram ----\nui &lt;- page_sidebar(\n  sidebar = sidebar(open = \"open\",\n    numericInput(\"n\", \"Sample count\", 100),\n    checkboxInput(\"pause\", \"Pause\", FALSE),\n  ),\n  plotOutput(\"plot\", width=1100)\n)\n\nserver &lt;- function(input, output, session) {\n  data &lt;- reactive({\n    input$resample\n    if (!isTRUE(input$pause)) {\n      invalidateLater(1000)\n    }\n    rnorm(input$n)\n  })\n  \n  output$plot &lt;- renderPlot({\n    hist(data(),\n      breaks = 40,\n      xlim = c(-2, 2),\n      ylim = c(0, 1),\n      lty = \"blank\",\n      xlab = \"value\",\n      freq = FALSE,\n      main = \"\"\n    )\n    \n    x &lt;- seq(from = -2, to = 2, length.out = 500)\n    y &lt;- dnorm(x)\n    lines(x, y, lwd=1.5)\n    \n    lwd &lt;- 5\n    abline(v=0, col=\"red\", lwd=lwd, lty=2)\n    abline(v=mean(data()), col=\"blue\", lwd=lwd, lty=1)\n\n    legend(legend = c(\"Normal\", \"Mean\", \"Sample mean\"),\n      col = c(\"black\", \"red\", \"blue\"),\n      lty = c(1, 2, 1),\n      lwd = c(1, lwd, lwd),\n      x = 1,\n      y = 0.9\n    )\n  }, res=140)\n}\n\n# Create Shiny app ----\nshinyApp(ui = ui, server = server)\nThe following code simulates \\((x,y)\\)-pairs of random variables.\n\n# Unset random seed\nset.seed(Sys.time())\n\n# Specify means and correlation coefficient\nn &lt;- 50             # number of points\nmu &lt;- c(1.25, 2.5)  # mean vector (mu_x, mu_y)\nsigma_x &lt;- 1        # standard deviation x\nsigma_y &lt;- 3        # standard deviation y\nrho &lt;- 0.8          # correlation coefficient\n\n# Define variance-covariance matrix\nsigma &lt;- matrix(\n  c(sigma_x^2,\n    rho*sigma_x*sigma_y,\n    rho*sigma_x*sigma_y,\n    sigma_y^2),\n  nrow = 2)\n\n# Simulate bivariate normal data\nmvn_data &lt;- MASS::mvrnorm(n, mu, sigma) %&gt;% \n  data.frame() %&gt;% \n  rename(x = X1, y = X2)\n\nThe following table illustrates some of the simulated values. The mean of the \\(x\\) values is \\(\\bar x = 1.294\\). The mean of the \\(y\\) values is \\(\\bar y =3.121\\). We will soon use the values \\((x-\\bar x)\\), \\((x-\\bar x)^2\\), \\((y-\\bar y)\\), \\((y-\\bar y)^2\\), and \\((x-\\bar x)(y-\\bar y)\\). For convenience, they are included in the table below.\n\n\n\n\n\ni\nx\ny\nx-mean(x)\n(x-mean(x))^2\ny-mean(y)\n(y-mean(y))^2\n(x-mean(x))(y-mean(y))\n\n\n\n\n1\n0.693\n4.372\n-0.601\n0.361\n1.251\n1.565\n-0.751\n\n\n2\n2.553\n7.285\n1.26\n1.586\n4.164\n17.335\n5.244\n\n\n3\n-0.236\n-1.199\n-1.529\n2.339\n-4.32\n18.663\n6.607\n\n\n4\n0.997\n0.097\n-0.297\n0.088\n-3.025\n9.148\n0.899\n\n\n5\n1.13\n0.987\n-0.164\n0.027\n-2.135\n4.558\n0.35\n\n\n6\n2.095\n5.961\n0.801\n0.642\n2.84\n8.063\n2.276\n\n\n:\n:\n:\n:\n:\n:\n:\n:\n\n\n:\n:\n:\n:\n:\n:\n:\n:\n\n\n48\n2.22\n2.023\n0.926\n0.858\n-1.098\n1.206\n-1.017\n\n\n49\n2.232\n4.006\n0.938\n0.881\n0.885\n0.783\n0.83\n\n\n50\n-0.303\n-0.877\n-1.597\n2.549\n-3.999\n15.988\n6.384\n\n\nsum\n64.695\n156.072\n0\n47.851\n0\n389.742\n105.881\n\n\n\n\n\n\n\nThe simulated values are plotted below, with vertical lines drawn at \\(x = \\bar x\\) and \\(y = \\bar y\\). The first simulated point \\((i=1)\\) is circled.\n\n\n\n\n\nIf the quantity \\((x-\\bar x)(y-\\bar y)\\) is greater than zero, the points are colored blue. Otherwise, they are colored orange.\n\nWhat color are the points if \\((x-\\bar x)\\) and \\((y-\\bar y)\\) have the same sign?\nWhat color are the points if \\((x-\\bar x)\\) and \\((y-\\bar y)\\) have different signs?\n\nTo compute the sample covariance, we divide the sum of the \\((x - \\bar x)(y - \\bar y)\\) values by \\(n-1\\):\n\\[\nCov(x,y)\n=\n\\frac{\\sum\\limits_{i=1}^n (x - \\bar x)(y - \\bar y)}{n-1}\n=\n\\frac{105.881}{50 - 1}\n=\n2.161\n\\]\nYou can think of this as an “average” of the \\((x - \\bar x)(y - \\bar y)\\) values. The only difference is that we divide by \\(n-1\\) instead of \\(n\\).\n\nIf there are more blue points than orange points, what should the sign of the sample covariance be? Why?\nWhat does the sample covariance tell us?\n\nThe sample covariance is related to the sample standard deviation of \\(x\\) and \\(y\\) and the sample correlation coefficient between \\(x\\) and \\(y\\).\nThe sample standard deviations are:\n\\[\n\\begin{align*}\ns_x &= \\sqrt{ \\frac{\\sum\\limits_{i=1}^n (x - \\bar x)^2}{n-1} }\n=\n\\sqrt{\n\\frac{\n47.851\n}{\n50-1\n}\n}\n=\n0.988\n\\\\\ns_y &= \\sqrt{ \\frac{\\sum\\limits_{i=1}^n (y - \\bar y)^2}{n-1} }\n=\n\\sqrt{\n\\frac{\n389.742\n}{\n50-1\n}\n}\n=\n2.82\n\\end{align*}\n\\]\nThe sample correlation coefficient is: \\[\nr = \\frac{\\sum\\limits_{i=1}^n (x - \\bar x)(y - \\bar y)}{\\sqrt{\\sum\\limits_{i=1}^n (x - \\bar x)^2} \\sqrt{\\sum\\limits_{i=1}^n (y - \\bar y)^2}}\n=\n\\frac{\n105.881\n}{\n\\sqrt{ 47.851}\n\\sqrt{ 389.742}\n}\n=\n0.775\n\\]\n\nWhat do you get if you multiply the equations for \\(r\\), \\(s_x\\), and \\(s_y\\) together? \\[\n\\begin{align*}\n  r \\cdot s_x \\cdot s_y\n  &=\n  \\frac{\\sum\\limits_{i=1}^n (x - \\bar x)(y - \\bar y)}{\\sqrt{\\sum\\limits_{i=1}^n (x - \\bar x)^2} \\sqrt{\\sum\\limits_{i=1}^n (y - \\bar y)^2}}\n  \\cdot\n  \\sqrt{ \\frac{\\sum\\limits_{i=1}^n (x - \\bar x)^2}{n-1} }\n  \\cdot\n  \\sqrt{ \\frac{\\sum\\limits_{i=1}^n (y - \\bar y)^2}{n-1} }\n  \\\\\n  ~&~\\\\\n  &=\\\\\n  ~&~\\\\\n\\end{align*}\n\\]\nUse the numerical values above to confirm your result. Any discrepancy is due to roundoff error."
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_1_class.html#team-activity-computational-practice-15-mins",
+    "href": "class_activities/chapter_2_lesson_1_class.html#team-activity-computational-practice-15-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "Team Activity: Computational Practice (15 mins)",
+    "text": "Team Activity: Computational Practice (15 mins)\nWith your assigned partner, compute the following values for the \\(n=6\\) values given in the table below:\n\n\\(\\bar x =\\)\n\\(\\bar y =\\)\n\\(s_x =\\)\n\\(s_y =\\)\n\\(r =\\)\n\\(Cov(x,y) =\\)\n\n\n\n\n\n\ni\nx\ny\nx-mean(x)\n(x-mean(x))^2\ny-mean(y)\n(y-mean(y))^2\n(x-mean(x))(y-mean(y))\n\n\n\n\n1\n-2.1\n2.8\n-1.9\n3.61\n1\n1\n-1.9\n\n\n2\n-0.2\n2.2\n\n\n\n\n\n\n\n3\n0.8\n0.9\n\n\n\n\n\n\n\n4\n0.4\n2\n\n\n\n\n\n\n\n5\n2.3\n-1\n\n\n\n\n\n\n\n6\n-2.4\n3.9\n\n\n\n\n\n\n\nsum\n-1.2\n10.8"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_1_class.html#recap-5-min",
+    "href": "class_activities/chapter_2_lesson_1_class.html#recap-5-min",
+    "title": "Chapter 2: Correlation",
+    "section": "Recap (5 min)",
+    "text": "Recap (5 min)\nWorking with your partner, prepare to explain the following concepts to the class:\n\nVariance\nStandard deviation\nCorrelation\nCovariance"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html",
+    "href": "class_activities/chapter_2_lesson_2_class.html",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Define covariance, autocovariance, autocorrelation\nUnderstand autocorrelation in time series\n\n\n\n\n\n\n\n\nMotivate studying autocorrelation\n\n\n\n\n\n\n\n\n\nFormally define autocovariance, autocorrelation\nExplain autocorrelation in time series context\n\n\n# Set random seed for reproducibility\nset.seed(123) \n\nn &lt;- 1000\nsigma &lt;- 0.1\na &lt;- 1\nx &lt;- rep(0,n)\ne &lt;- rnorm(n, 0, sigma)\n\nfor (i in 2:n) {\n  x[i] &lt;- a * x[i-1] + e[i]\n}\ntime &lt;- seq(1,n)\n\n# Create time variable  \ntime &lt;- 1:n  \n\n# Plot  \nplot(x, type=\"l\", \n     main=\"Simulated Stationary Time Series\",\n     xlab=\"Time\", ylab=\"Value\")\nlines(time, x)\n\n\n\n\n\n# Set random seed for reproducibility\nset.seed(123) \n\nn &lt;- 1000\nrealizations &lt;- 5\nsigma &lt;- 0.1\na &lt;- 1\nx &lt;- rep(0,n)\ne &lt;- rnorm(n, 0, sigma)\n\ndf1 &lt;- data.frame()\n\nfor (i in 2:n) {\n  x[i] &lt;- a * x[i-1] + e[i]\n}\ntime &lt;- seq(1,n)\n\n# Create time variable  \ntime &lt;- 1:n  \n\n# Plot  \nplot(x, type=\"l\", \n     main=\"Simulated Stationary Time Series\",\n     xlab=\"Time\", ylab=\"Value\")\nlines(time, x)\n\n\n\n\n\n# Define previous variables\nn &lt;- 100\nrealizations &lt;- 5\nsigma &lt;- 0.1\nm &lt;- 0.0005 * 0 # No drift\na &lt;- 1\n\n# Create data frames  \ndf1 &lt;- tibble(rep = 1:realizations)\ndf2 &lt;- tibble(x = 0, \n              i = 1:n)\n\n# Join \ndf &lt;- full_join(df1, df2, by = character()) %&gt;% \n  mutate(e = rnorm(n = nrow(.), mean = 0, sd = sigma)) %&gt;% \n  arrange(rep, i) %&gt;%\n  group_by(rep) %&gt;%\n  # mutate(x = ifelse(i == 1, 0, a*lag(x, 1) + e)) %&gt;%\n  # ungroup()\n  ungroup()\n\nWarning: Using `by = character()` to perform a cross join was deprecated in dplyr 1.1.0.\nℹ Please use `cross_join()` instead.\n\nfor (row_num in 1:nrow(df)) {\n  if (df$i[row_num] &gt; 1) {\n    df$x[row_num] &lt;- m * df$i[row_num] + a * df$x[row_num - 1] + df$e[row_num]\n  }\n}\n\nggplot(df, aes(x = i, y = x, color = factor(rep))) + \n  geom_line() +\n  scale_color_discrete() +\n  labs(title = \"Autocorrelated Data without Drift\",  \n       x = \"Time\",\n       y = \"x\") +\n  theme_bw() + \n  theme(plot.title = element_text(hjust = 0.5)) +\n  guides(color = guide_legend(title = \"Realization\"))\n\n\n\n\n\n# Define previous variables\nn &lt;- 100\nrealizations &lt;- 1\nsigma &lt;- 0.1 * 5\nm &lt;- 0.02 * 0 # No drift\na &lt;- 1 * 0\n\n# Create data frames  \ndf1 &lt;- tibble(rep = 1:realizations)\ndf2 &lt;- tibble(x = 0, \n              i = 1:n)\n\n# Join \ndf &lt;- full_join(df1, df2, by = character()) %&gt;% \n  mutate(e = rnorm(n = nrow(.), mean = 0, sd = sigma)) %&gt;% \n  arrange(rep, i) %&gt;%\n  group_by(rep) %&gt;%\n  # mutate(x = ifelse(i == 1, 0, a*lag(x, 1) + e)) %&gt;%\n  # ungroup()\n  ungroup()\n\nfor (row_num in 1:nrow(df)) {\n  if (df$i[row_num] &gt; 1) {\n    df$x[row_num] &lt;- m * df$i[row_num] + a * df$x[row_num - 1] + df$e[row_num]\n  }\n}\n\nggplot(df, aes(x = i, y = x, color = factor(rep))) + \n  geom_line() +\n  scale_color_discrete() +\n  labs(title = \"Independent Data without Drift\",  \n       x = \"Time\",\n       y = \"x\") +\n  theme_bw() + \n  theme(plot.title = element_text(hjust = 0.5)) +\n  guides(color = guide_legend(title = \"Realization\"))\n\n\n\n\n\nb &lt;- 0.5\nx &lt;- 1:100 * b + arima.sim(n=100-1,list(ar=0.1,ma=0.2,order=c(1,1,1)))\nplot(x)\n\n\n\ne &lt;- rnorm(100,0,2.5)\nb &lt;- 0.5\ny &lt;- 1:100 * b + e\n# Create time series\nlibrary(zoo) \n\n\nAttaching package: 'zoo'\n\n\nThe following object is masked from 'package:tsibble':\n\n    index\n\n\nThe following objects are masked from 'package:base':\n\n    as.Date, as.Date.numeric\n\nz &lt;- zoo(y, order.by = 1:100)\n\n# Plot\nplot(z) # , main=\"Simulated Time Series\", ylab=\"X\", xlab=\"Time\")\n\n\n\n\n\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n\n\n# Simulate data \n# set.seed(101)\nx &lt;- 1:100 * 0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))  \n\n# Simulate z\ne &lt;- rnorm(100,0,2.5) \ny &lt;- 1:100*0.5 + e\nz &lt;- zoo(y, order.by = 1:100)\n\n# Plot both series\nplot(x, type=\"l\", col=\"blue\", main=\"X vs Z Series\",\n     ylab=\"Values\", xlab=\"Time\") \nlines(z, col=\"red\")  \nlegend(\"topleft\", legend=c(\"X\", \"Z\"),\n       col=c(\"blue\", \"red\"), lty=1)\n\n\n\n\n\n\n\n\nlibrary(tidyverse)\nlibrary(zoo) \n\n# Generate data\nset.seed(101) \nx &lt;- 1:100*0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))\ne &lt;- rnorm(100, 0, 2.5)\ny &lt;- 1:100*0.5 + e  \nz &lt;- zoo(y, order.by = 1:100)\n\n# Create data frame  \ndf &lt;- data.frame(\n  time = 1:100,\n  x = x,\n  z = coredata(z)\n)\n\n# Plot  \nggplot(df, aes(x = time)) +\n  geom_line(aes(y = x, color = \"X\")) + \n  geom_line(aes(y = z, color = \"Z\")) +\n  labs(title=\"X vs Z Series\", \n       x=\"Time\",\n       y=\"Values\",\n       color=\"Series\") +\n  theme_bw()\n\nDon't know how to automatically pick scale for object of type &lt;ts&gt;. Defaulting\nto continuous.\n\n\n\n\n\n\n\n\nWalk through sample autocorrelation analysis\n\n\n\n\nReview objectives and key concepts\nClarify questions on autocorrelation\n\n\n\n\n\nWrite definitions of autocovariance and autocorrelation"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#objectives",
+    "href": "class_activities/chapter_2_lesson_2_class.html#objectives",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Define covariance, autocovariance, autocorrelation\nUnderstand autocorrelation in time series"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#introduction-5-mins",
+    "href": "class_activities/chapter_2_lesson_2_class.html#introduction-5-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Motivate studying autocorrelation"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#lecture-20-mins",
+    "href": "class_activities/chapter_2_lesson_2_class.html#lecture-20-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Formally define autocovariance, autocorrelation\nExplain autocorrelation in time series context\n\n\n# Set random seed for reproducibility\nset.seed(123) \n\nn &lt;- 1000\nsigma &lt;- 0.1\na &lt;- 1\nx &lt;- rep(0,n)\ne &lt;- rnorm(n, 0, sigma)\n\nfor (i in 2:n) {\n  x[i] &lt;- a * x[i-1] + e[i]\n}\ntime &lt;- seq(1,n)\n\n# Create time variable  \ntime &lt;- 1:n  \n\n# Plot  \nplot(x, type=\"l\", \n     main=\"Simulated Stationary Time Series\",\n     xlab=\"Time\", ylab=\"Value\")\nlines(time, x)\n\n\n\n\n\n# Set random seed for reproducibility\nset.seed(123) \n\nn &lt;- 1000\nrealizations &lt;- 5\nsigma &lt;- 0.1\na &lt;- 1\nx &lt;- rep(0,n)\ne &lt;- rnorm(n, 0, sigma)\n\ndf1 &lt;- data.frame()\n\nfor (i in 2:n) {\n  x[i] &lt;- a * x[i-1] + e[i]\n}\ntime &lt;- seq(1,n)\n\n# Create time variable  \ntime &lt;- 1:n  \n\n# Plot  \nplot(x, type=\"l\", \n     main=\"Simulated Stationary Time Series\",\n     xlab=\"Time\", ylab=\"Value\")\nlines(time, x)\n\n\n\n\n\n# Define previous variables\nn &lt;- 100\nrealizations &lt;- 5\nsigma &lt;- 0.1\nm &lt;- 0.0005 * 0 # No drift\na &lt;- 1\n\n# Create data frames  \ndf1 &lt;- tibble(rep = 1:realizations)\ndf2 &lt;- tibble(x = 0, \n              i = 1:n)\n\n# Join \ndf &lt;- full_join(df1, df2, by = character()) %&gt;% \n  mutate(e = rnorm(n = nrow(.), mean = 0, sd = sigma)) %&gt;% \n  arrange(rep, i) %&gt;%\n  group_by(rep) %&gt;%\n  # mutate(x = ifelse(i == 1, 0, a*lag(x, 1) + e)) %&gt;%\n  # ungroup()\n  ungroup()\n\nWarning: Using `by = character()` to perform a cross join was deprecated in dplyr 1.1.0.\nℹ Please use `cross_join()` instead.\n\nfor (row_num in 1:nrow(df)) {\n  if (df$i[row_num] &gt; 1) {\n    df$x[row_num] &lt;- m * df$i[row_num] + a * df$x[row_num - 1] + df$e[row_num]\n  }\n}\n\nggplot(df, aes(x = i, y = x, color = factor(rep))) + \n  geom_line() +\n  scale_color_discrete() +\n  labs(title = \"Autocorrelated Data without Drift\",  \n       x = \"Time\",\n       y = \"x\") +\n  theme_bw() + \n  theme(plot.title = element_text(hjust = 0.5)) +\n  guides(color = guide_legend(title = \"Realization\"))\n\n\n\n\n\n# Define previous variables\nn &lt;- 100\nrealizations &lt;- 1\nsigma &lt;- 0.1 * 5\nm &lt;- 0.02 * 0 # No drift\na &lt;- 1 * 0\n\n# Create data frames  \ndf1 &lt;- tibble(rep = 1:realizations)\ndf2 &lt;- tibble(x = 0, \n              i = 1:n)\n\n# Join \ndf &lt;- full_join(df1, df2, by = character()) %&gt;% \n  mutate(e = rnorm(n = nrow(.), mean = 0, sd = sigma)) %&gt;% \n  arrange(rep, i) %&gt;%\n  group_by(rep) %&gt;%\n  # mutate(x = ifelse(i == 1, 0, a*lag(x, 1) + e)) %&gt;%\n  # ungroup()\n  ungroup()\n\nfor (row_num in 1:nrow(df)) {\n  if (df$i[row_num] &gt; 1) {\n    df$x[row_num] &lt;- m * df$i[row_num] + a * df$x[row_num - 1] + df$e[row_num]\n  }\n}\n\nggplot(df, aes(x = i, y = x, color = factor(rep))) + \n  geom_line() +\n  scale_color_discrete() +\n  labs(title = \"Independent Data without Drift\",  \n       x = \"Time\",\n       y = \"x\") +\n  theme_bw() + \n  theme(plot.title = element_text(hjust = 0.5)) +\n  guides(color = guide_legend(title = \"Realization\"))\n\n\n\n\n\nb &lt;- 0.5\nx &lt;- 1:100 * b + arima.sim(n=100-1,list(ar=0.1,ma=0.2,order=c(1,1,1)))\nplot(x)\n\n\n\ne &lt;- rnorm(100,0,2.5)\nb &lt;- 0.5\ny &lt;- 1:100 * b + e\n# Create time series\nlibrary(zoo) \n\n\nAttaching package: 'zoo'\n\n\nThe following object is masked from 'package:tsibble':\n\n    index\n\n\nThe following objects are masked from 'package:base':\n\n    as.Date, as.Date.numeric\n\nz &lt;- zoo(y, order.by = 1:100)\n\n# Plot\nplot(z) # , main=\"Simulated Time Series\", ylab=\"X\", xlab=\"Time\")\n\n\n\n\n\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\n\n\n# Simulate data \n# set.seed(101)\nx &lt;- 1:100 * 0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))  \n\n# Simulate z\ne &lt;- rnorm(100,0,2.5) \ny &lt;- 1:100*0.5 + e\nz &lt;- zoo(y, order.by = 1:100)\n\n# Plot both series\nplot(x, type=\"l\", col=\"blue\", main=\"X vs Z Series\",\n     ylab=\"Values\", xlab=\"Time\") \nlines(z, col=\"red\")  \nlegend(\"topleft\", legend=c(\"X\", \"Z\"),\n       col=c(\"blue\", \"red\"), lty=1)"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#tyson-please-build-a-shiny-app-in-which-students-can-change-the-autocorrelation-coefficient-slider-for-autocorrelation-from-0-to-1-and-watch-the-graph-update-in-real-time",
+    "href": "class_activities/chapter_2_lesson_2_class.html#tyson-please-build-a-shiny-app-in-which-students-can-change-the-autocorrelation-coefficient-slider-for-autocorrelation-from-0-to-1-and-watch-the-graph-update-in-real-time",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "library(tidyverse)\nlibrary(zoo) \n\n# Generate data\nset.seed(101) \nx &lt;- 1:100*0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))\ne &lt;- rnorm(100, 0, 2.5)\ny &lt;- 1:100*0.5 + e  \nz &lt;- zoo(y, order.by = 1:100)\n\n# Create data frame  \ndf &lt;- data.frame(\n  time = 1:100,\n  x = x,\n  z = coredata(z)\n)\n\n# Plot  \nggplot(df, aes(x = time)) +\n  geom_line(aes(y = x, color = \"X\")) + \n  geom_line(aes(y = z, color = \"Z\")) +\n  labs(title=\"X vs Z Series\", \n       x=\"Time\",\n       y=\"Values\",\n       color=\"Series\") +\n  theme_bw()\n\nDon't know how to automatically pick scale for object of type &lt;ts&gt;. Defaulting\nto continuous."
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#example-analysis-15-mins",
+    "href": "class_activities/chapter_2_lesson_2_class.html#example-analysis-15-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Walk through sample autocorrelation analysis"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#recap-20-mins",
+    "href": "class_activities/chapter_2_lesson_2_class.html#recap-20-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Review objectives and key concepts\nClarify questions on autocorrelation"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#assessment",
+    "href": "class_activities/chapter_2_lesson_2_class.html#assessment",
+    "title": "Chapter 2: Correlation",
+    "section": "",
+    "text": "Write definitions of autocovariance and autocorrelation"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#objectives-1",
+    "href": "class_activities/chapter_2_lesson_2_class.html#objectives-1",
+    "title": "Chapter 2: Correlation",
+    "section": "Objectives:",
+    "text": "Objectives:\n\nCompute sample autocorrelations\nMake and interpret correlogram plots"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#agenda-1",
+    "href": "class_activities/chapter_2_lesson_2_class.html#agenda-1",
+    "title": "Chapter 2: Correlation",
+    "section": "Agenda:",
+    "text": "Agenda:"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#introduction-5-mins-1",
+    "href": "class_activities/chapter_2_lesson_2_class.html#introduction-5-mins-1",
+    "title": "Chapter 2: Correlation",
+    "section": "Introduction (5 mins)",
+    "text": "Introduction (5 mins)\n\nIntroduce correlogram plots"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#lecture-15-mins",
+    "href": "class_activities/chapter_2_lesson_2_class.html#lecture-15-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "Lecture (15 mins)",
+    "text": "Lecture (15 mins)\n\nDemonstrate computing acf/pacf in R\nExplain interpreting correlogram plots"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#hands-on-exercise-25-mins",
+    "href": "class_activities/chapter_2_lesson_2_class.html#hands-on-exercise-25-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "Hands-on Exercise (25 mins)",
+    "text": "Hands-on Exercise (25 mins)\n\nCompute acf/pacf on sample data\nMake correlogram plots in R\nIdentify significant lags/correlations"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#recap-15-mins",
+    "href": "class_activities/chapter_2_lesson_2_class.html#recap-15-mins",
+    "title": "Chapter 2: Correlation",
+    "section": "Recap (15 mins)",
+    "text": "Recap (15 mins)\n\nReview objectives and key points\nClarify questions on correlograms"
+  },
+  {
+    "objectID": "class_activities/chapter_2_lesson_2_class.html#assessment-1",
+    "href": "class_activities/chapter_2_lesson_2_class.html#assessment-1",
+    "title": "Chapter 2: Correlation",
+    "section": "Assessment:",
+    "text": "Assessment:\n\nCompute and interpret acf/pacf on data\n\n\n\n\n\n\n\nNote\n\n\n\nSome important information….\n\n\n\n\n\n\n\n\nWarning\n\n\n\nSome important information….\n\n\n\n\n\n\n\n\nImportant\n\n\n\nSome important information….\n\n\n\n\n\n\n\n\nTip\n\n\n\nSome important information….\n\n\n\n\n\n\n\n\nCaution\n\n\n\nSome important information…."
   }
 ]

@@ -279,6 +279,10 @@ Caution
 </ul>
 <p>The variance and standard deviation are individual numbers that summarize how far the data are from the mean. We first compute the deviations from the mean, <span class="math inline">\(x - \bar x\)</span>. This is the directed distance from the mean to each data point.</p>
 <div class="cell">
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning in is.na(x): is.na() applied to non-(list or vector) of type
+'expression'</code></pre>
+</div>
 <div class="cell-output-display">
 <p><img src="chapter_2_lesson_1_class_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
@@ -351,41 +355,98 @@ Caution
 <div class="callout-body-container callout-body">
 <p>Could we make this into a shiny app? Students could use a slider or something to choose the values of the following:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># n &lt;- 50             # number of points</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># mu &lt;- c(1.25, 2.5)  # mean vector (mu_x, mu_y)</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="co"># sigma_x &lt;- 1        # standard deviation x</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="co"># sigma_y &lt;- 3        # standard deviation y</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="co"># rho &lt;- 0.8          # correlation coefficient</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># n &lt;- 50             # number of points</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># mu &lt;- c(1.25, 2.5)  # mean vector (mu_x, mu_y)</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># sigma_x &lt;- 1        # standard deviation x</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># sigma_y &lt;- 3        # standard deviation y</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co"># rho &lt;- 0.8          # correlation coefficient</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>The table and scatterplot would update to match the values input into the app.</p>
 </div>
 </div>
+<section id="note-use-shiny-live" class="level5">
+<h5 class="anchored" data-anchor-id="note-use-shiny-live">Note (use shiny live)</h5>
+ <iframe id="example1" src="https://gallery.shinyapps.io/goog-trend-index/" style="border: none; width: 100%; height: 720px" frameborder="0"></iframe>
+<pre class="{shinylive-r}"><code>#| standalone: true
+#| viewerHeight: 600
+library(shiny)
+library(bslib)
+
+# Define UI for app that draws a histogram ----
+ui &lt;- page_sidebar(
+  sidebar = sidebar(open = "open",
+    numericInput("n", "Sample count", 100),
+    checkboxInput("pause", "Pause", FALSE),
+  ),
+  plotOutput("plot", width=1100)
+)
+
+server &lt;- function(input, output, session) {
+  data &lt;- reactive({
+    input$resample
+    if (!isTRUE(input$pause)) {
+      invalidateLater(1000)
+    }
+    rnorm(input$n)
+  })
+  
+  output$plot &lt;- renderPlot({
+    hist(data(),
+      breaks = 40,
+      xlim = c(-2, 2),
+      ylim = c(0, 1),
+      lty = "blank",
+      xlab = "value",
+      freq = FALSE,
+      main = ""
+    )
+    
+    x &lt;- seq(from = -2, to = 2, length.out = 500)
+    y &lt;- dnorm(x)
+    lines(x, y, lwd=1.5)
+    
+    lwd &lt;- 5
+    abline(v=0, col="red", lwd=lwd, lty=2)
+    abline(v=mean(data()), col="blue", lwd=lwd, lty=1)
+
+    legend(legend = c("Normal", "Mean", "Sample mean"),
+      col = c("black", "red", "blue"),
+      lty = c(1, 2, 1),
+      lwd = c(1, lwd, lwd),
+      x = 1,
+      y = 0.9
+    )
+  }, res=140)
+}
+
+# Create Shiny app ----
+shinyApp(ui = ui, server = server)</code></pre>
 <p>The following code simulates <span class="math inline">\((x,y)\)</span>-pairs of random variables.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Unset random seed</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="fu">Sys.time</span>())</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Specify means and correlation coefficient</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">50</span>             <span class="co"># number of points</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>mu <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">1.25</span>, <span class="fl">2.5</span>)  <span class="co"># mean vector (mu_x, mu_y)</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>sigma_x <span class="ot">&lt;-</span> <span class="dv">1</span>        <span class="co"># standard deviation x</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>sigma_y <span class="ot">&lt;-</span> <span class="dv">3</span>        <span class="co"># standard deviation y</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>rho <span class="ot">&lt;-</span> <span class="fl">0.8</span>          <span class="co"># correlation coefficient</span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Define variance-covariance matrix</span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>sigma <span class="ot">&lt;-</span> <span class="fu">matrix</span>(</span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(sigma_x<span class="sc">^</span><span class="dv">2</span>,</span>
-<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    rho<span class="sc">*</span>sigma_x<span class="sc">*</span>sigma_y,</span>
-<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    rho<span class="sc">*</span>sigma_x<span class="sc">*</span>sigma_y,</span>
-<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    sigma_y<span class="sc">^</span><span class="dv">2</span>),</span>
-<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">nrow =</span> <span class="dv">2</span>)</span>
-<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulate bivariate normal data</span></span>
-<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>mvn_data <span class="ot">&lt;-</span> MASS<span class="sc">::</span><span class="fu">mvrnorm</span>(n, mu, sigma) <span class="sc">%&gt;%</span> </span>
-<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>() <span class="sc">%&gt;%</span> </span>
-<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">x =</span> X1, <span class="at">y =</span> X2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Unset random seed</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="fu">Sys.time</span>())</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Specify means and correlation coefficient</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">50</span>             <span class="co"># number of points</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>mu <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">1.25</span>, <span class="fl">2.5</span>)  <span class="co"># mean vector (mu_x, mu_y)</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>sigma_x <span class="ot">&lt;-</span> <span class="dv">1</span>        <span class="co"># standard deviation x</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>sigma_y <span class="ot">&lt;-</span> <span class="dv">3</span>        <span class="co"># standard deviation y</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>rho <span class="ot">&lt;-</span> <span class="fl">0.8</span>          <span class="co"># correlation coefficient</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Define variance-covariance matrix</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>sigma <span class="ot">&lt;-</span> <span class="fu">matrix</span>(</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">c</span>(sigma_x<span class="sc">^</span><span class="dv">2</span>,</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    rho<span class="sc">*</span>sigma_x<span class="sc">*</span>sigma_y,</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    rho<span class="sc">*</span>sigma_x<span class="sc">*</span>sigma_y,</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    sigma_y<span class="sc">^</span><span class="dv">2</span>),</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">nrow =</span> <span class="dv">2</span>)</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulate bivariate normal data</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>mvn_data <span class="ot">&lt;-</span> MASS<span class="sc">::</span><span class="fu">mvrnorm</span>(n, mu, sigma) <span class="sc">%&gt;%</span> </span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">x =</span> X1, <span class="at">y =</span> X2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>The following table illustrates some of the simulated values. The mean of the <span class="math inline">\(x\)</span> values is <span class="math inline">\(\bar x = 1.151\)</span>. The mean of the <span class="math inline">\(y\)</span> values is <span class="math inline">\(\bar y =2.287\)</span>. We will soon use the values <span class="math inline">\((x-\bar x)\)</span>, <span class="math inline">\((x-\bar x)^2\)</span>, <span class="math inline">\((y-\bar y)\)</span>, <span class="math inline">\((y-\bar y)^2\)</span>, and <span class="math inline">\((x-\bar x)(y-\bar y)\)</span>. For convenience, they are included in the table below.</p>
+<p>The following table illustrates some of the simulated values. The mean of the <span class="math inline">\(x\)</span> values is <span class="math inline">\(\bar x = 1.294\)</span>. The mean of the <span class="math inline">\(y\)</span> values is <span class="math inline">\(\bar y =3.121\)</span>. We will soon use the values <span class="math inline">\((x-\bar x)\)</span>, <span class="math inline">\((x-\bar x)^2\)</span>, <span class="math inline">\((y-\bar y)\)</span>, <span class="math inline">\((y-\bar y)^2\)</span>, and <span class="math inline">\((x-\bar x)(y-\bar y)\)</span>. For convenience, they are included in the table below.</p>
 <div class="cell">
 <div class="cell-output-display">
 <table class="table table-sm table-striped small" data-quarto-postprocess="true">
@@ -404,83 +465,63 @@ Caution
 <tbody>
 <tr class="odd">
 <td style="text-align: center;">1</td>
-<td style="text-align: center;">0.137</td>
-<td style="text-align: center;">-0.044</td>
-<td style="text-align: center;">-1.014</td>
-<td style="text-align: center;">1.029</td>
-<td style="text-align: center;">-2.331</td>
-<td style="text-align: center;">5.433</td>
-<td style="text-align: center;"><span style="     color: blue !important;">2.364</span></td>
+<td style="text-align: center;">0.693</td>
+<td style="text-align: center;">4.372</td>
+<td style="text-align: center;">-0.601</td>
+<td style="text-align: center;">0.361</td>
+<td style="text-align: center;">1.251</td>
+<td style="text-align: center;">1.565</td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;">-0.751</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">2</td>
-<td style="text-align: center;">1.704</td>
-<td style="text-align: center;">4.229</td>
-<td style="text-align: center;">0.553</td>
-<td style="text-align: center;">0.306</td>
-<td style="text-align: center;">1.942</td>
-<td style="text-align: center;">3.772</td>
-<td style="text-align: center;"><span style="     color: blue !important;">1.074</span></td>
+<td style="text-align: center;">2.553</td>
+<td style="text-align: center;">7.285</td>
+<td style="text-align: center;">1.26</td>
+<td style="text-align: center;">1.586</td>
+<td style="text-align: center;">4.164</td>
+<td style="text-align: center;">17.335</td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;">5.244</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">3</td>
-<td style="text-align: center;">0.814</td>
-<td style="text-align: center;">0.425</td>
-<td style="text-align: center;">-0.337</td>
-<td style="text-align: center;">0.114</td>
-<td style="text-align: center;">-1.862</td>
-<td style="text-align: center;">3.467</td>
-<td style="text-align: center;"><span style="     color: blue !important;">0.628</span></td>
+<td style="text-align: center;">-0.236</td>
+<td style="text-align: center;">-1.199</td>
+<td style="text-align: center;">-1.529</td>
+<td style="text-align: center;">2.339</td>
+<td style="text-align: center;">-4.32</td>
+<td style="text-align: center;">18.663</td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;">6.607</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">4</td>
-<td style="text-align: center;">-0.033</td>
-<td style="text-align: center;">1.154</td>
-<td style="text-align: center;">-1.184</td>
-<td style="text-align: center;">1.402</td>
-<td style="text-align: center;">-1.133</td>
-<td style="text-align: center;">1.284</td>
-<td style="text-align: center;"><span style="     color: blue !important;">1.341</span></td>
+<td style="text-align: center;">0.997</td>
+<td style="text-align: center;">0.097</td>
+<td style="text-align: center;">-0.297</td>
+<td style="text-align: center;">0.088</td>
+<td style="text-align: center;">-3.025</td>
+<td style="text-align: center;">9.148</td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;">0.899</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">5</td>
-<td style="text-align: center;">0.708</td>
-<td style="text-align: center;">-0.343</td>
-<td style="text-align: center;">-0.443</td>
-<td style="text-align: center;">0.196</td>
-<td style="text-align: center;">-2.63</td>
-<td style="text-align: center;">6.917</td>
-<td style="text-align: center;"><span style="     color: blue !important;">1.164</span></td>
+<td style="text-align: center;">1.13</td>
+<td style="text-align: center;">0.987</td>
+<td style="text-align: center;">-0.164</td>
+<td style="text-align: center;">0.027</td>
+<td style="text-align: center;">-2.135</td>
+<td style="text-align: center;">4.558</td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;">0.35</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">6</td>
-<td style="text-align: center;">0.493</td>
-<td style="text-align: center;">-1.919</td>
-<td style="text-align: center;">-0.658</td>
-<td style="text-align: center;">0.432</td>
-<td style="text-align: center;">-4.206</td>
-<td style="text-align: center;">17.695</td>
-<td style="text-align: center;"><span style="     color: blue !important;">2.766</span></td>
-</tr>
-<tr class="odd">
-<td style="text-align: center;">7</td>
-<td style="text-align: center;">0.56</td>
-<td style="text-align: center;">2.538</td>
-<td style="text-align: center;">-0.591</td>
-<td style="text-align: center;">0.349</td>
-<td style="text-align: center;">0.251</td>
-<td style="text-align: center;">0.063</td>
-<td style="text-align: center;"><span style="     color: orange !important;">-0.148</span></td>
-</tr>
-<tr class="even">
-<td style="text-align: center;">:</td>
-<td style="text-align: center;">:</td>
-<td style="text-align: center;">:</td>
-<td style="text-align: center;">:</td>
-<td style="text-align: center;">:</td>
-<td style="text-align: center;">:</td>
-<td style="text-align: center;">:</td>
-<td style="text-align: center;"><span style="     color: Black !important;">:</span></td>
+<td style="text-align: center;">2.095</td>
+<td style="text-align: center;">5.961</td>
+<td style="text-align: center;">0.801</td>
+<td style="text-align: center;">0.642</td>
+<td style="text-align: center;">2.84</td>
+<td style="text-align: center;">8.063</td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;">2.276</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">:</td>
@@ -493,44 +534,54 @@ Caution
 <td style="text-align: center;"><span style="     color: Black !important;">:</span></td>
 </tr>
 <tr class="even">
+<td style="text-align: center;">:</td>
+<td style="text-align: center;">:</td>
+<td style="text-align: center;">:</td>
+<td style="text-align: center;">:</td>
+<td style="text-align: center;">:</td>
+<td style="text-align: center;">:</td>
+<td style="text-align: center;">:</td>
+<td style="text-align: center;"><span style="     color: Black !important;">:</span></td>
+</tr>
+<tr class="odd">
 <td style="text-align: center;">48</td>
-<td style="text-align: center;">1.186</td>
-<td style="text-align: center;">4.977</td>
-<td style="text-align: center;">0.035</td>
-<td style="text-align: center;">0.001</td>
-<td style="text-align: center;">2.69</td>
-<td style="text-align: center;">7.238</td>
-<td style="text-align: center;"><span style="     color: blue !important;">0.094</span></td>
-</tr>
-<tr class="odd">
-<td style="text-align: center;">49</td>
-<td style="text-align: center;">0.812</td>
-<td style="text-align: center;">3.087</td>
-<td style="text-align: center;">-0.339</td>
-<td style="text-align: center;">0.115</td>
-<td style="text-align: center;">0.8</td>
-<td style="text-align: center;">0.64</td>
-<td style="text-align: center;"><span style="     color: orange !important;">-0.271</span></td>
+<td style="text-align: center;">2.22</td>
+<td style="text-align: center;">2.023</td>
+<td style="text-align: center;">0.926</td>
+<td style="text-align: center;">0.858</td>
+<td style="text-align: center;">-1.098</td>
+<td style="text-align: center;">1.206</td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;">-1.017</span></td>
 </tr>
 <tr class="even">
-<td style="text-align: center;">50</td>
-<td style="text-align: center;">0.592</td>
-<td style="text-align: center;">-0.547</td>
-<td style="text-align: center;">-0.559</td>
-<td style="text-align: center;">0.312</td>
-<td style="text-align: center;">-2.834</td>
-<td style="text-align: center;">8.029</td>
-<td style="text-align: center;"><span style="     color: blue !important;">1.583</span></td>
+<td style="text-align: center;">49</td>
+<td style="text-align: center;">2.232</td>
+<td style="text-align: center;">4.006</td>
+<td style="text-align: center;">0.938</td>
+<td style="text-align: center;">0.881</td>
+<td style="text-align: center;">0.885</td>
+<td style="text-align: center;">0.783</td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;">0.83</span></td>
 </tr>
 <tr class="odd">
+<td style="text-align: center;">50</td>
+<td style="text-align: center;">-0.303</td>
+<td style="text-align: center;">-0.877</td>
+<td style="text-align: center;">-1.597</td>
+<td style="text-align: center;">2.549</td>
+<td style="text-align: center;">-3.999</td>
+<td style="text-align: center;">15.988</td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;">6.384</span></td>
+</tr>
+<tr class="even">
 <td style="text-align: center;">sum</td>
-<td style="text-align: center;">57.547</td>
-<td style="text-align: center;">114.35</td>
+<td style="text-align: center;">64.695</td>
+<td style="text-align: center;">156.072</td>
 <td style="text-align: center;">0</td>
-<td style="text-align: center;">44.138</td>
+<td style="text-align: center;">47.851</td>
 <td style="text-align: center;">0</td>
-<td style="text-align: center;">407.03</td>
-<td style="text-align: center;"><span style="     color: blue !important;">109.253</span></td>
+<td style="text-align: center;">389.742</td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;">105.881</span></td>
 </tr>
 </tbody>
 </table>
@@ -555,9 +606,9 @@ Cov(x,y)
 =
 \frac{\sum\limits_{i=1}^n (x - \bar x)(y - \bar y)}{n-1}
 =
-\frac{109.253}{50 - 1}
+\frac{105.881}{50 - 1}
 =
-2.23
+2.161
 \]</span></p>
 <p>You can think of this as an “average” of the <span class="math inline">\((x - \bar x)(y - \bar y)\)</span> values. The only difference is that we divide by <span class="math inline">\(n-1\)</span> instead of <span class="math inline">\(n\)</span>.</p>
 <ul>
@@ -572,38 +623,38 @@ s_x &amp;= \sqrt{ \frac{\sum\limits_{i=1}^n (x - \bar x)^2}{n-1} }
 =
 \sqrt{
 \frac{
-44.138
+47.851
 }{
 50-1
 }
 }
 =
-0.949
+0.988
 \\
 s_y &amp;= \sqrt{ \frac{\sum\limits_{i=1}^n (y - \bar y)^2}{n-1} }
 =
 \sqrt{
 \frac{
-407.03
+389.742
 }{
 50-1
 }
 }
 =
-2.882
+2.82
 \end{align*}
 \]</span></p>
 <p>The sample correlation coefficient is: <span class="math display">\[
 r = \frac{\sum\limits_{i=1}^n (x - \bar x)(y - \bar y)}{\sqrt{\sum\limits_{i=1}^n (x - \bar x)^2} \sqrt{\sum\limits_{i=1}^n (y - \bar y)^2}}
 =
 \frac{
-109.253
+105.881
 }{
-\sqrt{ 44.138}
-\sqrt{ 407.03}
+\sqrt{ 47.851}
+\sqrt{ 389.742}
 }
 =
-0.815
+0.775
 \]</span></p>
 <ul>
 <li><p>What do you get if you multiply the equations for <span class="math inline">\(r\)</span>, <span class="math inline">\(s_x\)</span>, and <span class="math inline">\(s_y\)</span> together? <span class="math display">\[
@@ -627,15 +678,16 @@ r = \frac{\sum\limits_{i=1}^n (x - \bar x)(y - \bar y)}{\sqrt{\sum\limits_{i=1}^
 $$
 Cov(x,y) = r \cdot s_x \cdot s_y 
 =
-0.815
+0.775
 \cdot 
-0.949
+0.988
 \cdot 
-2.882
+2.82
 =
-2.23
+2.161
 $$
  -->
+</section>
 </section>
 <section id="team-activity-computational-practice-15-mins" class="level2">
 <h2 class="anchored" data-anchor-id="team-activity-computational-practice-15-mins">Team Activity: Computational Practice (15 mins)</h2>

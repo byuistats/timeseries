@@ -1,0 +1,723 @@
+---
+title: "Chapter 2: Correlation"
+format: html
+editor: visual
+---
+
+```{r}
+#| include: false
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, ggokabeito, kableExtra)
+palette("okabeito")
+okabeito_colors_list <- c(
+    `orange` = "#E69F00",
+    `light blue` = "#56B4E9",
+    `green` = "#009E73",
+    `yellow` = "#F0E442",
+    `blue` = "#0072B2",
+    `red` = "#D55E00",
+    `purple` = "#CC79A7",
+    `grey` = "#999999",
+    `black` = "#000000",
+    `sky blue` = "#56B4E9",
+    `bluish green` = "#009E73",
+    `vermillion` = "#D55E00",
+    `reddish purple` = "#CC79A7",
+    `dark yellow` = "#F5C710",
+    `amber` = "#F5C710"
+)
+
+
+round_df <- function(df, digits) {
+  nums <- vapply(df, is.numeric, FUN.VALUE = logical(1))
+  df[,nums] <- round(df[,nums], digits = digits)
+  (df)
+}
+```
+
+::: callout-caution
+Please change the colors to be the okabeito scheme...
+
+palette("okabeito")
+
+okabeito_colors_list \<- c( `orange` = "#E69F00", `light blue` = "#56B4E9", `green` = "#009E73", `yellow` = "#F0E442", `blue` = "#0072B2", `red` = "#D55E00", `purple` = "#CC79A7", `grey` = "#999999", `black` = "#000000", `sky blue` = "#56B4E9", `bluish green` = "#009E73", `vermillion` = "#D55E00", `reddish purple` = "#CC79A7", `dark yellow` = "#F5C710", `amber` = "#F5C710" )
+:::
+
+# Lesson 1 (60 mins): Covariance and Correlation
+
+## Objectives:
+
+-   Define covariance, correlation
+
+-   Compute covariance and correlation
+
+## Agenda:
+
+-   Introduction (5 mins)
+
+-   Motivate covariance and correlation
+
+## Learning Journal Exchange (10 mins)
+
+## Class Activity: Variance and Standard Deviation (15 mins)
+
+We will explore the variance and standard deviation in this section.
+
+-   What do the standard deviation and the variance measure?
+
+The following code simulates observations of a random variable. We will use these data to explore the variance and standard deviation.
+
+```{r}
+# Set random seed
+set.seed(2412)
+
+# Specify means and standard deviation
+n <- 5        # number of points
+mu <- 10      # mean
+sigma <- 3    # standard deviation
+
+# Simulate normal data
+sim_data <- data.frame(x = round(rnorm(n, mu, sigma), 1)) %>% 
+  arrange(x)
+```
+
+```{r}
+#| echo: false
+
+# Convert to character string
+# Initialize empty character vector
+five_vals <- sim_data$x[1]
+# Simulate normal data
+for(i in 2:n){
+  five_vals <- paste(five_vals, sim_data$x[i], sep=", ")
+}
+```
+
+The data simulated by this process are:
+
+<center>`r five_vals`</center>
+
+-   Find the mean of these numbers. <!-- `r mean(sim_data$x)`. -->
+
+-   What are some ways to interpret the mean?
+
+The variance and standard deviation are individual numbers that summarize how far the data are from the mean. We first compute the deviations from the mean, $x - \bar x$. This is the directed distance from the mean to each data point.
+
+```{r}
+#| echo: false
+temp <- sim_data %>% 
+  mutate(deviations = x - mean(x)) %>% 
+  arrange(desc(x))
+
+mean_x <- mean(temp$x)
+min_x <- floor(min(temp$x))
+max_x <- ceiling(max(temp$x))
+range <- max_x - min_x
+lower <- min_x - range / 10
+upper <- max_x + range / 10
+
+ticks <- ceiling(lower):floor(upper)
+ticks_df <- data.frame(x = ticks, y = -1)
+
+
+# Plot deviations from the mean
+ggplot(temp, aes(x = x, y = 0)) +
+  # x-axis
+  annotate("segment", x = lower, xend = upper, y = -1, yend = -1, colour = "black", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+  
+  # Add tick marks and labels          
+  annotate("segment", x = ticks, xend = ticks, y = -1.25, yend = -0.75, colour = "black", linewidth = 0.5) +
+
+  geom_text(aes(x = upper, y = -1, label = "x"), size = 4, hjust = -1, vjust = 0, color = "black") +
+  
+  geom_text(data = ticks_df, aes(x = x, y = y, label = x), size = 4, vjust = 2, color = "black") +
+  
+  # Deviations from the mean arrows and lines
+  geom_segment(aes(x = mean_x, xend = x, y = 1:n, yend = 1:n), colour = okabeito_colors_list[2], linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+  geom_segment(aes(x = x, xend = x, y = 0.25, yend = 1:n - 0.25), colour = okabeito_colors_list[2], linewidth = 0.5, linetype = "dashed") +
+  geom_text(aes(x = (mean_x + x)/2, y = 1:n, label = round(deviations, 2)), size = 3, vjust = -0.5) +
+  
+  # Marker for the mean
+  annotate("segment", x = mean_x, xend = mean_x, y = -2.5, yend = -1.25, colour = okabeito_colors_list[1], linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+  geom_segment(aes(x = mean_x, xend = mean_x, y = -0.75, yend = n + 1), colour = okabeito_colors_list[1], linewidth = 0.5, linetype = "dashed") +
+  # Add xbar
+  geom_label(
+    label=expression(bar(x) == " "),
+    x=mean_x-0.1,
+    y=-2.6,
+    color = okabeito_colors_list[1],parse = TRUE,label.size = NA, fill=NA)+
+  # add mean value
+  geom_label(
+    label=paste0(round(mean_x, 2)),
+    x=mean_x+0.3,
+    y=-2.6,
+    color = okabeito_colors_list[1],label.size = NA, fill=NA)+
+  geom_point(size = 3, color = okabeito_colors_list[2]) + 
+  geom_text(aes(x = x, y = rep(0,n), label = x), size = 3, vjust = 1.75) +
+  
+  # theme
+  theme_void() +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+     
+  theme(aspect.ratio = 0.4) +
+  labs(title = "Deviations from the Mean", 
+       x = "Value",
+       y = "")+
+  scale_color_okabe_ito()
+```
+
+We can summarize this information in a table:
+
+```{r}
+#| echo: false
+sim_data %>% 
+  mutate(
+    "x - mean(x)" = x - mean(x),
+    "Workspace for your use" = " "
+    ) %>% 
+  knitr::kable(format = "html", align='ccc', escape = FALSE)
+```
+
+How can we obtain one number that summarizes how spread out the data are from the mean? We may try averaging the deviations from the mean.
+
+-   What is the average deviation from the mean?
+
+-   Will we get the same value with other data sets, or is this just a coincidence?
+
+-   What could you do to prevent this from happening?
+
+-   Apply your idea. Compute the resulting value that summarizes the spread. What do you get?
+
+-   What is the relationship between the sample variance and the sample standard deviation?
+
+-   Use the table above to verify that the sample variance is `r var(sim_data$x)`.
+
+-   Show that the sample standard deviation is `r sd(sim_data$x) %>% round(4)`.
+
+## Class Activity: Covariance and Correlation (15 mins)
+
+::: callout-caution
+Could we make this into a shiny app? Students could use a slider or something to choose the values of the following:
+
+```{r}
+# n <- 50             # number of points
+# mu <- c(1.25, 2.5)  # mean vector (mu_x, mu_y)
+# sigma_x <- 1        # standard deviation x
+# sigma_y <- 3        # standard deviation y
+# rho <- 0.8          # correlation coefficient
+```
+
+The table and scatterplot would update to match the values input into the app.
+:::
+
+##### Note (use shiny live)
+
+```{=html}
+ <iframe id="example1" src="https://gallery.shinyapps.io/goog-trend-index/" style="border: none; width: 100%; height: 720px" frameborder="0"></iframe>
+```
+```{shinylive-r}
+#| standalone: true
+#| viewerHeight: 600
+library(shiny)
+library(bslib)
+
+# Define UI for app that draws a histogram ----
+ui <- page_sidebar(
+  sidebar = sidebar(open = "open",
+    numericInput("n", "Sample count", 100),
+    checkboxInput("pause", "Pause", FALSE),
+  ),
+  plotOutput("plot", width=1100)
+)
+
+server <- function(input, output, session) {
+  data <- reactive({
+    input$resample
+    if (!isTRUE(input$pause)) {
+      invalidateLater(1000)
+    }
+    rnorm(input$n)
+  })
+  
+  output$plot <- renderPlot({
+    hist(data(),
+      breaks = 40,
+      xlim = c(-2, 2),
+      ylim = c(0, 1),
+      lty = "blank",
+      xlab = "value",
+      freq = FALSE,
+      main = ""
+    )
+    
+    x <- seq(from = -2, to = 2, length.out = 500)
+    y <- dnorm(x)
+    lines(x, y, lwd=1.5)
+    
+    lwd <- 5
+    abline(v=0, col="red", lwd=lwd, lty=2)
+    abline(v=mean(data()), col="blue", lwd=lwd, lty=1)
+
+    legend(legend = c("Normal", "Mean", "Sample mean"),
+      col = c("black", "red", "blue"),
+      lty = c(1, 2, 1),
+      lwd = c(1, lwd, lwd),
+      x = 1,
+      y = 0.9
+    )
+  }, res=140)
+}
+
+# Create Shiny app ----
+shinyApp(ui = ui, server = server)
+```
+
+The following code simulates $(x,y)$-pairs of random variables.
+
+```{r}
+# Unset random seed
+set.seed(Sys.time())
+
+# Specify means and correlation coefficient
+n <- 50             # number of points
+mu <- c(1.25, 2.5)  # mean vector (mu_x, mu_y)
+sigma_x <- 1        # standard deviation x
+sigma_y <- 3        # standard deviation y
+rho <- 0.8          # correlation coefficient
+
+# Define variance-covariance matrix
+sigma <- matrix(
+  c(sigma_x^2,
+    rho*sigma_x*sigma_y,
+    rho*sigma_x*sigma_y,
+    sigma_y^2),
+  nrow = 2)
+
+# Simulate bivariate normal data
+mvn_data <- MASS::mvrnorm(n, mu, sigma) %>% 
+  data.frame() %>% 
+  rename(x = X1, y = X2)
+```
+
+The following table illustrates some of the simulated values. The mean of the $x$ values is $\bar x = `r round(mean(mvn_data$x), 3)`$. The mean of the $y$ values is $\bar y =`r round(mean(mvn_data$y), 3)`$. We will soon use the values $(x-\bar x)$, $(x-\bar x)^2$, $(y-\bar y)$, $(y-\bar y)^2$, and $(x-\bar x)(y-\bar y)$. For convenience, they are included in the table below.
+
+```{r}
+#| echo: false
+
+cov_dat <- mvn_data %>% 
+  mutate(i = row_number()) %>% 
+  select(i, x, y) %>% 
+  mutate(
+    xx = x - mean(x),
+    xx2 = xx^2,
+    yy = y - mean(y),
+    yy2 = yy^2,
+    xy = (x - mean(x)) * (y - mean(y)),
+    sign = case_when(
+      xy > 0 ~ "positive", 
+      xy < 0 ~ "negative",
+      TRUE ~ "zero")
+    ) 
+
+cov_dat_summary <- cov_dat %>% 
+  summarize(
+    x = sum(x),
+    y = sum(y),
+    xx = sum(xx),
+    xx2 = sum(xx2),
+    yy = sum(yy),
+    yy2 = sum(yy2),
+    xy = sum(xy)
+  ) %>% 
+  round_df(3) %>% 
+  mutate(across(everything(), as.character)) %>% 
+  mutate(
+    i = "sum",
+    sign = case_when(
+      xy > 0 ~ "positive", 
+      xy < 0 ~ "negative",
+      TRUE ~ "zero")
+  )
+
+min_row <- cov_dat %>% 
+  mutate(
+    positive = if_else(xy > 0, 1, 0),
+    negative = if_else(xy < 0, 1, 0)
+    ) %>% 
+  mutate(
+    pos_sum = cumsum(positive),
+    neg_sum = cumsum(negative),
+    both = pos_sum > 0 & neg_sum > 0,
+    sum_both = cumsum(both)
+  ) %>% 
+  filter(sum_both <= 1) %>% 
+  nrow()
+  
+ellipsis <- data.frame(
+  i = ":",
+  x = ":",
+  y = ":",
+  xx = ":",
+  xx2 = ":",
+  yy = ":",
+  yy2 = ":",
+  xy = ":",
+  sign = " "
+  )
+
+temp1 <- cov_dat %>% 
+  round_df(3) %>% 
+  mutate(across(everything(), as.character))
+
+temp2 <- temp1 %>% 
+  # include at least 6 and at most 25 rows in the top part;
+  # try to include at least one positive and one negative 
+  # cross product
+  head(min(25,max(6, min_row))) %>% 
+  bind_rows(ellipsis) %>% 
+  bind_rows(ellipsis) %>% 
+  bind_rows(temp1 %>% tail(3)) %>% 
+  bind_rows(cov_dat_summary) %>% 
+  mutate(
+    xy = cell_spec(xy, 
+                   color = case_when(
+                     sign == "positive" ~ "#E69F00", 
+                     sign == "negative" ~ "#56B4E9",
+                     TRUE ~ "Black"))) %>% 
+  rename(
+    "x-mean(x)" = xx, 
+    "(x-mean(x))^2" = xx2, 
+    "y-mean(y)" = yy,
+    "(y-mean(y))^2" = yy2, 
+    "(x-mean(x))(y-mean(y))" = xy
+  ) %>% 
+  select(-sign)
+  
+knitr::kable(temp2, format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
+  kable_styling(full_width = FALSE)
+```
+
+The simulated values are plotted below, with vertical lines drawn at $x = \bar x$ and $y = \bar y$. The first simulated point $(i=1)$ is circled.
+
+```{r}
+#| warning: false
+#| echo: false
+
+ggplot(cov_dat, aes(x = x, y = y, color = sign)) +
+  geom_point(data=cov_dat %>% filter(row_number() == 1),
+             pch=21,
+             size=4,
+             colour="black") +
+  geom_point() +
+  scale_color_manual(values = c("#E69F00", "#56B4E9"),  
+                     labels = c(expression((x-bar(x))(y-bar(y))<0),
+                                expression((x-bar(x))(y-bar(y))>0))) +
+  geom_vline(xintercept = mean(cov_dat$x), color = "#009E73") + 
+  geom_hline(yintercept = mean(cov_dat$y), color = "#009E73") +
+  labs(x="x", y="y") +
+  theme_bw() +  
+  ggtitle(paste0("Simulated Data (n = ",n,", ρ = ",rho,")")) + 
+  theme(plot.title = element_text(hjust = 0.5)) +
+  guides(color = guide_legend(title = "Quadrant", reverse = TRUE)) +
+  annotate("text", x = mean(cov_dat$x), y = min(cov_dat$y), 
+            label = expression(bar(x)), hjust = 0, vjust = 0) +
+  annotate("text", y = mean(cov_dat$y), x = min(cov_dat$x), 
+            label = expression(bar(y)), hjust = 0, vjust = 0) 
+# + geom_segment(aes(x = 5, y = 30, xend = 3.5, yend = 25), arrow = arrow(length = unit(0.5, "cm")))
+```
+
+If the quantity $(x-\bar x)(y-\bar y)$ is greater than zero, the points are colored blue. Otherwise, they are colored orange.
+
+-   What color are the points if $(x-\bar x)$ and $(y-\bar y)$ have the same sign?
+
+-   What color are the points if $(x-\bar x)$ and $(y-\bar y)$ have different signs?
+
+To compute the sample covariance, we divide the sum of the $(x - \bar x)(y - \bar y)$ values by $n-1$:
+
+$$
+Cov(x,y) 
+=
+\frac{\sum\limits_{i=1}^n (x - \bar x)(y - \bar y)}{n-1} 
+=
+\frac{`r cov_dat_summary$xy`}{`r n` - 1} 
+= 
+`r cov(cov_dat$x, cov_dat$y) %>% round(3)`
+$$
+
+You can think of this as an "average" of the $(x - \bar x)(y - \bar y)$ values. The only difference is that we divide by $n-1$ instead of $n$.
+
+-   If there are more blue points than orange points, what should the sign of the sample covariance be? Why?
+-   What does the sample covariance tell us?
+
+The sample covariance is related to the sample standard deviation of $x$ and $y$ and the sample correlation coefficient between $x$ and $y$.
+
+The sample standard deviations are:
+
+$$
+\begin{align*}
+s_x &= \sqrt{ \frac{\sum\limits_{i=1}^n (x - \bar x)^2}{n-1} }
+=
+\sqrt{
+\frac{
+`r sum((cov_dat$x - mean(cov_dat$x))^2) %>% round(3)`
+}{
+`r n`-1
+}
+}
+=
+`r sd(cov_dat$x) %>% round(3)`
+\\
+s_y &= \sqrt{ \frac{\sum\limits_{i=1}^n (y - \bar y)^2}{n-1} }
+=
+\sqrt{
+\frac{
+`r sum((cov_dat$y - mean(cov_dat$y))^2) %>% round(3)`
+}{
+`r n`-1
+}
+}
+=
+`r sd(cov_dat$y) %>% round(3)`
+\end{align*}
+$$
+
+The sample correlation coefficient is: $$
+r = \frac{\sum\limits_{i=1}^n (x - \bar x)(y - \bar y)}{\sqrt{\sum\limits_{i=1}^n (x - \bar x)^2} \sqrt{\sum\limits_{i=1}^n (y - \bar y)^2}} 
+=
+\frac{
+`r sum((cov_dat$x - mean(cov_dat$x))*(cov_dat$y - mean(cov_dat$y))) %>% round(3)`
+}{
+\sqrt{ `r sum((cov_dat$x - mean(cov_dat$x))^2) %>% round(3)`} 
+\sqrt{ `r sum((cov_dat$y - mean(cov_dat$y))^2) %>% round(3)`} 
+}
+=
+`r cor(cov_dat$x, cov_dat$y) %>% round(3)`
+$$
+
+-   What do you get if you multiply the equations for $r$, $s_x$, and $s_y$ together? $$
+    \begin{align*}
+      r \cdot s_x \cdot s_y 
+      &=
+      \frac{\sum\limits_{i=1}^n (x - \bar x)(y - \bar y)}{\sqrt{\sum\limits_{i=1}^n (x - \bar x)^2} \sqrt{\sum\limits_{i=1}^n (y - \bar y)^2}} 
+      \cdot 
+      \sqrt{ \frac{\sum\limits_{i=1}^n (x - \bar x)^2}{n-1} }
+      \cdot 
+      \sqrt{ \frac{\sum\limits_{i=1}^n (y - \bar y)^2}{n-1} }
+      \\
+      ~&~\\
+      &=\\
+      ~&~\\
+    \end{align*}
+    $$
+
+-   Use the numerical values above to confirm your result. Any discrepancy is due to roundoff error.
+
+```{=html}
+<!-- Solution
+$$
+Cov(x,y) = r \cdot s_x \cdot s_y 
+=
+`r cor(cov_dat$x, cov_dat$y) %>% round(3)`
+\cdot 
+`r sd(cov_dat$x) %>% round(3)`
+\cdot 
+`r sd(cov_dat$y) %>% round(3)`
+=
+`r cov(cov_dat$x, cov_dat$y) %>% round(3)`
+$$
+ -->
+```
+## Team Activity: Computational Practice (15 mins)
+
+```{r}
+#| echo: false
+
+# Set random seed
+set.seed(300)
+
+# Specify means and correlation coefficient
+n <- 6              # number of points
+mu <- c(3, 1)       # mean vector (mu_x, mu_y)
+sigma_x <- 3.5      # standard deviation x
+sigma_y <- 2        # standard deviation y
+rho <- -0.85          # correlation coefficient
+
+# Define variance-covariance matrix
+sigma <- matrix(
+  c(sigma_x^2,
+    rho*sigma_x*sigma_y,
+    rho*sigma_x*sigma_y,
+    sigma_y^2),
+  nrow = 2)
+
+# Simulate bivariate normal data
+mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) %>% 
+  data.frame() %>% 
+  rename(x = X1, y = X2) %>% 
+  round_df(1)
+```
+
+With your assigned partner, compute the following values for the $n=`r n`$ values given in the table below:
+
+-   $\bar x =$
+
+-   $\bar y =$
+
+-   $s_x =$
+
+-   $s_y =$
+
+-   $r =$
+
+-   $Cov(x,y) =$
+
+```{r}
+#| echo: false
+
+delete_all_but_first_row <- function(df, skip_columns = 3, skip_rows = 1){
+  df_dimension <- dim(df)
+  for (i in (1 + skip_rows):df_dimension[1])
+    for (j in (1 + skip_columns):df_dimension[2]) {
+      df[i,j] <- " "
+    }
+  return(df)
+}
+
+cov_dat <- mvn_data_6 %>% 
+  mutate(i = row_number()) %>% 
+  select(i, x, y) %>% 
+  mutate(
+    xx = x - mean(x),
+    xx2 = xx^2,
+    yy = y - mean(y),
+    yy2 = yy^2,
+    xy = (x - mean(x)) * (y - mean(y))
+    ) 
+
+cov_dat_summary <- cov_dat %>% 
+  summarize(
+    x = sum(x),
+    y = sum(y),
+    xx = sum(xx),
+    xx2 = sum(xx2),
+    yy = sum(yy),
+    yy2 = sum(yy2),
+    xy = sum(xy)
+  ) %>% 
+  round_df(5) %>%
+  mutate(across(everything(), as.character)) %>% 
+  mutate(i = "sum")
+
+temp <- cov_dat %>% 
+  round_df(5) %>%
+  mutate(across(everything(), as.character)) %>% 
+  bind_rows(cov_dat_summary) %>% 
+  rename(
+    "x-mean(x)" = xx, 
+    "(x-mean(x))^2" = xx2, 
+    "y-mean(y)" = yy,
+    "(y-mean(y))^2" = yy2, 
+    "(x-mean(x))(y-mean(y))" = xy
+  ) %>%
+  delete_all_but_first_row()
+
+knitr::kable(temp, format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
+  kable_styling(full_width = FALSE)
+```
+
+```{r}
+#| echo: false
+#| warning: false
+
+cov_dat <- cov_dat %>% 
+  mutate(
+    sign = case_when(
+      xy > 0 ~ "positive", 
+      xy < 0 ~ "negative",
+      TRUE ~ "zero")
+  ) 
+  
+ggplot(cov_dat, aes(x = x, y = y)) +
+  # geom_point(data=cov_dat %>% filter(row_number() == 1),
+  #            pch=21,
+  #            size=4,
+  #            colour="black") +
+  geom_point(size = 2) +
+  # scale_color_manual(values = c("orange", "blue"),  
+  #                    labels = c(expression((x-bar(x))(y-bar(y))<0),
+  #                               expression((x-bar(x))(y-bar(y))>0))) +
+  # geom_vline(xintercept = mean(cov_dat$x), color = "green") + 
+  # geom_hline(yintercept = mean(cov_dat$y), color = "green") +
+  labs(x="x", y="y") +
+  theme_bw() +  
+  ggtitle(paste0("Data for Computational Practice (n = ",n,")")) + 
+  theme(plot.title = element_text(hjust = 0.5)) 
+  # guides(color = guide_legend(title = "Quadrant", reverse = TRUE)) +
+  # annotate("text", x = mean(cov_dat$x), y = min(cov_dat$y), 
+  #           label = expression(bar(x)), hjust = 0, vjust = 0) +
+  # annotate("text", y = mean(cov_dat$y), x = min(cov_dat$x), 
+  #           label = expression(bar(y)), hjust = 0, vjust = 0) 
+```
+
+## Recap (5 min)
+
+Working with your partner, prepare to explain the following concepts to the class:
+
+-   Variance
+
+-   Standard deviation
+
+-   Correlation
+
+-   Covariance
+
+```{r}
+#| include: false
+#| eval: false
+
+##################### THIS IS FOR CHOOSING THE SEED ##################
+
+reps <- 5000
+prodxy <- meanx <- meany <- sdx <- sdy <- covs <- cors <- rep(0,reps)
+for (i in 1:reps){
+  # Unset random seed
+  set.seed(i)
+  
+# Specify means and correlation coefficient
+n <- 6              # number of points
+mu <- c(3, 1)       # mean vector (mu_x, mu_y)
+sigma_x <- 3.5      # standard deviation x
+sigma_y <- 2        # standard deviation y
+rho <- -0.85          # correlation coefficient
+  
+  # Define variance-covariance matrix
+  sigma <- matrix(
+    c(sigma_x^2,
+      rho*sigma_x*sigma_y,
+      rho*sigma_x*sigma_y,
+      sigma_y^2),
+    nrow = 2)
+  
+  # Simulate bivariate normal data
+  mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) %>% 
+    data.frame() %>% 
+    rename(x = X1, y = X2) %>% 
+    round_df(1)
+  meanx[i] <- mean(mvn_data_6$x)
+  meany[i] <- mean(mvn_data_6$y)
+  prodxy[i] <- prod((mvn_data_6$x - meanx[i]) * (mvn_data_6$y - meany[i]))
+  sdx[i] <- sd(mvn_data_6$x)
+  sdy[i] <- sd(mvn_data_6$y)
+  cors[i] <- cor(mvn_data_6$x, mvn_data_6$y)
+  covs[i] <- cov(mvn_data_6$x, mvn_data_6$y) 
+}
+temp0 <- data.frame(meanx = meanx, meany = meany, sdx = sdx, sdy = sdy, cors = cors, covs = covs, prodxy = prodxy) %>% 
+  mutate(i = row_number()) %>% 
+  filter(meanx*10 == floor(meanx*10)) %>% 
+  filter(meany*10 == floor(meany*10))  %>% 
+  filter(covs*100 == floor(covs*100))  %>% 
+  mutate(across(everything(), as.character)) 
+
+View(temp0)
+```
