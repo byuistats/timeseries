@@ -6,6 +6,8 @@ if (!require("MASS")) install.packages("MASS")
 library(shiny)
 library(MASS)
 library(dplyr)
+library(ggplot2)
+library(kableExtra)
 
 # Define the UI
 ui <- fluidPage(
@@ -174,6 +176,7 @@ server <- function(input, output, session) {
   output$plot<-renderPlot({
     cov_dat <- sim_data()[[2]]
     rho <- input$rho
+    n <- input$n
     ggplot(cov_dat, aes(x = x, y = y, color = sign)) +
       geom_point(data=cov_dat %>% filter(row_number() == 1),
                  pch=21,
@@ -187,7 +190,7 @@ server <- function(input, output, session) {
       geom_hline(yintercept = mean(cov_dat$y), color = "#009E73") +
       labs(x="x", y="y") +
       theme_bw() +
-      #ggtitle(paste0("Simulated Data (n = ",n,", ρ = ",rho,")")) +
+      ggtitle(paste0("Simulated Data (n = ",n,", ρ = ",rho,")")) +
       theme(plot.title = element_text(hjust = 0.5)) +
       guides(color = guide_legend(title = "Quadrant", reverse = TRUE)) +
       annotate("text", x = mean(cov_dat$x), y = min(cov_dat$y),
