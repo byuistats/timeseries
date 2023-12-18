@@ -11,7 +11,8 @@ pacman::p_load("tsibble", "fable",
     "feasts", "tsibbledata",
     "fable.prophet", "tidyverse",
     "patchwork",
-    "ggthemes", "see"   # for okabeito color scheme
+    "ggthemes", "see",   # for okabeito color scheme
+    "MASS" # for MVNorm
     )
 pacman::p_load(ggokabeito, kableExtra, stringr, lubridate)
 
@@ -48,7 +49,7 @@ round_df <- function(df, digits) {
 
 -   Define covariance, autocovariance, autocorrelation
 
--   Understand autocorrelation in time series
+-   Explain autocorrelation in time series
 
 ## Agenda:
 
@@ -56,170 +57,166 @@ round_df <- function(df, digits) {
 
 -   Motivate studying autocorrelation
 
-## Lecture (20 mins)
+::: callout-caution
+## TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH THE IMAGE BELOW AND OBSERVE DIFFERENT REALIZATIONS. PLEASE MAKE SLIDERS FOR THE PARAMETERS n (from 10 to 500 by 10), a (from 0 to 1 by 0.005), and n_reps (from 1 to 9 by 1).
+:::
 
--   
+```{r}
+n <- 100
+a <- .995
+sigma <- 1
+n_reps <- 9
+
+df <- data.frame()
+for(i in 1:n_reps){
+  x1 <- rep(0, n)
+  for(j in 2:n){
+    x1[j] = a * x1[j-1] + rnorm(1, mean = 0, sd = sigma)
+  } 
+  
+  temp <- data.frame(i = 1:length(x1),
+                    x = x1,
+                    rep = i)
+  
+  df <- rbind(df, temp)
+}
+
+ggplot(df, aes(x = i, y = x, color = factor(rep))) +
+  geom_line() +
+  scale_color_okabeito(
+  palette = "full",
+  reverse = TRUE,
+  order = c(1,7,8,5,6,3,4,2,9),
+  aesthetics = "color"
+) +
+  labs(title = paste0(n_reps," Realizations of a Stationary Time Series"),
+       x = "Time",
+       y = "x") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  guides(color = guide_legend(title = "Realization"))
+
+# acf(df %>% filter(rep == 1) %>% dplyr::select(x), plot=FALSE, lag.max=5)
+```
+
+
+
+##    Explore Autocorrelation
+
+
+
+## Hands-on Exercise – Compute sample acvf and acf (40 min)
+
+Here is a time series:
+```{r}
+#| echo: false 
+n <- 20
+a <- .995
+sigma <- 1
+n_reps <- 1
+
+x1 <- rep(0, n)
+x1[1] <- rnorm(1, mean = 10, sd = 1)
+for(j in 2:n){
+  x1[j] = a * x1[j-1] + rnorm(1, mean = 0, sd = sigma)
+} 
+  
+df <- data.frame(i = 1:length(x1),
+                 x = x1)
+
+df
+# acf(df %>% filter(rep == 1) %>% dplyr::select(x), plot=FALSE, lag.max=5)
+```
+
+```{r}
+n <- 20
+rho <- 0.99
+sigma <- 1
+
+n_reps <- 5
+
+tmp.r <- matrix(rho, n, n)
+tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
+
+df <- data.frame()
+for(i in 1:n_reps){
+  x1 <- mvrnorm(1, rep(10,n), sigma^2 * tmp.r) 
+  
+  tmp <- data.frame(i = 1:length(x1),
+                    x = x1,
+                    rep = i)
+  
+  df <- rbind(df, tmp)
+}
+
+ggplot(df, aes(x = i, y = x, color = factor(rep))) +
+  geom_line() +
+  scale_color_discrete() + 
+  labs(title = "Stationary Time Series",
+       x = "Time",
+       y = "x") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  guides(color = guide_legend(title = "Realization"))
+```
+```{r}
+set.seed(1234)
+
+n <- 12
+rho <- 0.99
+mu <- 10
+sigma <- 3
+
+tmp.r <- matrix(rho, n, n)
+tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
+
+x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1)
+  
+df <- data.frame(i = 1:length(x1),
+                 x = x1,
+                 y = lag(x1)) %>% 
+  mutate(
+    orig_x = x,
+    x = ifelse(row_number() == 1, NA, orig_x),
+    xx = x - mean(x %>% tail(nrow(df) - 1)),
+    yy = y - mean(y, na.rm = TRUE),
+    xx2 = xx^2,
+    yy2 = yy^2,
+    xy = xx * yy
+  ) %>% 
+  mutate(x = orig_x) %>% 
+  dplyr::select(i, x, y, xx, xx2, yy, yy2, xy) %>% 
+  rename(
+    "x_i" = x,
+    "y_i" = y,
+    "x-mean(x)" = xx, 
+    "(x-mean(x))^2" = xx2, 
+    "y-mean(y)" = yy,
+    "(y-mean(y))^2" = yy2, 
+    "(x-mean(x))(y-mean(y))" = xy
+  )
+
+knitr::kable(df, format = "html", align='ccccccccc', escape = FALSE, width = NA) %>%
+  kable_styling(full_width = FALSE, "striped") 
+# %>%
+#   column_spec(1:8, width_min = '0.5in')
+```
+
+
+-   Compute c_k and r_k with a few different lag (k) values
+
+-   Finish a partially-created correlogram with the r_k values computed
+                         	 
+## Recap (5 mins)
+
+-   Review objectives and key points
+
 
 <!-- -->
 
 -   Formally define autocovariance, autocorrelation
 
 -   Explain autocorrelation in time series context
-
-```{r}
-# Set random seed for reproducibility
-set.seed(123) 
-
-n <- 1000
-sigma <- 0.1
-a <- 1
-x <- rep(0,n)
-e <- rnorm(n, 0, sigma)
-
-for (i in 2:n) {
-  x[i] <- a * x[i-1] + e[i]
-}
-time <- seq(1,n)
-
-# Create time variable  
-time <- 1:n  
-
-# Plot  
-plot(x, type="l", 
-     main="Simulated Stationary Time Series",
-     xlab="Time", ylab="Value")
-lines(time, x)
-```
-
-```{r}
-# Set random seed for reproducibility
-set.seed(123) 
-
-n <- 1000
-realizations <- 5
-sigma <- 0.1
-a <- 1
-x <- rep(0,n)
-e <- rnorm(n, 0, sigma)
-
-df1 <- data.frame()
-
-for (i in 2:n) {
-  x[i] <- a * x[i-1] + e[i]
-}
-time <- seq(1,n)
-
-# Create time variable  
-time <- 1:n  
-
-# Plot  
-plot(x, type="l", 
-     main="Simulated Stationary Time Series",
-     xlab="Time", ylab="Value")
-lines(time, x)
-```
-
-
-
-::: callout-caution
-## TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN REFRESH THE IMAGE BELOW AND OBSERVE DIFFERENT REALIZATIONS. WE CAN JUST USE THE SAME PARAMETER VALUES EACH TIME, SO SLIDERS ARE NOT NECESSARY. PLEASE ADD A BUTTON TO RERUN THE SIMULATION, SO STUDENTS CAN SEE THE EFFECT OF REPEATED REALIZATIONS FROM THE COMPLEMENT.
-:::
-
-```{r}
-# Define previous variables
-n <- 100
-realizations <- 5
-sigma <- 0.1
-m <- 0 # No drift
-a <- 1
-
-# Create data frames  
-df1 <- tibble(rep = 1:realizations)
-df2 <- tibble(x = 0, 
-              i = 1:n)
-
-# Join 
-df <- cross_join(df1, df2) %>% 
-  mutate(e = rnorm(n = nrow(.), mean = 0, sd = sigma)) %>% 
-  arrange(rep, i) %>%
-  group_by(rep) %>%
-  # mutate(x = ifelse(i == 1, 0, a*lag(x, 1) + e)) %>%
-  # ungroup()
-  ungroup()
-
-for (row_num in 1:nrow(df)) {
-  if (df$i[row_num] > 1) {
-    df$x[row_num] <- m * df$i[row_num] + a * df$x[row_num - 1] + df$e[row_num]
-  }
-}
-
-ggplot(df, aes(x = i, y = x, color = factor(rep))) + 
-  geom_line() +
-  scale_color_discrete() +
-  labs(title = "Stationary Time Series",  
-       x = "Time",
-       y = "x") +
-  theme_bw() + 
-  theme(plot.title = element_text(hjust = 0.5)) +
-  guides(color = guide_legend(title = "Realization"))
-```
-
-```{r}
-# Define previous variables
-n <- 100
-realizations <- 1
-sigma <- 0.1 * 5
-m <- 0.02 * 0 # No drift
-a <- 1 * 0
-
-# Create data frames  
-df1 <- tibble(rep = 1:realizations)
-df2 <- tibble(x = 0, 
-              i = 1:n)
-
-# Join 
-df <- cross_join(df1, df2) %>% 
-  mutate(e = rnorm(n = nrow(.), mean = 0, sd = sigma)) %>% 
-  arrange(rep, i) %>%
-  group_by(rep) %>%
-  # mutate(x = ifelse(i == 1, 0, a*lag(x, 1) + e)) %>%
-  # ungroup()
-  ungroup()
-
-for (row_num in 1:nrow(df)) {
-  if (df$i[row_num] > 1) {
-    df$x[row_num] <- m * df$i[row_num] + a * df$x[row_num - 1] + df$e[row_num]
-  }
-}
-
-ggplot(df, aes(x = i, y = x, color = factor(rep))) + 
-  geom_line() +
-  scale_color_discrete() +
-  labs(title = "Independent Data without Drift",  
-       x = "Time",
-       y = "x") +
-  theme_bw() + 
-  theme(plot.title = element_text(hjust = 0.5)) +
-  guides(color = guide_legend(title = "Realization"))
-```
-
-```{r}
-b <- 0.5
-x <- 1:100 * b + arima.sim(n=100-1,list(ar=0.1,ma=0.2,order=c(1,1,1)))
-plot(x)
-
-e <- rnorm(100,0,2.5)
-b <- 0.5
-y <- 1:100 * b + e
-# Create time series
-library(zoo) 
-z <- zoo(y, order.by = 1:100)
-
-# Plot
-plot(z) # , main="Simulated Time Series", ylab="X", xlab="Time")
-```
-
-
 
 
 
@@ -539,24 +536,6 @@ plot(z) # , main="Simulated Time Series", ylab="X", xlab="Time")
 ::: callout-caution
 ## TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN CHANGE THE AUTOCORRELATION COEFFICIENT (SLIDER FOR AUTOCORRELATION FROM 0 TO 1) AND WATCH THE GRAPH UPDATE IN REAL TIME
 :::
-
-```{r}
-# Simulate data 
-# set.seed(101)
-x <- 1:100 * 0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))  
-
-# Simulate z
-e <- rnorm(100,0,2.5) 
-y <- 1:100*0.5 + e
-z <- zoo(y, order.by = 1:100)
-
-# Plot both series
-plot(x, type="l", col="blue", main="X vs Z Series",
-     ylab="Values", xlab="Time") 
-lines(z, col="red")  
-legend("topleft", legend=c("X", "Z"),
-       col=c("blue", "red"), lty=1)
-```
 
 
 
