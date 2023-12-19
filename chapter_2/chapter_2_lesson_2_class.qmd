@@ -74,7 +74,114 @@ round_to_places <- function(x, places) {
   return(out)
 }
 
+make_cov_table_df <- function(offset = 1, decimals_1st_order = 1, decimals_2nd_order = 2) {
+  # Color vector
+  oi_colors <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#F5C710", "#CC79A7", "#999999")
+  
+  # set random number generator seed
+  set.seed(532)
+  
+  # set parameters
+  n <- 10
+  rho <- 0.99
+  mu <- 10
+  sigma <- 3
+  
+  # build population correlation matrix
+  tmp.r <- matrix(rho, n, n)
+  tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
+  
+  # simulate correlated normal random data
+  x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1)
+  
+  #
+  df <- data.frame(i = 1:length(x1),
+                   x = x1,
+                   y = lag(x1, offset)) %>% 
+    mutate(
+      orig_x = x,
+      x = ifelse(row_number() <= offset, NA, orig_x),
+      xx = x - mean(x, na.rm = TRUE),
+      xx2 = xx^2,
+      yy = y - mean(y, na.rm = TRUE),
+      yy2 = yy^2,
+      xy = xx * yy
+    ) %>% 
+    mutate(x = orig_x) %>% 
+    dplyr::select(i, x, y, xx, xx2, yy, yy2, xy)
+  
+  df_summary <- df %>% 
+    drop_na() %>% 
+    summarize(
+      x = sum(x),
+      y = sum(y),
+      xx = sum(xx),
+      yy = sum(yy),
+      xx2 = sum(xx2),
+      yy2 = sum(yy2),
+      xy = sum(xy)
+    ) %>% 
+    round_df(3) %>% 
+    mutate(
+      i = "sum",
+      x = round_to_places(x, 1),
+      y = round_to_places(y, 1),
+      xx = round_to_places(xx, decimals_1st_order),
+      xx2 = round_to_places(xx2, decimals_2nd_order),
+      yy = round_to_places(yy, decimals_1st_order),
+      yy2 = round_to_places(yy2, decimals_2nd_order),
+      xy = round_to_places(xy, decimals_2nd_order)
+    ) %>% 
+    dplyr::select(i, x, y, xx, xx2, yy, yy2, xy)
+  
+  df2 <- df %>%
+    mutate(
+      i = as.character(i),
+      x = round_to_places(x, 1),
+      y = round_to_places(y, 1),
+      xx = round_to_places(xx, decimals_1st_order),
+      xx2 = round_to_places(xx2, decimals_2nd_order),
+      yy = round_to_places(yy, decimals_1st_order),
+      yy2 = round_to_places(yy2, decimals_2nd_order),
+      xy = round_to_places(xy, decimals_2nd_order)
+    ) %>% 
+    mutate(
+      x = cell_spec(x, 
+                    color = case_when(
+                      is.na(x) ~ "#999999",
+                      TRUE ~ oi_colors[( row_number() - 0 ) %% 9 + 1]
+                    )
+      ),
+      y = cell_spec(y, 
+                    color = case_when(
+                      is.na(y) ~ "#999999",
+                      TRUE ~ oi_colors[( row_number() - offset ) %% 9 + 1]
+                    )
+      )
+    ) %>% 
+    bind_rows(df_summary) %>% 
+    rename(
+      "x_i" = x,
+      "y_i" = y,
+      "x-mean(x)" = xx, 
+      "(x-mean(x))^2" = xx2, 
+      "y-mean(y)" = yy,
+      "(y-mean(y))^2" = yy2, 
+      "(x-mean(x))(y-mean(y))" = xy
+    )
+
+  return(df2)
+}
+
+make_cov_table_row_blank <- function(df, row_num) {
+  for (col_num in 4:ncol(df)) {
+    df[row_num, col_num] = ""
+  }
+  return(df)
+}
 ```
+
+df
 
 # Lesson 2 (60 mins): Autocorrelation Concepts
 
@@ -191,86 +298,25 @@ ggplot(df, aes(x = i, y = x, color = factor(rep))) +
 ```
 
 ```{r}
-set.seed(570)
-set.seed(439)
-
-n <- 10
-rho <- 0.99
-mu <- 10
-sigma <- 3
-
-offset <- 1
-
-tmp.r <- matrix(rho, n, n)
-tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
-
-x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1)
-  
-df <- data.frame(i = 1:length(x1),
-                 x = x1,
-                 y = lag(x1, offset)) %>% 
-  mutate(
-    orig_x = x,
-    x = ifelse(row_number() <= offset, NA, orig_x),
-    xx = x - mean(x, na.rm = TRUE),
-    yy = y - mean(y, na.rm = TRUE),
-    xx2 = xx^2,
-    yy2 = yy^2,
-    xy = xx * yy
-  ) %>% 
-  mutate(x = orig_x) %>% 
-  mutate(
-    x = round_to_places(x, 1),
-    y = round_to_places(y, 1),
-    xx = round_to_places(xx, 2),
-    yy = round_to_places(yy, 2),
-    xx2 = round_to_places(xx2, 2),
-    yy2 = round_to_places(yy2, 2),
-    xy = round_to_places(xy, 2)
-  ) %>% 
-  dplyr::select(i, x, y, xx, xx2, yy, yy2, xy) %>% 
-  mutate(
-    x = cell_spec(x, 
-                   color = case_when(
-                     is.na(x) ~ "#999999",
-                     row_number() %% 9 == 0 ~ "#E69F00", 
-                     row_number() %% 9 == 1 ~ "#56B4E9", 
-                     row_number() %% 9 == 2 ~ "#009E73", 
-                     row_number() %% 9 == 3 ~ "#F0E442", 
-                     row_number() %% 9 == 4 ~ "#0072B2", 
-                     row_number() %% 9 == 5 ~ "#D55E00", 
-                     row_number() %% 9 == 6 ~ "#F5C710", 
-                     row_number() %% 9 == 7 ~ "#CC79A7", 
-                     row_number() %% 9 == 8 ~ "#999999", 
-                     TRUE ~ "#999999")),
-    y = cell_spec(y, 
-                   color = case_when(
-                     is.na(y) ~ "#999999",
-                     ( row_number() - offset ) %% 9 == 0 ~ "#E69F00", 
-                     ( row_number() - offset ) %% 9 == 1 ~ "#56B4E9", 
-                     ( row_number() - offset ) %% 9 == 2 ~ "#009E73", 
-                     ( row_number() - offset ) %% 9 == 3 ~ "#F0E442", 
-                     ( row_number() - offset ) %% 9 == 4 ~ "#0072B2", 
-                     ( row_number() - offset ) %% 9 == 5 ~ "#D55E00", 
-                     ( row_number() - offset ) %% 9 == 6 ~ "#F5C710", 
-                     ( row_number() - offset ) %% 9 == 7 ~ "#CC79A7", 
-                     ( row_number() - offset ) %% 9 == 8 ~ "#999999", 
-                     TRUE ~ "#999999"))
-  ) %>% 
-  rename(
-    "x_i" = x,
-    "y_i" = y,
-    "x-mean(x)" = xx, 
-    "(x-mean(x))^2" = xx2, 
-    "y-mean(y)" = yy,
-    "(y-mean(y))^2" = yy2, 
-    "(x-mean(x))(y-mean(y))" = xy
-  )
-
-knitr::kable(df, format = "html", align='ccccccccc', escape = FALSE, width = NA) %>%
+make_cov_table_df(offset = 1, decimals_1st_order = 1, decimals_2nd_order = 2) %>%
+  make_cov_table_row_blank(8) %>% 
+  make_cov_table_row_blank(9) %>% 
+  make_cov_table_row_blank(10) %>%
+  make_cov_table_row_blank(11) %>%
+  knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>% 
   kable_styling(full_width = FALSE, "striped") 
-# %>%
-#   column_spec(1:8, width_min = '0.5in')
+```
+
+```{r}
+make_cov_table_df(offset = 2, decimals_1st_order = 3, decimals_2nd_order = 3) %>% 
+  knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
+  kable_styling(full_width = FALSE, "striped") 
+```
+
+```{r}
+make_cov_table_df(offset = 3, decimals_1st_order = 3, decimals_2nd_order = 3) %>% 
+  knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
+  kable_styling(full_width = FALSE, "striped") 
 ```
 
 -   Compute c_k and r_k with a few different lag (k) values
