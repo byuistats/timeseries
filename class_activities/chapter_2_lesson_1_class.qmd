@@ -42,6 +42,38 @@ delete_all_but_first_row <- function(df, skip_columns = 3, skip_rows = 1){
     }
   return(df)
 }
+
+round_to_places <- function(x, places) {
+  # Initialize output  
+  out <- rep_len("", length(x)) 
+  
+  # Handle NAs  
+  out[is.na(x)] <- NA
+  
+  # Handle infinities
+  inf <- is.infinite(x)
+  out[inf & x > 0] <- "Inf"
+  out[inf & x < 0] <- "-Inf"
+  
+  # Special cases
+  finite <- !inf & !(is.na(x))
+  
+  # Round numbers
+  x <- round(x, places)
+  
+  # Format numbers
+  ints <- trunc(x)
+  decs <- round(abs(x - ints) * 10^places)
+  
+  if (places > 0) {
+    out[finite] <- paste0(ints[finite], ".", decs[finite], strrep(0, places - nchar(as.integer(decs[finite]))))
+  } else {
+    out[finite] <- as.character(ints[finite])
+  }
+  
+  return(out)
+}
+
 ```
 
 ::: callout-caution

@@ -41,6 +41,39 @@ round_df <- function(df, digits) {
   df[,nums] <- round(df[,nums], digits = digits)
   (df)
 }
+
+
+round_to_places <- function(x, places) {
+  # Initialize output  
+  out <- rep_len("", length(x)) 
+  
+  # Handle NAs  
+  out[is.na(x)] <- NA
+  
+  # Handle infinities
+  inf <- is.infinite(x)
+  out[inf & x > 0] <- "Inf"
+  out[inf & x < 0] <- "-Inf"
+  
+  # Special cases
+  finite <- !inf & !(is.na(x))
+  
+  # Round numbers
+  x <- round(x, places)
+  
+  # Format numbers
+  ints <- trunc(x)
+  decs <- round(abs(x - ints) * 10^places)
+  
+  if (places > 0) {
+    out[finite] <- paste0(ints[finite], ".", decs[finite], strrep(0, places - nchar(as.integer(decs[finite]))))
+  } else {
+    out[finite] <- as.character(ints[finite])
+  }
+  
+  return(out)
+}
+
 ```
 
 # Lesson 2 (60 mins): Autocorrelation Concepts
@@ -65,7 +98,7 @@ round_df <- function(df, digits) {
 n <- 100
 a <- .995
 sigma <- 1
-n_reps <- 9
+n_reps <- 5   # Max 9
 
 df <- data.frame()
 for(i in 1:n_reps){
@@ -160,12 +193,15 @@ ggplot(df, aes(x = i, y = x, color = factor(rep))) +
   guides(color = guide_legend(title = "Realization"))
 ```
 ```{r}
-set.seed(1234)
+set.seed(570)
+set.seed(439)
 
-n <- 12
+n <- 10
 rho <- 0.99
 mu <- 10
 sigma <- 3
+
+offset <- 1
 
 tmp.r <- matrix(rho, n, n)
 tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
@@ -174,18 +210,55 @@ x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1)
   
 df <- data.frame(i = 1:length(x1),
                  x = x1,
-                 y = lag(x1)) %>% 
+                 y = lag(x1, offset)) %>% 
   mutate(
     orig_x = x,
-    x = ifelse(row_number() == 1, NA, orig_x),
-    xx = x - mean(x %>% tail(nrow(df) - 1)),
+    x = ifelse(row_number() <= offset, NA, orig_x),
+    xx = x - mean(x, na.rm = TRUE),
     yy = y - mean(y, na.rm = TRUE),
     xx2 = xx^2,
     yy2 = yy^2,
     xy = xx * yy
   ) %>% 
   mutate(x = orig_x) %>% 
+  mutate(
+    x = round_to_places(x, 1),
+    y = round_to_places(y, 1),
+    xx = round_to_places(xx, 2),
+    yy = round_to_places(yy, 2),
+    xx2 = round_to_places(xx2, 2),
+    yy2 = round_to_places(yy2, 2),
+    xy = round_to_places(xy, 2)
+  ) %>% 
   dplyr::select(i, x, y, xx, xx2, yy, yy2, xy) %>% 
+  mutate(
+    x = cell_spec(x, 
+                   color = case_when(
+                     is.na(x) ~ "#999999",
+                     row_number() %% 9 == 0 ~ "#E69F00", 
+                     row_number() %% 9 == 1 ~ "#56B4E9", 
+                     row_number() %% 9 == 2 ~ "#009E73", 
+                     row_number() %% 9 == 3 ~ "#F0E442", 
+                     row_number() %% 9 == 4 ~ "#0072B2", 
+                     row_number() %% 9 == 5 ~ "#D55E00", 
+                     row_number() %% 9 == 6 ~ "#F5C710", 
+                     row_number() %% 9 == 7 ~ "#CC79A7", 
+                     row_number() %% 9 == 8 ~ "#999999", 
+                     TRUE ~ "#999999")),
+    y = cell_spec(y, 
+                   color = case_when(
+                     is.na(y) ~ "#999999",
+                     ( row_number() - offset ) %% 9 == 0 ~ "#E69F00", 
+                     ( row_number() - offset ) %% 9 == 1 ~ "#56B4E9", 
+                     ( row_number() - offset ) %% 9 == 2 ~ "#009E73", 
+                     ( row_number() - offset ) %% 9 == 3 ~ "#F0E442", 
+                     ( row_number() - offset ) %% 9 == 4 ~ "#0072B2", 
+                     ( row_number() - offset ) %% 9 == 5 ~ "#D55E00", 
+                     ( row_number() - offset ) %% 9 == 6 ~ "#F5C710", 
+                     ( row_number() - offset ) %% 9 == 7 ~ "#CC79A7", 
+                     ( row_number() - offset ) %% 9 == 8 ~ "#999999", 
+                     TRUE ~ "#999999"))
+  ) %>% 
   rename(
     "x_i" = x,
     "y_i" = y,
