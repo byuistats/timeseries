@@ -42,26 +42,33 @@ Instructions on how to access the data science repository. Ideally, there is a c
 ### Google Trends Data: chocolate searches
 
 ```{r}
-chocolate_raw <- gtrends(
-keyword = "vacation",
+chocolate_gt <- gtrends(
+keyword = "chocolate",
 geo = "",
 time = "all",
 low_search_volume = FALSE,
 onlyInterest = TRUE
 )
 
-plot(chocolate_raw)
-
-
+plot(chocolate_gt)
 
 ```
 
 ```{r}
-# feasts::autoplot(chocolate_raw) +
-#     labs(
-#         y = "Index",
-#         title = "World Wide Google Search Interest Index  "
-#     )
+
+
+# Extract time series data from the Google Trends object
+chocolate_raw <-chocolate_gt$interest_over_time
+chocolate_raw$date <- as.Date(chocolate_raw$date)
+# Convert to tsibble
+chocolate_raw <- as_tsibble(chocolate_raw, index = "date")
+
+
+autoplot(chocolate_raw) +
+    labs(
+        y = "Index",
+        title = "World Wide Google Search Interest Index  "
+    )
 
 head(chocolate_raw)
 class(chocolate_raw)
