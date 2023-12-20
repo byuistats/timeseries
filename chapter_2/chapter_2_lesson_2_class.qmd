@@ -76,7 +76,10 @@ round_to_places <- function(x, places) {
 
 get_data_for_cov_table <- function(offset = 1) {
   # set random number generator seed
-  set.seed(532)
+  # set.seed(532)
+  # set.seed(11626)
+  # set.seed(24456)
+  set.seed(9203)
   
   # set parameters
   n <- 10
@@ -98,11 +101,11 @@ get_data_for_cov_table <- function(offset = 1) {
   return(df)
 }
 
-make_cov_table_df <- function(df, offset = 1, decimals_1st_order = 1, decimals_2nd_order = 2) {
+make_cov_table_df <- function(df, offset=1, decimals_1st_order = 4, decimals_2nd_order = 4) {
   # Color vector
   oi_colors <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#F5C710", "#CC79A7", "#999999")
   
-  df <- df %>% 
+  df <- df %>%
     mutate(
       orig_x = x,
       x = ifelse(row_number() <= offset, NA, orig_x),
@@ -112,7 +115,7 @@ make_cov_table_df <- function(df, offset = 1, decimals_1st_order = 1, decimals_2
       yy2 = yy^2,
       xy = xx * yy
     ) %>% 
-    mutate(x = orig_x) %>% 
+    mutate(x = orig_x) %>%
     dplyr::select(i, x, y, xx, xx2, yy, yy2, xy)
   
   df_summary <- df %>% 
@@ -128,7 +131,7 @@ make_cov_table_df <- function(df, offset = 1, decimals_1st_order = 1, decimals_2
     ) %>% 
     round_df(3) %>% 
     mutate(
-      i = "sum",
+      i = paste0("sum (i≥", offset+1, ")"),
       x = round_to_places(x, 1),
       y = round_to_places(y, 1),
       xx = round_to_places(xx, decimals_1st_order),
@@ -164,6 +167,11 @@ make_cov_table_df <- function(df, offset = 1, decimals_1st_order = 1, decimals_2
                     )
       )
     ) %>% 
+    mutate(
+      x = ifelse(row_number() <= offset, paste0("[",x,"]"), x),
+      y = ifelse(row_number() <= offset, NA, y),
+    ) %>% 
+    replace(., is.na(.), "—") %>% 
     bind_rows(df_summary) %>% 
     rename(
       "x_i" = x,
@@ -177,15 +185,21 @@ make_cov_table_df <- function(df, offset = 1, decimals_1st_order = 1, decimals_2
   return()
 }
 
+# Eliminates the values in columns 3 onward for a specified row_num
 make_blank_row_in_cov_table <- function(df, row_num) {
   for (col_num in 3:ncol(df)) {
     df[row_num, col_num] = ""
   }
   return(df)
 }
-```
 
-df
+# Displays the kable table
+display_cov_table <- function(df) {
+  df %>% 
+    knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
+    kable_styling(full_width = FALSE, "striped") 
+}
+```
 
 # Lesson 2 (60 mins): Autocorrelation Concepts
 
@@ -206,10 +220,11 @@ df
 :::
 
 ```{r}
-n <- 100
-a <- .995
-sigma <- 1
+#| echo: false
+n <- 100      # Max 500
+a <- .995     # Max 1
 n_reps <- 5   # Max 9
+sigma <- 1    # This just changes the vertical axis scale; it can be a constant 1
 
 df <- data.frame()
 for(i in 1:n_reps){
@@ -243,98 +258,65 @@ ggplot(df, aes(x = i, y = x, color = factor(rep))) +
 # acf(df %>% filter(rep == 1) %>% dplyr::select(x), plot=FALSE, lag.max=5)
 ```
 
-## Explore Autocorrelation
 
-## Hands-on Exercise -- Compute sample acvf and acf (40 min)
+## Hands-on Exercise -- Exploring Autocorrelation (40 min)
+<!-- Compute sample acvf and acf -->
 
-Here is a time series:
+In the previous lesson, we computed the sample covariance and sample correlation coefficient between two independent variables. When working with time series, there is often a correlation between sequential observations. We 
 
-```{r}
-#| echo: false 
-n <- 20
-a <- .995
-sigma <- 1
-n_reps <- 1
+<!-- Here is a time series: -->
 
-x1 <- rep(0, n)
-x1[1] <- rnorm(1, mean = 10, sd = 1)
-for(j in 2:n){
-  x1[j] = a * x1[j-1] + rnorm(1, mean = 0, sd = sigma)
-} 
-  
-df <- data.frame(i = 1:length(x1),
-                 x = x1)
+<!-- ```{r} -->
+<!-- #| echo: false  -->
+<!-- n <- 20 -->
+<!-- a <- .995 -->
+<!-- sigma <- 1 -->
+<!-- n_reps <- 1 -->
 
-df
-# acf(df %>% filter(rep == 1) %>% dplyr::select(x), plot=FALSE, lag.max=5)
-```
+<!-- x1 <- rep(0, n) -->
+<!-- x1[1] <- rnorm(1, mean = 10, sd = 1) -->
+<!-- for(j in 2:n){ -->
+<!--   x1[j] = a * x1[j-1] + rnorm(1, mean = 0, sd = sigma) -->
+<!-- }  -->
 
-```{r}
-n <- 20
-rho <- 0.99
-sigma <- 1
+<!-- df <- data.frame(i = 1:length(x1), -->
+<!--                  x = x1) -->
 
-n_reps <- 5
+<!-- df -->
+<!-- # acf(df %>% filter(rep == 1) %>% dplyr::select(x), plot=FALSE, lag.max=5) -->
+<!-- ``` -->
 
-tmp.r <- matrix(rho, n, n)
-tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
-
-df <- data.frame()
-for(i in 1:n_reps){
-  x1 <- mvrnorm(1, rep(10,n), sigma^2 * tmp.r) 
-  
-  tmp <- data.frame(i = 1:length(x1),
-                    x = x1,
-                    rep = i)
-  
-  df <- rbind(df, tmp)
-}
-
-ggplot(df, aes(x = i, y = x, color = factor(rep))) +
-  geom_line() +
-  scale_color_discrete() + 
-  labs(title = "Stationary Time Series",
-       x = "Time",
-       y = "x") +
-  theme_bw() +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  guides(color = guide_legend(title = "Realization"))
-```
 
 ```{r}
 cov_df1 <- get_data_for_cov_table(offset = 1)
 cov_df1 %>%
-  make_cov_table_df(offset = 1, decimals_1st_order = 1, decimals_2nd_order = 2) %>%
-  make_blank_row_in_cov_table(8) %>% 
-  make_blank_row_in_cov_table(9) %>% 
-  make_blank_row_in_cov_table(10) %>%
-  make_blank_row_in_cov_table(11) %>%
-  knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>% 
-  kable_styling(full_width = FALSE, "striped") 
+  make_cov_table_df(offset = 1) %>%
+  display_cov_table()
 ```
 
 ```{r}
 cov_df2 <- get_data_for_cov_table(offset = 2)
 cov_df2 %>%
-  make_cov_table_df(offset = 1, decimals_1st_order = 3, decimals_2nd_order = 3) %>% 
-  knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
-  kable_styling(full_width = FALSE, "striped") 
+  make_cov_table_df(offset = 2, decimals_1st_order = 1, decimals_2nd_order = 2) %>% 
+  make_blank_row_in_cov_table(8) %>%
+  make_blank_row_in_cov_table(9) %>%
+  make_blank_row_in_cov_table(10) %>%
+  make_blank_row_in_cov_table(11) %>%
+  display_cov_table()
 ```
 
 ```{r}
 cov_df3 <- get_data_for_cov_table(offset = 3)
 cov_df3 %>%
-  make_cov_table_df(offset = 1, decimals_1st_order = 3, decimals_2nd_order = 3) %>% 
-  knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
-  kable_styling(full_width = FALSE, "striped") 
+  make_cov_table_df(offset = 3) %>% 
+  display_cov_table()
 ```
 
 ```{r}
 cov_df4 <- get_data_for_cov_table(offset = 4)
 cov_df4 %>%
-  make_cov_table_df(decimals_1st_order = 3, decimals_2nd_order = 3) %>% 
-  knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
-  kable_styling(full_width = FALSE, "striped") 
+  make_cov_table_df(offset = 4) %>% 
+  display_cov_table()
 ```
 
 -   Compute c_k and r_k with a few different lag (k) values
