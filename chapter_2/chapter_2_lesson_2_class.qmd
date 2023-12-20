@@ -74,10 +74,7 @@ round_to_places <- function(x, places) {
   return(out)
 }
 
-make_cov_table_df <- function(offset = 1, decimals_1st_order = 1, decimals_2nd_order = 2) {
-  # Color vector
-  oi_colors <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#F5C710", "#CC79A7", "#999999")
-  
+get_data_for_cov_table <- function(offset = 1) {
   # set random number generator seed
   set.seed(532)
   
@@ -94,10 +91,18 @@ make_cov_table_df <- function(offset = 1, decimals_1st_order = 1, decimals_2nd_o
   # simulate correlated normal random data
   x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1)
   
-  #
+  # build a data frame
   df <- data.frame(i = 1:length(x1),
                    x = x1,
-                   y = lag(x1, offset)) %>% 
+                   y = lag(x1, offset)) 
+  return(df)
+}
+
+make_cov_table_df <- function(df, offset = 1, decimals_1st_order = 1, decimals_2nd_order = 2) {
+  # Color vector
+  oi_colors <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#F5C710", "#CC79A7", "#999999")
+  
+  df <- df %>% 
     mutate(
       orig_x = x,
       x = ifelse(row_number() <= offset, NA, orig_x),
@@ -134,7 +139,7 @@ make_cov_table_df <- function(offset = 1, decimals_1st_order = 1, decimals_2nd_o
     ) %>% 
     dplyr::select(i, x, y, xx, xx2, yy, yy2, xy)
   
-  df2 <- df %>%
+  df %>%
     mutate(
       i = as.character(i),
       x = round_to_places(x, 1),
@@ -168,13 +173,12 @@ make_cov_table_df <- function(offset = 1, decimals_1st_order = 1, decimals_2nd_o
       "y-mean(y)" = yy,
       "(y-mean(y))^2" = yy2, 
       "(x-mean(x))(y-mean(y))" = xy
-    )
-
-  return(df2)
+    ) %>%
+  return()
 }
 
-make_cov_table_row_blank <- function(df, row_num) {
-  for (col_num in 4:ncol(df)) {
+make_blank_row_in_cov_table <- function(df, row_num) {
+  for (col_num in 3:ncol(df)) {
     df[row_num, col_num] = ""
   }
   return(df)
@@ -298,23 +302,37 @@ ggplot(df, aes(x = i, y = x, color = factor(rep))) +
 ```
 
 ```{r}
-make_cov_table_df(offset = 1, decimals_1st_order = 1, decimals_2nd_order = 2) %>%
-  make_cov_table_row_blank(8) %>% 
-  make_cov_table_row_blank(9) %>% 
-  make_cov_table_row_blank(10) %>%
-  make_cov_table_row_blank(11) %>%
+cov_df1 <- get_data_for_cov_table(offset = 1)
+cov_df1 %>%
+  make_cov_table_df(offset = 1, decimals_1st_order = 1, decimals_2nd_order = 2) %>%
+  make_blank_row_in_cov_table(8) %>% 
+  make_blank_row_in_cov_table(9) %>% 
+  make_blank_row_in_cov_table(10) %>%
+  make_blank_row_in_cov_table(11) %>%
   knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>% 
   kable_styling(full_width = FALSE, "striped") 
 ```
 
 ```{r}
-make_cov_table_df(offset = 2, decimals_1st_order = 3, decimals_2nd_order = 3) %>% 
+cov_df2 <- get_data_for_cov_table(offset = 2)
+cov_df2 %>%
+  make_cov_table_df(offset = 1, decimals_1st_order = 3, decimals_2nd_order = 3) %>% 
   knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
   kable_styling(full_width = FALSE, "striped") 
 ```
 
 ```{r}
-make_cov_table_df(offset = 3, decimals_1st_order = 3, decimals_2nd_order = 3) %>% 
+cov_df3 <- get_data_for_cov_table(offset = 3)
+cov_df3 %>%
+  make_cov_table_df(offset = 1, decimals_1st_order = 3, decimals_2nd_order = 3) %>% 
+  knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
+  kable_styling(full_width = FALSE, "striped") 
+```
+
+```{r}
+cov_df4 <- get_data_for_cov_table(offset = 4)
+cov_df4 %>%
+  make_cov_table_df(decimals_1st_order = 3, decimals_2nd_order = 3) %>% 
   knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
   kable_styling(full_width = FALSE, "striped") 
 ```
