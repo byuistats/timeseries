@@ -11,7 +11,9 @@ pacman::p_load("tsibble", "fable",
 max_reps <- 6 * 10^5
 max_offset <- 3
 
-cov_dat_init <- data.frame(offset = 0, seed_val = 1:(10000 * max_offset), xbar = 0, ybar =0, cov = 0, varx = 0, vary = 0)
+max_buffer <- 10000
+
+cov_dat_init <- data.frame(offset = 0, seed_val = 1:(max_buffer * max_offset), xbar = 0, ybar =0, cov = 0, varx = 0, vary = 0)
 cov_dat <- cov_dat_init
 row_num <- 0
 for (seed_val in 1:max_reps) {
@@ -20,7 +22,7 @@ for (seed_val in 1:max_reps) {
     set.seed(seed_val)
 
     # set parameters
-    n <- 10
+    n <- 11
     rho <- 0.99
     mu <- 10
     sigma <- 3
@@ -48,10 +50,10 @@ for (seed_val in 1:max_reps) {
 
 
   }
-  if (seed_val %% 10000 == 0) {
+  if (seed_val %% max_buffer == 0) {
     # write.table(cov_dat, file="data.csv", append=TRUE, row.names=FALSE) # , col.names=FALSE)
     export(cov_dat,
-           "data.csv",
+           "data11.csv",
            append = TRUE
            # ,
            # fileFormat = "csv",
@@ -63,21 +65,33 @@ for (seed_val in 1:max_reps) {
   }
 }
 
-cov_dat %>%
-  filter(offset <= 2) %>%
+# df1 <- rio::import("data1.csv")
+# df2 <- rio::import("data2.csv")
+# df3 <- rio::import("data.csv")
+# cov_dat <- bind_rows(df1,df2)
+
+cov_dat <- rio::import("data11.csv")
+
+x <- cov_dat %>%
+  # filter(offset <= 3) %>%
   mutate(
+    cov = as.character(cov),
     xbar = as.character(xbar),
     ybar = as.character(ybar),
     varx = as.character(varx),
     vary = as.character(vary)
   ) %>%
-  mutate(
-    nchar = nchar(cov) + nchar(varx) + nchar(vary),
-    nchar_mean = nchar(xbar) + nchar(ybar)
-  ) %>%
-  arrange(nchar) %>%
-  head(5000) %>%
   group_by(seed_val) %>%
-  mutate(count = n(), sumchar = sum(nchar_mean)) %>%
-  arrange(desc(count), sumchar, seed_val, offset) %>%
+  mutate(
+    count = n(),
+    nchar = sum(
+      (nchar(xbar) + nchar(ybar)) * 3 + nchar(cov) + nchar(varx) + nchar(vary)
+      ) # * (0.5)^abs(offset-2)
+  ) %>%
+  arrange(nchar)
+
+x %>%
+  head(100) %>%
+  arrange(desc(count), nchar, seed_val, offset) %>%
+  # filter(nchar(xbar) <= 3 & nchar(ybar) <= 3 & offset < 3) %>%
   View()
