@@ -4,13 +4,6 @@ format: html
 editor: visual
 ---
 
-<script type="text/javascript">
- function showhide(id) {
-    var e = document.getElementById(id);
-    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
- }
-</script>
-
 ```{r}
 #| include: false
 if (!require("pacman")) install.packages("pacman")
@@ -208,6 +201,51 @@ display_cov_table <- function(df) {
     knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
     kable_styling(full_width = FALSE, "striped") 
 }
+
+# Compute the (auto)covariance
+compute_cov <- function(df, digits = 4) {
+  df %>% 
+    na.omit() %>% 
+    summarize(
+      cov_xy = round(cov(x,y), digits)
+    ) %>% 
+    pull() %>% 
+    return()
+}
+
+# Compute the variance of x
+compute_varx <- function(df, digits = 4) {
+  df %>% 
+    na.omit() %>% 
+    summarize(
+      var_x = round(var(x), digits)
+    ) %>% 
+    pull() %>% 
+    return()
+}
+
+# Compute the variance of y
+compute_vary <- function(df, digits = 4) {
+  df %>% 
+    na.omit() %>% 
+    summarize(
+      var_y = round(var(y), digits)
+    ) %>% 
+    pull() %>% 
+    return()
+}
+
+# Compute the (auto)correlation coefficient
+compute_cor <- function(df, digits = 4) {
+  df %>% 
+    na.omit() %>% 
+    summarize(
+      cov_xy = round(cor(x,y), digits)
+    ) %>% 
+    pull() %>% 
+    return()
+}
+
 ```
 
 # Lesson 2 (60 mins): Autocorrelation Concepts
@@ -224,18 +262,8 @@ display_cov_table <- function(df) {
 
 -   Motivate studying autocorrelation
 
-
-<a href="javascript:showhide('Meme')"
-style="font-size:.6em;">(Meme)</a>
-
-::: {#Meme style="display:none;"}
-
-![Loki S2 is great](../images/MobiusMeme.png)
-
-:::
-
 ::: callout-caution
-Insert Stationary Realization App
+## TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH THE IMAGE BELOW AND OBSERVE DIFFERENT REALIZATIONS. PLEASE MAKE SLIDERS FOR THE PARAMETERS n (from 10 to 500 by 10), a (from 0 to 1 by 0.005), and n_reps (from 1 to 9 by 1).
 :::
 
 ```{r}
@@ -244,6 +272,7 @@ n <- 100      # Max 500
 a <- .995     # Max 1
 n_reps <- 5   # Max 9
 sigma <- 1    # This just changes the vertical axis scale; it can be a constant 1
+
 df <- data.frame()
 for(i in 1:n_reps){
   x1 <- rep(0, n)
@@ -273,60 +302,143 @@ ggplot(df, aes(x = i, y = x, color = factor(rep))) +
   theme(plot.title = element_text(hjust = 0.5)) +
   guides(color = guide_legend(title = "Realization"))
 
-
+# acf(df %>% filter(rep == 1) %>% dplyr::select(x), plot=FALSE, lag.max=5)
 ```
 
-## Hands-on Exercise -- Exploring Autocorrelation (40 min)
 
+## Hands-on Exercise -- Exploring Autocorrelation (40 min)
 <!-- Compute sample acvf and acf -->
 
-In the previous lesson, we computed the sample covariance and sample correlation coefficient between two independent variables. When working with time series, there is often a correlation between sequential observations. We
+In the previous lesson, we computed the sample covariance and sample correlation coefficient between two independent variables. When working with time series, there is often a correlation between sequential observations. We 
 
 <!-- Here is a time series: -->
 
 <!-- ```{r} -->
-
 <!-- #| echo: false  -->
-
 <!-- n <- 20 -->
-
 <!-- a <- .995 -->
-
 <!-- sigma <- 1 -->
-
 <!-- n_reps <- 1 -->
 
 <!-- x1 <- rep(0, n) -->
-
 <!-- x1[1] <- rnorm(1, mean = 10, sd = 1) -->
-
 <!-- for(j in 2:n){ -->
-
 <!--   x1[j] = a * x1[j-1] + rnorm(1, mean = 0, sd = sigma) -->
-
 <!-- }  -->
 
 <!-- df <- data.frame(i = 1:length(x1), -->
-
 <!--                  x = x1) -->
 
 <!-- df -->
-
 <!-- # acf(df %>% filter(rep == 1) %>% dplyr::select(x), plot=FALSE, lag.max=5) -->
-
 <!-- ``` -->
 
+
 ```{r}
-cov_df1 <- get_data_for_cov_table(offset = 1)
-cov_df1 %>%
-  make_cov_table_df(offset = 1) %>%
+offset_value <- 1
+cov_df <- get_data_for_cov_table(offset = offset_value)
+cov_table <- cov_df %>%
+  make_cov_table_df(offset = offset_value) 
+cov_table %>%
   display_cov_table()
+```
+In this case, $y_i$ corresponds to $x_{i-1}$, where $i>1$. The covariance of $x_i$ and $x_{i-1}$ is: 
+
+$$
+  cov(x,y) = \frac{\sum\limits_{i=`r offset_value + 1`}^{11}(x_i-\bar x)(y_i-\bar y)}{n-1} 
+= \frac{`r as.numeric(cov_table[nrow(cov_table),8])`}{`r nrow(cov_df %>% na.omit())` - 1}
+= `r compute_cov(cov_df)`
+$$ 
+
+This is the covariance of $x$ with itself, but with a lag of 1 time unit. This is called the **lag 1 autocovariance** or the **autocovariance of $x$ with lag 1**.
+
+-   What does the lag 1 autocorrelation measure?
+
+We can compute the **lag 1 autocorrelation** or the **autocorrelation of $x$ with lag 1** by dividing the autocovariance by the square roots of the variances of $x_i$ and $x_{i-1}$:
+
+$$
+\begin{align*}
+  cor(x,y) 
+  &= \frac{cov(x,y)}{\sqrt{s_x} \cdot \sqrt{s_y}} 
+  =
+  \frac{ \frac{\sum\limits_{i=`r offset_value + 1`}^{11}(x_i-\bar x)(y_i-\bar y)}{n-1}
+      }{
+        \sqrt{
+          \frac{\sum\limits_{i=`r offset_value + 1`}^{11}(x_i-\bar x)^2}{n-1}
+        }
+        \sqrt{
+          \frac{\sum\limits_{i=`r offset_value + 1`}^{11}(y_i-\bar y)^2}{n-1}
+        }
+      }  
+  \\
+  &= 
+  \frac{ \sum\limits_{i=`r offset_value + 1`}^{11}(x_i-\bar x)(y_i-\bar y)
+      }{
+        \sqrt{
+          \sum\limits_{i=`r offset_value + 1`}^{11}(x_i-\bar x)^2
+        }
+        \sqrt{
+          \sum\limits_{i=`r offset_value + 1`}^{11}(y_i-\bar y)^2
+        }
+      } 
+  =
+  \frac{
+        `r as.numeric(cov_table[nrow(cov_table),8])`
+  }{
+    \sqrt{ `r as.numeric(cov_table[nrow(cov_table),5])` }
+    \sqrt{ `r as.numeric(cov_table[nrow(cov_table),7])` }
+  }
+  = `r compute_cor(cov_df)`
+\end{align*}
+$$ 
+
+-   What does the lag 1 autocorrelation measure?
+
+We will summarize these values in a table:
+
+```{r}
+#| echo: false
+
+# Initialize table
+auto_cov_cor_table <- data.frame(lag = integer(),
+                  autocovariance = double(),
+                  autocorrelation = double())
 ```
 
 ```{r}
-cov_df2 <- get_data_for_cov_table(offset = 2)
-cov_df2 %>%
-  make_cov_table_df(offset = 2, decimals_1st_order = 1, decimals_2nd_order = 2) %>% 
+#| echo: false
+
+# Add rows to the table
+auto_cov_cor_table <- auto_cov_cor_table %>% bind_rows(c(lag = offset_value, autocovariance = compute_cov(cov_df), autocorrelation = compute_cor(cov_df)))
+
+# Display the table, except row 2
+auto_cov_cor_table %>%
+  mutate(
+    autocovariance = ifelse(row_number() == 2,"", autocovariance),
+    autocorrelation = ifelse(row_number() == 2,"", autocorrelation)
+  ) %>% 
+  knitr::kable(format = "html", align='ccc', escape = FALSE, width = NA) %>%
+  kable_styling(full_width = FALSE, "striped") 
+```
+
+
+
+```{r}
+# cov_df2 <- get_data_for_cov_table(offset = 2)
+# cov_df2 %>%
+#   make_cov_table_df(offset = 2, decimals_1st_order = 1, decimals_2nd_order = 2) %>% 
+#   make_blank_row_in_cov_table(9) %>%
+#   make_blank_row_in_cov_table(10) %>%
+#   make_blank_row_in_cov_table(11) %>%
+#   make_blank_row_in_cov_table(12) %>%
+#   display_cov_table()
+```
+```{r}
+offset_value <- 2
+cov_df <- get_data_for_cov_table(offset = offset_value)
+cov_table <- cov_df %>%
+  make_cov_table_df(offset = offset_value, decimals_1st_order = 1, decimals_2nd_order = 2) 
+cov_table %>%
   make_blank_row_in_cov_table(9) %>%
   make_blank_row_in_cov_table(10) %>%
   make_blank_row_in_cov_table(11) %>%
@@ -335,17 +447,85 @@ cov_df2 %>%
 ```
 
 ```{r}
-cov_df3 <- get_data_for_cov_table(offset = 3)
-cov_df3 %>%
-  make_cov_table_df(offset = 3) %>% 
+#| echo: false
+
+# Add rows to the table
+auto_cov_cor_table <- auto_cov_cor_table %>% bind_rows(c(lag = offset_value, autocovariance = compute_cov(cov_df), autocorrelation = compute_cor(cov_df)))
+
+# Display the table, except row 2
+auto_cov_cor_table %>%
+  mutate(
+    autocovariance = ifelse(row_number() == 2,"", autocovariance),
+    autocorrelation = ifelse(row_number() == 2,"", autocorrelation)
+  ) %>% 
+  knitr::kable(format = "html", align='ccc', escape = FALSE, width = NA) %>%
+  kable_styling(full_width = FALSE, "striped") 
+```
+
+
+
+
+```{r}
+# cov_df3 <- get_data_for_cov_table(offset = 3)
+# cov_df3 %>%
+#   make_cov_table_df(offset = 3) %>% 
+#   display_cov_table()
+
+offset_value <- 3
+cov_df <- get_data_for_cov_table(offset = offset_value)
+cov_table <- cov_df %>%
+  make_cov_table_df(offset = offset_value) 
+cov_table %>%
   display_cov_table()
 ```
 
 ```{r}
-cov_df4 <- get_data_for_cov_table(offset = 4)
-cov_df4 %>%
-  make_cov_table_df(offset = 4) %>% 
+#| echo: false
+
+# Add rows to the table
+auto_cov_cor_table <- auto_cov_cor_table %>% bind_rows(c(lag = offset_value, autocovariance = compute_cov(cov_df), autocorrelation = compute_cor(cov_df)))
+
+# Display the table, except row 2
+auto_cov_cor_table %>%
+  mutate(
+    autocovariance = ifelse(row_number() == 2,"", autocovariance),
+    autocorrelation = ifelse(row_number() == 2,"", autocorrelation)
+  ) %>% 
+  knitr::kable(format = "html", align='ccc', escape = FALSE, width = NA) %>%
+  kable_styling(full_width = FALSE, "striped") 
+```
+
+
+
+
+```{r}
+# cov_df4 <- get_data_for_cov_table(offset = 4)
+# cov_df4 %>%
+#   make_cov_table_df(offset = 4) %>% 
+#   display_cov_table()
+
+offset_value <- 4
+cov_df <- get_data_for_cov_table(offset = offset_value)
+cov_table <- cov_df %>%
+  make_cov_table_df(offset = offset_value) 
+cov_table %>%
   display_cov_table()
+```
+
+```{r}
+#| echo: false
+
+# Add rows to the table
+auto_cov_cor_table <- auto_cov_cor_table %>% bind_rows(c(lag = offset_value, autocovariance = compute_cov(cov_df), autocorrelation = compute_cor(cov_df)))
+
+# Display the table, except row 2
+auto_cov_cor_table %>%
+  mutate(
+    autocovariance = ifelse(row_number() == 2,"", autocovariance),
+    autocorrelation = ifelse(row_number() == 2,"", autocorrelation)
+  ) %>% 
+  knitr::kable(format = "html", align='ccc', escape = FALSE, width = NA) %>%
+  kable_styling(full_width = FALSE, "striped") 
 ```
 
 -   Compute c_k and r_k with a few different lag (k) values
