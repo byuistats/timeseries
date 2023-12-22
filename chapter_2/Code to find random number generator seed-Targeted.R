@@ -8,11 +8,12 @@ pacman::p_load("tsibble", "fable",
                "rio"
 )
 
-max_reps <- 10^6
+max_reps <- 10^3
 max_offset <- 4
 
 cov_dat_init <- data.frame(
   seed_val = as.integer(),
+  r1 = as.numeric(),
   r_k_1 = as.integer(), r_k_2 = as.integer(),
   # xbar_1 = as.integer(), xvar_1 = as.integer(), cov_1 = as.integer(),
   # xbar_2 = as.integer(), xvar_2 = as.integer(), cov_2 = as.integer(),
@@ -57,13 +58,17 @@ for (seed_val in 1:max_reps) {
       xx2 = sum(xx2),
       xy = sum(xy, na.rm = TRUE)
     ) %>%
-    mutate(r_k = nchar(round(abs(xy / xx2),10))) %>%
+    mutate(
+      r1 = round(abs(xy / xx2),10),
+      r_k = nchar(r1)
+    ) %>%
     mutate(
       xbar = nchar(round(abs(xbar),10)),
       xx2 = nchar(round(abs(xx2),10)),
       xy = nchar(round(abs(sum(xy, na.rm = TRUE)),10))
     )
   r_k_1 <- df$r_k
+  r1 <- df$r1
 
   # Offset = 2
   if(df$xbar <= 3 & df$xx2 <=4 & df$xy <= 4)  {
@@ -114,6 +119,7 @@ for (seed_val in 1:max_reps) {
         bind_rows(
           c(
             seed_val = seed_val,
+            r1 = r1,
             r_k_1 = r_k_1,
             r_k_2 = r_k_2,
             xbar_3 = df$xbar,
@@ -172,7 +178,9 @@ cov_dat <- rio::import("data_new.csv")
 x <- cov_dat
 
 x %>%
-  mutate(r_K_12 = sum(r_k_1, r_k_2)) %>%
+  mutate(r_K_12 = r_k_1 + r_k_2) %>%
+  arrange(r_K_12) %>%
+  head
 
 
 

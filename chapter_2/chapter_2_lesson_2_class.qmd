@@ -11,9 +11,13 @@ pacman::p_load("tsibble", "fable",
     "feasts", "tsibbledata",
     "fable.prophet", "tidyverse",
     "patchwork",
-    "ggthemes", "see",   # for okabeito color scheme
-    "MASS", # for MVNorm
-    "ggokabeito", "kableExtra", "stringr", "lubridate")
+    "ggthemes", 
+    "see",   # okabeito color scheme
+    "MASS", # MVNorm
+    "ggokabeito", # colorblind palette
+    "kableExtra", # formatting tables
+    "stringr", # string manipulation
+    "lubridate") # date manipulation
 
 palette("okabeito")
 okabeito_colors_list <- c(
@@ -43,6 +47,9 @@ round_df <- function(df, digits) {
 
 
 round_to_places <- function(x, places) {
+  # Remove floating point errors
+  x <- round(x, 12)
+  
   # Initialize output  
   out <- rep_len("", length(x)) 
   
@@ -79,14 +86,22 @@ round_to_places <- function(x, places) {
   return(out)
 }
 
+########################## DEBUGGING
+round_to_places <- function(x, places) {
+  return(as.character(round(x,12)))
+}
+
 get_data_for_cov_table <- function(offset = 1) {
   # set random number generator seed
   set.seed(92401)
+  set.seed(16633)
+  set.seed(2686)
+  set.seed(997)
   
   # set parameters
   n <- 10
   rho <- 0.99
-  mu <- 10
+  mu <- 0
   sigma <- 3
   
   # build population correlation matrix
@@ -94,7 +109,7 @@ get_data_for_cov_table <- function(offset = 1) {
   tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
   
   # simulate correlated normal random data
-  x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1)
+  x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1) 
   
   # build a data frame
   df <- data.frame(t = 1:length(x1),
@@ -112,7 +127,7 @@ get_data_for_cov_table <- function(offset = 1) {
   return(df)
 }
 
-make_cov_table_df <- function(df, offset=1, decimals_1st_order = 4, decimals_2nd_order = 4) {
+make_cov_table_df <- function(df, offset=1, decimals_1st_order = 5, decimals_2nd_order = 5) {
   # Color vector
   oi_colors <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#F5C710", "#CC79A7", "#999999")
   
@@ -126,7 +141,8 @@ make_cov_table_df <- function(df, offset=1, decimals_1st_order = 4, decimals_2nd
       # yy2 = sum(yy2, na.rm = TRUE),
       xy = sum(xy, na.rm = TRUE)
     ) %>% 
-    round_df(3) %>% 
+    # round_df(3) %>% 
+    mutate(t = paste0("sum")) %>% 
     mutate(
       t = paste0("sum"),
       x = round_to_places(x, 1),
@@ -280,13 +296,108 @@ ggplot(df, aes(x = i, y = x, color = factor(rep))) +
 
 -   If a time series displays an upward trend, can we conclude that trend will continue in the same direction? Why or why not?
 
+
 ## Hands-on Exercise -- Exploring Sample Autocorrelation (40 min)
 
 <!-- Compute sample acvf and acf -->
 
 In the previous lesson, we computed the sample covariance and sample correlation coefficient between two independent variables. When working with time series, the observations are not independent. There is often a relationship between sequential observations. We will compute the autocovariance function and autocorrelation function for a time series.
+Note: the prefix "auto" comes from a Greek root meaning "self." 
 
-Note: the prefix "auto" comes from a Greek root meaning "self." We will be finding the autocovariance and correlation of a time series with itself. First, we start with a lag of 1. With a lag of 1 the corresponding values of the time series that are being compared are shifted by one time unit. Then, we will consider any integer lag: lag $k$.
+The figure below illustrates the difference between a series of data, where the residuals are independent compared to a series with autocorrelated data.
+
+```{r}
+#| echo: false 
+
+# Generate data
+set.seed(101) 
+x <- 1:100*0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))
+e <- rnorm(100, 0, 2.5)
+y <- 1:100*0.5 + e  
+
+# Create data frame  
+df <- data.frame(
+  time = 1:100,
+  Autocorrelated = x,
+  Independent = y
+)
+
+# Plot  
+ggplot(df, aes(x = time)) +
+  geom_line(aes(y = Independent, color = "Independent")) + 
+  geom_point(aes(y = Independent, color = "Independent")) + 
+  geom_line(aes(y = Autocorrelated, color = "Autocorrelated")) + 
+  geom_point(aes(y = Autocorrelated, color = "Autocorrelated")) +
+  scale_color_okabeito(
+    palette = "full",
+    reverse = FALSE,
+    order = c(2,4),
+    aesthetics = "color"
+  )+
+  labs(title="Comparison of Independent and Autocorrelated Data", 
+       x="Time",
+       y="Values",
+       color="Series") +
+  theme_bw()
+```
+
+We will be finding the autocovariance and correlation of a time series with itself. First, we start with a lag of 1. With a lag of 1 the corresponding values of the time series that are being compared are shifted by one time unit. Then, we will consider any integer lag: lag $k$.
+
+We will use the following data to explore these concepts.
+
+```{r}
+#| echo: false
+offset_value <- 1
+cov_df <- get_data_for_cov_table(offset = offset_value)
+
+# Obtain the number of data values.
+n <- nrow(cov_df)
+
+cov_df %>%
+  dplyr::select(t, x) %>% 
+  rename(x_t = x) %>% 
+  display_table()
+```
+
+You can use this R command to read in the observations.
+
+```{r}
+#| echo: false
+
+cat("x <- c(",paste(cov_df$x, collapse = ", "),")")
+```
+
+
+```{r}
+#| echo: false
+
+ggplot(cov_df, aes(x = t, y = x)) +
+  geom_line(color = "#0072B2") +
+  geom_point(color = "#0072B2") +
+#   scale_color_okabeito(
+#   palette = "full",
+#   reverse = TRUE,
+#   order = c(1,7,8,5,6,3,4,2,9),
+#   aesthetics = "color"
+# ) +
+  ylim(0,ceiling(max(cov_df$x))) +
+  labs(title = "Sample Time Series",
+       x = "Time",
+       y = "x") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)) 
+```
+
+
+We will use the sample mean of these data repeatedly. The value of $\bar x$ is:
+
+$$
+  \bar x 
+    = \frac{1}{n} \sum\limits_{t=1}^{n} x_t 
+    = \frac{1}{`r n`} \cdot `r sum(cov_df$x) %>% round(4)`
+    = `r mean(cov_df$x)`
+$$
+
 
 ### Lag $k$ Sample Autocovariance Function (acvf), $c_k$
 
@@ -309,14 +420,14 @@ We will now find the autocovariance between the values in a time series ($x = x_
 offset_value <- 1
 cov_df <- get_data_for_cov_table(offset = offset_value)
 cov_table <- cov_df %>%
-  make_cov_table_df(offset = offset_value, decimals_1st_order = 1, decimals_2nd_order = 2) 
+  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
 cov_table %>%
   display_table()
 
 summarized <- compute_summaries(cov_df)
 
 ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
-  geom_point(size = 2, colour= "#56B4E9") +
+  geom_point(size = 2, colour= "#0072B2") +
   xlab(expression(x[t])) +
   ylab(expression(x[t+1])) +
   theme_bw() +  
@@ -324,39 +435,6 @@ ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 ```
 
-```{r}
-#| echo: false
-# Obtain the number of data values.
-n <- nrow(cov_df)
-```
-
-Here are the values observed in a time series. We will use these to explore 
-
-```{r}
-#| echo: false
-
-cov_df %>%
-  dplyr::select(t, x, y) %>% 
-  rename(x_t = x, `x_t+1` = y) %>% 
-  display_table()
-```
-
-You can use the following command to read the observations into R.
-
-```{r}
-#| echo: false
-
-cat("x <- c(",paste(cov_df$x, collapse = ", "),")")
-```
-
-Note that
-
-$$
-  \bar x 
-    = \frac{1}{n} \sum\limits_{t=1}^{n} x_t 
-    = \frac{1}{`r n`} \cdot `r sum(cov_df$x) %>% round(4)`
-    = `r summarized$mean_x`
-$$
 
 In this example, the second variable is $x_{t+1}$, where $t>1$. the autocovariance of $x_t$ and $x_{t+1}$ is:
 
@@ -383,7 +461,7 @@ $$
     = \frac{ \sum\limits_{t=1}^{n-k}(x_t-\bar x)(x_{t+k}-\bar x) }{ \sum\limits_{t=1}^{n}(x_t-\bar x)^2 }
 $$
 
-Note that $c_0$ is the variance of $x$, computed by dividing by $n$, instead of $n-1$.
+Note that $c_0$ is the variance of $x$, but computed by dividing by $n$, instead of $n-1$.
 
 ### Lag $k=1$ Sample Autocorrelation Function, $r_1$
 
@@ -467,26 +545,27 @@ auto_cov_cor_table <- auto_cov_cor_table %>%
 offset_value <- 2
 cov_df <- get_data_for_cov_table(offset = offset_value)
 cov_table <- cov_df %>%
-  make_cov_table_df(offset = offset_value, decimals_1st_order = 1, decimals_2nd_order = 2) 
+  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
 cov_table %>%
   ############ Let students fill in these rows ##########
-  make_blank_row_in_cov_table(3) %>% 
   make_blank_row_in_cov_table(4) %>% 
   make_blank_row_in_cov_table(5) %>% 
-  # make_blank_row_in_cov_table(6) %>% 
+  make_blank_row_in_cov_table(6) %>%
   make_blank_row_in_cov_table(11) %>% 
   display_table()
 
 summarized <- compute_summaries(cov_df)
 
 ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
-  geom_point(size = 2, colour= "#56B4E9") +
+  geom_point(size = 2, colour= "#0072B2") +
   xlab(expression(x[t])) +
   ylab(expression(x[t+2])) +
-  theme_bw() +  
-  ggtitle(paste0("Data pairs with a lag of k=",offset_value)) + 
-  theme(plot.title = element_text(hjust = 0.5)) 
+  theme_bw() +
+  ggtitle(paste0("Data pairs with a lag of k=",offset_value)) +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
+
+-   Complete the table above to compute the values of $c_2$ and $r_2$.
 
 ```{r}
 #| echo: false
@@ -517,14 +596,14 @@ auto_cov_cor_table <- auto_cov_cor_table %>%
 offset_value <- 3
 cov_df <- get_data_for_cov_table(offset = offset_value)
 cov_table <- cov_df %>%
-  make_cov_table_df(offset = offset_value, decimals_1st_order = 1, decimals_2nd_order = 2) 
+  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
 cov_table %>%
   display_table()
 
 summarized <- compute_summaries(cov_df)
 
 ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
-  geom_point(size = 2, colour= "#56B4E9") +
+  geom_point(size = 2, colour= "#0072B2") +
   xlab(expression(x[t])) +
   ylab(expression(x[t+3])) +
   theme_bw() +  
@@ -561,14 +640,14 @@ auto_cov_cor_table <- auto_cov_cor_table %>%
 offset_value <- 4
 cov_df <- get_data_for_cov_table(offset = offset_value)
 cov_table <- cov_df %>%
-  make_cov_table_df(offset = offset_value, decimals_1st_order = 1, decimals_2nd_order = 2) 
+  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
 cov_table %>%
   display_table()
 
 summarized <- compute_summaries(cov_df)
 
 ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
-  geom_point(size = 2, colour= "#56B4E9") +
+  geom_point(size = 2, colour= "#0072B2") +
   xlab(expression(x[t])) +
   ylab(expression(x[t+4])) +
   theme_bw() +  
@@ -601,13 +680,13 @@ auto_cov_cor_table %>%
 
 ### Correlograms
 
--   The table below gives the sample autocorrelation function, acf, for this data set. Use these values to sketch a correlogram. The figure below can help you begin.
+-   The table below gives the sample autocorrelation function, acf, for this data set. Use these values to sketch a correlogram in your Learning Journal. The figure below can help you begin.
 
 ```{r}
 #| echo: false
 
 acf(cov_df$x, plot=FALSE, type = "correlation") 
-# acf(cov_df$x, plot=TRUE, type = "correlation") 
+# acf(cov_df$x, plot=TRUE, type = "correlation") ## Solution
 
 ggplot(data = cov_df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +
   # geom_col() +
@@ -616,8 +695,8 @@ ggplot(data = cov_df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +
   geom_segment(aes(x = 0, y = 0, xend = 0, yend = 1)) + 
   geom_segment(aes(x = 0, y = 0, xend = 9, yend = 0)) + ## Hack
   geom_hline(yintercept = 0, linetype = "solid", linewidth=1, color = "black") +
-  geom_hline(yintercept = -0.62, linetype = "dashed", linewidth=1, color = "#56B4E9") +
-  geom_hline(yintercept = 0.62, linetype = "dashed", linewidth=1, color = "#56B4E9") +  # Should be (-0.1 +/- 2/sqrt(10))
+  geom_hline(yintercept = (2.6/4.2), linetype = "dashed", linewidth=1, color = "#0072B2") +  # Texbooks says these lines should be at (-0.1 +/- 2/sqrt(10)). Used +/-(2.6/4.2), based on measurements made visually with a ruler from the figure generated by R.
+  geom_hline(yintercept = (-2.6/4.2), linetype = "dashed", linewidth=1, color = "#0072B2") +
   labs(x = "Lag", y = "ACF") +
   # theme_bw()   
   # theme(panel.grid.major.x = element_blank(), panel.grid.major.y = element_blank())
@@ -632,164 +711,33 @@ ggplot(data = cov_df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +
 
 <!-- -   Finish a partially-created correlogram with the r_k values computed -->
 
--   Show a correlogram with seasonal data with a period of one year (chocolate data?). What do the spikes tell us?
+-   Are any of the autocorrelations statistically significant? If so, which one(s)?
 
+
+## Application: Chocolate Search Trends
+
+::: callout-caution
+## TYSON: We need to read in the chocolate search trends data, decompose it, then compute the autocorrelations on residuals. What do we need to do to make this work?
+:::
+
+-   Is there a trend in the data? 
+
+-   Is there evidence of seasonal variation?
+
+    -   Can you find an explanation for the seasonal variation?
+
+-   What do the spikes in the correlogram tell us about this time series?
+
+    -   Is there evidence of autocorrelations in the data after removing the trend and seasonal variation?
+  
+-   There are two big spikes in the observed data. Can you identify a cause for these spikes?
 
 ## Recap (5 mins)
 
 -   Review objectives and key points
 
-<!-- -->
+-   Review the definitions of autocovariance, autocorrelation
 
--   Formally define autocovariance, autocorrelation
+-   Discuss autocorrelation in the time series context
 
--   Explain autocorrelation in time series context
 
-::: callout-caution
-## TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN CHANGE THE AUTOCORRELATION COEFFICIENT (SLIDER FOR AUTOCORRELATION FROM 0 TO 1) AND WATCH THE GRAPH UPDATE IN REAL TIME
-:::
-
-```{r}
-library(tidyverse)
-library(zoo) 
-
-# Generate data
-set.seed(101) 
-x <- 1:100*0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))
-e <- rnorm(100, 0, 2.5)
-y <- 1:100*0.5 + e  
-z <- zoo(y, order.by = 1:100)
-
-# Create data frame  
-df <- data.frame(
-  time = 1:100,
-  x = x,
-  z = coredata(z)
-)
-
-# Plot  
-ggplot(df, aes(x = time)) +
-  geom_line(aes(y = x, color = "X")) + 
-  geom_line(aes(y = z, color = "Z")) +
-  labs(title="X vs Z Series", 
-       x="Time",
-       y="Values",
-       color="Series") +
-  theme_bw()
-```
-
-## Example Analysis (15 mins)
-
-Walk through sample autocorrelation analysis
-
-## Recap (20 mins)
-
--   Review objectives and key concepts
-
--   Clarify questions on autocorrelation
-
-## Assessment:
-
--   Write definitions of autocovariance and autocorrelation
-
-# Lesson 2 (60 mins): Correlograms
-
-## Objectives:
-
--   Compute sample autocorrelations
-
--   Make and interpret correlogram plots
-
-## Agenda:
-
-## Introduction (5 mins)
-
--   Introduce correlogram plots
-
-## Lecture (15 mins)
-
--   Demonstrate computing acf/pacf in R
-
--   Explain interpreting correlogram plots
-
-## Hands-on Exercise (25 mins)
-
--   Compute acf/pacf on sample data
-
--   Make correlogram plots in R
-
--   Identify significant lags/correlations
-
-## Assessment:
-
--   Compute and interpret acf/pacf on data
-
-```{r}
-#| include: false
-#| eval: false
-
-##################### THIS IS FOR CHOOSING THE SEED ##################
-
-reps <- 5000
-prodxy <- meanx <- meany <- sdx <- sdy <- covs <- cors <- rep(0,reps)
-for (i in 1:reps){
-  # Unset random seed
-  set.seed(i)
-  
-# Specify means and correlation coefficient
-n <- 6              # number of points
-mu <- c(3, 1)       # mean vector (mu_x, mu_y)
-sigma_x <- 3.5      # standard deviation x
-sigma_y <- 2        # standard deviation y
-rho <- -0.85          # correlation coefficient
-  
-  # Define variance-covariance matrix
-  sigma <- matrix(
-    c(sigma_x^2,
-      rho*sigma_x*sigma_y,
-      rho*sigma_x*sigma_y,
-      sigma_y^2),
-    nrow = 2)
-  
-  # Simulate bivariate normal data
-  mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) %>% 
-    data.frame() %>% 
-    rename(x = X1, y = X2) %>% 
-    round_df(1)
-  meanx[i] <- mean(mvn_data_6$x)
-  meany[i] <- mean(mvn_data_6$y)
-  prodxy[i] <- prod((mvn_data_6$x - meanx[i]) * (mvn_data_6$y - meany[i]))
-  sdx[i] <- sd(mvn_data_6$x)
-  sdy[i] <- sd(mvn_data_6$y)
-  cors[i] <- cor(mvn_data_6$x, mvn_data_6$y)
-  covs[i] <- cov(mvn_data_6$x, mvn_data_6$y) 
-}
-temp0 <- data.frame(meanx = meanx, meany = meany, sdx = sdx, sdy = sdy, cors = cors, covs = covs, prodxy = prodxy) %>% 
-  mutate(i = row_number()) %>% 
-  filter(meanx*10 == floor(meanx*10)) %>% 
-  filter(meany*10 == floor(meany*10))  %>% 
-  filter(covs*100 == floor(covs*100))  %>% 
-  mutate(across(everything(), as.character)) 
-
-View(temp0)
-```
-
-::: callout-note
-Some important information....
-:::
-
-::: callout-warning
-Some important information....
-:::
-
-::: callout-important
-Some important information....
-:::
-
-::: callout-tip
-Some important information....
-:::
-
-::: callout-caution
-Some important information....
-:::
