@@ -189,8 +189,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#introduction-5-mins" id="toc-introduction-5-mins" class="nav-link" data-scroll-target="#introduction-5-mins">Introduction (5 mins)</a></li>
   <li><a href="#hands-on-exercise-exploring-sample-autocorrelation-40-min" id="toc-hands-on-exercise-exploring-sample-autocorrelation-40-min" class="nav-link" data-scroll-target="#hands-on-exercise-exploring-sample-autocorrelation-40-min">Hands-on Exercise – Exploring Sample Autocorrelation (40 min)</a>
   <ul class="collapse">
-  <li><a href="#lag-1-sample-autocovariance" id="toc-lag-1-sample-autocovariance" class="nav-link" data-scroll-target="#lag-1-sample-autocovariance">(Lag 1) Sample Autocovariance</a></li>
-  <li><a href="#lag-1-autocorrelation-coefficient" id="toc-lag-1-autocorrelation-coefficient" class="nav-link" data-scroll-target="#lag-1-autocorrelation-coefficient">(Lag 1) Autocorrelation Coefficient</a></li>
+  <li><a href="#lag-k-sample-autocovariance-function-acvf-c_k" id="toc-lag-k-sample-autocovariance-function-acvf-c_k" class="nav-link" data-scroll-target="#lag-k-sample-autocovariance-function-acvf-c_k">Lag <span class="math inline">\(k\)</span> Sample Autocovariance Function (acvf), <span class="math inline">\(c_k\)</span></a></li>
+  <li><a href="#lag-k1-sample-autocovariance-function-c_1" id="toc-lag-k1-sample-autocovariance-function-c_1" class="nav-link" data-scroll-target="#lag-k1-sample-autocovariance-function-c_1">Lag <span class="math inline">\(k=1\)</span> Sample Autocovariance Function, <span class="math inline">\(c_1\)</span></a></li>
+  <li><a href="#lag-k-sample-autocorrelation-function-acf-r_k" id="toc-lag-k-sample-autocorrelation-function-acf-r_k" class="nav-link" data-scroll-target="#lag-k-sample-autocorrelation-function-acf-r_k">Lag <span class="math inline">\(k\)</span> Sample Autocorrelation Function (acf), <span class="math inline">\(r_k\)</span></a></li>
+  <li><a href="#lag-k1-sample-autocorrelation-function-r_1" id="toc-lag-k1-sample-autocorrelation-function-r_1" class="nav-link" data-scroll-target="#lag-k1-sample-autocorrelation-function-r_1">Lag <span class="math inline">\(k=1\)</span> Sample Autocorrelation Function, <span class="math inline">\(r_1\)</span></a></li>
+  <li><a href="#k-2" id="toc-k-2" class="nav-link" data-scroll-target="#k-2"><span class="math inline">\(k = 2\)</span></a></li>
+  <li><a href="#k-3" id="toc-k-3" class="nav-link" data-scroll-target="#k-3"><span class="math inline">\(k = 3\)</span></a></li>
+  <li><a href="#k-4" id="toc-k-4" class="nav-link" data-scroll-target="#k-4"><span class="math inline">\(k = 4\)</span></a></li>
+  <li><a href="#correlograms" id="toc-correlograms" class="nav-link" data-scroll-target="#correlograms">Correlograms</a></li>
   </ul></li>
   <li><a href="#recap-5-mins" id="toc-recap-5-mins" class="nav-link" data-scroll-target="#recap-5-mins">Recap (5 mins)</a></li>
   <li><a href="#example-analysis-15-mins" id="toc-example-analysis-15-mins" class="nav-link" data-scroll-target="#example-analysis-15-mins">Example Analysis (15 mins)</a></li>
@@ -204,7 +210,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#introduction-5-mins-1" id="toc-introduction-5-mins-1" class="nav-link" data-scroll-target="#introduction-5-mins-1">Introduction (5 mins)</a></li>
   <li><a href="#lecture-15-mins" id="toc-lecture-15-mins" class="nav-link" data-scroll-target="#lecture-15-mins">Lecture (15 mins)</a></li>
   <li><a href="#hands-on-exercise-25-mins" id="toc-hands-on-exercise-25-mins" class="nav-link" data-scroll-target="#hands-on-exercise-25-mins">Hands-on Exercise (25 mins)</a></li>
-  <li><a href="#recap-15-mins" id="toc-recap-15-mins" class="nav-link" data-scroll-target="#recap-15-mins">Recap (15 mins)</a></li>
   <li><a href="#assessment-1" id="toc-assessment-1" class="nav-link" data-scroll-target="#assessment-1">Assessment:</a></li>
   </ul></li>
   </ul>
@@ -279,33 +284,21 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 <!-- Compute sample acvf and acf -->
 <p>In the previous lesson, we computed the sample covariance and sample correlation coefficient between two independent variables. When working with time series, the observations are not independent. There is often a relationship between sequential observations. We will compute the autocovariance function and autocorrelation function for a time series.</p>
 <p>Note: the prefix “auto” comes from a Greek root meaning “self.” We will be finding the autocovariance and correlation of a time series with itself. First, we start with a lag of 1. With a lag of 1 the corresponding values of the time series that are being compared are shifted by one time unit. Then, we will consider any integer lag: lag <span class="math inline">\(k\)</span>.</p>
-<section id="lag-1-sample-autocovariance" class="level3">
-<h3 class="anchored" data-anchor-id="lag-1-sample-autocovariance">(Lag 1) Sample Autocovariance</h3>
-<p>We will now find the autocovariance between the values in a time series (<span class="math inline">\(x = x_t\)</span>) and the same values, with a lag of one time period (<span class="math inline">\(y = x_{i+1}\)</span>). We denote the lag by the letter <span class="math inline">\(k\)</span>, so we have a lag of <span class="math inline">\(k=1\)</span>.</p>
-<!-- Here is a time series: -->
-<!-- ```{r} -->
-<!-- #| echo: false  -->
-<!-- n <- 20 -->
-<!-- a <- .995 -->
-<!-- sigma <- 1 -->
-<!-- n_reps <- 1 -->
-<!-- x1 <- rep(0, n) -->
-<!-- x1[1] <- rnorm(1, mean = 10, sd = 1) -->
-<!-- for(j in 2:n){ -->
-<!--   x1[j] = a * x1[j-1] + rnorm(1, mean = 0, sd = sigma) -->
-<!-- }  -->
-<!-- df <- data.frame(i = 1:length(x1), -->
-<!--                  x = x1) -->
-<!-- df -->
-<!-- # acf(df %>% filter(rep == 1) %>% dplyr::select(x), plot=FALSE, lag.max=5) -->
-<!-- ``` -->
+<section id="lag-k-sample-autocovariance-function-acvf-c_k" class="level3">
+<h3 class="anchored" data-anchor-id="lag-k-sample-autocovariance-function-acvf-c_k">Lag <span class="math inline">\(k\)</span> Sample Autocovariance Function (acvf), <span class="math inline">\(c_k\)</span></h3>
+<p>The <strong>lag</strong> <span class="math inline">\(k\)</span> sample autocovariance function, acvf, denoted <span class="math inline">\(c_k\)</span>, is defined as</p>
+<p><span class="math display">\[
+  c_k = \frac{1}{n} \sum\limits_{t=1}^{n-k}(x_t-\bar x)(x_{t+k}-\bar x)
+\]</span></p>
+<p>We denote the lag by the letter <span class="math inline">\(k\)</span>. This is the number of values the data set is shifted to compute the autocovariance.</p>
+<ul>
+<li>What is the equation for <span class="math inline">\(c_0\)</span>, the value of the autocovariance function with lag <span class="math inline">\(k=0\)</span>?</li>
+</ul>
+</section>
+<section id="lag-k1-sample-autocovariance-function-c_1" class="level3">
+<h3 class="anchored" data-anchor-id="lag-k1-sample-autocovariance-function-c_1">Lag <span class="math inline">\(k=1\)</span> Sample Autocovariance Function, <span class="math inline">\(c_1\)</span></h3>
+<p>We will now find the autocovariance between the values in a time series (<span class="math inline">\(x = x_t\)</span>) and the same values, shifted by one unit of time (<span class="math inline">\(y = x_{t+1}\)</span>).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>offset_value <span class="ot">&lt;-</span> <span class="dv">1</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>cov_df <span class="ot">&lt;-</span> <span class="fu">get_data_for_cov_table</span>(<span class="at">offset =</span> offset_value)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>cov_table <span class="ot">&lt;-</span> cov_df <span class="sc">%&gt;%</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">make_cov_table_df</span>(<span class="at">offset =</span> offset_value, <span class="at">decimals_1st_order =</span> <span class="dv">1</span>, <span class="at">decimals_2nd_order =</span> <span class="dv">2</span>) </span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>cov_table <span class="sc">%&gt;%</span></span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_cov_table</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <table class="table table-striped table-sm small" data-quarto-postprocess="true">
 <thead>
@@ -316,108 +309,97 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 <th style="text-align: center;" data-quarto-table-cell-role="th">x_t-mean(x)</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">(x_t-mean(x))^2</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">x_{t+k}-mean(x)</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">(x_{t+k}-mean(x))^2</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">(x-mean(x))(x_{t+k}-mean(x))</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td style="text-align: center;">1</td>
-<td style="text-align: center;"><span style="     color: #56B4E9 !important;">9.6</span></td>
-<td style="text-align: center;"><span style="     color: #009E73 !important;">9.4</span></td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;"> 9.6</span></td>
+<td style="text-align: center;"><span style="     color: #009E73 !important;"> 9.4</span></td>
 <td style="text-align: center;">0.9</td>
 <td style="text-align: center;">0.81</td>
 <td style="text-align: center;">0.7</td>
-<td style="text-align: center;">0.49</td>
 <td style="text-align: center;">0.63</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">2</td>
-<td style="text-align: center;"><span style="     color: #009E73 !important;">9.4</span></td>
-<td style="text-align: center;"><span style="     color: #F0E442 !important;">9.2</span></td>
+<td style="text-align: center;"><span style="     color: #009E73 !important;"> 9.4</span></td>
+<td style="text-align: center;"><span style="     color: #F0E442 !important;"> 9.2</span></td>
 <td style="text-align: center;">0.7</td>
 <td style="text-align: center;">0.49</td>
 <td style="text-align: center;">0.5</td>
-<td style="text-align: center;">0.25</td>
 <td style="text-align: center;">0.35</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">3</td>
-<td style="text-align: center;"><span style="     color: #F0E442 !important;">9.2</span></td>
-<td style="text-align: center;"><span style="     color: #0072B2 !important;">9.1</span></td>
+<td style="text-align: center;"><span style="     color: #F0E442 !important;"> 9.2</span></td>
+<td style="text-align: center;"><span style="     color: #0072B2 !important;"> 9.1</span></td>
 <td style="text-align: center;">0.5</td>
 <td style="text-align: center;">0.25</td>
 <td style="text-align: center;">0.4</td>
-<td style="text-align: center;">0.16</td>
 <td style="text-align: center;">0.20</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">4</td>
-<td style="text-align: center;"><span style="     color: #0072B2 !important;">9.1</span></td>
-<td style="text-align: center;"><span style="     color: #D55E00 !important;">9.4</span></td>
+<td style="text-align: center;"><span style="     color: #0072B2 !important;"> 9.1</span></td>
+<td style="text-align: center;"><span style="     color: #D55E00 !important;"> 9.4</span></td>
 <td style="text-align: center;">0.4</td>
 <td style="text-align: center;">0.16</td>
 <td style="text-align: center;">0.7</td>
-<td style="text-align: center;">0.49</td>
 <td style="text-align: center;">0.28</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">5</td>
-<td style="text-align: center;"><span style="     color: #D55E00 !important;">9.4</span></td>
-<td style="text-align: center;"><span style="     color: #F5C710 !important;">8.3</span></td>
+<td style="text-align: center;"><span style="     color: #D55E00 !important;"> 9.4</span></td>
+<td style="text-align: center;"><span style="     color: #F5C710 !important;"> 8.3</span></td>
 <td style="text-align: center;">0.7</td>
 <td style="text-align: center;">0.49</td>
-<td style="text-align: center;">0.4</td>
-<td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.28</td>
+<td style="text-align: center;">-0.4</td>
+<td style="text-align: center;">-0.28</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">6</td>
-<td style="text-align: center;"><span style="     color: #F5C710 !important;">8.3</span></td>
-<td style="text-align: center;"><span style="     color: #CC79A7 !important;">8.0</span></td>
-<td style="text-align: center;">0.4</td>
+<td style="text-align: center;"><span style="     color: #F5C710 !important;"> 8.3</span></td>
+<td style="text-align: center;"><span style="     color: #CC79A7 !important;"> 8.0</span></td>
+<td style="text-align: center;">-0.4</td>
 <td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.7</td>
-<td style="text-align: center;">0.49</td>
+<td style="text-align: center;">-0.7</td>
 <td style="text-align: center;">0.28</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">7</td>
-<td style="text-align: center;"><span style="     color: #CC79A7 !important;">8.0</span></td>
-<td style="text-align: center;"><span style="     color: #999999 !important;">7.8</span></td>
-<td style="text-align: center;">0.7</td>
+<td style="text-align: center;"><span style="     color: #CC79A7 !important;"> 8.0</span></td>
+<td style="text-align: center;"><span style="     color: #999999 !important;"> 7.8</span></td>
+<td style="text-align: center;">-0.7</td>
 <td style="text-align: center;">0.49</td>
-<td style="text-align: center;">0.9</td>
-<td style="text-align: center;">0.81</td>
+<td style="text-align: center;">-0.9</td>
 <td style="text-align: center;">0.63</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">8</td>
-<td style="text-align: center;"><span style="     color: #999999 !important;">7.8</span></td>
-<td style="text-align: center;"><span style="     color: #E69F00 !important;">8.3</span></td>
-<td style="text-align: center;">0.9</td>
+<td style="text-align: center;"><span style="     color: #999999 !important;"> 7.8</span></td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;"> 8.3</span></td>
+<td style="text-align: center;">-0.9</td>
 <td style="text-align: center;">0.81</td>
-<td style="text-align: center;">0.4</td>
-<td style="text-align: center;">0.16</td>
+<td style="text-align: center;">-0.4</td>
 <td style="text-align: center;">0.36</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">9</td>
-<td style="text-align: center;"><span style="     color: #E69F00 !important;">8.3</span></td>
-<td style="text-align: center;"><span style="     color: #56B4E9 !important;">7.9</span></td>
-<td style="text-align: center;">0.4</td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;"> 8.3</span></td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;"> 7.9</span></td>
+<td style="text-align: center;">-0.4</td>
 <td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.8</td>
-<td style="text-align: center;">0.64</td>
+<td style="text-align: center;">-0.8</td>
 <td style="text-align: center;">0.32</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">10</td>
-<td style="text-align: center;"><span style="     color: #56B4E9 !important;">7.9</span></td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;"> 7.9</span></td>
 <td style="text-align: center;">—</td>
-<td style="text-align: center;">0.8</td>
+<td style="text-align: center;">-0.8</td>
 <td style="text-align: center;">0.64</td>
-<td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 </tr>
@@ -427,8 +409,7 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 <td style="text-align: center;">77.4</td>
 <td style="text-align: center;">0.0</td>
 <td style="text-align: center;">4.46</td>
-<td style="text-align: center;">0.9</td>
-<td style="text-align: center;">3.65</td>
+<td style="text-align: center;">-0.9</td>
 <td style="text-align: center;">2.77</td>
 </tr>
 </tbody>
@@ -436,123 +417,71 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 
 
 </div>
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(cov_df <span class="sc">%&gt;%</span> <span class="fu">na.omit</span>(), <span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> y)) <span class="sc">+</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">2</span>, <span class="at">colour=</span> <span class="st">"#56B4E9"</span>) <span class="sc">+</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># scale_color_manual(values = c("#E69F00", "#56B4E9"),  </span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">#                    labels = c(expression((x-bar(x))(y-bar(y))&lt;0),</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">#                               expression((x-bar(x))(y-bar(y))&gt;0))) +</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># geom_vline(xintercept = mean(cov_dat$x), color = "#009E73") + </span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># geom_hline(yintercept = mean(cov_dat$y), color = "#009E73") +</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">xlab</span>(<span class="fu">expression</span>(x[t])) <span class="sc">+</span></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ylab</span>(<span class="fu">expression</span>(x[t<span class="sc">+</span><span class="dv">1</span>])) <span class="sc">+</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span>  </span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggtitle</span>(<span class="st">"Simulated data pairs with a lag of k=1"</span>) <span class="sc">+</span> </span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="chapter_2_lesson_2_class_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Obtain the number of data values.</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="fu">nrow</span>(cov_df)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>In this case, the second variable is <span class="math inline">\(x_{t+1}\)</span>, where <span class="math inline">\(t&gt;1\)</span>. the autocovariance of <span class="math inline">\(x_t\)</span> and <span class="math inline">\(x_{t+1}\)</span> is:</p>
-<p>FIX THIS</p>
-<p>FIX THIS</p>
-<p>FIX THIS</p>
-<p>FIX THIS</p>
-<p>FIX THIS <span class="math display">\[
-  cov(x,y) = \frac{\sum\limits_{t=1}^{9}(x_t-\bar x)(x_{t+k}-\bar x)}{n}
-= \frac{2.77}{9}
-= 0.3078
-\]</span></p>
-<p>This is the autocovariance of <span class="math inline">\(x\)</span> with itself, but with a lag of 1 time unit. This is called the <strong>lag 1 autocovariance</strong> or the <strong>autocovariance of</strong> <span class="math inline">\(x\)</span> with lag 1.</p>
-<ul>
-<li>What does the lag 1 autocovariance measure?</li>
-</ul>
-</section>
-<section id="lag-1-autocorrelation-coefficient" class="level3">
-<h3 class="anchored" data-anchor-id="lag-1-autocorrelation-coefficient">(Lag 1) Autocorrelation Coefficient</h3>
-<p>We can compute the <strong>lag 1 autocorrelation</strong> or the <strong>autocorrelation of</strong> <span class="math inline">\(x\)</span> with lag 1 by dividing the autocovariance by the square roots of the variances of <span class="math inline">\(x_t\)</span> and <span class="math inline">\(x_{t+1}\)</span>:</p>
-<p><span class="math display">\[
-\begin{align*}
-  cor(x,y)
-  &amp;= \frac{cov(x,y)}{\sqrt{s_x} \cdot \sqrt{s_y}}
-  =
-  \frac{ \frac{\sum\limits_{t=1}^{9}(x_t-\bar x)(x_{t+k}-\bar x)}{n}
-      }{
-        \sqrt{
-          \frac{\sum\limits_{t=1}^{10}(x_t-\bar x)^2}{n}
-        }
-        \sqrt{
-          \frac{\sum\limits_{t=1}^{9}(x_{t+k}-\bar x)^2}{n}
-        }
-      }  
-  \\
-  &amp;=
-  \frac{ \sum\limits_{t=1}^{9}(x_t-\bar x)(x_{t+k}-\bar x)
-      }{
-        \sqrt{
-          \sum\limits_{t=1}^{10}(x_t-\bar x)^2
-        }
-        \sqrt{
-          \sum\limits_{t=1}^{9}(x_{t+k}-\bar x)^2
-        }
-      }
-  =
-  \frac{
-        2.77
-  }{
-    \sqrt{ 4.46 }
-    \sqrt{ 3.65 }
-  }
-  = 0.7801
-\end{align*}
-\]</span></p>
-<p><span class="math display">\[
-\begin{align*}
-  DUH_cor(x,y)
-  &amp;= \frac{c_k}{c_0}
-  =
-  \frac{ \frac{1}{n} \sum\limits_{t=1}^{9}(x_t-\bar x)(x_{t+k}-\bar x)
-      }{
-          \frac{1}{n} \sum\limits_{t=1}^{10}(x_t-\bar x)^2
-      }  
-  \\
-  &amp;=
-  \frac{ \sum\limits_{t=1}^{9}(x_t-\bar x)(x_{t+k}-\bar x)
-      }{
-          \sum\limits_{t=1}^{10}(x_t-\bar x)^2
-      }
-  =
-  \frac{
-        2.77
-  }{
-    \sqrt{ 4.46 }
-    \sqrt{ 3.65 }
-  }
-  = 0.7801
-\end{align*}
-\]</span></p>
-<ul>
-<li>What does the lag 1 autocorrelation measure?</li>
-</ul>
-<p>We will summarize these values in a table:</p>
+<p>Here are the values observed in a time series. We will use these to explore</p>
 <div class="cell">
 <div class="cell-output-display">
 <table class="table table-striped table-sm small" data-quarto-postprocess="true">
 <thead>
 <tr class="header">
-<th style="text-align: center;" data-quarto-table-cell-role="th">lag</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">autocovariance</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">autocorrelation</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">t</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">x_t</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">x_t+1</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td style="text-align: center;">1</td>
-<td style="text-align: center;">0.3562</td>
-<td style="text-align: center;">0.7801</td>
+<td style="text-align: center;">9.6</td>
+<td style="text-align: center;">9.4</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">2</td>
+<td style="text-align: center;">9.4</td>
+<td style="text-align: center;">9.2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">3</td>
+<td style="text-align: center;">9.2</td>
+<td style="text-align: center;">9.1</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">9.1</td>
+<td style="text-align: center;">9.4</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">5</td>
+<td style="text-align: center;">9.4</td>
+<td style="text-align: center;">8.3</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">6</td>
+<td style="text-align: center;">8.3</td>
+<td style="text-align: center;">8.0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">7</td>
+<td style="text-align: center;">8.0</td>
+<td style="text-align: center;">7.8</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">8</td>
+<td style="text-align: center;">7.8</td>
+<td style="text-align: center;">8.3</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">9</td>
+<td style="text-align: center;">8.3</td>
+<td style="text-align: center;">7.9</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">7.9</td>
+<td style="text-align: center;">NA</td>
 </tr>
 </tbody>
 </table>
@@ -560,17 +489,85 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 
 </div>
 </div>
+<p>You can use the following command to read the observations into R.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>offset_value <span class="ot">&lt;-</span> <span class="dv">2</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>cov_df <span class="ot">&lt;-</span> <span class="fu">get_data_for_cov_table</span>(<span class="at">offset =</span> offset_value)</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>cov_table <span class="ot">&lt;-</span> cov_df <span class="sc">%&gt;%</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">make_cov_table_df</span>(<span class="at">offset =</span> offset_value, <span class="at">decimals_1st_order =</span> <span class="dv">1</span>, <span class="at">decimals_2nd_order =</span> <span class="dv">2</span>) </span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>cov_table <span class="sc">%&gt;%</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># make_blank_row_in_cov_table(3) %&gt;%</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># make_blank_row_in_cov_table(4) %&gt;%</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># make_blank_row_in_cov_table(5) %&gt;%</span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># make_blank_row_in_cov_table(6) %&gt;%</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_cov_table</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>x &lt;- c( 9.6, 9.4, 9.2, 9.1, 9.4, 8.3, 8, 7.8, 8.3, 7.9 )</code></pre>
+</div>
+</div>
+<p>Note that</p>
+<p><span class="math display">\[
+  \bar x
+    = \frac{1}{n} \sum\limits_{t=1}^{n} x_t
+    = \frac{1}{10} \cdot 87
+    = 8.7
+\]</span></p>
+<p>In this example, the second variable is <span class="math inline">\(x_{t+1}\)</span>, where <span class="math inline">\(t&gt;1\)</span>. the autocovariance of <span class="math inline">\(x_t\)</span> and <span class="math inline">\(x_{t+1}\)</span> is:</p>
+<p><span class="math display">\[
+  c_1
+    = \frac{1}{n} \sum\limits_{t=1}^{n-1}(x_t-\bar x)(x_{t+1}-\bar x)
+    = \frac{1}{10} \sum\limits_{t=1}^{9}(x_t-\bar x)(x_{t+1}-\bar x)
+  = \frac{1}{10} \cdot 2.77
+  = 0.277
+\]</span></p>
+<p>This is the (auto)covariance of <span class="math inline">\(x\)</span> with itself, but with a lag of 1 time unit. This is the value of the <strong>lag</strong> <span class="math inline">\(k=1\)</span> autocovariance function, acvf_1.</p>
+<ul>
+<li>What does the lag 1 autocovariance measure?</li>
+</ul>
+</section>
+<section id="lag-k-sample-autocorrelation-function-acf-r_k" class="level3">
+<h3 class="anchored" data-anchor-id="lag-k-sample-autocorrelation-function-acf-r_k">Lag <span class="math inline">\(k\)</span> Sample Autocorrelation Function (acf), <span class="math inline">\(r_k\)</span></h3>
+<p>The <strong>sample autocorrelation function, acf</strong>, denoted <span class="math inline">\(r_k\)</span>, where <span class="math inline">\(k\)</span> is the lag, is defined as</p>
+<p><span class="math display">\[
+  r_k
+    = \frac{c_k}{c_0}
+    = \frac{ \frac{1}{n} \sum\limits_{t=1}^{n-k}(x_t-\bar x)(x_{t+k}-\bar x) }{ \frac{1}{n} \sum\limits_{t=1}^{n}(x_t-\bar x)^2 }
+    = \frac{ \sum\limits_{t=1}^{n-k}(x_t-\bar x)(x_{t+k}-\bar x) }{ \sum\limits_{t=1}^{n}(x_t-\bar x)^2 }
+\]</span></p>
+<p>Note that <span class="math inline">\(c_0\)</span> is the variance of <span class="math inline">\(x\)</span>, computed by dividing by <span class="math inline">\(n\)</span>, instead of <span class="math inline">\(n-1\)</span>.</p>
+</section>
+<section id="lag-k1-sample-autocorrelation-function-r_1" class="level3">
+<h3 class="anchored" data-anchor-id="lag-k1-sample-autocorrelation-function-r_1">Lag <span class="math inline">\(k=1\)</span> Sample Autocorrelation Function, <span class="math inline">\(r_1\)</span></h3>
+<p>We can compute the <strong>lag 1 autocorrelation</strong> or the <strong>autocorrelation of</strong> <span class="math inline">\(x\)</span> with lag 1 as the quotient <span class="math inline">\(r_1 = \frac{c_1}{c_0}\)</span>, where <span class="math display">\[ c_1 = \sum\limits_{t=1}^{n-k} (x_t-\bar x)(x_{t+k}-\bar x) \]</span> by <span class="math display">\[ c_0 = \sum\limits_{t=1}^{n} (x_t-\bar x)^2 \]</span></p>
+<p>First, we compute <span class="math inline">\(c_0\)</span>: <span class="math display">\[
+  c_0
+    = \frac{1}{10} \sum\limits_{t=1}^{n} (x_t-\bar x)^2
+    = \frac{1}{10} \cdot 4.46
+    = 0.446
+\]</span></p>
+<p>Now, we use <span class="math inline">\(c_0\)</span> to compute <span class="math inline">\(r_1\)</span>:</p>
+<span class="math display">\[\begin{align*}
+  r_1
+  &amp;= \frac{c_1}{c_0}
+  =
+  \frac{ \frac{1}{n} \sum\limits_{t=1}^{9}(x_t-\bar x)(x_{t+1}-\bar x)
+      }{
+          \frac{1}{n} \sum\limits_{t=1}^{10}(x_t-\bar x)^2
+      }  
+  =
+  \frac{0.277}{0.446}
+  = 0.6211
+  \\
+  &amp;=
+  \frac{ \sum\limits_{t=1}^{9}(x_t-\bar x)(x_{t+1}-\bar x)
+      }{
+          \sum\limits_{t=1}^{10}(x_t-\bar x)^2
+      }
+  =
+  \frac{
+        2.77
+  }{
+    4.46
+  }
+  = 0.6211
+\end{align*}\]</span>
+<ul>
+<li>What does the lag 1 autocorrelation measure?</li>
+</ul>
+</section>
+<section id="k-2" class="level3">
+<h3 class="anchored" data-anchor-id="k-2"><span class="math inline">\(k = 2\)</span></h3>
+<div class="cell">
 <div class="cell-output-display">
 <table class="table table-striped table-sm small" data-quarto-postprocess="true">
 <thead>
@@ -581,166 +578,122 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 <th style="text-align: center;" data-quarto-table-cell-role="th">x_t-mean(x)</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">(x_t-mean(x))^2</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">x_{t+k}-mean(x)</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">(x_{t+k}-mean(x))^2</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">(x-mean(x))(x_{t+k}-mean(x))</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td style="text-align: center;">1</td>
-<td style="text-align: center;"><span style="     color: #56B4E9 !important;">9.6</span></td>
-<td style="text-align: center;"><span style="     color: #F0E442 !important;">9.2</span></td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;"> 9.6</span></td>
+<td style="text-align: center;"><span style="     color: #F0E442 !important;"> 9.2</span></td>
 <td style="text-align: center;">0.9</td>
 <td style="text-align: center;">0.81</td>
 <td style="text-align: center;">0.5</td>
-<td style="text-align: center;">0.25</td>
 <td style="text-align: center;">0.45</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">2</td>
-<td style="text-align: center;"><span style="     color: #009E73 !important;">9.4</span></td>
-<td style="text-align: center;"><span style="     color: #0072B2 !important;">9.1</span></td>
+<td style="text-align: center;"><span style="     color: #009E73 !important;"> 9.4</span></td>
+<td style="text-align: center;"><span style="     color: #0072B2 !important;"> 9.1</span></td>
 <td style="text-align: center;">0.7</td>
 <td style="text-align: center;">0.49</td>
 <td style="text-align: center;">0.4</td>
-<td style="text-align: center;">0.16</td>
 <td style="text-align: center;">0.28</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">3</td>
-<td style="text-align: center;"><span style="     color: #F0E442 !important;">9.2</span></td>
-<td style="text-align: center;"><span style="     color: #D55E00 !important;">9.4</span></td>
-<td style="text-align: center;">0.5</td>
-<td style="text-align: center;">0.25</td>
-<td style="text-align: center;">0.7</td>
-<td style="text-align: center;">0.49</td>
-<td style="text-align: center;">0.35</td>
+<td style="text-align: center;"><span style="     color: #F0E442 !important;"> 9.2</span></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">4</td>
-<td style="text-align: center;"><span style="     color: #0072B2 !important;">9.1</span></td>
-<td style="text-align: center;"><span style="     color: #F5C710 !important;">8.3</span></td>
-<td style="text-align: center;">0.4</td>
-<td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.4</td>
-<td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.16</td>
+<td style="text-align: center;"><span style="     color: #0072B2 !important;"> 9.1</span></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">5</td>
-<td style="text-align: center;"><span style="     color: #D55E00 !important;">9.4</span></td>
-<td style="text-align: center;"><span style="     color: #CC79A7 !important;">8.0</span></td>
-<td style="text-align: center;">0.7</td>
-<td style="text-align: center;">0.49</td>
-<td style="text-align: center;">0.7</td>
-<td style="text-align: center;">0.49</td>
-<td style="text-align: center;">0.49</td>
+<td style="text-align: center;"><span style="     color: #D55E00 !important;"> 9.4</span></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">6</td>
-<td style="text-align: center;"><span style="     color: #F5C710 !important;">8.3</span></td>
-<td style="text-align: center;"><span style="     color: #999999 !important;">7.8</span></td>
-<td style="text-align: center;">0.4</td>
+<td style="text-align: center;"><span style="     color: #F5C710 !important;"> 8.3</span></td>
+<td style="text-align: center;"><span style="     color: #999999 !important;"> 7.8</span></td>
+<td style="text-align: center;">-0.4</td>
 <td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.9</td>
-<td style="text-align: center;">0.81</td>
+<td style="text-align: center;">-0.9</td>
 <td style="text-align: center;">0.36</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">7</td>
-<td style="text-align: center;"><span style="     color: #CC79A7 !important;">8.0</span></td>
-<td style="text-align: center;"><span style="     color: #E69F00 !important;">8.3</span></td>
-<td style="text-align: center;">0.7</td>
+<td style="text-align: center;"><span style="     color: #CC79A7 !important;"> 8.0</span></td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;"> 8.3</span></td>
+<td style="text-align: center;">-0.7</td>
 <td style="text-align: center;">0.49</td>
-<td style="text-align: center;">0.4</td>
-<td style="text-align: center;">0.16</td>
+<td style="text-align: center;">-0.4</td>
 <td style="text-align: center;">0.28</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">8</td>
-<td style="text-align: center;"><span style="     color: #999999 !important;">7.8</span></td>
-<td style="text-align: center;"><span style="     color: #56B4E9 !important;">7.9</span></td>
-<td style="text-align: center;">0.9</td>
+<td style="text-align: center;"><span style="     color: #999999 !important;"> 7.8</span></td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;"> 7.9</span></td>
+<td style="text-align: center;">-0.9</td>
 <td style="text-align: center;">0.81</td>
-<td style="text-align: center;">0.8</td>
-<td style="text-align: center;">0.64</td>
+<td style="text-align: center;">-0.8</td>
 <td style="text-align: center;">0.72</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">9</td>
-<td style="text-align: center;"><span style="     color: #E69F00 !important;">8.3</span></td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;"> 8.3</span></td>
 <td style="text-align: center;">—</td>
-<td style="text-align: center;">0.4</td>
+<td style="text-align: center;">-0.4</td>
 <td style="text-align: center;">0.16</td>
-<td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">10</td>
-<td style="text-align: center;"><span style="     color: #56B4E9 !important;">7.9</span></td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;"> 7.9</span></td>
 <td style="text-align: center;">—</td>
-<td style="text-align: center;">0.8</td>
+<td style="text-align: center;">-0.8</td>
 <td style="text-align: center;">0.64</td>
-<td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">sum</td>
 <td style="text-align: center;">87.0</td>
-<td style="text-align: center;">68.0</td>
-<td style="text-align: center;">0.0</td>
-<td style="text-align: center;">4.46</td>
-<td style="text-align: center;">-1.6</td>
-<td style="text-align: center;">3.16</td>
-<td style="text-align: center;">1.79</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
 </tr>
 </tbody>
 </table>
 
 
 </div>
-</div>
-<div class="cell">
 <div class="cell-output-display">
-<table class="table table-striped table-sm small" data-quarto-postprocess="true">
-<thead>
-<tr class="header">
-<th style="text-align: center;" data-quarto-table-cell-role="th">lag</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">autocovariance</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">autocorrelation</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: center;">1</td>
-<td style="text-align: center;">0.3562</td>
-<td style="text-align: center;">0.7801</td>
-</tr>
-<tr class="even">
-<td style="text-align: center;">2</td>
-<td style="text-align: center;"></td>
-<td style="text-align: center;"></td>
-</tr>
-</tbody>
-</table>
-
-
+<p><img src="chapter_2_lesson_2_class_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+</section>
+<section id="k-3" class="level3">
+<h3 class="anchored" data-anchor-id="k-3"><span class="math inline">\(k = 3\)</span></h3>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># cov_df3 &lt;- get_data_for_cov_table(offset = 3)</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co"># cov_df3 %&gt;%</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   make_cov_table_df(offset = 3) %&gt;% </span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">#   display_cov_table()</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>offset_value <span class="ot">&lt;-</span> <span class="dv">3</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>cov_df <span class="ot">&lt;-</span> <span class="fu">get_data_for_cov_table</span>(<span class="at">offset =</span> offset_value)</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>cov_table <span class="ot">&lt;-</span> cov_df <span class="sc">%&gt;%</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">make_cov_table_df</span>(<span class="at">offset =</span> offset_value, <span class="at">decimals_1st_order =</span> <span class="dv">1</span>, <span class="at">decimals_2nd_order =</span> <span class="dv">2</span>) </span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>cov_table <span class="sc">%&gt;%</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_cov_table</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <table class="table table-striped table-sm small" data-quarto-postprocess="true">
 <thead>
@@ -751,108 +704,97 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 <th style="text-align: center;" data-quarto-table-cell-role="th">x_t-mean(x)</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">(x_t-mean(x))^2</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">x_{t+k}-mean(x)</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">(x_{t+k}-mean(x))^2</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">(x-mean(x))(x_{t+k}-mean(x))</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td style="text-align: center;">1</td>
-<td style="text-align: center;"><span style="     color: #56B4E9 !important;">9.6</span></td>
-<td style="text-align: center;"><span style="     color: #0072B2 !important;">9.1</span></td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;"> 9.6</span></td>
+<td style="text-align: center;"><span style="     color: #0072B2 !important;"> 9.1</span></td>
 <td style="text-align: center;">0.9</td>
 <td style="text-align: center;">0.81</td>
 <td style="text-align: center;">0.4</td>
-<td style="text-align: center;">0.16</td>
 <td style="text-align: center;">0.36</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">2</td>
-<td style="text-align: center;"><span style="     color: #009E73 !important;">9.4</span></td>
-<td style="text-align: center;"><span style="     color: #D55E00 !important;">9.4</span></td>
+<td style="text-align: center;"><span style="     color: #009E73 !important;"> 9.4</span></td>
+<td style="text-align: center;"><span style="     color: #D55E00 !important;"> 9.4</span></td>
 <td style="text-align: center;">0.7</td>
 <td style="text-align: center;">0.49</td>
 <td style="text-align: center;">0.7</td>
-<td style="text-align: center;">0.49</td>
 <td style="text-align: center;">0.49</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">3</td>
-<td style="text-align: center;"><span style="     color: #F0E442 !important;">9.2</span></td>
-<td style="text-align: center;"><span style="     color: #F5C710 !important;">8.3</span></td>
+<td style="text-align: center;"><span style="     color: #F0E442 !important;"> 9.2</span></td>
+<td style="text-align: center;"><span style="     color: #F5C710 !important;"> 8.3</span></td>
 <td style="text-align: center;">0.5</td>
 <td style="text-align: center;">0.25</td>
-<td style="text-align: center;">0.4</td>
-<td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.20</td>
+<td style="text-align: center;">-0.4</td>
+<td style="text-align: center;">-0.20</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">4</td>
-<td style="text-align: center;"><span style="     color: #0072B2 !important;">9.1</span></td>
-<td style="text-align: center;"><span style="     color: #CC79A7 !important;">8.0</span></td>
+<td style="text-align: center;"><span style="     color: #0072B2 !important;"> 9.1</span></td>
+<td style="text-align: center;"><span style="     color: #CC79A7 !important;"> 8.0</span></td>
 <td style="text-align: center;">0.4</td>
 <td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.7</td>
-<td style="text-align: center;">0.49</td>
-<td style="text-align: center;">0.28</td>
+<td style="text-align: center;">-0.7</td>
+<td style="text-align: center;">-0.28</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">5</td>
-<td style="text-align: center;"><span style="     color: #D55E00 !important;">9.4</span></td>
-<td style="text-align: center;"><span style="     color: #999999 !important;">7.8</span></td>
+<td style="text-align: center;"><span style="     color: #D55E00 !important;"> 9.4</span></td>
+<td style="text-align: center;"><span style="     color: #999999 !important;"> 7.8</span></td>
 <td style="text-align: center;">0.7</td>
 <td style="text-align: center;">0.49</td>
-<td style="text-align: center;">0.9</td>
-<td style="text-align: center;">0.81</td>
-<td style="text-align: center;">0.63</td>
+<td style="text-align: center;">-0.9</td>
+<td style="text-align: center;">-0.63</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">6</td>
-<td style="text-align: center;"><span style="     color: #F5C710 !important;">8.3</span></td>
-<td style="text-align: center;"><span style="     color: #E69F00 !important;">8.3</span></td>
-<td style="text-align: center;">0.4</td>
+<td style="text-align: center;"><span style="     color: #F5C710 !important;"> 8.3</span></td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;"> 8.3</span></td>
+<td style="text-align: center;">-0.4</td>
 <td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.4</td>
-<td style="text-align: center;">0.16</td>
+<td style="text-align: center;">-0.4</td>
 <td style="text-align: center;">0.16</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">7</td>
-<td style="text-align: center;"><span style="     color: #CC79A7 !important;">8.0</span></td>
-<td style="text-align: center;"><span style="     color: #56B4E9 !important;">7.9</span></td>
-<td style="text-align: center;">0.7</td>
+<td style="text-align: center;"><span style="     color: #CC79A7 !important;"> 8.0</span></td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;"> 7.9</span></td>
+<td style="text-align: center;">-0.7</td>
 <td style="text-align: center;">0.49</td>
-<td style="text-align: center;">0.8</td>
-<td style="text-align: center;">0.64</td>
+<td style="text-align: center;">-0.8</td>
 <td style="text-align: center;">0.56</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">8</td>
-<td style="text-align: center;"><span style="     color: #999999 !important;">7.8</span></td>
+<td style="text-align: center;"><span style="     color: #999999 !important;"> 7.8</span></td>
 <td style="text-align: center;">—</td>
-<td style="text-align: center;">0.9</td>
+<td style="text-align: center;">-0.9</td>
 <td style="text-align: center;">0.81</td>
-<td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">9</td>
-<td style="text-align: center;"><span style="     color: #E69F00 !important;">8.3</span></td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;"> 8.3</span></td>
 <td style="text-align: center;">—</td>
-<td style="text-align: center;">0.4</td>
+<td style="text-align: center;">-0.4</td>
 <td style="text-align: center;">0.16</td>
-<td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">10</td>
-<td style="text-align: center;"><span style="     color: #56B4E9 !important;">7.9</span></td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;"> 7.9</span></td>
 <td style="text-align: center;">—</td>
-<td style="text-align: center;">0.8</td>
+<td style="text-align: center;">-0.8</td>
 <td style="text-align: center;">0.64</td>
-<td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 </tr>
@@ -862,8 +804,7 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 <td style="text-align: center;">58.8</td>
 <td style="text-align: center;">0.0</td>
 <td style="text-align: center;">4.46</td>
-<td style="text-align: center;">-2.1</td>
-<td style="text-align: center;">2.91</td>
+<td style="text-align: center;">--2.1</td>
 <td style="text-align: center;">0.46</td>
 </tr>
 </tbody>
@@ -871,51 +812,14 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 
 
 </div>
-</div>
-<div class="cell">
 <div class="cell-output-display">
-<table class="table table-striped table-sm small" data-quarto-postprocess="true">
-<thead>
-<tr class="header">
-<th style="text-align: center;" data-quarto-table-cell-role="th">lag</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">autocovariance</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">autocorrelation</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: center;">1</td>
-<td style="text-align: center;">0.3562</td>
-<td style="text-align: center;">0.7801</td>
-</tr>
-<tr class="even">
-<td style="text-align: center;">2</td>
-<td style="text-align: center;"></td>
-<td style="text-align: center;"></td>
-</tr>
-<tr class="odd">
-<td style="text-align: center;">3</td>
-<td style="text-align: center;">0.1817</td>
-<td style="text-align: center;">0.4845</td>
-</tr>
-</tbody>
-</table>
-
-
+<p><img src="chapter_2_lesson_2_class_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+</section>
+<section id="k-4" class="level3">
+<h3 class="anchored" data-anchor-id="k-4"><span class="math inline">\(k = 4\)</span></h3>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># cov_df4 &lt;- get_data_for_cov_table(offset = 4)</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co"># cov_df4 %&gt;%</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   make_cov_table_df(offset = 4) %&gt;% </span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="co">#   display_cov_table()</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>offset_value <span class="ot">&lt;-</span> <span class="dv">4</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>cov_df <span class="ot">&lt;-</span> <span class="fu">get_data_for_cov_table</span>(<span class="at">offset =</span> offset_value)</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>cov_table <span class="ot">&lt;-</span> cov_df <span class="sc">%&gt;%</span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">make_cov_table_df</span>(<span class="at">offset =</span> offset_value, <span class="at">decimals_1st_order =</span> <span class="dv">1</span>, <span class="at">decimals_2nd_order =</span> <span class="dv">2</span>) </span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>cov_table <span class="sc">%&gt;%</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_cov_table</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <table class="table table-striped table-sm small" data-quarto-postprocess="true">
 <thead>
@@ -926,108 +830,97 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 <th style="text-align: center;" data-quarto-table-cell-role="th">x_t-mean(x)</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">(x_t-mean(x))^2</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">x_{t+k}-mean(x)</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">(x_{t+k}-mean(x))^2</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">(x-mean(x))(x_{t+k}-mean(x))</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td style="text-align: center;">1</td>
-<td style="text-align: center;"><span style="     color: #56B4E9 !important;">9.6</span></td>
-<td style="text-align: center;"><span style="     color: #D55E00 !important;">9.4</span></td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;"> 9.6</span></td>
+<td style="text-align: center;"><span style="     color: #D55E00 !important;"> 9.4</span></td>
 <td style="text-align: center;">0.9</td>
 <td style="text-align: center;">0.81</td>
 <td style="text-align: center;">0.7</td>
-<td style="text-align: center;">0.49</td>
 <td style="text-align: center;">0.63</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">2</td>
-<td style="text-align: center;"><span style="     color: #009E73 !important;">9.4</span></td>
-<td style="text-align: center;"><span style="     color: #F5C710 !important;">8.3</span></td>
+<td style="text-align: center;"><span style="     color: #009E73 !important;"> 9.4</span></td>
+<td style="text-align: center;"><span style="     color: #F5C710 !important;"> 8.3</span></td>
 <td style="text-align: center;">0.7</td>
 <td style="text-align: center;">0.49</td>
-<td style="text-align: center;">0.4</td>
-<td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.28</td>
+<td style="text-align: center;">-0.4</td>
+<td style="text-align: center;">-0.28</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">3</td>
-<td style="text-align: center;"><span style="     color: #F0E442 !important;">9.2</span></td>
-<td style="text-align: center;"><span style="     color: #CC79A7 !important;">8.0</span></td>
+<td style="text-align: center;"><span style="     color: #F0E442 !important;"> 9.2</span></td>
+<td style="text-align: center;"><span style="     color: #CC79A7 !important;"> 8.0</span></td>
 <td style="text-align: center;">0.5</td>
 <td style="text-align: center;">0.25</td>
-<td style="text-align: center;">0.7</td>
-<td style="text-align: center;">0.49</td>
-<td style="text-align: center;">0.35</td>
+<td style="text-align: center;">-0.7</td>
+<td style="text-align: center;">-0.35</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">4</td>
-<td style="text-align: center;"><span style="     color: #0072B2 !important;">9.1</span></td>
-<td style="text-align: center;"><span style="     color: #999999 !important;">7.8</span></td>
+<td style="text-align: center;"><span style="     color: #0072B2 !important;"> 9.1</span></td>
+<td style="text-align: center;"><span style="     color: #999999 !important;"> 7.8</span></td>
 <td style="text-align: center;">0.4</td>
 <td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.9</td>
-<td style="text-align: center;">0.81</td>
-<td style="text-align: center;">0.36</td>
+<td style="text-align: center;">-0.9</td>
+<td style="text-align: center;">-0.36</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">5</td>
-<td style="text-align: center;"><span style="     color: #D55E00 !important;">9.4</span></td>
-<td style="text-align: center;"><span style="     color: #E69F00 !important;">8.3</span></td>
+<td style="text-align: center;"><span style="     color: #D55E00 !important;"> 9.4</span></td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;"> 8.3</span></td>
 <td style="text-align: center;">0.7</td>
 <td style="text-align: center;">0.49</td>
-<td style="text-align: center;">0.4</td>
-<td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.28</td>
+<td style="text-align: center;">-0.4</td>
+<td style="text-align: center;">-0.28</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">6</td>
-<td style="text-align: center;"><span style="     color: #F5C710 !important;">8.3</span></td>
-<td style="text-align: center;"><span style="     color: #56B4E9 !important;">7.9</span></td>
-<td style="text-align: center;">0.4</td>
+<td style="text-align: center;"><span style="     color: #F5C710 !important;"> 8.3</span></td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;"> 7.9</span></td>
+<td style="text-align: center;">-0.4</td>
 <td style="text-align: center;">0.16</td>
-<td style="text-align: center;">0.8</td>
-<td style="text-align: center;">0.64</td>
+<td style="text-align: center;">-0.8</td>
 <td style="text-align: center;">0.32</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">7</td>
-<td style="text-align: center;"><span style="     color: #CC79A7 !important;">8.0</span></td>
+<td style="text-align: center;"><span style="     color: #CC79A7 !important;"> 8.0</span></td>
 <td style="text-align: center;">—</td>
-<td style="text-align: center;">0.7</td>
+<td style="text-align: center;">-0.7</td>
 <td style="text-align: center;">0.49</td>
-<td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">8</td>
-<td style="text-align: center;"><span style="     color: #999999 !important;">7.8</span></td>
+<td style="text-align: center;"><span style="     color: #999999 !important;"> 7.8</span></td>
 <td style="text-align: center;">—</td>
-<td style="text-align: center;">0.9</td>
+<td style="text-align: center;">-0.9</td>
 <td style="text-align: center;">0.81</td>
-<td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">9</td>
-<td style="text-align: center;"><span style="     color: #E69F00 !important;">8.3</span></td>
+<td style="text-align: center;"><span style="     color: #E69F00 !important;"> 8.3</span></td>
 <td style="text-align: center;">—</td>
-<td style="text-align: center;">0.4</td>
+<td style="text-align: center;">-0.4</td>
 <td style="text-align: center;">0.16</td>
-<td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">10</td>
-<td style="text-align: center;"><span style="     color: #56B4E9 !important;">7.9</span></td>
+<td style="text-align: center;"><span style="     color: #56B4E9 !important;"> 7.9</span></td>
 <td style="text-align: center;">—</td>
-<td style="text-align: center;">0.8</td>
+<td style="text-align: center;">-0.8</td>
 <td style="text-align: center;">0.64</td>
-<td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 <td style="text-align: center;">—</td>
 </tr>
@@ -1037,14 +930,16 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 <td style="text-align: center;">49.7</td>
 <td style="text-align: center;">0.0</td>
 <td style="text-align: center;">4.46</td>
-<td style="text-align: center;">-2.5</td>
-<td style="text-align: center;">2.75</td>
-<td style="text-align: center;">0.32</td>
+<td style="text-align: center;">--2.5</td>
+<td style="text-align: center;">-0.32</td>
 </tr>
 </tbody>
 </table>
 
 
+</div>
+<div class="cell-output-display">
+<p><img src="chapter_2_lesson_2_class_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="cell">
@@ -1060,23 +955,23 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 <tbody>
 <tr class="odd">
 <td style="text-align: center;">1</td>
-<td style="text-align: center;">0.3562</td>
-<td style="text-align: center;">0.7801</td>
+<td style="text-align: center;">0.277</td>
+<td style="text-align: center;">0.6211</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">2</td>
-<td style="text-align: center;"></td>
-<td style="text-align: center;"></td>
+<td style="text-align: center;">0.179</td>
+<td style="text-align: center;">0.4013</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">3</td>
-<td style="text-align: center;">0.1817</td>
-<td style="text-align: center;">0.4845</td>
+<td style="text-align: center;">0.046</td>
+<td style="text-align: center;">0.1031</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">4</td>
-<td style="text-align: center;">0.1693</td>
-<td style="text-align: center;">0.6312</td>
+<td style="text-align: center;">-0.032</td>
+<td style="text-align: center;">-0.0717</td>
 </tr>
 </tbody>
 </table>
@@ -1084,37 +979,28 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN PRESS A BUTTON TO REFRESH 
 
 </div>
 </div>
+</section>
+<section id="correlograms" class="level3">
+<h3 class="anchored" data-anchor-id="correlograms">Correlograms</h3>
 <ul>
-<li><p>Compute c_k and r_k with a few different lag (k) values</p></li>
-<li><p>Finish a partially-created correlogram with the r_k values computed</p></li>
-<li><p>Show a correlogram with seasonal data with a period of one year (chocolate data?). What do the spikes tell us?</p></li>
+<li>The table below gives the sample autocorrelation function, acf, for this data set. Use these values to sketch a correlogram. The figure below can help you begin.</li>
 </ul>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(cov_df<span class="sc">$</span>x)<span class="sc">$</span>acf</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="chapter_2_lesson_2_class_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
-</div>
 <div class="cell-output cell-output-stdout">
-<pre><code>, , 1
+<pre><code>
+Autocorrelations of series 'cov_df$x', by lag
 
-             [,1]
- [1,]  1.00000000
- [2,]  0.62107623
- [3,]  0.40134529
- [4,]  0.10313901
- [5,] -0.07174888
- [6,] -0.45291480
- [7,] -0.39910314
- [8,] -0.33408072
- [9,] -0.20627803
-[10,] -0.16143498</code></pre>
+     0      1      2      3      4      5      6      7      8      9 
+ 1.000  0.621  0.401  0.103 -0.072 -0.453 -0.399 -0.334 -0.206 -0.161 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>values_text <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"x_t &lt;- c("</span>,<span class="fu">paste</span>(cov_df<span class="sc">$</span>x, <span class="at">collapse =</span> <span class="st">", "</span>),<span class="st">")"</span>)</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>values_text</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] "x_t &lt;- c(9.6, 9.4, 9.2, 9.1, 9.4, 8.3, 8, 7.8, 8.3, 7.9)"</code></pre>
+<div class="cell-output-display">
+<p><img src="chapter_2_lesson_2_class_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<!-- -   Finish a partially-created correlogram with the r_k values computed -->
+<ul>
+<li>Show a correlogram with seasonal data with a period of one year (chocolate data?). What do the spikes tell us?</li>
+</ul>
 </section>
 </section>
 <section id="recap-5-mins" class="level2">
@@ -1141,8 +1027,8 @@ TYSON: PLEASE BUILD A SHINY APP IN WHICH STUDENTS CAN CHANGE THE AUTOCORRELATION
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(zoo) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(zoo) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>
 Attaching package: 'zoo'</code></pre>
@@ -1157,35 +1043,35 @@ Attaching package: 'zoo'</code></pre>
 
     as.Date, as.Date.numeric</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate data</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">101</span>) </span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span><span class="sc">*</span><span class="fl">0.5</span> <span class="sc">+</span> <span class="fu">arima.sim</span>(<span class="at">n=</span><span class="dv">100-1</span>, <span class="fu">list</span>(<span class="at">ar=</span><span class="fl">0.1</span>, <span class="at">ma=</span><span class="fl">0.2</span>, <span class="at">order=</span><span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>)))</span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>e <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">100</span>, <span class="dv">0</span>, <span class="fl">2.5</span>)</span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span><span class="sc">*</span><span class="fl">0.5</span> <span class="sc">+</span> e  </span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>z <span class="ot">&lt;-</span> <span class="fu">zoo</span>(y, <span class="at">order.by =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>)</span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Create data frame  </span></span>
-<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">time =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>,</span>
-<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">x =</span> x,</span>
-<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">z =</span> <span class="fu">coredata</span>(z)</span>
-<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot  </span></span>
-<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df, <span class="fu">aes</span>(<span class="at">x =</span> time)) <span class="sc">+</span></span>
-<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> x, <span class="at">color =</span> <span class="st">"X"</span>)) <span class="sc">+</span> </span>
-<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> z, <span class="at">color =</span> <span class="st">"Z"</span>)) <span class="sc">+</span></span>
-<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title=</span><span class="st">"X vs Z Series"</span>, </span>
-<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>       <span class="at">x=</span><span class="st">"Time"</span>,</span>
-<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>       <span class="at">y=</span><span class="st">"Values"</span>,</span>
-<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>       <span class="at">color=</span><span class="st">"Series"</span>) <span class="sc">+</span></span>
-<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate data</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">101</span>) </span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span><span class="sc">*</span><span class="fl">0.5</span> <span class="sc">+</span> <span class="fu">arima.sim</span>(<span class="at">n=</span><span class="dv">100-1</span>, <span class="fu">list</span>(<span class="at">ar=</span><span class="fl">0.1</span>, <span class="at">ma=</span><span class="fl">0.2</span>, <span class="at">order=</span><span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>)))</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>e <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="dv">100</span>, <span class="dv">0</span>, <span class="fl">2.5</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>y <span class="ot">&lt;-</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span><span class="sc">*</span><span class="fl">0.5</span> <span class="sc">+</span> e  </span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>z <span class="ot">&lt;-</span> <span class="fu">zoo</span>(y, <span class="at">order.by =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>)</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Create data frame  </span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">time =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">100</span>,</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">x =</span> x,</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">z =</span> <span class="fu">coredata</span>(z)</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot  </span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(df, <span class="fu">aes</span>(<span class="at">x =</span> time)) <span class="sc">+</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> x, <span class="at">color =</span> <span class="st">"X"</span>)) <span class="sc">+</span> </span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> z, <span class="at">color =</span> <span class="st">"Z"</span>)) <span class="sc">+</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title=</span><span class="st">"X vs Z Series"</span>, </span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>       <span class="at">x=</span><span class="st">"Time"</span>,</span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>       <span class="at">y=</span><span class="st">"Values"</span>,</span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>       <span class="at">color=</span><span class="st">"Series"</span>) <span class="sc">+</span></span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Don't know how to automatically pick scale for object of type &lt;ts&gt;. Defaulting
 to continuous.</code></pre>
 </div>
 <div class="cell-output-display">
-<p><img src="chapter_2_lesson_2_class_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_2_lesson_2_class_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
@@ -1238,13 +1124,6 @@ to continuous.</code></pre>
 <li><p>Compute acf/pacf on sample data</p></li>
 <li><p>Make correlogram plots in R</p></li>
 <li><p>Identify significant lags/correlations</p></li>
-</ul>
-</section>
-<section id="recap-15-mins" class="level2">
-<h2 class="anchored" data-anchor-id="recap-15-mins">Recap (15 mins)</h2>
-<ul>
-<li><p>Review objectives and key points</p></li>
-<li><p>Clarify questions on correlograms</p></li>
 </ul>
 </section>
 <section id="assessment-1" class="level2">

@@ -8,13 +8,18 @@ pacman::p_load("tsibble", "fable",
                "rio"
 )
 
-max_reps <- 6 * 10^5
+max_reps <- 10^6
 max_offset <- 3
 
 max_buffer <- 10000
 
 cov_dat_init <- data.frame(offset = 0, seed_val = 1:(max_buffer * max_offset), xbar = 0, ybar =0, cov = 0, varx = 0, vary = 0)
 cov_dat <- cov_dat_init
+export(cov_dat %>% mutate(offset = NA) %>% na.omit(),
+       "data_new.csv",
+       append = FALSE
+)
+
 row_num <- 0
 for (seed_val in 1:max_reps) {
   for (offset in 1:max_offset) {
@@ -22,7 +27,7 @@ for (seed_val in 1:max_reps) {
     set.seed(seed_val)
 
     # set parameters
-    n <- 11
+    n <- 10
     rho <- 0.99
     mu <- 10
     sigma <- 3
@@ -35,29 +40,30 @@ for (seed_val in 1:max_reps) {
     x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1)
 
     # build a data frame
-    df <- data.frame(i = 1:length(x1),
+    df <- data.frame(#t = 1:length(x1),
                      x = x1,
-                     y = lag(x1, offset)) %>%
-      na.omit()
+                     y = lead(x1, offset)) %>%
+      mutate(
+        xx = x - mean(x),
+        xx2 = xx^2,
+        yy = y - mean(x),
+        yy2 = yy^2,
+        xy = xx * yy
+      )
 
     cov_dat$offset[row_num] <- offset
     cov_dat$seed_val[row_num] <- seed_val
     cov_dat$xbar[row_num] <- mean(df$x)
-    cov_dat$ybar[row_num] <- mean(df$y)
-    cov_dat$cov[row_num] <- cov(df$x, df$y)
-    cov_dat$varx[row_num] <- var(df$x)
-    cov_dat$vary[row_num] <- var(df$y)
-
-
+    cov_dat$ybar[row_num] <- mean(df$y, na.rm = TRUE)
+    cov_dat$cov[row_num] <- sum(df$xy, na.rm = TRUE) / n
+    cov_dat$varx[row_num] <- sum(df$xx2) / n
+    cov_dat$vary[row_num] <- sum(df$yy2, na.rm = TRUE) / n
   }
+
   if (seed_val %% max_buffer == 0) {
-    # write.table(cov_dat, file="data.csv", append=TRUE, row.names=FALSE) # , col.names=FALSE)
     export(cov_dat,
-           "data11.csv",
+           "data_new.csv",
            append = TRUE
-           # ,
-           # fileFormat = "csv",
-           # delimiter = "\t"
            )
     cov_dat <- cov_dat_init
     row_num <- 0
@@ -65,33 +71,37 @@ for (seed_val in 1:max_reps) {
   }
 }
 
-# df1 <- rio::import("data1.csv")
-# df2 <- rio::import("data2.csv")
-# df3 <- rio::import("data.csv")
-# cov_dat <- bind_rows(df1,df2)
-
-cov_dat <- rio::import("data11.csv")
+cov_dat <- rio::import("data_new.csv")
 
 x <- cov_dat %>%
   # filter(offset <= 3) %>%
   mutate(
-    cov = as.character(cov),
-    xbar = as.character(xbar),
-    ybar = as.character(ybar),
-    varx = as.character(varx),
-    vary = as.character(vary)
+    cov1 = as.character(cov),
+    xbar1 = as.character(xbar),
+    ybar1 = as.character(ybar),
+    varx1 = as.character(varx),
+    vary1 = as.character(vary)
   ) %>%
   group_by(seed_val) %>%
   mutate(
     count = n(),
     nchar = sum(
-      (nchar(xbar) + nchar(ybar)) * 3 + nchar(cov) + nchar(varx) + nchar(vary)
-      ) # * (0.5)^abs(offset-2)
-  ) %>%
-  arrange(nchar)
+      (nchar(xbar1) + nchar(ybar1)) * 3 + nchar(cov1) + nchar(varx1) + nchar(vary1)
+      )
+  ) #%>%
+  # select(c(offset, seed_val, xbar, ybar, cov, varx, vary, count, nchar )
 
-x %>%
-  head(100) %>%
-  arrange(desc(count), nchar, seed_val, offset) %>%
-  # filter(nchar(xbar) <= 3 & nchar(ybar) <= 3 & offset < 3) %>%
-  View()
+  x01 <- x %>% arrange(nchar) %>%
+    head(3000) %>%
+    group_by(seed_val) %>%
+    mutate(
+      ncharx = mean(nchar(xbar1)),
+      nchary = mean(nchar(ybar1))
+    ) %>%
+    filter(ncharx <= 3 & nchary <= 3) %>%
+    # select(-ncharx, -nchary) %>%
+    arrange(nchary) %>%
+    head(3000) %>%
+    arrange(nchary, nchar, seed_val, offset) %>%
+    dplyr::select(offset, seed_val, xbar1, ybar1,  varx1,vary1, cov1, ncharx,nchary) %>%
+    View()
