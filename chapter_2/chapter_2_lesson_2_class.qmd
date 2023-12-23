@@ -296,15 +296,26 @@ ggplot(df, aes(x = i, y = x, color = factor(rep))) +
 
 -   If a time series displays an upward trend, can we conclude that trend will continue in the same direction? Why or why not?
 
-
 ## Hands-on Exercise -- Exploring Sample Autocorrelation (40 min)
 
 <!-- Compute sample acvf and acf -->
 
-In the previous lesson, we computed the sample covariance and sample correlation coefficient between two independent variables. When working with time series, the observations are not independent. There is often a relationship between sequential observations. We will compute the autocovariance function and autocorrelation function for a time series.
-Note: the prefix "auto" comes from a Greek root meaning "self." 
+In the previous lesson, we computed the sample covariance and sample correlation coefficient between two independent variables. When working with time series, the observations are not independent. There is often a relationship between sequential observations. We will compute the autocovariance function and autocorrelation function for a time series. Note: the prefix "auto" comes from a Greek root meaning "self."
 
 The figure below illustrates the difference between a series of data, where the residuals are independent compared to a series with autocorrelated data.
+
+```{r}
+# library(gganimate)
+# p <- ggplot(iris, aes(x = Petal.Width, y = Petal.Length)) + 
+#   geom_()
+# 
+# anim <- p + 
+#   transition_states(Species,
+#                     transition_length = 0,
+#                     state_length = 1)
+# 
+# anim
+```
 
 ```{r}
 #| echo: false 
@@ -367,7 +378,6 @@ You can use this R command to read in the observations.
 cat("x <- c(",paste(cov_df$x, collapse = ", "),")")
 ```
 
-
 ```{r}
 #| echo: false
 
@@ -388,7 +398,6 @@ ggplot(cov_df, aes(x = t, y = x)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 ```
 
-
 We will use the sample mean of these data repeatedly. The value of $\bar x$ is:
 
 $$
@@ -397,7 +406,6 @@ $$
     = \frac{1}{`r n`} \cdot `r sum(cov_df$x) %>% round(4)`
     = `r mean(cov_df$x)`
 $$
-
 
 ### Lag $k$ Sample Autocovariance Function (acvf), $c_k$
 
@@ -435,7 +443,6 @@ ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 ```
 
-
 In this example, the second variable is $x_{t+1}$, where $t>1$. the autocovariance of $x_t$ and $x_{t+1}$ is:
 
 $$
@@ -467,8 +474,9 @@ Note that $c_0$ is the variance of $x$, but computed by dividing by $n$, instead
 
 We can compute the **lag 1 autocorrelation** or the **autocorrelation of** $x$ with lag 1 as the quotient $r_1 = \frac{c_1}{c_0}$, where $$ c_1 = \sum\limits_{t=1}^{n-k} (x_t-\bar x)(x_{t+k}-\bar x) $$ by $$ c_0 = \sum\limits_{t=1}^{n} (x_t-\bar x)^2 $$
 
+First, we compute $c_0$:
 
-First, we compute $c_0$: $$ 
+$$ 
   c_0 
     = \frac{1}{`r n`} \sum\limits_{t=1}^{n} (x_t-\bar x)^2 
     = \frac{1}{`r n`} \cdot `r summarized$ss_x %>% round(4)`
@@ -505,7 +513,6 @@ Now, we use $c_0$ to compute $r_1$:
 \end{align*}
 ```
 -   What does the lag 1 autocorrelation measure?
-
 
 ```{r}
 #| echo: false
@@ -674,9 +681,8 @@ auto_cov_cor_table %>%
   #   autocorrelation = ifelse(row_number() == 2,"", autocorrelation)
   # ) %>% 
   knitr::kable(format = "html", align='ccc', escape = FALSE, width = NA) %>%
-  kable_styling(full_width = FALSE, "striped") 
+  kable_styling(full_width = FALSE, "striped")
 ```
-
 
 ### Correlograms
 
@@ -713,14 +719,13 @@ ggplot(data = cov_df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +
 
 -   Are any of the autocorrelations statistically significant? If so, which one(s)?
 
-
 ## Application: Chocolate Search Trends
 
 ::: callout-caution
 ## TYSON: We need to read in the chocolate search trends data, decompose it, then compute the autocorrelations on residuals. What do we need to do to make this work?
 :::
 
--   Is there a trend in the data? 
+-   Is there a trend in the data?
 
 -   Is there evidence of seasonal variation?
 
@@ -729,7 +734,7 @@ ggplot(data = cov_df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +
 -   What do the spikes in the correlogram tell us about this time series?
 
     -   Is there evidence of autocorrelations in the data after removing the trend and seasonal variation?
-  
+
 -   There are two big spikes in the observed data. Can you identify a cause for these spikes?
 
 ## Recap (5 mins)
@@ -739,5 +744,3 @@ ggplot(data = cov_df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +
 -   Review the definitions of autocovariance, autocorrelation
 
 -   Discuss autocorrelation in the time series context
-
-
