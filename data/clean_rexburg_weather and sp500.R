@@ -1,3 +1,7 @@
+
+
+##################### Rexburg Daily High Temperatures
+
 # Read and clean rexburg weather data
 
 pacman::p_load("tsibble", "fable",
@@ -95,6 +99,13 @@ yp <- autoplot(rexburg_annual_ts) +
 mp / yp
 
 
+# Plot annual and monthly summaries
+
+psum <- autoplot(summarise(index_by(rexburg_day_ts, year), value = sum(value)))
+pbox <- ggplot(rexburg_day_ts, aes(x = factor(month), y = value)) +
+  geom_boxplot()
+psum / pbox
+
 
 ##################### S&P 500
 
@@ -135,4 +146,12 @@ yp <- autoplot(sp500_annual_ts) +
 # +
 #   scale_x_continuous(breaks = seq(1900, 2010, by = 2))
 mp / yp
+
+
+# Plot annual and monthly summaries
+
+psum <- autoplot(summarise(index_by(sp500_ts, year), value = sum(value)))
+pbox <- ggplot(sp500_ts, aes(x = factor(month), y = value)) +
+  geom_boxplot()
+psum / pbox
 
