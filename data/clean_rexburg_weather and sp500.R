@@ -82,15 +82,15 @@ rexburg_day <- weather_clean %>%
   select(-date_seq, -imputed) %>%
   tibble()
 
-rexburg_day_ts <- rexburg_day |>
+rexburg_daily_ts <- rexburg_day |>
   mutate(index = dates) |>
   as_tsibble(index = index)
 
-rexburg_annual_ts <- summarise(index_by(rexburg_day_ts, year), value = mean(value))
+rexburg_annual_ts <- summarise(index_by(rexburg_daily_ts, year), value = mean(value))
 rexburg_annual_ts
 
 
-mp <- autoplot(rexburg_day_ts, .vars = value) +
+mp <- autoplot(rexburg_daily_ts, .vars = value) +
   labs(y = "high temperature")
 yp <- autoplot(rexburg_annual_ts) +
   labs(y = "high temperature")
@@ -101,10 +101,37 @@ mp / yp
 
 # Plot annual and monthly summaries
 
-psum <- autoplot(summarise(index_by(rexburg_day_ts, year), value = sum(value)))
-pbox <- ggplot(rexburg_day_ts, aes(x = factor(month), y = value)) +
+psum <- autoplot(summarise(index_by(rexburg_daily_ts, year), value = sum(value)))
+pbox <- ggplot(rexburg_daily_ts, aes(x = factor(month), y = value)) +
   geom_boxplot()
 psum / pbox
+
+# Filter
+
+
+rexburg_daily_ts %>% filter(dates == lubridate::mdy("07/15/2023"))
+
+
+# Regression
+
+rexburg_daily_ts |>
+  # filter(date >= ymd("1970-01-01"), date <= ymd("2005-12-31")) |>
+  ggplot(aes(x = dates, y = value)) +
+  geom_point(color = "lightgrey") +
+  geom_line() +
+  geom_smooth(method = "lm") +
+  theme_bw()
+
+
+
+# Decomposition
+
+rex_decompose <- rexburg_daily_ts |>
+  # filter(dates > lubridate::mdy("01/01/2020")) %>%
+  model(feasts::classical_decomposition(value ~ season("1 year"),
+                                        type = "add"))  |>
+  components()
+autoplot(rex_decompose)
 
 
 ##################### S&P 500
