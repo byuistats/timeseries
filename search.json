@@ -40,5 +40,131 @@
     "title": "Chapter 1: Lesson 4",
     "section": "Recap (5 mins)",
     "text": "Recap (5 mins)\n-   Review objectives and key concepts\n-   Clarify questions on course or time series data"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_2_class.html",
+    "href": "chapter_1/chapter_1_lesson_2_class.html",
+    "title": "Chapter 1: Lesson 2",
+    "section": "",
+    "text": "Use technical language to describe the main features of time series data\n\n-   Define time series analysis\n-   Define time series\n-   Define sampling interval\n-   Define serial dependence or autocorrelation\n-   Define a time series trend\n-   Define seasonal variation\n-   Define cycle\n\n\n\nUse R to describe key features of time series data\n\n-   Create a seasonal summmary of a time series\n\n\n\nPlot time series data to visualize trends, seasonal patterns, and potential outliers\n\n-   Plot a \"ts\" object\n-   Combine multiple \"ts\" objects into a single plot ?????????????????????????????????????????????????????????????????????????????????????????? When?\n-   Make boxplots to examine distribution of values within each season\n\n\n\nUnderstand the purpose and limitations of forecasting\n\n-   Define lead time\n\n\n\n\n\nRead Sections 1.1-1.4\n\n\n\n\n\nReview another student’s journal\nWhat would you add to your learning journal after reading another student’s?\nWhat would you recommend the other student add to their learning journal?\nSign the Learning Journal review sheet for your peer\n\n\n\n\nMatch the definitions on the left with the terms on the right.\n\n\n\n\nA figure with time on the horizontal axis and the value of a random variable on the vertical axis\nA systematic change in a time series that does not appear to be periodic\nRepeated pattern within each year (or any other time period)\nRepeated pattern that does not correspond to some fixed natural period\nObservations in which values are related to lagged observations of the same\nRandom trend that does not follow a discernible or predictable pattern\nCan be modeled with mathematical functions, facilitating the long-term prediction of the behavior\nNumber of observations of a time series\nDiscrete observations of a time series, taken at times \\(1, 2, \\ldots, n\\).\nLead time\nForecast made at time \\(t\\) for a future value \\(k\\) time units in the future\nAdditive decomposition\nAdditive decomposition model for \\(\\log(x_t)\\)\nMultiplicative model\nCentered moving average\nEstimate of monthly additive effect\nEstimate of monthly multipliciative effect\nSeasonally adjusted mean for the month corresponding to time \\(t\\)\nSeasonal adjusted series (additive seasonal effect)\nSeasonal adjusted series (additive seasonal effect)\nThe trend as observed at time \\(t\\)\nThe seasonal effect, as observed at time \\(t\\)\nThe error term (a sequence of correlated random variables with mean zero), as observed at time \\(t\\)\n\n\n\n\nCycles\nCorrelated (Serially Dependent) Data\nDeterministic Trend\nSeasonal Variations\nStochastic Trend\nTime Plot\nTrends\n\\(n\\)\n\\(\\{x_t\\}\\)\n\\(k\\)\n\\(\\hat x_{t+k \\mid t}\\)\n\\(m_t\\)\n\\(\\hat m_t\\)\n\\(s_t\\)\n\\(\\hat s_t = x_t - \\hat m_t\\)\n\\(\\hat s_t = \\dfrac{x_t}{\\hat m_t}\\)\n\\(\\bar s_t\\)\n\\(z_t\\)\n\\(x_t = m_t + s_t + z_t\\)\n\\(x_t = m_t \\cdot s_t + z_t\\)\n\\(\\log(x_t) = m_t + s_t + z_t\\)\n\\(x_t - \\bar s_t\\)\n\\(\\frac{x_t}{\\bar s_t}\\)\n\n\n\nwhere \\(\\hat m_t = \\dfrac{\\frac{1}{2}x_{t-6} + x_{t-5} + \\cdots + x_{t-1} + x_t + x_{t+1} + \\cdot + x_{t+5} + \\frac{1}{2} x_{t+6}}{12}\\).\n\n\n\n\n\n\nWarning\n\n\n\nUnderstand the difference between these models\nTextbook model: \\[ x_t = m_t \\cdot s_t + z_t \\]\nR’s model: \\[ x_t = m_t \\cdot s_t \\cdot z_t \\]\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nCaution\n\n\n\nWe need to add a link to the chocolate search trends data here, together with the code to analyze them\n\n\nDo the following.\n\nImport the chocolate search data and convert to tsibble format\nCompute summary statistics for this time series data\nAggregate time series data in a tsibble to the annual level to remove seasonal variation and visualize the trend.\nWhat do you observe in the trend? What do you suspect is causing this trend?\nCreate a box plot of seasonal values, with one box plot per month. What do you observe? Which months tend to have more searches? Can you provide an explanation for this?\nDemonstrate decomposition of the chocolate search data; show trend, seasonality, and residual\nHow does the trend and seasonality compare to your observations above?\nWhat do you observe in the residual? Are there any unusual spikes? Use Google to try to determine what may have caused the usual spikes.\n\n\n\n\n\n\n\n\n\n\nCaution\n\n\n\nInsert a simulation of a time series that can be revised to allow students to see effects of inputs on the TS. (Here is an idea below.)\n\n\n\n# Set random seed for reproducibility\nset.seed(1234) \n\nnum_years &lt;- 10\nn &lt;- 12 * num_years\n\nsigma &lt;- .75\na &lt;- 0.05\nb &lt;- .5\nc &lt;- .9\nx &lt;- rep(0,n)\ne &lt;- rnorm(n, 0, sigma)\ntime_seq &lt;- seq(1,n)\n\n# Get date\nyear_seq &lt;- lubridate::year(today()) - num_years  + (time_seq - 1) %/% 12\nmonth_seq &lt;- (time_seq - 1) %% 12 + 1\ndate_seq &lt;- ymd(paste0(year_seq,\"-\",month_seq,\"-01\"))\n\n# Get data\nfor (i in 2:n) {\n  x[i] &lt;- a * i + b * sin(i / 12 * 2 * pi * 3)  + c * cos(i / 12 * 2 * pi * 2) + e[i]\n}\n\nx_df &lt;- data.frame(x = x)\n\nstart_year &lt;- lubridate::year(today()) - num_years\nstart_date &lt;- lubridate::ymd(paste0(start_year,\"-01-01\"))\n\n# start_date &lt;- lubridate::ymd(\"1958-01-01\")\ndate_seq &lt;- seq(start_date,\n    start_date + months(nrow(x_df)-1),\n    by = \"1 months\")\n\nx_df_ts &lt;- x_df |&gt;\n    mutate(\n        date = date_seq,\n        month = tsibble::yearmonth(date)) |&gt;\n    as_tsibble(index = month)\n\nx_decompose &lt;- x_df_ts |&gt;\n    model(feasts::classical_decomposition(x,\n        type = \"add\"))  |&gt;\n    components()\n\nautoplot(x_decompose)\n\n\n\n\n\nDemonstrate decomposition of simulated ts data in Quarto notebook; show trend, seasonality, and residual\nMake changes to the simulated data and observe the effect on the plots\n\n\n\n\n\nReview objectives and key concepts\nClarify questions on time series data"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_2_class.html#learning-outcomes",
+    "href": "chapter_1/chapter_1_lesson_2_class.html#learning-outcomes",
+    "title": "Chapter 1: Lesson 2",
+    "section": "",
+    "text": "Use technical language to describe the main features of time series data\n\n-   Define time series analysis\n-   Define time series\n-   Define sampling interval\n-   Define serial dependence or autocorrelation\n-   Define a time series trend\n-   Define seasonal variation\n-   Define cycle\n\n\n\nUse R to describe key features of time series data\n\n-   Create a seasonal summmary of a time series\n\n\n\nPlot time series data to visualize trends, seasonal patterns, and potential outliers\n\n-   Plot a \"ts\" object\n-   Combine multiple \"ts\" objects into a single plot ?????????????????????????????????????????????????????????????????????????????????????????? When?\n-   Make boxplots to examine distribution of values within each season\n\n\n\nUnderstand the purpose and limitations of forecasting\n\n-   Define lead time"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_2_class.html#preparation",
+    "href": "chapter_1/chapter_1_lesson_2_class.html#preparation",
+    "title": "Chapter 1: Lesson 2",
+    "section": "",
+    "text": "Read Sections 1.1-1.4"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_2_class.html#learning-journal-exchange-15-mins",
+    "href": "chapter_1/chapter_1_lesson_2_class.html#learning-journal-exchange-15-mins",
+    "title": "Chapter 1: Lesson 2",
+    "section": "",
+    "text": "Review another student’s journal\nWhat would you add to your learning journal after reading another student’s?\nWhat would you recommend the other student add to their learning journal?\nSign the Learning Journal review sheet for your peer"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_2_class.html#vocabulary-and-nomenclature-activity-15-mins",
+    "href": "chapter_1/chapter_1_lesson_2_class.html#vocabulary-and-nomenclature-activity-15-mins",
+    "title": "Chapter 1: Lesson 2",
+    "section": "",
+    "text": "Match the definitions on the left with the terms on the right.\n\n\n\n\nA figure with time on the horizontal axis and the value of a random variable on the vertical axis\nA systematic change in a time series that does not appear to be periodic\nRepeated pattern within each year (or any other time period)\nRepeated pattern that does not correspond to some fixed natural period\nObservations in which values are related to lagged observations of the same\nRandom trend that does not follow a discernible or predictable pattern\nCan be modeled with mathematical functions, facilitating the long-term prediction of the behavior\nNumber of observations of a time series\nDiscrete observations of a time series, taken at times \\(1, 2, \\ldots, n\\).\nLead time\nForecast made at time \\(t\\) for a future value \\(k\\) time units in the future\nAdditive decomposition\nAdditive decomposition model for \\(\\log(x_t)\\)\nMultiplicative model\nCentered moving average\nEstimate of monthly additive effect\nEstimate of monthly multipliciative effect\nSeasonally adjusted mean for the month corresponding to time \\(t\\)\nSeasonal adjusted series (additive seasonal effect)\nSeasonal adjusted series (additive seasonal effect)\nThe trend as observed at time \\(t\\)\nThe seasonal effect, as observed at time \\(t\\)\nThe error term (a sequence of correlated random variables with mean zero), as observed at time \\(t\\)\n\n\n\n\nCycles\nCorrelated (Serially Dependent) Data\nDeterministic Trend\nSeasonal Variations\nStochastic Trend\nTime Plot\nTrends\n\\(n\\)\n\\(\\{x_t\\}\\)\n\\(k\\)\n\\(\\hat x_{t+k \\mid t}\\)\n\\(m_t\\)\n\\(\\hat m_t\\)\n\\(s_t\\)\n\\(\\hat s_t = x_t - \\hat m_t\\)\n\\(\\hat s_t = \\dfrac{x_t}{\\hat m_t}\\)\n\\(\\bar s_t\\)\n\\(z_t\\)\n\\(x_t = m_t + s_t + z_t\\)\n\\(x_t = m_t \\cdot s_t + z_t\\)\n\\(\\log(x_t) = m_t + s_t + z_t\\)\n\\(x_t - \\bar s_t\\)\n\\(\\frac{x_t}{\\bar s_t}\\)\n\n\n\nwhere \\(\\hat m_t = \\dfrac{\\frac{1}{2}x_{t-6} + x_{t-5} + \\cdots + x_{t-1} + x_t + x_{t+1} + \\cdot + x_{t+5} + \\frac{1}{2} x_{t+6}}{12}\\).\n\n\n\n\n\n\nWarning\n\n\n\nUnderstand the difference between these models\nTextbook model: \\[ x_t = m_t \\cdot s_t + z_t \\]\nR’s model: \\[ x_t = m_t \\cdot s_t \\cdot z_t \\]"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_2_class.html#hands-on-exercise-exploring-a-time-series-in-r-google-trends-chocolate-20-min",
+    "href": "chapter_1/chapter_1_lesson_2_class.html#hands-on-exercise-exploring-a-time-series-in-r-google-trends-chocolate-20-min",
+    "title": "Chapter 1: Lesson 2",
+    "section": "",
+    "text": "Caution\n\n\n\nWe need to add a link to the chocolate search trends data here, together with the code to analyze them\n\n\nDo the following.\n\nImport the chocolate search data and convert to tsibble format\nCompute summary statistics for this time series data\nAggregate time series data in a tsibble to the annual level to remove seasonal variation and visualize the trend.\nWhat do you observe in the trend? What do you suspect is causing this trend?\nCreate a box plot of seasonal values, with one box plot per month. What do you observe? Which months tend to have more searches? Can you provide an explanation for this?\nDemonstrate decomposition of the chocolate search data; show trend, seasonality, and residual\nHow does the trend and seasonality compare to your observations above?\nWhat do you observe in the residual? Are there any unusual spikes? Use Google to try to determine what may have caused the usual spikes."
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_2_class.html#hands-on-exercise-exploring-simulated-time-series-data-5-min",
+    "href": "chapter_1/chapter_1_lesson_2_class.html#hands-on-exercise-exploring-simulated-time-series-data-5-min",
+    "title": "Chapter 1: Lesson 2",
+    "section": "",
+    "text": "Caution\n\n\n\nInsert a simulation of a time series that can be revised to allow students to see effects of inputs on the TS. (Here is an idea below.)\n\n\n\n# Set random seed for reproducibility\nset.seed(1234) \n\nnum_years &lt;- 10\nn &lt;- 12 * num_years\n\nsigma &lt;- .75\na &lt;- 0.05\nb &lt;- .5\nc &lt;- .9\nx &lt;- rep(0,n)\ne &lt;- rnorm(n, 0, sigma)\ntime_seq &lt;- seq(1,n)\n\n# Get date\nyear_seq &lt;- lubridate::year(today()) - num_years  + (time_seq - 1) %/% 12\nmonth_seq &lt;- (time_seq - 1) %% 12 + 1\ndate_seq &lt;- ymd(paste0(year_seq,\"-\",month_seq,\"-01\"))\n\n# Get data\nfor (i in 2:n) {\n  x[i] &lt;- a * i + b * sin(i / 12 * 2 * pi * 3)  + c * cos(i / 12 * 2 * pi * 2) + e[i]\n}\n\nx_df &lt;- data.frame(x = x)\n\nstart_year &lt;- lubridate::year(today()) - num_years\nstart_date &lt;- lubridate::ymd(paste0(start_year,\"-01-01\"))\n\n# start_date &lt;- lubridate::ymd(\"1958-01-01\")\ndate_seq &lt;- seq(start_date,\n    start_date + months(nrow(x_df)-1),\n    by = \"1 months\")\n\nx_df_ts &lt;- x_df |&gt;\n    mutate(\n        date = date_seq,\n        month = tsibble::yearmonth(date)) |&gt;\n    as_tsibble(index = month)\n\nx_decompose &lt;- x_df_ts |&gt;\n    model(feasts::classical_decomposition(x,\n        type = \"add\"))  |&gt;\n    components()\n\nautoplot(x_decompose)\n\n\n\n\n\nDemonstrate decomposition of simulated ts data in Quarto notebook; show trend, seasonality, and residual\nMake changes to the simulated data and observe the effect on the plots"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_2_class.html#recap-5-mins",
+    "href": "chapter_1/chapter_1_lesson_2_class.html#recap-5-mins",
+    "title": "Chapter 1: Lesson 2",
+    "section": "",
+    "text": "Review objectives and key concepts\nClarify questions on time series data"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_4_class.html",
+    "href": "chapter_1/chapter_1_lesson_4_class.html",
+    "title": "Chapter 1: Lesson 4",
+    "section": "",
+    "text": "Decompose time series into trends, seasonal variation, and residuals\n\n-   Obtain residuals as difference between original series and trend + seasonal estimates\n\n\n\nUse R to describe key features of time series data\n\n-   Remove seasonal variation of a time series\n\n\n\nExplain the key theoretical concepts of time series decomposition\n\n-   Explain how to remove seasonal variation using an estimate for seasonal component of a time series"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_4_class.html#learning-outcomes",
+    "href": "chapter_1/chapter_1_lesson_4_class.html#learning-outcomes",
+    "title": "Chapter 1: Lesson 4",
+    "section": "",
+    "text": "Decompose time series into trends, seasonal variation, and residuals\n\n-   Obtain residuals as difference between original series and trend + seasonal estimates\n\n\n\nUse R to describe key features of time series data\n\n-   Remove seasonal variation of a time series\n\n\n\nExplain the key theoretical concepts of time series decomposition\n\n-   Explain how to remove seasonal variation using an estimate for seasonal component of a time series"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_3_class.html",
+    "href": "chapter_1/chapter_1_lesson_3_class.html",
+    "title": "Chapter 1: Lesson 3",
+    "section": "",
+    "text": "Decompose time series into trends, seasonal variation, and residuals\n\n-   Describe additive decomposition\n-   Describe multiplicative decomposition\n-   Define moving average of a time series\n-   Estimate trend component using moving averages\n-   Differentiate between deterministic and stochastic trends\n\n\n\nUse R to describe key features of time series data\n\n-   Import CSV data and convert to tsibble format\n\n\nUnderstand the purpose and limitations of forecasting\n\n-   Define forecasting\n-   Differentiate causation from correlation\n\n\n\nExplain the key theoretical concepts of time series decomposition\n\n-   Define smoothing\n-   Explain a centered moving average\n-   Explain the differences in additive vs multiplicative estimators of seasonal variation"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_3_class.html#learning-outcomes",
+    "href": "chapter_1/chapter_1_lesson_3_class.html#learning-outcomes",
+    "title": "Chapter 1: Lesson 3",
+    "section": "",
+    "text": "Decompose time series into trends, seasonal variation, and residuals\n\n-   Describe additive decomposition\n-   Describe multiplicative decomposition\n-   Define moving average of a time series\n-   Estimate trend component using moving averages\n-   Differentiate between deterministic and stochastic trends\n\n\n\nUse R to describe key features of time series data\n\n-   Import CSV data and convert to tsibble format\n\n\nUnderstand the purpose and limitations of forecasting\n\n-   Define forecasting\n-   Differentiate causation from correlation\n\n\n\nExplain the key theoretical concepts of time series decomposition\n\n-   Define smoothing\n-   Explain a centered moving average\n-   Explain the differences in additive vs multiplicative estimators of seasonal variation"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_3_class.html#preparation",
+    "href": "chapter_1/chapter_1_lesson_3_class.html#preparation",
+    "title": "Chapter 1: Lesson 3",
+    "section": "Preparation",
+    "text": "Preparation\n\nRead Sections 1.5.1-1.5.3"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_3_class.html#learning-journal-exchange-10-mins",
+    "href": "chapter_1/chapter_1_lesson_3_class.html#learning-journal-exchange-10-mins",
+    "title": "Chapter 1: Lesson 3",
+    "section": "Learning Journal Exchange (10 mins)",
+    "text": "Learning Journal Exchange (10 mins)\n\nReview another student’s journal\nWhat would you add to your learning journal after reading another student’s?\nWhat would you recommend the other student add to their learning journal?\nSign the Learning Journal review sheet for your peer"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_3_class.html#random-walks-5-10-mins",
+    "href": "chapter_1/chapter_1_lesson_3_class.html#random-walks-5-10-mins",
+    "title": "Chapter 1: Lesson 3",
+    "section": "Random walks (5-10 mins)",
+    "text": "Random walks (5-10 mins)\n-   Definition of a random walk\n-   Example: tossing a coin and moving left or right one integer on a number line\n\nPlease add simulation of random walk here"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_3_class.html#when-to-use-additive-vs.-multiplicative-decomposition-5-min",
+    "href": "chapter_1/chapter_1_lesson_3_class.html#when-to-use-additive-vs.-multiplicative-decomposition-5-min",
+    "title": "Chapter 1: Lesson 3",
+    "section": "When to use additive vs. multiplicative decomposition (5 min)",
+    "text": "When to use additive vs. multiplicative decomposition (5 min)\n\nAdditive: Constant variance\nMultiplicative: Variance grows with the value of the time series"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_3_class.html#decomposition-of-a-time-series-in-excel-40-min",
+    "href": "chapter_1/chapter_1_lesson_3_class.html#decomposition-of-a-time-series-in-excel-40-min",
+    "title": "Chapter 1: Lesson 3",
+    "section": "Decomposition of a Time Series in Excel (40 min)",
+    "text": "Decomposition of a Time Series in Excel (40 min)\n\n\n\n\n\n\nCaution\n\n\n\nProvide 36 months worth of data\nStudents will compute a mean by hand\nStudents will compute (some values of) the additive decomposition by hand (Partial table given)\n\nStudents will compute some values of the centered moving average by hand\nStudents will compute some values of the monthly additive effect by hand\nStudents will compute some values of the seasonally adjusted series by hand\nStudents will plot some values of the decomposed time series by hand (Plot given)"
+  },
+  {
+    "objectID": "chapter_1/chapter_1_lesson_3_class.html#recap-5-mins",
+    "href": "chapter_1/chapter_1_lesson_3_class.html#recap-5-mins",
+    "title": "Chapter 1: Lesson 3",
+    "section": "Recap (5 mins)",
+    "text": "Recap (5 mins)\n-   Review objectives and key concepts\n-   Clarify questions on course or time series data"
   }
 ]
