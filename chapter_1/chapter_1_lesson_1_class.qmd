@@ -98,7 +98,8 @@ The cleaned version of the data used for this demonstration are available in the
 In Lesson 3, we will practice converting data like this into a time series (tsibble) object.
 
 ```{r}
-#| echo: false
+#| code-fold: true
+#| code-summary: "Show the code"
 
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load("tsibble", "fable",
@@ -111,13 +112,13 @@ start_date <- lubridate::ymd("2004-01-01")
 date_seq <- seq(start_date,
                 start_date + months(nrow(chocolate_month)-1),
                 by = "1 months")
-chocolate <- tibble(
+chocolate_tibble <- tibble(
   dates = date_seq,
   year = lubridate::year(date_seq),
   month = lubridate::month(date_seq),
   value = pull(chocolate_month, chocolate)
 )
-chocolate_month_ts <- chocolate |>
+chocolate_month_ts <- chocolate_tibble |>
   mutate(index = tsibble::yearmonth(dates)) |>
   as_tsibble(index = index)
 
@@ -129,35 +130,10 @@ chocolate_month_ts %>% head()
 For now, we will use the tsibble object (which in this case is called *chocolate_month_ts*) to explore the time series. 
 Here is a plot of the time series representing the proportional frequency of searches for the term "chocolate."
 
-
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 
-# load packages
-if (!require("pacman")) install.packages("pacman")
-pacman::p_load("tsibble", "fable",
-               "feasts", "tsibbledata",
-               "fable.prophet", "tidyverse",
-               "patchwork", "rio")
-
-# read in the data from a csv and make the tsibble
-chocolate_month <- rio::import("../data/chocolate.csv")
-start_date <- lubridate::ymd("2004-01-01")
-date_seq <- seq(start_date,
-                start_date + months(nrow(chocolate_month)-1),
-                by = "1 months")
-chocolate <- tibble(
-  dates = date_seq,
-  year = lubridate::year(date_seq),
-  month = lubridate::month(date_seq),
-  value = pull(chocolate_month, chocolate)
-)
-chocolate_month_ts <- chocolate |>
-  mutate(index = tsibble::yearmonth(dates)) |>
-  as_tsibble(index = index)
-
-# generate the plot
 autoplot(chocolate_month_ts, .vars = value) +
   labs(
     x = "Month",
