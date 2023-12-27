@@ -54,25 +54,9 @@ source("../common_functions.R")
     -   We are all in this together
 
 
-## Class Discussion: Introduction to Time Series Data (5 mins)
-
--   What is time series data?
-    -   Define "time series" (e.g. observations collected sequentially over time)
--   Examples of time series data
--   Why ordinary regression fails -- correlated error terms
--   Examples of time series from different domains:
-    -   Daily credit card balance
-    -   Daily closing stock prices
-    -   Monthly sales figures
-    -   Yearly global temperature measurements
-    -   Secondly wave heights in an ocean buoy
-    -   Weekly unemployment rates
-    -   Quarterly GDP estimates
--   Importance of context and subject matter knowledge
--   Role of models (explanation, prediction, simulation)
 
 
-## Class Activity: Google Trends (Searches for "Chocolate") (15 mins)
+## Class Activity: Google Trends (Searches for "Chocolate") (10 mins)
 
 Google Trends allows you to download a time series showing the proportional number of searches for a given term. The month with the highest number of searches has a value of 100. The values for the other months are given as a percentage of the peak month's value. The following table illustrates the data, as given by Google Trends.
 
@@ -80,7 +64,7 @@ Google Trends allows you to download a time series showing the proportional numb
 #| echo: false
 
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load("rio")
+pacman::p_load("tidyverse", "rio")
 
 chocolate_raw <- rio::import("../data/chocolate_raw.csv") 
 
@@ -189,7 +173,35 @@ autoplot(chocolate_month_ts, .vars = value) +
 
 #### Characteristics
 
-#### Seasonality
+#### Trend
+
+The red line represents the mean for each year. The point for this line was positioned to align with July of the year.
+
+```{r}
+#| echo: false
+
+temp <- chocolate_month_ts %>% 
+  filter(month == 7) %>% 
+  select(-value) %>% 
+  right_join(chocolate_annual_ts)
+
+autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Chocolate Searches",
+    title = "Relative Number of Google Searches for Chocolate"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_line(data = temp, 
+            aes(x = index, y = value),
+            color = "#D55E00")
+```
+
+-   What do you observe about the number of searches for "chocolate" each month?
+-   What might be causing this trend?
+
+
+#### Seasonality / Cycles
 
 Consider the data for the last few years:
 
@@ -215,35 +227,9 @@ lastfew_plot
 -   How can you explain these observations?
 
 
-#### Trend
-
-The red line represents the mean for each year. The point for this line was positioned to align with July of the year.
-
-```{r}
-#| echo: false
-
-temp <- chocolate_month_ts %>% 
-  filter(month == 7) %>% 
-  select(-value) %>% 
-  right_join(chocolate_annual_ts)
-
-autoplot(chocolate_month_ts, .vars = value) +
-  labs(
-    x = "Month",
-    y = "Chocolate Searches",
-    title = "Relative Number of Google Searches for Chocolate"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  geom_line(data = temp, 
-            aes(x = index, y = value),
-            color = "red")
-```
-
--   What do you observe about the number of searches for "chocolate" each month?
--   What might be causing this trend?
-
-
 #### Autocorrelation
+
+**Autocorrelation** is a fancy word that means that individual values in a sequence of data are related in some way.
 
 Consider searches in successive months. Are they independent?
 ```{r}
@@ -258,7 +244,18 @@ lastfew_plot
 -   Think about what you know about the reported number of searches in December compared to the following February. The reported number of searches for "Chocolate" in December `r example_year-1` is `r chocolate_month_ts %>% filter(year == example_year - 1, month == 12) %>% data.frame() %>% select(value) %>% pull()`. Does it make sense that the reported number of searches in February `r example_year` is `r chocolate_month_ts %>% filter(year == example_year, month == 2) %>% data.frame() %>% select(value) %>% pull()`? Given the value from December, is the value in the following Febrary independent and completely random?
 -   The value reported by Google for June `r example_year` is `r chocolate_month_ts %>% filter(year == example_year, month == 6) %>% data.frame() %>% select(value) %>% pull()`. Based on what you have observed in the data, do you think the value for July `r example_year` will be close to or far from this value? Justify your answer.
 
+
 :::
+
+Discuss these vocabulary terms in the context of the Google Trends ("Chocolate") example:
+-   Time series
+-   Sampling interval
+-   Autocorrelation (or serial dependence)
+-   Trend
+-   Seasonal variation
+-   Cycle
+-   Deterministic vs. Stochastic
+
 
 
 
@@ -289,26 +286,158 @@ mp
 
 
 
-## Class Activity: S&P 500 (5 mins)
+## Class Activity: S&P 500 (10 mins)
+
+The time series plot below illustrates the daily closing prices of the standard and Poor's 500 stock index (S&P 500).
+
+```{r}
+#| echo: false
+
+##################### S&P 500
+
+replaceCommas<-function(x){
+  x<-as.numeric(gsub("\\,", "", x))
+}
+
+sp500_dat <- rio::import("../data/sp500.csv") %>%
+  mutate(dates = mdy(Date))
+
+sp500_day <- sp500_dat %>%
+  mutate(date_seq = dates) %>%
+  mutate(
+    dates = date_seq,
+    year = lubridate::year(date_seq),
+    month = lubridate::month(date_seq),
+    value = replaceCommas(Close)
+  ) %>%
+  select(-date_seq) %>%
+  tibble()
+
+sp500_ts <- sp500_day |>
+  mutate(index = dates) |>
+  as_tsibble(index = index)
+
+sp500_annual_ts <- summarise(index_by(sp500_ts, year), value = mean(value))
+
+temp <- sp500_ts |> filter(month == 7 & day(dates) == 1) %>% 
+  select(Date, year) 
+
+temp2 <- sp500_annual_ts %>% 
+  right_join(temp)
+
+autoplot(sp500_ts, .vars = value) +
+  labs(
+    x = "Date",
+    y = "Closing Price",
+    title = "Daily Closing Price of the S&P 500 Stock Index"
+  )  +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+::: panel-tabset
+
+#### Characteristics
+
+#### Trend
+
+The red line represents the mean for each year. The point for this line was positioned to align with July of the year.
+
+```{r}
+#| echo: false
+
+##################### S&P 500
+
+replaceCommas<-function(x){
+  x<-as.numeric(gsub("\\,", "", x))
+}
+
+sp500_dat <- rio::import("../data/sp500.csv") %>%
+  mutate(dates = mdy(Date))
+
+sp500_day <- sp500_dat %>%
+  mutate(date_seq = dates) %>%
+  mutate(
+    dates = date_seq,
+    year = lubridate::year(date_seq),
+    month = lubridate::month(date_seq),
+    value = replaceCommas(Close)
+  ) %>%
+  select(-date_seq) %>%
+  tibble()
+
+sp500_ts <- sp500_day |>
+  mutate(index = dates) |>
+  as_tsibble(index = index)
+
+sp500_annual_ts <- summarise(index_by(sp500_ts, year), value = mean(value))
+
+temp <- sp500_ts |> filter(month == 7 & day(dates) == 1) %>% 
+  select(Date, year) 
+
+temp2 <- sp500_annual_ts %>% 
+  right_join(temp)
+
+autoplot(sp500_ts, .vars = value) +
+  labs(
+    x = "Date",
+    y = "Closing Price",
+    title = "Daily Closing Price of the S&P 500 Stock Index"
+  )  +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  # geom_line(data = temp2, 
+  #           aes(x = index, y = value),
+  #           color = "red") +
+  geom_smooth(method = "loess", color = "#D55E00")
+```
+
+-   What do you observe about the value of the S&P 500 over time?
+-   What might be causing this trend?
+
+
+#### Seasonality / Cycles
+
+-   Are there regularly-occurring seasonal trends in the data?
+-   Are there some random (stochastic) business cycles observable in the data?
+-   How can you explain these observations?
+
+
+#### Autocorrelation
+
+-   Consider closing prices in successive days. Are they independent?
+-   Why would there be autocorrelation in the data?
+
+:::
+
+Discuss these vocabulary terms in the context of the S&P 500 example:
+-   Time series
+-   Sampling interval
+-   Autocorrelation (or serial dependence)
+-   Trend
+-   Seasonal variation
+-   Cycle
+-   Deterministic vs. Stochastic
 
 
 
 
--   Vocabulary terms (Identify each in the example above):
-    -   Time series analysis
-    -   Time series
-    -   Sampling interval
-    -   Serial dependence or autocorrelation
-    -   Time series trend
-    -   Seasonal variation
-    -   Cycle
-    -   Deterministic vs. Stochastic
 
+## Recap (10 mins)
 
-## Recap (5 mins)
-
--   Review objectives and key concepts
--   Clarify questions on course or time series data
+-   What is time series data?
+    -   Define "time series" (e.g. observations collected sequentially over time)
+-   Examples of time series data
+-   Why ordinary regression fails -- correlated error terms
+-   Examples of time series from different domains:
+    -   Daily credit card balance
+    -   Daily closing stock prices
+    -   Monthly sales figures
+    -   Yearly global temperature measurements
+    -   Secondly wave heights in an ocean buoy
+    -   Weekly unemployment rates
+    -   Quarterly GDP estimates
+-   Importance of context and subject matter knowledge
+-   Role of models (explanation, prediction, simulation)
+-   Are there any questions on the course or time series data?
 
 ## Preparation for the next class meeting
 
