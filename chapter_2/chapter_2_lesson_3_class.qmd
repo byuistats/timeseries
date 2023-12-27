@@ -115,14 +115,14 @@ get_data_for_cov_table <- function(offset = 1) {
   # build a data frame
   df <- data.frame(t = 1:length(x1),
                    x = x1,
-                   y = lead(x1, offset)) %>%
+                   y = lead(x1, offset)) |>
     mutate(
       xx = x - mean(x),
       xx2 = xx^2,
       yy = y - mean(x),
       # yy2 = yy^2,
       xy = xx * yy
-    ) %>% 
+    ) |> 
     dplyr::select(t, x, y, xx, xx2, yy, xy)
   
   return(df)
@@ -132,7 +132,7 @@ make_cov_table_df <- function(df, offset=1, decimals_1st_order = 5, decimals_2nd
   # Color vector
   oi_colors <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#F5C710", "#CC79A7", "#999999")
   
-  df_summary <- df %>% 
+  df_summary <- df |> 
     summarize(
       x = sum(x),
       y = sum(y, na.rm = TRUE),
@@ -141,9 +141,9 @@ make_cov_table_df <- function(df, offset=1, decimals_1st_order = 5, decimals_2nd
       xx2 = sum(xx2),
       # yy2 = sum(yy2, na.rm = TRUE),
       xy = sum(xy, na.rm = TRUE)
-    ) %>% 
-    # round_df(3) %>% 
-    mutate(t = paste0("sum")) %>% 
+    ) |> 
+    # round_df(3) |> 
+    mutate(t = paste0("sum")) |> 
     mutate(
       t = paste0("sum"),
       x = round_to_places(x, 1),
@@ -153,10 +153,10 @@ make_cov_table_df <- function(df, offset=1, decimals_1st_order = 5, decimals_2nd
       yy = round_to_places(yy, decimals_1st_order),
       # yy2 = round_to_places(yy2, decimals_2nd_order),
       xy = round_to_places(xy, decimals_2nd_order)
-    ) %>% 
+    ) |> 
     dplyr::select(t, x, y, xx, xx2, yy, xy)
   
-  df %>%
+  out <- df |>
     mutate(
       t = as.character(t),
       x = round_to_places(x, 1),
@@ -166,7 +166,7 @@ make_cov_table_df <- function(df, offset=1, decimals_1st_order = 5, decimals_2nd
       yy = round_to_places(yy, decimals_1st_order),
       # yy2 = round_to_places(yy2, decimals_2nd_order),
       xy = round_to_places(xy, decimals_2nd_order)
-    ) %>% 
+    ) |> 
     mutate(
       x = cell_spec(x, 
                     color = case_when(
@@ -180,13 +180,13 @@ make_cov_table_df <- function(df, offset=1, decimals_1st_order = 5, decimals_2nd
                       TRUE ~ oi_colors[( row_number() + offset ) %% 9 + 1]
                     )
       )
-    ) %>% 
+    ) |> 
     mutate(
       # x = ifelse(row_number() > nrow(.) - offset, paste0("[",x,"]"), x),
       y = ifelse(row_number() > nrow(.) - offset, NA, y),
-    ) %>% 
-    replace(., is.na(.), "—") %>%
-    bind_rows(df_summary) %>% 
+    ) |> 
+    replace(., is.na(.), "—") |>
+    bind_rows(df_summary) |> 
     rename(
       "x_t" = x,
       "x_{t+k}" = y,
@@ -196,8 +196,9 @@ make_cov_table_df <- function(df, offset=1, decimals_1st_order = 5, decimals_2nd
       "x_{t+k}-mean(x)" = yy,
       # "(x_{t+k}-mean(x))^2" = yy2, 
       "(x-mean(x))(x_{t+k}-mean(x))" = xy
-    ) %>%
-  return()
+    )
+  
+  return(out)
 }
 
 # Eliminates the values in columns 3 onward for a specified row_num
@@ -210,14 +211,14 @@ make_blank_row_in_cov_table <- function(df, row_num) {
 
 # Displays the kable table
 display_table <- function(df) {
-  df %>% 
-    knitr::kable(format = "html", align='ccccccc', escape = FALSE, width = NA) %>%
+  df |> 
+    knitr::kable(format = "html", align='ccccccc', escape = FALSE, width = NA) |>
     kable_styling(full_width = FALSE, "striped") 
 }
 
 # Compute summary values
 compute_summaries <- function(df, digits = 4) {
-  df %>% 
+  df |> 
     summarize(
       mean_x = mean(x),
       mean_y = mean(y, na.rm = TRUE),
@@ -227,7 +228,7 @@ compute_summaries <- function(df, digits = 4) {
       c_0 = sum(xx2) / nrow(.),
       c_k = sum(xy, na.rm = TRUE) / nrow(.),
       r_k = c_k / c_0
-    ) %>% 
+    ) |> 
     round_df(digits)
 }
 
@@ -295,16 +296,16 @@ z <- acf(x, plot=FALSE, type = "correlation")
 
 # z
 
-z$acf %>% 
-  data.frame() %>% 
-  round_df(3) %>% 
-  rename("acf" = ".") %>% 
+z$acf |> 
+  data.frame() |> 
+  round_df(3) |> 
+  rename("acf" = "z.acf") |> 
   mutate(
     k = row_number() - 1,
     acf = as.character(acf)
-  ) %>% 
-  pivot_wider(names_from = k, values_from = acf) %>% 
-  # mutate("4" = "_____") %>% 
+  ) |> 
+  pivot_wider(names_from = k, values_from = acf) |> 
+  # mutate("4" = "_____") |> 
   display_table()
 
 ggplot(data = df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +

@@ -61,7 +61,7 @@ mu <- 10      # mean
 sigma <- 3    # standard deviation
 
 # Simulate normal data
-sim_data <- data.frame(x = round(rnorm(n, mu, sigma), 1)) %>% 
+sim_data <- data.frame(x = round(rnorm(n, mu, sigma), 1)) |> 
   arrange(x)
 ```
 
@@ -88,8 +88,8 @@ The variance and standard deviation are individual numbers that summarize how fa
 
 ```{r}
 #| echo: false
-temp <- sim_data %>% 
-  mutate(deviations = x - mean(x)) %>% 
+temp <- sim_data |> 
+  mutate(deviations = x - mean(x)) |> 
   arrange(desc(x))
 
 mean_x <- mean(temp$x)
@@ -154,11 +154,11 @@ We can summarize this information in a table:
 
 ```{r}
 #| echo: false
-sim_data %>% 
+sim_data |> 
   mutate(
     "x - mean(x)" = x - mean(x),
     "Workspace for your use" = " "
-    ) %>% 
+    ) |> 
   knitr::kable(format = "html", align='ccc', escape = FALSE)
 ```
 
@@ -170,7 +170,7 @@ How can we obtain one number that summarizes how spread out the data are from th
 -   Apply your idea. Compute the resulting value that summarizes the spread. What do you get?
 -   What is the relationship between the sample variance and the sample standard deviation?
 -   Use the table above to verify that the sample variance is `r var(sim_data$x)`.
--   Show that the sample standard deviation is `r sd(sim_data$x) %>% round(4)`.
+-   Show that the sample standard deviation is `r sd(sim_data$x) |> round(4)`.
 
 ## Class Activity: Covariance and Correlation (15 mins)
 
@@ -200,8 +200,8 @@ sigma <- matrix(
   nrow = 2)
 
 # Simulate bivariate normal data
-mvn_data <- MASS::mvrnorm(n, mu, sigma) %>% 
-  data.frame() %>% 
+mvn_data <- MASS::mvrnorm(n, mu, sigma) |> 
+  data.frame() |> 
   rename(x = X1, y = X2)
 ```
 
@@ -210,9 +210,9 @@ The following table illustrates some of the simulated values. The mean of the $x
 ```{r}
 #| echo: false
 
-cov_dat <- mvn_data %>% 
-  mutate(i = row_number()) %>% 
-  select(i, x, y) %>% 
+cov_dat <- mvn_data |> 
+  mutate(i = row_number()) |> 
+  select(i, x, y) |> 
   mutate(
     xx = x - mean(x),
     xx2 = xx^2,
@@ -225,7 +225,7 @@ cov_dat <- mvn_data %>%
       TRUE ~ "zero")
     ) 
 
-cov_dat_summary <- cov_dat %>% 
+cov_dat_summary <- cov_dat |> 
   summarize(
     x = sum(x),
     y = sum(y),
@@ -234,9 +234,9 @@ cov_dat_summary <- cov_dat %>%
     yy = sum(yy),
     yy2 = sum(yy2),
     xy = sum(xy)
-  ) %>% 
-  round_df(3) %>% 
-  mutate(across(everything(), as.character)) %>% 
+  ) |> 
+  round_df(3) |> 
+  mutate(across(everything(), as.character)) |> 
   mutate(
     i = "sum",
     sign = case_when(
@@ -245,18 +245,18 @@ cov_dat_summary <- cov_dat %>%
       TRUE ~ "zero")
   )
 
-min_row <- cov_dat %>% 
+min_row <- cov_dat |> 
   mutate(
     positive = if_else(xy > 0, 1, 0),
     negative = if_else(xy < 0, 1, 0)
-    ) %>% 
+    ) |> 
   mutate(
     pos_sum = cumsum(positive),
     neg_sum = cumsum(negative),
     both = pos_sum > 0 & neg_sum > 0,
     sum_both = cumsum(both)
-  ) %>% 
-  filter(sum_both <= 1) %>% 
+  ) |> 
+  filter(sum_both <= 1) |> 
   nrow()
   
 ellipsis <- data.frame(
@@ -271,35 +271,35 @@ ellipsis <- data.frame(
   sign = " "
   )
 
-temp1 <- cov_dat %>% 
-  round_df(3) %>% 
+temp1 <- cov_dat |> 
+  round_df(3) |> 
   mutate(across(everything(), as.character))
 
-temp2 <- temp1 %>% 
+temp2 <- temp1 |> 
   # include at least 6 and at most 25 rows in the top part;
   # try to include at least one positive and one negative 
   # cross product
-  head(min(25,max(6, min_row))) %>% 
-  bind_rows(ellipsis) %>% 
-  bind_rows(ellipsis) %>% 
-  bind_rows(temp1 %>% tail(3)) %>% 
-  bind_rows(cov_dat_summary) %>% 
+  head(min(25,max(6, min_row))) |> 
+  bind_rows(ellipsis) |> 
+  bind_rows(ellipsis) |> 
+  bind_rows(temp1 |> tail(3)) |> 
+  bind_rows(cov_dat_summary) |> 
   mutate(
     xy = cell_spec(xy, 
                    color = case_when(
                      sign == "positive" ~ "#E69F00", 
                      sign == "negative" ~ "#56B4E9",
-                     TRUE ~ "Black"))) %>% 
+                     TRUE ~ "Black"))) |> 
   rename(
     "x-mean(x)" = xx, 
     "(x-mean(x))^2" = xx2, 
     "y-mean(y)" = yy,
     "(y-mean(y))^2" = yy2, 
     "(x-mean(x))(y-mean(y))" = xy
-  ) %>% 
+  ) |> 
   select(-sign)
   
-knitr::kable(temp2, format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
+knitr::kable(temp2, format = "html", align='cccccccc', escape = FALSE, width = NA) |>
   kable_styling(full_width = FALSE)
 ```
 
@@ -310,7 +310,7 @@ The simulated values are plotted below, with vertical lines drawn at $x = \bar x
 #| echo: false
 
 ggplot(cov_dat, aes(x = x, y = y, color = sign)) +
-  geom_point(data=cov_dat %>% filter(row_number() == 1),
+  geom_point(data=cov_dat |> filter(row_number() == 1),
              pch=21,
              size=4,
              colour="black") +
@@ -346,7 +346,7 @@ Cov(x,y)
 =
 \frac{`r cov_dat_summary$xy`}{`r n` - 1} 
 = 
-`r cov(cov_dat$x, cov_dat$y) %>% round(3)`
+`r cov(cov_dat$x, cov_dat$y) |> round(3)`
 $$
 
 You can think of this as an "average" of the $(x - \bar x)(y - \bar y)$ values. The only difference is that we divide by $n-1$ instead of $n$.
@@ -364,25 +364,25 @@ s_x &= \sqrt{ \frac{\sum\limits_{i=1}^n (x - \bar x)^2}{n-1} }
 =
 \sqrt{
 \frac{
-`r sum((cov_dat$x - mean(cov_dat$x))^2) %>% round(3)`
+`r sum((cov_dat$x - mean(cov_dat$x))^2) |> round(3)`
 }{
 `r n`-1
 }
 }
 =
-`r sd(cov_dat$x) %>% round(3)`
+`r sd(cov_dat$x) |> round(3)`
 \\
 s_y &= \sqrt{ \frac{\sum\limits_{i=1}^n (y - \bar y)^2}{n-1} }
 =
 \sqrt{
 \frac{
-`r sum((cov_dat$y - mean(cov_dat$y))^2) %>% round(3)`
+`r sum((cov_dat$y - mean(cov_dat$y))^2) |> round(3)`
 }{
 `r n`-1
 }
 }
 =
-`r sd(cov_dat$y) %>% round(3)`
+`r sd(cov_dat$y) |> round(3)`
 \end{align*}
 $$
 
@@ -390,13 +390,13 @@ The sample correlation coefficient is: $$
 r = \frac{\sum\limits_{i=1}^n (x - \bar x)(y - \bar y)}{\sqrt{\sum\limits_{i=1}^n (x - \bar x)^2} \sqrt{\sum\limits_{i=1}^n (y - \bar y)^2}} 
 =
 \frac{
-`r sum((cov_dat$x - mean(cov_dat$x))*(cov_dat$y - mean(cov_dat$y))) %>% round(3)`
+`r sum((cov_dat$x - mean(cov_dat$x))*(cov_dat$y - mean(cov_dat$y))) |> round(3)`
 }{
-\sqrt{ `r sum((cov_dat$x - mean(cov_dat$x))^2) %>% round(3)`} 
-\sqrt{ `r sum((cov_dat$y - mean(cov_dat$y))^2) %>% round(3)`} 
+\sqrt{ `r sum((cov_dat$x - mean(cov_dat$x))^2) |> round(3)`} 
+\sqrt{ `r sum((cov_dat$y - mean(cov_dat$y))^2) |> round(3)`} 
 }
 =
-`r cor(cov_dat$x, cov_dat$y) %>% round(3)`
+`r cor(cov_dat$x, cov_dat$y) |> round(3)`
 $$
 
 -   What do you get if you multiply the equations for $r$, $s_x$, and $s_y$ together? 
@@ -420,13 +420,13 @@ $$
 $$
 Cov(x,y) = r \cdot s_x \cdot s_y 
 =
-`r cor(cov_dat$x, cov_dat$y) %>% round(3)`
+`r cor(cov_dat$x, cov_dat$y) |> round(3)`
 \cdot 
-`r sd(cov_dat$x) %>% round(3)`
+`r sd(cov_dat$x) |> round(3)`
 \cdot 
-`r sd(cov_dat$y) %>% round(3)`
+`r sd(cov_dat$y) |> round(3)`
 =
-`r cov(cov_dat$x, cov_dat$y) %>% round(3)`
+`r cov(cov_dat$x, cov_dat$y) |> round(3)`
 $$
  -->
 ```
@@ -454,9 +454,9 @@ sigma <- matrix(
   nrow = 2)
 
 # Simulate bivariate normal data
-mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) %>% 
-  data.frame() %>% 
-  rename(x = X1, y = X2) %>% 
+mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) |> 
+  data.frame() |> 
+  rename(x = X1, y = X2) |> 
   round_df(1)
 ```
 
@@ -473,9 +473,9 @@ With your assigned partner, compute the following values for the $n=`r n`$ value
 #| echo: false
 
 
-cov_dat <- mvn_data_6 %>% 
-  mutate(i = row_number()) %>% 
-  select(i, x, y) %>% 
+cov_dat <- mvn_data_6 |> 
+  mutate(i = row_number()) |> 
+  select(i, x, y) |> 
   mutate(
     xx = x - mean(x),
     xx2 = xx^2,
@@ -484,7 +484,7 @@ cov_dat <- mvn_data_6 %>%
     xy = (x - mean(x)) * (y - mean(y))
     ) 
 
-cov_dat_summary <- cov_dat %>% 
+cov_dat_summary <- cov_dat |> 
   summarize(
     x = sum(x),
     y = sum(y),
@@ -493,25 +493,25 @@ cov_dat_summary <- cov_dat %>%
     yy = sum(yy),
     yy2 = sum(yy2),
     xy = sum(xy)
-  ) %>% 
-  round_df(5) %>%
-  mutate(across(everything(), as.character)) %>% 
+  ) |> 
+  round_df(5) |>
+  mutate(across(everything(), as.character)) |> 
   mutate(i = "sum")
 
-temp <- cov_dat %>% 
-  round_df(5) %>%
-  mutate(across(everything(), as.character)) %>% 
-  bind_rows(cov_dat_summary) %>% 
+temp <- cov_dat |> 
+  round_df(5) |>
+  mutate(across(everything(), as.character)) |> 
+  bind_rows(cov_dat_summary) |> 
   rename(
     "x-mean(x)" = xx, 
     "(x-mean(x))^2" = xx2, 
     "y-mean(y)" = yy,
     "(y-mean(y))^2" = yy2, 
     "(x-mean(x))(y-mean(y))" = xy
-  ) %>%
+  ) |>
   delete_all_but_first_row()
 
-knitr::kable(temp, format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
+knitr::kable(temp, format = "html", align='cccccccc', escape = FALSE, width = NA) |>
   kable_styling(full_width = FALSE)
 ```
 
@@ -519,7 +519,7 @@ knitr::kable(temp, format = "html", align='cccccccc', escape = FALSE, width = NA
 #| echo: false
 #| warning: false
 
-cov_dat <- cov_dat %>% 
+cov_dat <- cov_dat |> 
   mutate(
     sign = case_when(
       xy > 0 ~ "positive", 
@@ -528,7 +528,7 @@ cov_dat <- cov_dat %>%
   ) 
   
 ggplot(cov_dat, aes(x = x, y = y)) +
-  # geom_point(data=cov_dat %>% filter(row_number() == 1),
+  # geom_point(data=cov_dat |> filter(row_number() == 1),
   #            pch=21,
   #            size=4,
   #            colour="black") +
@@ -586,9 +586,9 @@ rho <- -0.85          # correlation coefficient
     nrow = 2)
   
   # Simulate bivariate normal data
-  mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) %>% 
-    data.frame() %>% 
-    rename(x = X1, y = X2) %>% 
+  mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) |> 
+    data.frame() |> 
+    rename(x = X1, y = X2) |> 
     round_df(1)
   meanx[i] <- mean(mvn_data_6$x)
   meany[i] <- mean(mvn_data_6$y)
@@ -598,11 +598,11 @@ rho <- -0.85          # correlation coefficient
   cors[i] <- cor(mvn_data_6$x, mvn_data_6$y)
   covs[i] <- cov(mvn_data_6$x, mvn_data_6$y) 
 }
-temp0 <- data.frame(meanx = meanx, meany = meany, sdx = sdx, sdy = sdy, cors = cors, covs = covs, prodxy = prodxy) %>% 
-  mutate(i = row_number()) %>% 
-  filter(meanx*10 == floor(meanx*10)) %>% 
-  filter(meany*10 == floor(meany*10))  %>% 
-  filter(covs*100 == floor(covs*100))  %>% 
+temp0 <- data.frame(meanx = meanx, meany = meany, sdx = sdx, sdy = sdy, cors = cors, covs = covs, prodxy = prodxy) |> 
+  mutate(i = row_number()) |> 
+  filter(meanx*10 == floor(meanx*10)) |> 
+  filter(meany*10 == floor(meany*10))  |> 
+  filter(covs*100 == floor(covs*100))  |> 
   mutate(across(everything(), as.character)) 
 
 View(temp0)

@@ -74,10 +74,10 @@ temp <- chocolate_raw
 temp[1,1] <- "Category:"
 temp[1,2] <- paste0("All categories", strrep(" ",12))
 
-temp2 <- temp %>% 
-  head(16) %>% 
-  bind_rows(data.frame(V1 = "⋮   ", V2 = "⋮")) %>% 
-  bind_rows(temp %>% tail(3)) %>% 
+temp2 <- temp |> 
+  head(16) |> 
+  bind_rows(data.frame(V1 = "⋮   ", V2 = "⋮")) |> 
+  bind_rows(temp |> tail(3)) |> 
   mutate(
     V1 = 
       case_when(
@@ -87,8 +87,8 @@ temp2 <- temp %>%
       )
   )
 
-temp2 %>% 
-  rename(" " = "V1", "   " = "V2") %>% print(row.names = FALSE)
+temp2 |> 
+  rename(" " = "V1", "   " = "V2") |> print(row.names = FALSE)
 
 ```
 
@@ -122,9 +122,7 @@ chocolate_month_ts <- chocolate_tibble |>
   mutate(index = tsibble::yearmonth(dates)) |>
   as_tsibble(index = index)
 
-chocolate_annual_ts <- summarise(index_by(chocolate_month_ts, year), value = mean(value))
-
-chocolate_month_ts %>% head()
+chocolate_month_ts |> head()
 ```
 
 For now, we will use the tsibble object (which in this case is called *chocolate_month_ts*) to explore the time series. 
@@ -156,9 +154,11 @@ The red line represents the mean for each year. The point for this line was posi
 ```{r}
 #| echo: false
 
-temp <- chocolate_month_ts %>% 
-  filter(month == 7) %>% 
-  select(-value) %>% 
+chocolate_annual_ts <- summarise(index_by(chocolate_month_ts, year), value = mean(value))
+
+temp <- chocolate_month_ts |> 
+  filter(month == 7) |> 
+  select(-value) |> 
   right_join(chocolate_annual_ts)
 
 autoplot(chocolate_month_ts, .vars = value) +
@@ -187,7 +187,7 @@ Consider the data for the last few years:
                             ####################### FUTURE MAINTENANCE ###################
 first_year_selected <- 2020 # Increase this in future semesters, so the figure shows each year clearly. There should be a major vertical line for January of each year, and the shape of the monthly pattern should be clearly evident.
 
-lastfew_plot <- autoplot(chocolate_month_ts %>% filter(dates >= lubridate::mdy(paste0("07/01/", first_year_selected))), .vars = value) +
+lastfew_plot <- autoplot(chocolate_month_ts |> filter(dates >= lubridate::mdy(paste0("07/01/", first_year_selected))), .vars = value) +
   labs(
     x = "Month",
     y = "Chocolate Searches",
@@ -217,8 +217,8 @@ example_year <- 2023   # Change this in future semesters to be the last full yea
 lastfew_plot
 ```
 
--   Think about what you know about the reported number of searches in December compared to the following February. The reported number of searches for "Chocolate" in December `r example_year-1` is `r chocolate_month_ts %>% filter(year == example_year - 1, month == 12) %>% data.frame() %>% select(value) %>% pull()`. Does it make sense that the reported number of searches in February `r example_year` is `r chocolate_month_ts %>% filter(year == example_year, month == 2) %>% data.frame() %>% select(value) %>% pull()`? Given the value from December, is the value in the following Febrary independent and completely random?
--   The value reported by Google for June `r example_year` is `r chocolate_month_ts %>% filter(year == example_year, month == 6) %>% data.frame() %>% select(value) %>% pull()`. Based on what you have observed in the data, do you think the value for July `r example_year` will be close to or far from this value? Justify your answer.
+-   Think about what you know about the reported number of searches in December compared to the following February. The reported number of searches for "Chocolate" in December `r example_year-1` is `r chocolate_month_ts |> filter(year == example_year - 1, month == 12) |> data.frame() |> select(value) |> pull()`. Does it make sense that the reported number of searches in February `r example_year` is `r chocolate_month_ts |> filter(year == example_year, month == 2) |> data.frame() |> select(value) |> pull()`? Given the value from December, is the value in the following Febrary independent and completely random?
+-   The value reported by Google for June `r example_year` is `r chocolate_month_ts |> filter(year == example_year, month == 6) |> data.frame() |> select(value) |> pull()`. Based on what you have observed in the data, do you think the value for July `r example_year` will be close to or far from this value? Justify your answer.
 
 
 :::
@@ -243,6 +243,7 @@ Discuss these vocabulary terms in the context of the Google Trends ("Chocolate")
 
 mp <- autoplot(chocolate_month_ts, .vars = value) +
   labs(
+    x = "Month",
     y = "Chocolate Searches",
     title = "Relative Number of Google Searches for Chocolate"
   ) +
@@ -275,18 +276,18 @@ replaceCommas<-function(x){
   x<-as.numeric(gsub("\\,", "", x))
 }
 
-sp500_dat <- rio::import("../data/sp500.csv") %>%
+sp500_dat <- rio::import("../data/sp500.csv") |>
   mutate(dates = mdy(Date))
 
-sp500_day <- sp500_dat %>%
-  mutate(date_seq = dates) %>%
+sp500_day <- sp500_dat |>
+  mutate(date_seq = dates) |>
   mutate(
     dates = date_seq,
     year = lubridate::year(date_seq),
     month = lubridate::month(date_seq),
     value = replaceCommas(Close)
-  ) %>%
-  select(-date_seq) %>%
+  ) |>
+  select(-date_seq) |>
   tibble()
 
 sp500_ts <- sp500_day |>
@@ -295,10 +296,10 @@ sp500_ts <- sp500_day |>
 
 sp500_annual_ts <- summarise(index_by(sp500_ts, year), value = mean(value))
 
-temp <- sp500_ts |> filter(month == 7 & day(dates) == 1) %>% 
+temp <- sp500_ts |> filter(month == 7 & day(dates) == 1) |> 
   select(Date, year) 
 
-temp2 <- sp500_annual_ts %>% 
+temp2 <- sp500_annual_ts |> 
   right_join(temp)
 
 autoplot(sp500_ts, .vars = value) +
@@ -327,18 +328,18 @@ replaceCommas<-function(x){
   x<-as.numeric(gsub("\\,", "", x))
 }
 
-sp500_dat <- rio::import("../data/sp500.csv") %>%
+sp500_dat <- rio::import("../data/sp500.csv") |>
   mutate(dates = mdy(Date))
 
-sp500_day <- sp500_dat %>%
-  mutate(date_seq = dates) %>%
+sp500_day <- sp500_dat |>
+  mutate(date_seq = dates) |>
   mutate(
     dates = date_seq,
     year = lubridate::year(date_seq),
     month = lubridate::month(date_seq),
     value = replaceCommas(Close)
-  ) %>%
-  select(-date_seq) %>%
+  ) |>
+  select(-date_seq) |>
   tibble()
 
 sp500_ts <- sp500_day |>
@@ -347,10 +348,10 @@ sp500_ts <- sp500_day |>
 
 sp500_annual_ts <- summarise(index_by(sp500_ts, year), value = mean(value))
 
-temp <- sp500_ts |> filter(month == 7 & day(dates) == 1) %>% 
+temp <- sp500_ts |> filter(month == 7 & day(dates) == 1) |> 
   select(Date, year) 
 
-temp2 <- sp500_annual_ts %>% 
+temp2 <- sp500_annual_ts |> 
   right_join(temp)
 
 autoplot(sp500_ts, .vars = value) +

@@ -122,18 +122,16 @@ W.  $\frac{x_t}{\bar s_t}$
 
 where $\hat m_t = \dfrac{\frac{1}{2}x_{t-6} + x_{t-5} + \cdots + x_{t-1} + x_t + x_{t+1} + \cdot + x_{t+5} + \frac{1}{2} x_{t+6}}{12}$.
 
-## POSSIBLY: DEMONSTRATE THAT TWO UNRELATED TIME SERIES WILL BE CORRELATED IF THEY BOTH CONTAIN A TREND----------
-
 ## Hands-on Exercise: Exploring a time series in R (Google Trends: Chocolate) (20 min)
 
 Recall the Google Trends data for the term "Chocolate" from the last lesson.
-The cleaned version of the data we will use in this demonstration are available in the file <a href="../data/chocolate.csv" download>chocolate.csv</a>.
+The cleaned data are available in the file <a href="../data/chocolate.csv" download>chocolate.csv</a>.
 
-In Lesson 3, we will practice converting data like this into a time series (tsibble) object.
+### Import the chocolate search data and convert to tsibble format
+
+Use the code below to import the data and convert it into a time series (tsibble) object.
 
 ```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
 
 # load packages
 if (!require("pacman")) install.packages("pacman")
@@ -168,13 +166,45 @@ autoplot(chocolate_month_ts, .vars = value) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
+### Explore R commands summarizing time series data
+
+-   What does each of the following commands do?
+    -   class(chocolate_month_ts)
+    -   head(chocolate_month_ts, 1)
+    -   tail(chocolate_month_ts, 1)
+    -   guess_frequency(chocolate_month_ts$index)
+
+### Aggregate to the annual level
+
+To help visualize what is happening with a time series, we often aggregate the data in the time series to the annual level. This can make it easier to spot the trend.
+
+```{r}
+chocolate_annual_ts <- summarise(index_by(chocolate_month_ts, year), value = mean(value))
+
+# TS Plot (Monthly and Annual)
+mp <- autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Chocolate Searches",
+    title = "Relative Number of Google Searches for Chocolate"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+yp <- autoplot(chocolate_annual_ts, .vars = value) +
+  labs(
+    y = "Chocolate Searches",
+    title = "Annual Mean Trend of Google Searches for Chocolate"
+  ) +
+  scale_x_continuous(breaks = seq(2004, 2024, by = 2)) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+mp / yp
+```
 
 
 
 Do the following.
 
--   Import the chocolate search data and convert to tsibble format
--   Compute summary statistics for this time series data
 -   Aggregate time series data in a tsibble to the annual level to remove seasonal variation and visualize the trend.
 -   What do you observe in the trend? What do you suspect is causing this trend?
 -   Create a box plot of seasonal values, with one box plot per month. What do you observe? Which months tend to have more searches? Can you provide an explanation for this?
@@ -241,6 +271,20 @@ autoplot(x_decompose)
 
 -   Demonstrate decomposition of simulated ts data in Quarto notebook; show trend, seasonality, and residual
 -   Make changes to the simulated data and observe the effect on the plots
+
+
+
+## POSSIBLY: DEMONSTRATE THAT TWO UNRELATED TIME SERIES WILL BE CORRELATED IF THEY BOTH CONTAIN A TREND----------
+
+
+
+
+
+
+
+
+
+
 
 ## Recap (5 mins)
 
