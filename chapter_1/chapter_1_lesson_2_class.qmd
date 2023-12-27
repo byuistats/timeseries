@@ -124,7 +124,7 @@ where $\hat m_t = \dfrac{\frac{1}{2}x_{t-6} + x_{t-5} + \cdots + x_{t-1} + x_t +
 
 ## Hands-on Exercise: Exploring a time series in R (Google Trends: Chocolate) (20 min)
 
-Recall the Google Trends data for the term "Chocolate" from the last lesson.
+Recall the Google Trends data for the term "chocolate" from the last lesson.
 The cleaned data are available in the file <a href="../data/chocolate.csv" download>chocolate.csv</a>.
 
 ### Import the chocolate search data and convert to tsibble format
@@ -194,6 +194,7 @@ mp <- autoplot(chocolate_month_ts, .vars = value) +
 
 yp <- autoplot(chocolate_annual_ts, .vars = value) +
   labs(
+    x = "Year",
     y = "Chocolate Searches",
     title = "Mean Annual Google Searches for 'Chocolate'"
   ) +
@@ -211,24 +212,37 @@ mp / yp
 To better visualize the effect of seasonal variation, we can make box plots by month.
 
 ```{r}
-psum <- autoplot(summarise(index_by(chocolate_month_ts, year), value = sum(value))) +
-  labs(
-    x = "Year",
-    y = "Chocolate Searches",
-    title = "Mean Annual Google Searches for 'Chocolate'"
-  ) +
-  scale_x_continuous(breaks = seq(2004, max(chocolate_month_ts$year), by = 2)) +
-  theme(plot.title = element_text(hjust = 0.5))
 pbox <- ggplot(chocolate_month_ts, aes(x = factor(month), y = value)) +
-    geom_boxplot()
-psum / pbox
+    geom_boxplot() +
+  labs(
+    x = "Month Number",
+    y = "Chocolate Searches",
+    title = "Boxplot of Google Searches for 'Chocolate' by Month"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+pbox
+```
+-   What do you observe? 
+-   Which months tend to have more searches? 
+    -   Can you provide an explanation for this?
+
+
+## Additive Decomposition 
+
+```{r}
+x_decompose <- chocolate_month_ts |>
+    model(feasts::classical_decomposition(value,
+        type = "add"))  |>
+    components()
+
+autoplot(x_decompose)
 ```
 
 
 
 Do the following.
 
--   Create a box plot of seasonal values, with one box plot per month. What do you observe? Which months tend to have more searches? Can you provide an explanation for this?
 -   Demonstrate decomposition of the chocolate search data; show trend, seasonality, and residual
 -   How does the trend and seasonality compare to your observations above?
 -   What do you observe in the residual? Are there any unusual spikes? Use Google to try to determine what may have caused the usual spikes.
