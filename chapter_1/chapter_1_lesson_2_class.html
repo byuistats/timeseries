@@ -373,7 +373,7 @@ Explain the purpose and limitations of forecasting
 <li>Lead time</li>
 <li>Forecast made at time <span class="math inline">\(t\)</span> for a future value <span class="math inline">\(k\)</span> time units in the future</li>
 <li>Additive decomposition</li>
-<li>Additive decomposition model for <span class="math inline">\(\log(x_t)\)</span></li>
+<li>Additive decomposition model after taking the logarithm</li>
 <li>Multiplicative model</li>
 <li>Centered moving average</li>
 <li>Estimate of monthly additive effect</li>
@@ -436,17 +436,45 @@ Warning
 </section>
 <section id="hands-on-exercise-exploring-a-time-series-in-r-google-trends-chocolate-20-min" class="level2">
 <h2 class="anchored" data-anchor-id="hands-on-exercise-exploring-a-time-series-in-r-google-trends-chocolate-20-min">Hands-on Exercise: Exploring a time series in R (Google Trends: Chocolate) (20 min)</h2>
-<div class="callout callout-style-default callout-caution callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Caution
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>We need to add a link to the chocolate search trends data here, together with the code to analyze them</p>
+<p>Recall the Google Trends data for the term “Chocolate” from the last lesson. The cleaned version of the data we will use in this demonstration are available in the file <a href="../data/chocolate.csv" download="">chocolate.csv</a>.</p>
+<p>In Lesson 3, we will practice converting data like this into a time series (tsibble) object.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># load packages</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(<span class="st">"pacman"</span>)) <span class="fu">install.packages</span>(<span class="st">"pacman"</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(<span class="st">"tsibble"</span>, <span class="st">"fable"</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>               <span class="st">"feasts"</span>, <span class="st">"tsibbledata"</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>               <span class="st">"fable.prophet"</span>, <span class="st">"tidyverse"</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>               <span class="st">"patchwork"</span>, <span class="st">"rio"</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># read in the data from a csv and make the tsibble</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>chocolate_month <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"../data/chocolate.csv"</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="st">"2004-01-01"</span>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>                start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(chocolate_month)<span class="sc">-</span><span class="dv">1</span>),</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">"1 months"</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>chocolate <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">dates =</span> date_seq,</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(date_seq),</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(date_seq),</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">pull</span>(chocolate_month, chocolate)</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>chocolate_month_ts <span class="ot">&lt;-</span> chocolate <span class="sc">|&gt;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(dates)) <span class="sc">|&gt;</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="co"># generate the plot</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(chocolate_month_ts, <span class="at">.vars =</span> value) <span class="sc">+</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Month"</span>,</span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Chocolate Searches"</span>,</span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Relative Number of Google Searches for Chocolate"</span></span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="chapter_1_lesson_2_class_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Do the following.</p>
@@ -477,54 +505,54 @@ Caution
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set random seed for reproducibility</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>) </span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>num_years <span class="ot">&lt;-</span> <span class="dv">10</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">12</span> <span class="sc">*</span> num_years</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>sigma <span class="ot">&lt;-</span> .<span class="dv">75</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fl">0.05</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> .<span class="dv">5</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>c <span class="ot">&lt;-</span> .<span class="dv">9</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>,n)</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>e <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, sigma)</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>time_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">1</span>,n)</span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Get date</span></span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>year_seq <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">year</span>(<span class="fu">today</span>()) <span class="sc">-</span> num_years  <span class="sc">+</span> (time_seq <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">%/%</span> <span class="dv">12</span></span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>month_seq <span class="ot">&lt;-</span> (time_seq <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">%%</span> <span class="dv">12</span> <span class="sc">+</span> <span class="dv">1</span></span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">ymd</span>(<span class="fu">paste0</span>(year_seq,<span class="st">"-"</span>,month_seq,<span class="st">"-01"</span>))</span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Get data</span></span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>n) {</span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>  x[i] <span class="ot">&lt;-</span> a <span class="sc">*</span> i <span class="sc">+</span> b <span class="sc">*</span> <span class="fu">sin</span>(i <span class="sc">/</span> <span class="dv">12</span> <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span>)  <span class="sc">+</span> c <span class="sc">*</span> <span class="fu">cos</span>(i <span class="sc">/</span> <span class="dv">12</span> <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span>) <span class="sc">+</span> e[i]</span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>x_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x =</span> x)</span>
-<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>start_year <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">year</span>(<span class="fu">today</span>()) <span class="sc">-</span> num_years</span>
-<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="fu">paste0</span>(start_year,<span class="st">"-01-01"</span>))</span>
-<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a><span class="co"># start_date &lt;- lubridate::ymd("1958-01-01")</span></span>
-<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
-<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>    start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(x_df)<span class="sc">-</span><span class="dv">1</span>),</span>
-<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="st">"1 months"</span>)</span>
-<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>x_df_ts <span class="ot">&lt;-</span> x_df <span class="sc">|&gt;</span></span>
-<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>        <span class="at">date =</span> date_seq,</span>
-<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>        <span class="at">month =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(date)) <span class="sc">|&gt;</span></span>
-<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tsibble</span>(<span class="at">index =</span> month)</span>
-<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a>x_decompose <span class="ot">&lt;-</span> x_df_ts <span class="sc">|&gt;</span></span>
-<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(x,</span>
-<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
-<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
-<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(x_decompose)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set random seed for reproducibility</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>) </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>num_years <span class="ot">&lt;-</span> <span class="dv">10</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">12</span> <span class="sc">*</span> num_years</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>sigma <span class="ot">&lt;-</span> .<span class="dv">75</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="fl">0.05</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> .<span class="dv">5</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>c <span class="ot">&lt;-</span> .<span class="dv">9</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">rep</span>(<span class="dv">0</span>,n)</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>e <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(n, <span class="dv">0</span>, sigma)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>time_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="dv">1</span>,n)</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Get date</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>year_seq <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">year</span>(<span class="fu">today</span>()) <span class="sc">-</span> num_years  <span class="sc">+</span> (time_seq <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">%/%</span> <span class="dv">12</span></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>month_seq <span class="ot">&lt;-</span> (time_seq <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">%%</span> <span class="dv">12</span> <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">ymd</span>(<span class="fu">paste0</span>(year_seq,<span class="st">"-"</span>,month_seq,<span class="st">"-01"</span>))</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Get data</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>n) {</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>  x[i] <span class="ot">&lt;-</span> a <span class="sc">*</span> i <span class="sc">+</span> b <span class="sc">*</span> <span class="fu">sin</span>(i <span class="sc">/</span> <span class="dv">12</span> <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span>)  <span class="sc">+</span> c <span class="sc">*</span> <span class="fu">cos</span>(i <span class="sc">/</span> <span class="dv">12</span> <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span>) <span class="sc">+</span> e[i]</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>x_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">x =</span> x)</span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>start_year <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">year</span>(<span class="fu">today</span>()) <span class="sc">-</span> num_years</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="fu">paste0</span>(start_year,<span class="st">"-01-01"</span>))</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a><span class="co"># start_date &lt;- lubridate::ymd("1958-01-01")</span></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>    start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(x_df)<span class="sc">-</span><span class="dv">1</span>),</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="st">"1 months"</span>)</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>x_df_ts <span class="ot">&lt;-</span> x_df <span class="sc">|&gt;</span></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>        <span class="at">date =</span> date_seq,</span>
+<span id="cb6-38"><a href="#cb6-38" aria-hidden="true" tabindex="-1"></a>        <span class="at">month =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(date)) <span class="sc">|&gt;</span></span>
+<span id="cb6-39"><a href="#cb6-39" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tsibble</span>(<span class="at">index =</span> month)</span>
+<span id="cb6-40"><a href="#cb6-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-41"><a href="#cb6-41" aria-hidden="true" tabindex="-1"></a>x_decompose <span class="ot">&lt;-</span> x_df_ts <span class="sc">|&gt;</span></span>
+<span id="cb6-42"><a href="#cb6-42" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(x,</span>
+<span id="cb6-43"><a href="#cb6-43" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
+<span id="cb6-44"><a href="#cb6-44" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
+<span id="cb6-45"><a href="#cb6-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-46"><a href="#cb6-46" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(x_decompose)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="chapter_1_lesson_2_class_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_1_lesson_2_class_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <ul>

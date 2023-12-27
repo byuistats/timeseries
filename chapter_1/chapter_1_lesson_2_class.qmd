@@ -79,7 +79,7 @@ Match the definitions on the left with the terms on the right.
 10. Lead time
 11. Forecast made at time $t$ for a future value $k$ time units in the future
 12. Additive decomposition
-13. Additive decomposition model for $\log(x_t)$
+13. Additive decomposition model after taking the logarithm
 14. Multiplicative model
 15. Centered moving average
 16. Estimate of monthly additive effect
@@ -134,9 +134,50 @@ R's model: $$ x_t = m_t \cdot s_t \cdot z_t $$
 
 ## Hands-on Exercise: Exploring a time series in R (Google Trends: Chocolate) (20 min)
 
-::: callout-caution
-We need to add a link to the chocolate search trends data here, together with the code to analyze them
-:::
+Recall the Google Trends data for the term "Chocolate" from the last lesson.
+The cleaned version of the data we will use in this demonstration are available in the file <a href="../data/chocolate.csv" download>chocolate.csv</a>.
+
+In Lesson 3, we will practice converting data like this into a time series (tsibble) object.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# load packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("tsibble", "fable",
+               "feasts", "tsibbledata",
+               "fable.prophet", "tidyverse",
+               "patchwork", "rio")
+
+# read in the data from a csv and make the tsibble
+chocolate_month <- rio::import("../data/chocolate.csv")
+start_date <- lubridate::ymd("2004-01-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(chocolate_month)-1),
+                by = "1 months")
+chocolate <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = pull(chocolate_month, chocolate)
+)
+chocolate_month_ts <- chocolate |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index)
+
+# generate the plot
+autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Chocolate Searches",
+    title = "Relative Number of Google Searches for Chocolate"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
 
 Do the following.
 
