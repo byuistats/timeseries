@@ -158,18 +158,20 @@ chocolate_month_ts <- chocolate_tibble |>
   as_tsibble(index = index)
 
 # generate the plot
-autoplot(chocolate_month_ts, .vars = value) +
+choc_plot <- autoplot(chocolate_month_ts, .vars = value) +
   labs(
     x = "Month",
-    y = "Chocolate Searches",
+    y = "Searches",
     title = "Relative Number of Google Searches for 'Chocolate'"
   ) +
   theme(plot.title = element_text(hjust = 0.5))
+
+choc_plot
 ```
 
 ### Explore R commands summarizing time series data
 
--   What does each of the following commands do?
+-   What does each of the following R commands give us?
     -   class(chocolate_month_ts)
     -   head(chocolate_month_ts, 1)
     -   tail(chocolate_month_ts, 1)
@@ -183,24 +185,26 @@ The first plot is the time series plot of the raw data, and the second plot is a
 ```{r}
 chocolate_annual_ts <- summarise(index_by(chocolate_month_ts, year), value = mean(value))
 
-# TS Plot (Monthly and Annual)
+# monthly plot
 mp <- autoplot(chocolate_month_ts, .vars = value) +
   labs(
     x = "Month",
-    y = "Chocolate Searches",
+    y = "Searches",
     title = "Relative Number of Google Searches for 'Chocolate'"
   ) +
   theme(plot.title = element_text(hjust = 0.5))
 
+# yearly plot
 yp <- autoplot(chocolate_annual_ts, .vars = value) +
   labs(
     x = "Year",
-    y = "Chocolate Searches",
+    y = "Searches",
     title = "Mean Annual Google Searches for 'Chocolate'"
   ) +
   scale_x_continuous(breaks = seq(2004, max(chocolate_month_ts$year), by = 2)) +
   theme(plot.title = element_text(hjust = 0.5))
 
+# display both simultaneously
 mp / yp
 ```
 
@@ -216,7 +220,7 @@ pbox <- ggplot(chocolate_month_ts, aes(x = factor(month), y = value)) +
     geom_boxplot() +
   labs(
     x = "Month Number",
-    y = "Chocolate Searches",
+    y = "Searches",
     title = "Boxplot of Google Searches for 'Chocolate' by Month"
   ) +
   theme(plot.title = element_text(hjust = 0.5))
@@ -224,51 +228,70 @@ pbox <- ggplot(chocolate_month_ts, aes(x = factor(month), y = value)) +
 pbox
 ```
 -   What do you observe? 
--   Which months tend to have more searches? 
+-   Which months tend to have the most searches?  Which months tend to have the fewest seraches?
     -   Can you provide an explanation for this?
 
 
 ## Additive Decomposition 
 
+The additive model for a time series, $\{x_t\}$, is:
+
+$$
+  x_t = m_t + s_t + z_t
+$$
+
+where $x_t$ is the observed series, $m_t$ is the trend, $s_t$ is the seasonal effect, $z_t$ is random variation, and $t = 1, 2, 3, \ldots, n$. We consider $z_t$ as a sequence of correlated random variables with mean 0.
+
+The residual is the part of the time series that is not explained by the trend or the seasonal effect. This is an estimate of $
+For an additive model, the residual is computed as:
+$$
+  Residual = Value - Trend - Seasonal
+$$
+
+The code below produces a plot showing the original data in the time series, the trend, the seasonal effect, and the residual (random component). 
+
 ```{r}
-x_decompose <- chocolate_month_ts |>
+#| warning: false
+
+choc_decompose <- chocolate_month_ts |>
     model(feasts::classical_decomposition(value,
         type = "add"))  |>
     components()
 
-autoplot(x_decompose)
+autoplot(choc_decompose)
 ```
 
 
+-   How does the trend and seasonality compare to the plots made previously?
+-   What do you observe in the residual? 
+    -   Are there any unusual spikes? Use Google to try to determine what may have caused the usual spikes.
 
-Do the following.
+## Hands-on Exercise: Exploring simulated time series data (10 min)
 
--   Demonstrate decomposition of the chocolate search data; show trend, seasonality, and residual
--   How does the trend and seasonality compare to your observations above?
--   What do you observe in the residual? Are there any unusual spikes? Use Google to try to determine what may have caused the usual spikes.
+### Additive Model
 
-## Hands-on Exercise: Exploring simulated time series data (5 min)
-
-::: callout-caution
-Insert a simulation of a time series that can be revised to allow students to see effects of inputs on the TS. (Here is an idea below.)
-:::
+The following code simulates 10 years of a monthly time series with a linear trend and seasonal variation with an additive model.
 
 ```{r}
 #| warning: false
 
 # Set random seed for reproducibility
-set.seed(1234) 
+set.seed(12345) 
 
+# Set parameters & initialize vectors
 num_years <- 10
 n <- 12 * num_years
-
 sigma <- .75
 a <- 0.05
-b <- .5
-c <- .9
-x <- rep(0,n)
-e <- rnorm(n, 0, sigma)
+b <- 1
+c <- 0.5
+trend <- seasonal <- x <- rep(0,n)
 time_seq <- seq(1,n)
+
+# Generate correlated error terms
+w <- rnorm(n + 4, 0, 1)
+z = w + lead(w,1) + lead(w,2) + lead(w,3) + lead(w,4)
+z  = head(z, n) / 2
 
 # Get date
 year_seq <- lubridate::year(today()) - num_years  + (time_seq - 1) %/% 12
@@ -276,11 +299,13 @@ month_seq <- (time_seq - 1) %% 12 + 1
 date_seq <- ymd(paste0(year_seq,"-",month_seq,"-01"))
 
 # Get data
-for (i in 2:n) {
-  x[i] <- a * i + b * sin(i / 12 * 2 * pi * 3)  + c * cos(i / 12 * 2 * pi * 2) + e[i]
+for (t in 2:n) {
+  trend[t] <- a * t 
+  seasonal[t] <- b * sin(t / 12 * 2 * pi * 1)  + c * cos(t / 12 * 2 * pi * 3) + 5
+  x[t] <- trend[t] + seasonal[t] + z[t]
 }
 
-x_df <- data.frame(x = x)
+x_df <- data.frame(x = x, trend = trend, seasonal = seasonal)
 
 start_year <- lubridate::year(today()) - num_years
 start_date <- lubridate::ymd(paste0(start_year,"-01-01"))
@@ -293,8 +318,84 @@ date_seq <- seq(start_date,
 x_df_ts <- x_df |>
     mutate(
         date = date_seq,
-        month = tsibble::yearmonth(date)) |>
-    as_tsibble(index = month)
+        Month = tsibble::yearmonth(date)) |>
+    as_tsibble(index = Month)
+```
+
+
+The code above has generated simulated data, where the trend is linear with equation
+
+$$
+  m_t = \frac{t}{20}
+$$
+
+and the seasonal effect follows the function
+
+$$
+  s_t = \sin \left( \frac{t\pi}{6} \right) + \frac{1}{2}\cos\left(\frac{t \pi}{18} \right) + 5
+$$
+
+Letting $t$ represent the month number across 10 years, we get:
+
+```{r}
+#| echo: false
+
+trend_plot <- ggplot(x_df_ts, aes(x=Month, y=trend)) + 
+  geom_line() +
+  labs(
+    title="Plot of Trend", 
+    x="Month", 
+    y="Trend"
+    ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+seasonal_plot <- ggplot(x_df_ts, aes(x=Month, y=seasonal)) + 
+  geom_line() +
+  labs(
+    title="Plot of Seasonal Effect", 
+    x="Month", 
+    y="Seasonal"
+    ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# trend_plot / seasonal_plot
+
+
+error_plot <- ggplot(x_df_ts, aes(x = Month, y = x - trend - seasonal)) + 
+  geom_line() +
+  labs(
+    title="Plot of Random Error Term", 
+    x="Month", 
+    y="Random"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+x_plot <- ggplot(x_df_ts, aes(x=Month, y=x)) + 
+  geom_line() +
+  labs(
+    title="Plot of Simulated Time Series", 
+    x="Month", 
+    y="x"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+# error_plot / x_plot
+
+x_plot <- x_plot  + labs(title = "True (Simulated) Values", x = NULL)
+trend_plot <- trend_plot + labs(title = NULL, x = NULL)
+seasonal_plot <- seasonal_plot + labs(title = NULL, x = NULL)
+error_plot <- error_plot + labs(title = NULL)
+
+
+x_plot / trend_plot / seasonal_plot / error_plot 
+```
+
+
+Now, we use R to decompose the time series $\{x_t\}$.
+
+```{r}
+#| warning: false
 
 x_decompose <- x_df_ts |>
     model(feasts::classical_decomposition(x,
@@ -304,8 +405,372 @@ x_decompose <- x_df_ts |>
 autoplot(x_decompose)
 ```
 
--   Demonstrate decomposition of simulated ts data in Quarto notebook; show trend, seasonality, and residual
+```{r}
+#| include: false
+i <- c(0:n)
+# a <- 0
+x <- a*i + b*sin(i/12*2*pi) + c*cos(i/12*2*pi*3)
+
+df <- data.frame(i, x)
+
+ggplot(df, aes(x=i, y=x)) + 
+  geom_line() +
+  labs(title="Plot of Function", 
+       x="i", 
+       y="x")
+```
+
+-   How does the (estimated) decomposition compare to the theoretical values above?
+    -   How well is the trend estimated?
+    -   How well is the seasonal effect estimated?
+    -   How well is the random effect estimated?
 -   Make changes to the simulated data and observe the effect on the plots
+
+### Note on Additive and Multiplicative Models in the Textbook and R
+
+Both the textbook and R use the same model in the additive case:
+
+$$
+  x_t = m_t + s_t + z_t
+$$
+
+However, there is a discrepancy in the definitions for the mulitplicative models. The textbook defines the multiplicative model as
+
+$$
+  x_t = m_t \cdot s_t + z_t
+$$
+but R defines the multiplicative model as 
+
+$$
+  x_t = m_t \cdot s_t \cdot z_t
+$$
+You can investigate R's definition by executing this command in RStudio.
+
+```{r}
+#| eval: false
+
+?classical_decomposition
+```
+
+
+### Multiplicative Model
+
+We use the same simulated data as before, but this time we apply R's multiplicative model. This implies that the error term, $z_t$, has a mean of 1, rather than 0.
+
+```{r}
+# Set random seed for reproducibility
+set.seed(12345) 
+
+# Set parameters & initialize vectors
+num_years <- 10
+n <- 12 * num_years
+sigma <- .75
+a <- 0.03
+b <- 1
+c <- 0.5 
+trend <- seasonal <- x <- rep(0,n)
+time_seq <- seq(1,n)
+
+# Generate correlated error terms
+w <- rnorm(n + 4, 0.2, 0.1) # Changed to a mean of 1 and sd of 0.03
+z = w + lead(w,1) + lead(w,2) + lead(w,3) + lead(w,4)
+z  = head(z, n)
+
+# Get date
+year_seq <- lubridate::year(today()) - num_years  + (time_seq - 1) %/% 12
+month_seq <- (time_seq - 1) %% 12 + 1
+date_seq <- ymd(paste0(year_seq,"-",month_seq,"-01"))
+
+# Get data
+for (t in 1:n) {
+  trend[t] <- exp(a * t)
+  seasonal[t] <- b * sin(t / 12 * 2 * pi * 1)  + c * cos(t / 12 * 2 * pi * 3) + 5
+  x[t] <- trend[t] * seasonal[t] * z[t] # Note R's definition of the mult. model
+}
+
+x_df <- data.frame(x = x, trend = trend, seasonal = seasonal)
+
+start_year <- lubridate::year(today()) - num_years
+start_date <- lubridate::ymd(paste0(start_year,"-01-01"))
+
+# start_date <- lubridate::ymd("1958-01-01")
+date_seq <- seq(start_date,
+    start_date + months(nrow(x_df)-1),
+    by = "1 months")
+
+x_df_ts <- x_df |>
+    mutate(
+        date = date_seq,
+        Month = tsibble::yearmonth(date)) |>
+    as_tsibble(index = Month)
+```
+
+
+The code above simulated data, where the trend is expoential with equation
+
+$$
+  m_t = e^{0.03 t}
+$$
+
+and the seasonal effect follows the function
+
+$$
+  s_t = \sin \left( \frac{t\pi}{6} \right) + \frac{1}{2}\cos\left(\frac{t \pi}{18} \right) + 5
+$$
+
+Letting $t$ represent the month number across 10 years, we get:
+
+```{r}
+#| echo: false
+
+trend_plot <- ggplot(x_df_ts, aes(x=Month, y=trend)) + 
+  geom_line() +
+  labs(
+    title="Plot of Trend", 
+    x="Month", 
+    y="Trend"
+    ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+seasonal_plot <- ggplot(x_df_ts, aes(x=Month, y=seasonal)) + 
+  geom_line() +
+  labs(
+    title="Plot of Seasonal Effect", 
+    x="Month", 
+    y="Seasonal"
+    ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# trend_plot / seasonal_plot
+
+
+error_plot <- ggplot(x_df_ts, aes(x = Month, y = x / trend / seasonal)) + 
+  geom_line() +
+  labs(
+    title="Plot of Random Error Term", 
+    x="Month", 
+    y="Random"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+x_plot <- ggplot(x_df_ts, aes(x=Month, y=x)) + 
+  geom_line() +
+  labs(
+    title="Plot of Simulated Time Series", 
+    x="Month", 
+    y="x"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+# error_plot / x_plot
+
+x_plot <- x_plot  + labs(title = "True (Simulated) Values", x = NULL)
+trend_plot <- trend_plot + labs(title = NULL, x = NULL)
+seasonal_plot <- seasonal_plot + labs(title = NULL, x = NULL)
+error_plot <- error_plot + labs(title = NULL)
+
+
+x_plot / trend_plot / seasonal_plot / error_plot 
+```
+
+
+Now, we use R to decompose the time series $\{x_t\}$.
+
+```{r}
+#| warning: false
+
+x_decompose <- x_df_ts |>
+    model(feasts::classical_decomposition(x,
+        type = "mult"))  |>
+    components()
+
+autoplot(x_decompose)
+```
+
+```{r}
+#| include: false
+i <- c(0:n)
+# a <- 0
+x <- a*i * ( b*sin(i/12*2*pi) + c*cos(i/12*2*pi*3) )
+
+df <- data.frame(i, x)
+
+ggplot(df, aes(x=i, y=x)) + 
+  geom_line() +
+  labs(title="Plot of Function", 
+       x="i", 
+       y="x")
+```
+
+-   How does the (estimated) decomposition compare to the theoretical values above?
+    -   How well is the trend estimated?
+    -   How well is the seasonal effect estimated?
+    -   How well is the random effect estimated?
+-   Make changes to the simulated data and observe the effect on the plots
+
+
+### Which Model Should I Use? Additive or Multiplicative?
+
+Compare the following two time series. 
+
+```{r}
+#| echo: false
+
+# Read and clean rexburg weather data
+
+# pacman::p_load("tsibble", "fable",
+#                "feasts", "tsibbledata",
+#                "fable.prophet", "tidyverse",
+#                "patchwork",
+#                "ggthemes", "see",   # for okabeito color scheme
+#                "tidyverse",
+#                "rio",
+#                "lubridate"
+# )
+
+weather_dat <- rio::import("../data/rexburg_weather.csv")
+
+w2 <- weather_dat %>%
+  select("NAME", "DAY", "MONTH", "YEAR", "DATE", "TMAX") %>%
+  pivot_wider(names_from = "NAME", values_from = c("TMAX")) %>%
+  rename(
+    "byui" = "REXBURG BYU IDAHO, ID US",
+    "airport" = "REXBURG MADISON CO AIRPORT, ID US",
+    "moody" = "MOODY IDAHO, ID US"
+  )
+
+w3 <- w2 %>%
+  select(byui, airport) %>%
+  rename(x = byui, y = airport) %>%
+  filter(abs(x - y)<50)
+# plot(w3$x, w3$y)
+lm_byu <- lm(y~x, data= w3)
+
+w4 <- w2 %>%
+  select(moody, airport) %>%
+  rename(x = moody, y = airport) %>%
+  filter(abs(x - y)<50)
+# plot(w4$x, w4$y)
+lm_moody <- lm(y~x, data= w4)
+
+weather_clean <- w2 %>%
+  mutate(byui_pred = predict(lm_byu, data.frame(x=w2$byui))) %>%
+  mutate(moody_pred = predict(lm_moody, data.frame(x=w2$moody))) %>%
+  mutate(rexburg = airport) %>%
+  mutate(rexburg =
+           case_when(
+             airport > 100 ~ byui_pred,
+             !is.na(airport) ~ airport,
+             !is.na(byui_pred) ~ byui_pred,
+             !is.na(moody_pred) ~ moody_pred,
+             TRUE ~ NA
+           )
+        ) %>%
+  mutate(imputed = !(rexburg == round(rexburg, 0))) %>%
+  mutate(rexburg = round(rexburg, 0)) %>%
+  mutate(dates = mdy(DATE)) %>%
+  filter(dates > mdy("08/31/1998")) %>%
+  filter(!is.na(rexburg)) %>%
+  rename(rexburg_airport_high = rexburg) %>%
+  select(dates, rexburg_airport_high, imputed) %>%
+  filter(dates > mdy("01/01/1999"))
+
+# weather_clean %>%
+#   mutate(years = year(dates)) %>%
+#   group_by(years) %>%
+#   summarize(average = mean(rexburg_airport_high)) %>%
+#   plot
+
+rexburg_day <- weather_clean %>%
+  mutate(date_seq = dates) %>%
+  mutate(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = rexburg_airport_high
+  ) %>%
+  select(-date_seq, -imputed) %>%
+  tibble()
+
+rexburg_daily_ts <- rexburg_day |>
+  mutate(index = dates) |>
+  as_tsibble(index = index)
+
+rexburg_annual_ts <- summarise(index_by(rexburg_daily_ts, year), value = mean(value))
+
+rexburg_weather_plot <- autoplot(rexburg_daily_ts, .vars = value) +
+  labs(
+    x = "Date",
+    y = "High Temp (F)",
+    title = "Daily High Temperature in Rexburg, Idaho"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# mp <- autoplot(rexburg_daily_ts, .vars = value) +
+#   labs(y = "high temperature")
+# yp <- autoplot(rexburg_annual_ts) +
+#   labs(y = "high temperature")
+# # +
+# #   scale_x_continuous(breaks = seq(1900, 2010, by = 2))
+# mp / yp
+
+
+
+##################### S&P 500
+
+replaceCommas<-function(x){
+  x<-as.numeric(gsub("\\,", "", x))
+}
+
+sp500_dat <- rio::import("../data/sp500.csv") |>
+  mutate(dates = mdy(Date))
+
+sp500_day <- sp500_dat |>
+  mutate(date_seq = dates) |>
+  mutate(
+    dates = date_seq,
+    year = lubridate::year(date_seq),
+    month = lubridate::month(date_seq),
+    value = replaceCommas(Close)
+  ) |>
+  select(-date_seq) |>
+  tibble()
+
+sp500_ts <- sp500_day |>
+  mutate(index = dates) |>
+  as_tsibble(index = index)
+
+# sp500_annual_ts <- summarise(index_by(sp500_ts, year), value = mean(value))
+# 
+# temp <- sp500_ts |> filter(month == 7 & day(dates) == 1) |> 
+#   select(Date, year) 
+# 
+# temp2 <- sp500_annual_ts |> 
+#   right_join(temp)
+
+sp500_plot <- autoplot(sp500_ts, .vars = value) +
+  labs(
+    x = "Date",
+    y = "Closing Price",
+    title = "Daily Closing Price of the S&P 500 Stock Index"
+  )  +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+rexburg_weather_plot / sp500_plot
+```
+
+-   For each of the following, does the "amplitude" of the "wiggles" gets bigger as time goes by?
+    -   Daily high temperature in Rexburg
+    -   Daily closing prices of the S&P 500
+-   For each scenario, which is more appropriate, an additive model or a multiplicative model? Justify your answer.
+    -   Daily high temperature in Rexburg
+    -   Daily closing prices of the S&P 500
+
+
+
+
 
 
 
