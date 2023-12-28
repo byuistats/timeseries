@@ -5,6 +5,10 @@ format: html
 editor: source
 ---
 
+```{r}
+#| include: false
+source("../common_functions.R")
+```
 
 ## Learning Outcomes
 
@@ -36,21 +40,94 @@ editor: source
 -   Sign the Learning Journal review sheet for your peer
 
 
-## Random walks (5-10 min)
 
-```         
--   Definition of a random walk
--   Example: tossing a coin and moving left or right one integer on a number line
+
+
+
+<!-- ## Random walks (5-10 min) -->
+
+<!-- ```          -->
+<!-- -   Definition of a random walk -->
+<!-- -   Example: tossing a coin and moving left or right one integer on a number line -->
+<!-- ``` -->
+
+<!-- ::: callout-solution -->
+<!-- Please add simulation of random walk here -->
+<!-- ::: -->
+
+
+
+
+
+
+<!-- ## When to use additive vs. multiplicative decomposition (5 min) -->
+
+<!-- -   Additive: Constant variance -->
+<!-- -   Multiplicative: Variance grows with the value of the time series -->
+
+# WORKING HERE.....START OVER WITH 4-5 YEARS OF MONTHLY DATA
+
+## Estimating Monthly Additive Effects (xxxxxxxxxx min)
+
+```{r}
+# load packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("tsibble", "fable",
+               "feasts", "tsibbledata",
+               "fable.prophet", "tidyverse",
+               "patchwork", "rio")
+
+# read in the data from a csv and make the tsibble
+# change the line below to include your file path
+chocolate_month <- rio::import("../data/chocolate.csv")
+start_date <- lubridate::ymd("2004-01-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(chocolate_month)-1),
+                by = "1 months")
+chocolate_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = pull(chocolate_month, chocolate)
+)
+chocolate_month_ts <- chocolate_tibble |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index)
+
+chocolate_month_ts <- chocolate_month_ts %>% 
+  mutate(
+    m_hat = (
+          (1/2) * lag(value,6)
+          + lag(value,5)
+          + lag(value,4)
+          + lag(value,3)
+          + lag(value,2)
+          + lag(value,1)
+          + value
+          + lead(value,1)
+          + lead(value,2)
+          + lead(value,3)
+          + lead(value,4)
+          + lead(value,5)
+          + (1/2) * lead(value,6)
+        ) / 12
+  )
 ```
 
-::: callout-solution
-Please add simulation of random walk here
-:::
+```{r}
+temp <- chocolate_month_ts |>
+  mutate(s_hat = value - m_hat) |>
+  data.frame()
 
-## When to use additive vs. multiplicative decomposition (5 min)
+temp |> 
+  dplyr::select(year, month, s_hat) |> 
+  group_by(month) |>
+  mutate(s_hat_bar = mean(s_hat, na.rm = TRUE)) |>
+  pivot_wider(values_from = "s_hat", names_from = "year") |>
+  round_df(3) |>
+  display_table()
+```
 
--   Additive: Constant variance
--   Multiplicative: Variance grows with the value of the time series
 
 ## Decomposition of a Time Series in Excel (40 min)
 

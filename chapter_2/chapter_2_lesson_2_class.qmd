@@ -4,88 +4,70 @@ subtitle: "Autocorrelation Concepts"
 format: html
 editor: source
 ---
+```{r}
+#| include: false
+source("../common_functions.R")
+```
 
 ```{r}
 #| include: false
-if (!require("pacman")) install.packages("pacman")
-pacman::p_load("tsibble", "fable", 
-    "feasts", "tsibbledata",
-    "fable.prophet", "tidyverse",
-    "patchwork",
-    "ggthemes", 
-    "see",   # okabeito color scheme
-    "MASS", # MVNorm
-    "ggokabeito", # colorblind palette
-    "kableExtra", # formatting tables
-    "stringr", # string manipulation
-    "lubridate") # date manipulation
 
-palette("okabeito")
-okabeito_colors_list <- c(
-    `orange` = "#E69F00",
-    `light blue` = "#56B4E9",
-    `green` = "#009E73",
-    `yellow` = "#F0E442",
-    `blue` = "#0072B2",
-    `red` = "#D55E00",
-    `purple` = "#CC79A7",
-    `grey` = "#999999",
-    `black` = "#000000",
-    `sky blue` = "#56B4E9",
-    `bluish green` = "#009E73",
-    `vermillion` = "#D55E00",
-    `reddish purple` = "#CC79A7",
-    `dark yellow` = "#F5C710",
-    `amber` = "#F5C710"
-)
+# if (!require("pacman")) install.packages("pacman")
+# pacman::p_load("tsibble", "fable", 
+#     "feasts", "tsibbledata",
+#     "fable.prophet", "tidyverse",
+#     "patchwork",
+#     "ggthemes", 
+#     "see",   # okabeito color scheme
+#     "MASS", # MVNorm
+#     "ggokabeito", # colorblind palette
+#     "kableExtra", # formatting tables
+#     "stringr", # string manipulation
+#     "lubridate") # date manipulation
 
 
-round_df <- function(df, digits) {
-  nums <- vapply(df, is.numeric, FUN.VALUE = logical(1))
-  df[,nums] <- round(df[,nums], digits = digits)
-  (df)
-}
 
 
-round_to_places <- function(x, places) {
-  # Remove floating point errors
-  x <- round(x, 12)
-  
-  # Initialize output  
-  out <- rep_len("", length(x)) 
-  
-  # Handle NAs  
-  out[is.na(x)] <- NA
-  
-  # Handle infinities
-  inf <- is.infinite(x)
-  out[inf & x > 0] <- "Inf"
-  out[inf & x < 0] <- "-Inf"
-  
-  # Special cases
-  finite <- !inf & !(is.na(x))
-  
-  # Round numbers
-  x <- round(x, places)
-  
-  # Format numbers
-  sgn <- sign(x)
-  ints <- trunc(x)
-  decs <- round(abs(x - ints) * 10^places)
-  
-  if (places > 0) {
-    out[finite] <- paste0(ifelse(sgn[finite] >= 0, " ", "-"),
-                          ints[finite], 
-                          ".", 
-                          decs[finite], 
-                          strrep(0, places - nchar(as.integer(decs[finite])))
-    )
-  } else {
-    out[finite] <- as.character(ints[finite])
-  }
-  
-  return(out)
-}
+
+# round_to_places <- function(x, places) {
+#   # Remove floating point errors
+#   x <- round(x, 12)
+#   
+#   # Initialize output  
+#   out <- rep_len("", length(x)) 
+#   
+#   # Handle NAs  
+#   out[is.na(x)] <- NA
+#   
+#   # Handle infinities
+#   inf <- is.infinite(x)
+#   out[inf & x > 0] <- "Inf"
+#   out[inf & x < 0] <- "-Inf"
+#   
+#   # Special cases
+#   finite <- !inf & !(is.na(x))
+#   
+#   # Round numbers
+#   x <- round(x, places)
+#   
+#   # Format numbers
+#   sgn <- sign(x)
+#   ints <- trunc(x)
+#   decs <- round(abs(x - ints) * 10^places)
+#   
+#   if (places > 0) {
+#     out[finite] <- paste0(ifelse(sgn[finite] >= 0, " ", "-"),
+#                           ints[finite], 
+#                           ".", 
+#                           decs[finite], 
+#                           strrep(0, places - nchar(as.integer(decs[finite])))
+#     )
+#   } else {
+#     out[finite] <- as.character(ints[finite])
+#   }
+#   
+#   return(out)
+# }
 
 ########################## DEBUGGING
 round_to_places <- function(x, places) {
@@ -204,13 +186,6 @@ make_blank_row_in_cov_table <- function(df, row_num) {
     df[row_num, col_num] = ""
   }
   return(df)
-}
-
-# Displays the kable table
-display_table <- function(df) {
-  df %>% 
-    knitr::kable(format = "html", align='ccccccc', escape = FALSE, width = NA) %>%
-    kable_styling(full_width = FALSE, "striped") 
 }
 
 # Compute summary values

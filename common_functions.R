@@ -8,7 +8,13 @@ pacman::p_load(tidyverse, ggokabeito, kableExtra,
                patchwork,
                ggthemes, see,   # for okabeito color scheme
                stringr,
-               lubridate
+               lubridate,
+               see,   # okabeito color scheme
+               MASS, # MVNorm
+               ggokabeito, # colorblind palette
+               kableExtra, # formatting tables
+               stringr, # string manipulation
+               lubridate # date manipulation
 )
 
 # Palette ----
@@ -40,38 +46,13 @@ round_df <- function(df, digits) {
   (df)
 }
 
-## Round places ----
-round_to_places <- function(x, places) {
-  # Initialize output
-  out <- rep_len("", length(x))
 
-  # Handle NAs
-  out[is.na(x)] <- NA
-
-  # Handle infinities
-  inf <- is.infinite(x)
-  out[inf & x > 0] <- "Inf"
-  out[inf & x < 0] <- "-Inf"
-
-  # Special cases
-  finite <- !inf & !(is.na(x))
-
-  # Round numbers
-  x <- round(x, places)
-
-  # Format numbers
-  ints <- trunc(x)
-  decs <- round(abs(x - ints) * 10^places)
-
-  if (places > 0) {
-    out[finite] <- paste0(ints[finite], ".", decs[finite], strrep(0, places - nchar(as.integer(decs[finite]))))
-  } else {
-    out[finite] <- as.character(ints[finite])
-  }
-
-  return(out)
+# Displays the kable table
+display_table <- function(df) {
+  df %>%
+    knitr::kable(format = "html", align='ccccccccc', escape = FALSE, width = NA) %>%
+    kable_styling(full_width = FALSE, "striped")
 }
-
 
 # Subsetting ----
 
