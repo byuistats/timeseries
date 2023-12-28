@@ -5,6 +5,10 @@ format: html
 editor: source
 ---
 
+```{r}
+#| include: false
+source("../common_functions.R")
+```
 
 ## Learning Outcomes
 
@@ -44,6 +48,139 @@ editor: source
 -   What would you add to your learning journal after reading your partner's?
 -   What would you recommend your partner add to their learning journal?
 -   Sign the Learning Journal review sheet for your peer
+
+
+
+## Moving Average
+
+### Derivation
+
+
+
+```{r}
+#| echo: false
+
+plot_n_values <- function(start = 1, n = 12, numeric_t_labels = TRUE) {
+  # This function will plot a few points of a simulated time series
+  # It is used to motivate the derivation of the centered moving average
+  
+  # Set random seed
+  set.seed(6 + numeric_t_labels)
+  
+  lower <- start + !numeric_t_labels
+  upper <- start + n - 1 + !numeric_t_labels
+  
+  all_data <- data.frame(x = max(1,(lower-1)):(upper+1)) |> 
+    mutate(use_data = numeric_t_labels) |>
+    mutate(t_label1 = paste0("t=",x)) |>
+    mutate(
+      t_label2 = case_when(
+            x == (n + 1) / 2 + 1 ~ "t",
+            x < (n + 1) / 2 + 1 ~ paste0("t",x - ((n + 1) / 2 + 1)),
+           TRUE ~ paste0("t+",x - ((n + 1) / 2 + 1))
+          ) # case_when
+    ) |>
+    mutate(t_label = ifelse(use_data, t_label1, t_label2)) |>
+    mutate(data_label = ifelse(use_data, paste0("x[",x,"]"), paste0("x[",t_label,"]"))) |>
+    mutate(y = sample(seq(2,3,0.05), n(), replace = TRUE)) |>
+    filter(x >= lower - 1)
+  
+  trimmed_data <- all_data %>% 
+    filter(x >= lower & x <= upper)
+  
+  ticks <- ceiling(lower):floor(upper)
+  ticks_df <- data.frame(x = ticks, y = 0)
+  
+  
+  # Plot deviations from the mean
+  ggplot(trimmed_data, aes(x = x, y = y)) +
+    # y-axis
+    annotate("segment", x = 0, xend = 0, y = -1, yend = 4, colour = "black", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+    geom_text(aes(x = 0, y = 4, label = "x[t]"), size = 4, vjust = 0.5, hjust = -0.5, color = "black") +
+    # x-axis
+    annotate("segment", x = -1, xend = upper+2, y = 0, yend = 0, colour = "black", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+    geom_text(aes(x = upper+2, y = 0, label = "t"), size = 4, hjust = -1, vjust = 0, color = "black") +
+    
+    # Add tick marks and labels          
+    annotate("segment", x = ticks, xend = ticks, y = -0.25, yend = 0.25, colour = "black", linewidth = 0.5) +
+    geom_text(aes(x = x, y = 0, label = t_label), size = 4, vjust = 2, color = "black") +
+    
+    # Gives the small data labels above the tick marks
+    geom_text(aes(x = x, y = y, label = data_label), size = 3, vjust = 2) +
+    
+    # Add the points above
+    geom_point(size = 3, color = okabeito_colors_list[2]) + 
+    geom_line(color = okabeito_colors_list[2]) + 
+    geom_line(data = all_data, aes(x = x, y = y), color = okabeito_colors_list[2]) +
+  
+    
+    # theme
+    theme_void() +
+    theme(axis.title.y = element_blank()) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+       
+    theme(aspect.ratio = 0.25) +
+    labs(title = "Hypothetical Observations of a Time Series", 
+         x = "Value",
+         y = "")
+}
+```
+
+Data representing some value have been collected each month for a few years. This plot represents the first 12 observations in this time series.
+
+-   Suppose you wanted to compute the mean of the first 12 observations. What is the formula you would use to compute this mean? Write this expression without a summation symbol. 
+-   To what value of $t$ should this mean be assigned? (If you were to plot this mean on a time plot, where should it go?)
+
+
+```{r}
+#| echo: false
+plot_n_values(start = 1, n = 12, numeric_t_labels = TRUE)
+```
+
+-   Suppose you want to compute the mean of the next 12 observations. Write the formula you would use to compute this mean without using a summation symbol. 
+-   To what value of $t$ should this mean be assigned? (If you were to plot this mean on a time plot, where should it go?)
+
+```{r}
+#| echo: false
+plot_n_values(start = 2, n = 12, numeric_t_labels = TRUE)
+```
+
+-   Note that neither of the two means above are appropriately located on an integer value of $t$.
+-   Give the formula that combines the two means above to give one mean that is centered on an integer value of $t$. Do not include a summation symbol in your formula. (Hint: try averaging the two means.)
+-   Upon what value of $t$ is your new mean centered?
+
+We will now adjust this moving average adjusted so it is centered on any given value of $t$, not just $t=7$.
+
+```{r}
+#| echo: false
+plot_n_values(start = 1, n = 13, numeric_t_labels = FALSE)
+```
+
+-   Consider the values $x_{t-6}$, $x_{t-5}$, $x_{t-4}$, $x_{t-3}$, $x_{t-2}$, $x_{t-1}$, $x_{t}$, $x_{t+1}$, $x_{t+2}$, $x_{t+3}$, $x_{t+4}$, and $x_{t+5}$.
+    -   Give an expression for the mean of the values. 
+    -   Where will this mean be centered?
+-   Consider the values $x_{t-5}$, $x_{t-4}$, $x_{t-3}$, $x_{t-2}$, $x_{t-1}$, $x_{t}$, $x_{t+1}$, $x_{t+2}$, $x_{t+3}$, $x_{t+4}$, $x_{t+5}$, and $x_{t+6}$.
+    -   Give an expression for the mean of the values. 
+    -   Where will this mean be centered?
+-   We now combine these two means by averaging them.
+    -   Give an expression for the mean of these two means.
+    -   Where will this combined mean be centered?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ## Random walks (5-10 mins)
