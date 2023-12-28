@@ -51,7 +51,7 @@ source("../common_functions.R")
 
 
 
-## Moving Average
+## Class Activity: Moving Averages (40 min)
 
 ### Derivation
 
@@ -169,65 +169,120 @@ plot_n_values(start = 1, n = 13, numeric_t_labels = FALSE)
 
 
 
+### Application
 
+Recall the Google Trends data for the term "chocolate" given in the file <a href="../data/chocolate.csv" download>chocolate.csv</a>.
 
+```{r}
 
+# load packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("tsibble", "fable",
+               "feasts", "tsibbledata",
+               "fable.prophet", "tidyverse",
+               "patchwork", "rio")
 
+# read in the data from a csv and make the tsibble
+# change the line below to include your file path
+chocolate_month <- rio::import("../data/chocolate.csv")
+start_date <- lubridate::ymd("2004-01-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(chocolate_month)-1),
+                by = "1 months")
+chocolate_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = pull(chocolate_month, chocolate)
+)
+chocolate_month_ts <- chocolate_tibble |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index)
 
-
-
-
-
-
-
-
-
-
-## Random walks (5-10 mins)
-
-```         
--   Definition of a random walk
--   Example: tossing a coin and moving left or right one integer on a number line
 ```
 
-::: callout-solution
-Please add simulation of random walk here
-:::
 
-## When to use additive vs. multiplicative decomposition (5 min)
+```{r}
+#| echo: false
+chocolate_month_ts <- chocolate_month_ts %>% 
+  mutate(
+    m = (
+          (1/2) * lag(value,6)
+          + lag(value,5)
+          + lag(value,4)
+          + lag(value,3)
+          + lag(value,2)
+          + lag(value,1)
+          + value
+          + lead(value,1)
+          + lead(value,2)
+          + lead(value,3)
+          + lead(value,4)
+          + lead(value,5)
+          + (1/2) * lead(value,6)
+        ) / 12
+  )
+```
 
--   Additive: Constant variance
--   Multiplicative: Variance grows with the value of the time series
-
-## Decomposition of a Time Series in Excel (40 min)
-
-::: callout-caution
-Provide 36 months worth of data
-
-Students will compute a mean by hand
-
-Students will compute (some values of) the additive decomposition by hand (Partial table given)
-
--   Students will compute some values of the centered moving average by hand
--   Students will compute some values of the monthly additive effect by hand
--   Students will compute some values of the seasonally adjusted series by hand
--   Students will plot some values of the decomposed time series by hand (Plot given)
-:::
-
-
-
-
+-   Using any tool (except R functions that automate the process) compute the centered moving average for the chocolate data. To help your check yourself, the value of $\hat m$ in month 7 should be `r chocolate_month_ts %>% data.frame() %>% filter(row_number() == 7) %>% dplyr::select(m) %>% pull()`.
+-   Create a plot of your centered moving average. Here are some examples of ways you could display your centered moving average.
 
 
+```{r}
+#| echo: false
+#| warning: false
+
+# generate the plots
+
+plain <- autoplot(chocolate_month_ts, .vars = m) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Centered Moving Average"
+  ) +
+  scale_y_continuous(limits = c(25, 100)) +
+  theme(plot.title = element_text(hjust = 0.5))
 
 
-::: callout-warning
-Watch out for the difference between these multiplicative models:
+fancy <- autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Google Searches for 'Chocolate'"
+  ) +
+  geom_line(aes(x = dates, y = m), color = "#D55E00") +
+  theme(plot.title = element_text(hjust = 0.5))
 
-Textbook model: $$ x_t = m_t \cdot s_t + z_t $$
+plain | fancy
+```
 
-R's model: $$ x_t = m_t \cdot s_t \cdot z_t $$
-:::
+If you stored your centered moving average in a variable called "m" in the "chocolate_month_ts" tsibble, you can generate the plot on the right with the R command:
+
+```{r}
+#| eval: false
+autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Google Searches for 'Chocolate'"
+  ) +
+  geom_line(aes(x = dates, y = m), color = "#D55E00") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+-   What does the centered moving average reveal about the chocolate search time series?
+
+
+
+### Summary
+
+-   What does the centered moving average tell us?
+-   Why is a centered moving average helpful when there are seasonal effects?
+-   For the chocolate search data, answer the following questions:
+    -   How many values of $t$ were not assigned a value of the centered moving average?
+    -   Interpret that number in years.
+    -   Does this number depend on the length of the time series?
+
 
 
 
