@@ -89,4 +89,11 @@ color_last_row2 <- function(df, color) {
   }
   return(df)
 }
+# Works
+color_2nd_to_last_row2 <- function(df, color) {
+  for (j in 1:ncol(df)) {
+    df[nrow(df)-1, j] = cell_spec(df[nrow(df)-1, j], color = color)
+  }
+  return(df)
+}
 ##########################################################################

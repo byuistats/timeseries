@@ -181,6 +181,8 @@ autoplot(deaths_ts, .vars = deaths) +
 
 #### Visualization of Seasonal Effect
 
+These side-by-side box plots illustrate the seasonal effect present in the data.
+
 ```{r}
 ggplot(deaths_ts, aes(x = factor(month), y = deaths)) +
     geom_boxplot() +
@@ -192,7 +194,9 @@ ggplot(deaths_ts, aes(x = factor(month), y = deaths)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-## Computing the Seasonally Adjusted Series (20 min)
+-   How do the positions of the box plots correspond to the times of the year where you noted more (or less) deaths occurring?
+
+## Computing the Seasonally Adjusted Series (40 min)
 
 Our objective is to find an estimate for the time series that does not fluctuate with the seasons. This is called the seasonally adjusted series.
 
@@ -288,6 +292,8 @@ deaths_shat_ts |>
 Next, we need to compute the seasonally adjusted mean. This is the mean (across years) of $\hat s_t$ for each month. To compute this, it can be convenient to organize the values of $\hat s_t$ in a table, where the columns give the year and the rows give the month.
 
 ```{r}
+#| echo: false
+
 # Compute s_hat
 deaths_shat_df <- deaths_ts |>
   data.frame() |>
@@ -297,8 +303,6 @@ deaths_shat_df <- deaths_ts |>
 
 wider_df <- deaths_shat_df |>
   dplyr::select(year, month, s_hat) |> 
-  # group_by(month) |>
-  # mutate(s_hat_bar = mean(s_hat, na.rm = TRUE)) |>
   pivot_wider(values_from = "s_hat", names_from = "month")
 
 wider_df2 <- wider_df %>% 
@@ -331,13 +335,18 @@ wider_df2 |>
   mutate(Nov = ifelse(row_number() == n(), "______", Nov)) |>
   mutate(Dec = ifelse(row_number() == n(), "______", Dec)) |>
   rename(Year = year) |>
+  color_specific_cell(1, 8, "#0072B2") |>
+  color_specific_cell(1, 9, "#0072B2") |>
+  color_specific_cell(1, 10, "#0072B2") |>
+  color_specific_cell(1, 11, "#0072B2") |>
+  color_specific_cell(1, 12, "#0072B2") |>
   color_last_row2("#0072B2") |>
   rbind(c("Adjusted",rep("______",12))) |>
   color_last_row2("#0072B2") |>
   display_table()
 ```
 
--   The table above gives the values of $\hat s_t$. Fill in the missing values in the first row of table above. Note you already computed these.
+-   The table above gives the values of $\hat s_t$. Fill in the missing values in the first row of table above. (Note you already computed these.)
 -   The second-to-last row (labeled "Mean") gives the values of $\bar s_t$. Fill in the two missing numbers
 -   Compute the mean of the $\bar s_t$ values. (This number should be relatively close to 0.)
 -   Subtract the mean of the $\bar s_t$ values from each $\bar s_t$ to get $\bar s_t$, the seasonally adjusted mean for month $t$. 
@@ -346,29 +355,31 @@ wider_df2 |>
 
 
 
-### NEED TO BUILD adjusted_ts!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! NEEDS seasonally_adjusted
 
+### Visualizing the Seasonally Adjusted Series
+
+This code calculates the seasonally adjusted time series, beginning with the tsibble deaths_ts.
 
 ```{r}
-#| echo: false
+# Compute s_hat
 deaths_ts2 <- deaths_ts |>
   mutate(s_hat = deaths - m_hat)
 
+# Compute s_bar and the adjusted s_bar
 adj_s_bar_df <- deaths_ts2 |>
   data.frame() |>
   group_by(month) |>
   summarize(s_bar = mean(s_hat, na.rm = TRUE)) |>
   mutate(s_bar_bar = mean(s_bar)) |>
   mutate(adjusted_s_bar = s_bar - s_bar_bar) |>
-  dplyr::select(month, adjusted_s_bar)
+  dplyr::select(month, adjusted_s_bar, s_bar_bar)
 
 # Get seasonally adjusted time series
 adjusted_ts <- deaths_ts2 |>
   left_join(adj_s_bar_df, by = join_by(month)) |>
-  mutate(seasonally_adjusted = deaths - adjusted_s_bar)
+  mutate(seasonally_adjusted = deaths - adjusted_s_bar) |>
+  dplyr::select(-s_bar_bar)
 ```
-
-### Visualizing the Seasonally Adjusted Series
 
 The figure below illustrates the original time series (in black), the centered moving average $\hat m_t$ (in blue), and the seasonally adjusted series (in red).
 
@@ -386,40 +397,68 @@ autoplot(adjusted_ts, .vars = deaths) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
+-   Do you observe a trend in the time series?
+    -   What does this trend suggest?
 -   In February 2020, there is a spike in the seasonally adjusted time series. Refer to the values in the original time series to explain why this occurred.
 -   In April 2020, there is a dip in the seasonally adjusted time series. Refer to the values in the original time series to explain why this occurred.
 
 
 
 
-### Visualize moving average, m-hat (computed for you)
-### Compute s-hat for a few values
-### Adjust $\bar s_t$ to have mean 0
+```{r}
+#| warning: false
+#| include: false
+#| echo: false
+#| eval: false
+xplot <- autoplot(adjusted_ts, .vars = deaths) +
+  # geom_line(aes(x = index, y = seasonally_adjusted), color = "#D55E00") +
+  # geom_line(aes(x = index, y = m_hat), color = "#0072B2") +
+  labs(
+    x = "Month",
+    y = "Traffic Fatalities",
+    title = "Traffic Fatalities in the United States (by Month)"
+  ) +
+  # coord_cartesian(ylim = c(0,4500)) +
+  theme(plot.title = element_text(hjust = 0.5))
 
-The mean of the the $\bar s_t$ values is `r mean(adjusted_ts$s_hat) %>% round(3)`.
-We will subtract this from each of the $\hat s_t$ values to get the adjusted monthly additive effect.
+mplot <- autoplot(adjusted_ts, .vars = m_hat) +
+  # geom_line(aes(x = index, y = seasonally_adjusted), color = "#D55E00") +
+  # geom_line(aes(x = index, y = m_hat), color = "#0072B2") +
+  labs(
+    x = "Month",
+    y = "Traffic Fatalities",
+    title = "m: Traffic Fatalities in the United States (by Month)"
+  ) +
+  # coord_cartesian(ylim = c(0,4500)) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+splot <- autoplot(adjusted_ts, .vars = s_hat) +
+  # geom_line(aes(x = index, y = seasonally_adjusted), color = "#D55E00") +
+  # geom_line(aes(x = index, y = m_hat), color = "#0072B2") +
+  labs(
+    x = "Month",
+    y = "Traffic Fatalities",
+    title = "s: Traffic Fatalities in the United States (by Month)"
+  ) +
+  # coord_cartesian(ylim = c(0,4500)) +
+  theme(plot.title = element_text(hjust = 0.5))
 
 
-### Use s-hat-bar to....
-#### Seasonally adjusted data
-#### Remove seasonal effect
+seasplot <- autoplot(adjusted_ts, .vars = seasonally_adjusted) +
+  # geom_line(aes(x = index, y = seasonally_adjusted), color = "#D55E00") +
+  # geom_line(aes(x = index, y = m_hat), color = "#0072B2") +
+  labs(
+    x = "Month",
+    y = "Traffic Fatalities",
+    title = "seas.adj.: Traffic Fatalities in the United States (by Month)"
+  ) +
+  # coord_cartesian(ylim = c(0,4500)) +
+  theme(plot.title = element_text(hjust = 0.5))
 
+xplot / mplot 
 
-
-## Decomposition of a Time Series in Excel (40 min)
-
-::: callout-caution
-Provide 36 months worth of data
-
-Students will compute a mean by hand
-
-Students will compute (some values of) the additive decomposition by hand (Partial table given)
-
--   Students will compute some values of the centered moving average by hand
--   Students will compute some values of the monthly additive effect by hand
--   Students will compute some values of the seasonally adjusted series by hand
--   Students will plot some values of the decomposed time series by hand (Plot given)
-:::
+splot /seasplot
+```
 
 ## Recap (5 min)
 
@@ -429,14 +468,15 @@ Students will compute (some values of) the additive decomposition by hand (Parti
 ```
 
 
+<!-- Solutions  -->
 
-## Recap........
+
 <a href="javascript:showhide('Solutions')"
 style="font-size:.8em;">(Team Activity: Computational Practice)</a>
 
 ::: {#Solutions style="display:none;"}
 
-Solutions for the computations of the Monthly Additive Effect
+Solutions for the computations from this lesson
 
 ```{r}
 #| echo: false
@@ -449,6 +489,41 @@ adjusted_ts |>
     adjusted_s_bar = cell_spec(adjusted_s_bar, color = "#E69F00"),
     seasonally_adjusted = cell_spec(seasonally_adjusted, color = "#E69F00")
   ) |>
+  display_table()
+```
+
+
+```{r}
+#| echo: false
+
+s_bar_bar_value <- adj_s_bar_df %>% 
+  summarize(s_bar_bar = round(mean(s_bar_bar), 1)) |>
+  dplyr::select(s_bar_bar) |>
+  pull()
+
+wider_df3 <- wider_df2 |>
+  bind_rows(
+    wider_df2 |> tail(1)
+  ) 
+
+# Subtract the mean of \bar s_t to make the mean of the adjusted values be zero.
+for (j in 2:ncol(wider_df3)) {
+  wider_df3[nrow(wider_df3), j] = 
+    as.character(
+      as.numeric(wider_df3[nrow(wider_df3), j]) - s_bar_bar_value
+    )
+}
+
+wider_df3 |> 
+  mutate(year = ifelse(row_number() == n(), "Adjusted", year)) |>
+  rename(Year = year) |>
+  color_specific_cell(1, 8, "#0072B2") |>
+  color_specific_cell(1, 9, "#0072B2") |>
+  color_specific_cell(1, 10, "#0072B2") |>
+  color_specific_cell(1, 11, "#0072B2") |>
+  color_specific_cell(1, 12, "#0072B2") |>
+  color_last_row2("#0072B2") |>
+  color_2nd_to_last_row2("#0072B2") |>
   display_table()
 ```
 
