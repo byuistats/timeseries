@@ -54,16 +54,5 @@ display_table <- function(df) {
     kable_styling(full_width = FALSE, "striped")
 }
 
-# Subsetting ----
-
-## Extract first row ?? ----
-blank_all_but_first_row <- function(df, skip_columns = 3, skip_rows = 1){
-  df_dimension <- dim(df)
-  for (i in (1 + skip_rows):df_dimension[1])
-    for (j in (1 + skip_columns):df_dimension[2]) {
-      df[i,j] <- " "
-    }
-  return(df)
-}
 
 
