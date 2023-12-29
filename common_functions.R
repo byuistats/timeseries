@@ -50,9 +50,43 @@ round_df <- function(df, digits) {
 # Displays the kable table
 display_table <- function(df) {
   df %>%
-    knitr::kable(format = "html", align='ccccccccc', escape = FALSE, width = NA) %>%
+    knitr::kable(format = "html", align='cccccccccccccc', escape = FALSE, width = NA) %>%
     kable_styling(full_width = FALSE, "striped")
 }
 
+# Rounds a value to a specific number of places and returns a character string
+round_as_text <- function(x, places) {
+  return(as.character(round(x,12)))
+}
 
 
+##########################################################################
+# These functions color cells in a data frame of character vectors
+# Works
+color_specific_cell <- function(df, row_num, col_num, color) {
+  df[row_num, col_num] = cell_spec(df[row_num, col_num], color = color)
+  return(df)
+}
+
+# -------- THIS ONE IS NOT WORKING ----------
+color_specific_row <- function(df, row_num, color) {
+  for (j in 1:ncol(df)) {
+    color_specific_cell(df, row_num, j, color)
+  }
+  return(df)
+}
+
+# -------- THIS ONE IS NOT WORKING ----------
+color_last_row <- function(df, color) {
+  color_specific_row(df, nrow(df), color)
+  return(df)
+}
+
+# Works
+color_last_row2 <- function(df, color) {
+  for (j in 1:ncol(df)) {
+    df[nrow(df), j] = cell_spec(df[nrow(df), j], color = color)
+  }
+  return(df)
+}
+##########################################################################
