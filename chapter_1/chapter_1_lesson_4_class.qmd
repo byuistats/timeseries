@@ -67,16 +67,17 @@ source("../common_functions.R")
 
 ## Estimating Monthly Additive Effects (xxxxxxxxxx min)
 
+### Converting the data file to a tsibble
+
+This is a demonstration of how to read in an Excel 
+or csv data file and convert it to a tsibble.
+
 ```{r}
 deaths_df <- rio::import("../data/traffic_deaths.xlsx")
 
-deaths_df |> 
-  dplyr::select(Month, Year, Deaths)  |> 
-  # dplyr::select(Year) %>%
-  unique()
-
 # Method 1: Create date from scratch based on pattern of rows
-# This only works if the data are in the right order
+# This only works if the data are in ascending order with no missing values
+# Note that this file is not in the right order, so this gives the wrong tsibble
 start_date <- lubridate::ymd("2017-01-01")
 date_seq <- seq(start_date,
                 start_date + months(nrow(deaths_df)-1),
@@ -103,8 +104,24 @@ deaths_tibble <- deaths_df |>
 deaths_ts <- deaths_tibble |>
   mutate(index = tsibble::yearmonth(dates)) |>
   as_tsibble(index = index)
+```
 
-deaths_ts <- deaths_ts %>% 
+This results in a tsibble:
+
+```{r}
+#| echo: false
+
+deaths_ts %>% head
+```
+
+
+
+### Centered Moving Average
+
+Next, we compute the centered moving average, $\hat m$:
+
+```{r}
+deaths_ts <- deaths_ts |> 
   mutate(
     m_hat = (
           (1/2) * lag(value,6)
@@ -124,11 +141,28 @@ deaths_ts <- deaths_ts %>%
   )
 ```
 
+```{r}
+#| echo: false
+
+temp <- deaths_ts |>
+  dplyr::select(index, dates, year, month, value, m_hat) |>
+  round_df(3)
+
+for (i in 1:13) {
+  temp$value[i] = cell_spec(temp$value[i], color = "#E69F00") 
+}
+temp$m_hat[7] = cell_spec(temp$m_hat[7], color = "#E69F00")
+
+temp |>
+  display_table()
+```
+
+
 ### Without adjusting the y-axis
 ```{r}
 autoplot(deaths_ts, .vars = value) +
   labs(
-    x = "Date",
+    x = "Month",
     y = "Traffic Fatalities",
     title = "Traffic Fatalities in the United States (by Month)"
   ) +
@@ -139,11 +173,11 @@ autoplot(deaths_ts, .vars = value) +
 ```{r}
 autoplot(deaths_ts, .vars = value) +
   labs(
-    x = "Date",
+    x = "Month",
     y = "Traffic Fatalities",
     title = "Traffic Fatalities in the United States (by Month)"
   ) +
-  ylim(c(0,4500)) +
+  coord_cartesian(ylim = c(0,4500)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
