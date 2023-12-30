@@ -1,14 +1,12 @@
 # Load packages ----
 
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, ggokabeito, kableExtra,
+pacman::p_load(tidyverse, kableExtra,
                tsibble, fable,
                feasts, tsibbledata,
-               fable.prophet, tidyverse,
+               fable.prophet,
                patchwork,
-               ggthemes, see,   # for okabeito color scheme
-               stringr,
-               lubridate,
+               ggthemes,
                see,   # okabeito color scheme
                MASS, # MVNorm
                ggokabeito, # colorblind palette
