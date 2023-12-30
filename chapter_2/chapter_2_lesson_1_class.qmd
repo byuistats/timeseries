@@ -192,7 +192,7 @@ How can we obtain one number that summarizes how spread out the data are from th
 -   What could you do to prevent this from happening?
 -   Apply your idea. Compute the resulting value that summarizes the spread. What do you get?
 -   What is the relationship between the sample variance and the sample standard deviation?
--   Use the table above to verify that the sample variance is `r var(sim_data$x)`.
+-   Use a table like the one above to verify that the sample variance is `r var(sim_data$x)`.
 -   Show that the sample standard deviation is `r sd(sim_data$x) |> round(4)`.
 
 ## Class Activity: Covariance and Correlation (15 min)
@@ -590,10 +590,51 @@ Working with your partner, prepare to explain the following concepts to the clas
 -   Correlation
 -   Covariance
 
+
+
+
+
+
+
+
 <a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">(Team Activity: Computational Practice)</a>
+style="font-size:.8em;">Class Activity: Variance and Standard Deviation</a>
 
 ::: {#Solutions style="display:none;"}
+
+Solutions to Class Activity: Variance and Standard Deviation
+
+
+```{r}
+#| echo: false
+temp <- sim_data |> 
+  mutate(
+    xx = x - mean(x),
+    xx2 = (x - mean(x))^2,
+    ) 
+
+temp2 <- temp |> 
+  bind_rows(colSums(temp)) |>
+  round_df(5) |>
+  mutate(Solution = ifelse(row_number() == n(), "Sum", "")) |>
+  dplyr::select(Solution, x, xx, xx2) |>
+  data.frame()
+
+ssx <- temp2[nrow(temp2), ncol(temp2)]
+
+temp2 |> 
+  rename(
+    "x-mean(x)" = xx, 
+    "(x-mean(x))^2" = xx2
+  ) |>
+  knitr::kable(format = "html", align='ccc', escape = FALSE)
+```
+:::
+
+<a href="javascript:showhide('Solutions2')"
+style="font-size:.8em;">(Team Activity: Computational Practice)</a>
+
+::: {#Solutions2 style="display:none;"}
 
 Solutions to Team Activity: Computational Practice
 
@@ -616,52 +657,3 @@ knitr::kable(temp, format = "html", align='cccccccc', escape = FALSE, width = NA
 ```
 :::
 
-```{r}
-#| include: false
-#| eval: false
-
-##################### THIS IS FOR CHOOSING THE SEED ##################
-
-reps <- 5000
-prodxy <- meanx <- meany <- sdx <- sdy <- covs <- cors <- rep(0,reps)
-for (i in 1:reps){
-  # Unset random seed
-  set.seed(i)
-  
-# Specify means and correlation coefficient
-n <- 6              # number of points
-mu <- c(3, 1)       # mean vector (mu_x, mu_y)
-sigma_x <- 3.5      # standard deviation x
-sigma_y <- 2        # standard deviation y
-rho <- -0.85          # correlation coefficient
-  
-  # Define variance-covariance matrix
-  sigma <- matrix(
-    c(sigma_x^2,
-      rho*sigma_x*sigma_y,
-      rho*sigma_x*sigma_y,
-      sigma_y^2),
-    nrow = 2)
-  
-  # Simulate bivariate normal data
-  mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) |> 
-    data.frame() |> 
-    rename(x = X1, y = X2) |> 
-    round_df(1)
-  meanx[i] <- mean(mvn_data_6$x)
-  meany[i] <- mean(mvn_data_6$y)
-  prodxy[i] <- prod((mvn_data_6$x - meanx[i]) * (mvn_data_6$y - meany[i]))
-  sdx[i] <- sd(mvn_data_6$x)
-  sdy[i] <- sd(mvn_data_6$y)
-  cors[i] <- cor(mvn_data_6$x, mvn_data_6$y)
-  covs[i] <- cov(mvn_data_6$x, mvn_data_6$y) 
-}
-temp0 <- data.frame(meanx = meanx, meany = meany, sdx = sdx, sdy = sdy, cors = cors, covs = covs, prodxy = prodxy) |> 
-  mutate(i = row_number()) |> 
-  filter(meanx*10 == floor(meanx*10)) |> 
-  filter(meany*10 == floor(meany*10))  |> 
-  filter(covs*100 == floor(covs*100))  |> 
-  mutate(across(everything(), as.character)) 
-
-View(temp0)
-```

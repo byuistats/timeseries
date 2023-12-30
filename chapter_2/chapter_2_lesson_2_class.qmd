@@ -12,70 +12,31 @@ source("../common_functions.R")
 library(tidyverse)
 ```
 
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
 ```{r}
 #| include: false
-
-# if (!require("pacman")) install.packages("pacman")
-# pacman::p_load("tsibble", "fable", 
-#     "feasts", "tsibbledata",
-#     "fable.prophet", "tidyverse",
-#     "patchwork",
-#     "ggthemes", 
-#     "see",   # okabeito color scheme
-#     "MASS", # MVNorm
-#     "ggokabeito", # colorblind palette
-#     "kableExtra", # formatting tables
-#     "stringr", # string manipulation
-#     "lubridate") # date manipulation
-
-
-
-
-
-# round_to_places <- function(x, places) {
-#   # Remove floating point errors
-#   x <- round(x, 12)
-#   
-#   # Initialize output  
-#   out <- rep_len("", length(x)) 
-#   
-#   # Handle NAs  
-#   out[is.na(x)] <- NA
-#   
-#   # Handle infinities
-#   inf <- is.infinite(x)
-#   out[inf & x > 0] <- "Inf"
-#   out[inf & x < 0] <- "-Inf"
-#   
-#   # Special cases
-#   finite <- !inf & !(is.na(x))
-#   
-#   # Round numbers
-#   x <- round(x, places)
-#   
-#   # Format numbers
-#   sgn <- sign(x)
-#   ints <- trunc(x)
-#   decs <- round(abs(x - ints) * 10^places)
-#   
-#   if (places > 0) {
-#     out[finite] <- paste0(ifelse(sgn[finite] >= 0, " ", "-"),
-#                           ints[finite], 
-#                           ".", 
-#                           decs[finite], 
-#                           strrep(0, places - nchar(as.integer(decs[finite])))
-#     )
-#   } else {
-#     out[finite] <- as.character(ints[finite])
-#   }
-#   
-#   return(out)
-# }
-
-########################## DEBUGGING
-round_to_places <- function(x, places) {
-  return(as.character(round(x,12)))
-}
 
 get_data_for_cov_table <- function(offset = 1) {
   # set random number generator seed
@@ -128,26 +89,26 @@ make_cov_table_df <- function(df, offset=1, decimals_1st_order = 5, decimals_2nd
     mutate(t = paste0("sum")) %>% 
     mutate(
       t = paste0("sum"),
-      x = round_to_places(x, 1),
-      y = round_to_places(y, 1),
-      xx = round_to_places(xx, decimals_1st_order),
-      xx2 = round_to_places(xx2, decimals_2nd_order),
-      yy = round_to_places(yy, decimals_1st_order),
-      # yy2 = round_to_places(yy2, decimals_2nd_order),
-      xy = round_to_places(xy, decimals_2nd_order)
+      x = round_as_text(x, 1),
+      y = round_as_text(y, 1),
+      xx = round_as_text(xx, decimals_1st_order),
+      xx2 = round_as_text(xx2, decimals_2nd_order),
+      yy = round_as_text(yy, decimals_1st_order),
+      # yy2 = round_as_text(yy2, decimals_2nd_order),
+      xy = round_as_text(xy, decimals_2nd_order)
     ) %>% 
     dplyr::select(t, x, y, xx, xx2, yy, xy)
   
   out <- df %>%
     mutate(
       t = as.character(t),
-      x = round_to_places(x, 1),
-      y = round_to_places(y, 1),
-      xx = round_to_places(xx, decimals_1st_order),
-      xx2 = round_to_places(xx2, decimals_2nd_order),
-      yy = round_to_places(yy, decimals_1st_order),
-      # yy2 = round_to_places(yy2, decimals_2nd_order),
-      xy = round_to_places(xy, decimals_2nd_order)
+      x = round_as_text(x, 1),
+      y = round_as_text(y, 1),
+      xx = round_as_text(xx, decimals_1st_order),
+      xx2 = round_as_text(xx2, decimals_2nd_order),
+      yy = round_as_text(yy, decimals_1st_order),
+      # yy2 = round_as_text(yy2, decimals_2nd_order),
+      xy = round_as_text(xy, decimals_2nd_order)
     ) %>% 
     mutate(
       x = cell_spec(x, 
@@ -744,3 +705,62 @@ ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
 -   Review objectives and key points
 -   Review the definitions of autocovariance, autocorrelation
 -   Discuss autocorrelation in the time series context
+
+
+
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Class Activity: $k=2$</a>
+
+::: {#Solutions style="display:none;"}
+
+Solutions to Class Activity: $k=2$
+
+```{r}
+#| echo: false
+offset_value <- 2
+cov_df <- get_data_for_cov_table(offset = offset_value)
+cov_table <- cov_df %>%
+  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
+cov_table %>%
+  display_table()
+
+summarized <- compute_summaries(cov_df)
+```
+
+:::
+
+<a href="javascript:showhide('Solutions_k4')"
+style="font-size:.8em;">Class Activity: $k=4$</a>
+
+::: {#Solutions_k4 style="display:none;"}
+
+Solutions to Class Activity: $k=4$
+
+
+```{r}
+#| echo: false
+offset_value <- 4
+cov_df <- get_data_for_cov_table(offset = offset_value)
+cov_table <- cov_df %>%
+  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
+cov_table %>%
+  # make_blank_row_in_cov_table(1) %>% 
+  # make_blank_row_in_cov_table(2) %>%  
+  # make_blank_row_in_cov_table(3) %>%  
+  # make_blank_row_in_cov_table(4) %>%  
+  # make_blank_row_in_cov_table(5) %>%  
+  # make_blank_row_in_cov_table(6) %>%  
+  # make_blank_row_in_cov_table(7) %>%  
+  # make_blank_row_in_cov_table(8) %>%  
+  # make_blank_row_in_cov_table(9) %>%  
+  # make_blank_row_in_cov_table(10) %>%  
+  # make_blank_row_in_cov_table(11) %>% 
+  display_table()
+
+summarized <- compute_summaries(cov_df)
+```
+
+
+:::
+
