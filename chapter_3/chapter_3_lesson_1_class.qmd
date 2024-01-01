@@ -78,7 +78,9 @@ pacman::p_load(mosaic)
 -   Sign the Learning Journal review sheet for your peer
 
 
-## Leading Variables
+## Cross-Correlation
+
+The figure below illustrates the daily high temperature in Rexburg, Idaho (in black) and the angle of the sun with the horizon at solar noon (in red).
 
 ```{r}
 #| echo: false
@@ -161,7 +163,8 @@ rexburg_daily_ts <- rexburg_day |>
 rexburg_annual_ts <- summarise(index_by(rexburg_daily_ts, year), value = mean(value))
 
 rexburg_weather_plot <- autoplot(rexburg_daily_ts %>% filter(year > 2016), .vars = value) +
-  # geom_line(y = max_solar_angle)
+  geom_line(aes(x = index, y = max_solar_angle), color = "#D55E00") +
+  scale_y_continuous(sec.axis = sec_axis(~., name = "Max Solar Angle (in degrees)")) +
   labs(
     x = "Date",
     y = "High Temp (F)",
@@ -173,19 +176,42 @@ rexburg_weather_plot <- autoplot(rexburg_daily_ts %>% filter(year > 2016), .vars
 rexburg_weather_plot
 ```
 
+Notice that the red curve "leads" the black time series. The peaks and valleys first occur in the maximum solar angle and then days later in the daily high temperatures.
 
+### Sample Cross-Covariance Function
 
+In Chapter 2, Lesson 2, we explored the covariance of a time series with itself, shifted by $k$ units of time. Now, we will consider a similar idea, where we compare one time series that has been shifted $k$ units to another time series.
 
+-   What does the notation $x_{t+k}$ mean?
 
+The sample cross-covariance function (ccvf) is defined as:
 
+$$
+  c_k(x,y) = \frac{1}{n} \sum_{t=1}^{n-k} \left( x_{t_k} - \bar x \right) \left( y_t - \bar y \right)
+$$
+We can compute the acvf of a time series with itself:
 
+$$
+  c_k(x,x) = \frac{1}{n} \sum_{t=1}^{n-k} \left( x_{t_k} - \bar x \right) \left( x_t - \bar x \right)
+$$
 
+In particular, if $k=0$, this reduces to:
 
+$$
+  c_0(x,x) = \frac{1}{n} \sum_{t=1}^{n-k} \left( x_{t} - \bar x \right)^2
+$$
 
+### Sample Cross-Correlation Function
 
+The sample cross-correlation function is defined as:
 
-
-
+$$
+  r_k(x,y) = \frac{
+                    c_k(x,y)
+                  }{
+                    \sqrt{ c_0(x,x) c_0(y,y) }
+                  }
+$$
 
 
 
