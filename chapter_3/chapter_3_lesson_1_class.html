@@ -402,10 +402,10 @@ Evaluate the limitations of forecasting models based on past trends
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>acf_solar <span class="ot">&lt;-</span> <span class="fu">ACF</span>(rexburg_daily_ts, <span class="at">y =</span> max_solar_angle) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">+</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Maximum Solar Angle"</span>)</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>acf_temp <span class="ot">&lt;-</span> <span class="fu">ACF</span>(rexburg_daily_ts, <span class="at">y =</span> value) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>acf_temp <span class="ot">&lt;-</span> <span class="fu">ACF</span>(rexburg_daily_ts, <span class="at">y =</span> high_temp) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">+</span></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Daily High Temperature"</span>)</span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>joint_ccf_plot <span class="ot">&lt;-</span> rexburg_daily_ts <span class="sc">|&gt;</span></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">CCF</span>(<span class="at">y =</span> max_solar_angle, <span class="at">x =</span> value) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">CCF</span>(<span class="at">y =</span> max_solar_angle, <span class="at">x =</span> high_temp) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">+</span></span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"CCF Plot"</span>)</span>
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>(acf_solar <span class="sc">+</span> acf_temp) <span class="sc">/</span> joint_ccf_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
@@ -846,17 +846,23 @@ Evaluate the limitations of forecasting models based on past trends
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>solar_decompose <span class="ot">&lt;-</span> <span class="fu">model</span>(rexburg_daily_ts, feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(max_solar_angle)) <span class="sc">|&gt;</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>temp_decompose <span class="ot">&lt;-</span> <span class="fu">model</span>(rexburg_daily_ts, feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(value)) <span class="sc">|&gt;</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>solar_random <span class="ot">&lt;-</span> <span class="fu">ACF</span>(solar_decompose, random) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>()</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>temp_random <span class="ot">&lt;-</span> <span class="fu">ACF</span>(temp_decompose, random) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>()</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>random_decompose <span class="ot">&lt;-</span> <span class="fu">select</span>(solar_decompose, quarter, <span class="at">random_app =</span> random) <span class="sc">|&gt;</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">left_join</span>(<span class="fu">select</span>(temp_decompose, quarter, <span class="at">random_act =</span> random))</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>joint_ccf_random <span class="ot">&lt;-</span> random_decompose <span class="sc">|&gt;</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">CCF</span>(<span class="at">y =</span> random_app, <span class="at">x =</span> random_act) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() </span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>(solar_random <span class="sc">+</span> temp_random) <span class="sc">/</span> joint_ccf_random</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># x_decompose &lt;- x_df_ts |&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co">#     model(feasts::classical_decomposition(x,</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">#         type = "mult"))  |&gt;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">#     components()</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>solar_decompose <span class="ot">&lt;-</span> rexburg_daily_ts <span class="sc">|&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(max_solar_angle), <span class="at">type =</span> <span class="st">"add"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>()</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>temp_decompose <span class="ot">&lt;-</span> <span class="fu">model</span>(rexburg_daily_ts, feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(high_temp)) <span class="sc">|&gt;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>solar_random <span class="ot">&lt;-</span> <span class="fu">ACF</span>(solar_decompose, random) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>()</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>temp_random <span class="ot">&lt;-</span> <span class="fu">ACF</span>(temp_decompose, random) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>()</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>random_decompose <span class="ot">&lt;-</span> <span class="fu">select</span>(solar_decompose, quarter, <span class="at">random_app =</span> random) <span class="sc">|&gt;</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">left_join</span>(<span class="fu">select</span>(temp_decompose, quarter, <span class="at">random_act =</span> random))</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>joint_ccf_random <span class="ot">&lt;-</span> random_decompose <span class="sc">|&gt;</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">CCF</span>(<span class="at">y =</span> random_app, <span class="at">x =</span> random_act) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() </span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>(solar_random <span class="sc">+</span> temp_random) <span class="sc">/</span> joint_ccf_random</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>joint_ccf_random <span class="ot">&lt;-</span> random_decompose <span class="sc">|&gt;</span></span>
@@ -866,6 +872,32 @@ Evaluate the limitations of forecasting models based on past trends
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>random_decompose <span class="sc">|&gt;</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">CCF</span>(<span class="at">y =</span> random_app, <span class="at">x =</span> random_act)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="at">data =</span> rexburg_daily_ts, <span class="fu">aes</span>(<span class="at">x =</span> max_solar_angle, <span class="at">y =</span> high_temp)) <span class="sc">+</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span>  </span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Maximum Solar Angle"</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"High Temperature"</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Comparison of Maximum Solar Angle and Daily High Temperature"</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_1_class_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="at">data =</span> rexburg_daily_ts, <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">lag</span>(max_solar_angle, <span class="dv">28</span>), <span class="at">y =</span> high_temp)) <span class="sc">+</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span>  </span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Maximum Solar Angle, 28 Days Prior"</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"High Temperature"</span>,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Comparison of Lagged Maximum Solar Angle and Daily High Temperature"</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_1_class_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
+</div>
 </div>
 </section>
 </section>

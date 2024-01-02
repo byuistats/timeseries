@@ -162,6 +162,7 @@ rexburg_day <- weather_clean %>%
     declination = 23.45 * sin(deg2rad(360 * (284+days_since_ref_date)/365.25)),
     max_solar_angle = (sin(deg2rad(43.825386)) * sin(deg2rad(declination)) + cos(deg2rad(43.825386)) * cos(deg2rad(declination)) * cos(0)) |> asin() |> rad2deg()
   ) |>
+  rename(high_temp = value) |>
   dplyr::select(-date_seq, -imputed, -days_since_ref_date, -declination) %>%
   tibble()
 
@@ -169,9 +170,9 @@ rexburg_daily_ts <- rexburg_day |>
   mutate(index = dates) |>
   as_tsibble(index = index)
 
-rexburg_annual_ts <- summarise(index_by(rexburg_daily_ts, year), value = mean(value))
+rexburg_annual_ts <- summarise(index_by(rexburg_daily_ts, year), high_temp = mean(high_temp))
 
-rexburg_weather_plot <- autoplot(rexburg_daily_ts %>% filter(year > 2016), .vars = value) +
+rexburg_weather_plot <- autoplot(rexburg_daily_ts %>% filter(year > 2016), .vars = high_temp) +
   geom_line(aes(x = index, y = max_solar_angle), color = "#D55E00", linewidth = 2) +
   scale_y_continuous(sec.axis = sec_axis(~., name = "Max Solar Angle (in degrees)")) +
   labs(
@@ -226,10 +227,10 @@ $$
 ```{r}
 acf_solar <- ACF(rexburg_daily_ts, y = max_solar_angle) |> autoplot() +
     labs(title = "Maximum Solar Angle")
-acf_temp <- ACF(rexburg_daily_ts, y = value) |> autoplot() +
+acf_temp <- ACF(rexburg_daily_ts, y = high_temp) |> autoplot() +
     labs(title = "Daily High Temperature")
 joint_ccf_plot <- rexburg_daily_ts |>
-  CCF(y = max_solar_angle, x = value) |> autoplot() +
+  CCF(y = max_solar_angle, x = high_temp) |> autoplot() +
   labs(title = "CCF Plot")
 (acf_solar + acf_temp) / joint_ccf_plot
 ```
@@ -244,7 +245,7 @@ joint_ccf_plot <- rexburg_daily_ts |>
 #| echo: false
 
 temp <- rexburg_daily_ts |>
-  CCF(y = max_solar_angle, x = value) |>
+  CCF(y = max_solar_angle, x = high_temp) |>
   numeric_2_char_df(decimals = 4) |>
   mutate(" " = " ") |>
   dplyr::select(" ", lag, ccf)
@@ -261,9 +262,16 @@ knitr::kable(
 
 ```{r}
 #| eval: false
-solar_decompose <- model(rexburg_daily_ts, feasts::classical_decomposition(max_solar_angle)) |>
-    components()
-temp_decompose <- model(rexburg_daily_ts, feasts::classical_decomposition(value)) |>
+
+# x_decompose <- x_df_ts |>
+#     model(feasts::classical_decomposition(x,
+#         type = "mult"))  |>
+#     components()
+
+solar_decompose <- rexburg_daily_ts |>
+  model(feasts::classical_decomposition(max_solar_angle), type = "add") |>
+  components()
+temp_decompose <- model(rexburg_daily_ts, feasts::classical_decomposition(high_temp)) |>
     components()
 solar_random <- ACF(solar_decompose, random) |> autoplot()
 temp_random <- ACF(temp_decompose, random) |> autoplot()
@@ -288,6 +296,28 @@ random_decompose |>
 ```
 
 
+```{r}
+#| warning: false
+ggplot(data = rexburg_daily_ts, aes(x = max_solar_angle, y = high_temp)) +
+  geom_point() +  
+  labs(
+    x = "Maximum Solar Angle",
+    y = "High Temperature",
+    title = "Comparison of Maximum Solar Angle and Daily High Temperature"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+```{r}
+#| warning: false
+ggplot(data = rexburg_daily_ts, aes(x = lag(max_solar_angle, 28), y = high_temp)) +
+  geom_point() +  
+  labs(
+    x = "Maximum Solar Angle, 28 Days Prior",
+    y = "High Temperature",
+    title = "Comparison of Lagged Maximum Solar Angle and Daily High Temperature"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
 
 
 
