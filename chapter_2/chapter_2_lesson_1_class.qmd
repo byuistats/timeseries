@@ -291,14 +291,33 @@ min_row <- cov_dat |>
   filter(sum_both <= 1) |> 
   nrow()
 
-cov_out_dat <- cov_dat |>
+cov_dat |>
   numeric_2_char_df() |>
-  bind_rows(cov_dat_summary) 
-
-# WORKING HERE NEED TO CHANGE COLOR OF TEXT
-  
-
-concat_partial_table(cov_out_dat, min(25,max(6, min_row)), 6) |>
+  bind_rows(cov_dat_summary) |>
+  mutate(
+      xy = cell_spec(xy, 
+                    color = case_when(
+                      xy > 0 ~ "#56B4E9",
+                      xy < 0 ~ "#E69F00"
+                    )
+      ),
+      sign = cell_spec(sign, 
+                    color = case_when(
+                      sign == "positive" ~ "#56B4E9",
+                      sign == "negative" ~ "#E69F00"
+                    )
+      )
+  ) |>
+  rename(
+      "x_t" = x,
+      "y_t" = y,
+      "x_t-mean(x)" = xx, 
+      "(x_t-mean(x))^2" = xx2, 
+      "y_t-mean(y)" = yy,
+      "(y_t-mean(y))^2" = yy2, 
+      "(x_t-mean(x))(y_t-mean(y))" = xy
+    ) |>
+concat_partial_table(min(25,max(6, min_row)), 6) |>
   display_table()
 ```
 
@@ -339,7 +358,7 @@ If the quantity $(x-\bar x)(y-\bar y)$ is greater than zero, the points are colo
 To compute the sample covariance, we divide the sum of the $(x - \bar x)(y - \bar y)$ values by $n-1$:
 
 $$
-Cov(x,y) 
+cov(x,y) 
 =
 \frac{\sum\limits_{t=1}^n (x - \bar x)(y - \bar y)}{n-1} 
 =
@@ -417,7 +436,7 @@ $$
 ```{=html}
 <!-- Solution
 $$
-Cov(x,y) = r \cdot s_x \cdot s_y 
+cov(x,y) = r \cdot s_x \cdot s_y 
 =
 `r cor(cov_dat$x, cov_dat$y) |> round(3)`
 \cdot 
@@ -466,7 +485,7 @@ With your assigned partner, compute the following values for the $n=`r n`$ value
 -   $s_x =$
 -   $s_y =$
 -   $r =$
--   $Cov(x,y) =$
+-   $cov(x,y) =$
 
 ```{r}
 #| echo: false
@@ -614,7 +633,7 @@ Solutions to Team Activity: Computational Practice
 
 -   $r = `r cor(mvn_data_6$x, mvn_data_6$y)`$
 
--   $Cov(x,y) = `r cov(mvn_data_6$x, mvn_data_6$y)`$
+-   $cov(x,y) = `r cov(mvn_data_6$x, mvn_data_6$y)`$
 
 ```{r}
 knitr::kable(temp, format = "html", align='cccccccc', escape = FALSE, width = NA) |>
