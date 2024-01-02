@@ -95,3 +95,41 @@ color_2nd_to_last_row2 <- function(df, color) {
   return(df)
 }
 ##########################################################################
+
+# Used to create a table with ellipses in the middle
+
+row_of_vdots <- function(df) {
+  temp_df <- df |>
+    # mutate(across(everything(), as.character)) |>
+    head(1)
+
+  for (j in 1:ncol(temp_df)) {
+    if (names(temp_df[j]) == "sign") {
+      temp_df[1,j] = " "
+    } else {
+      temp_df[1,j] = "⋮"
+    }
+  } # for
+
+  return(temp_df)
+}
+
+numeric_2_char_df <- function(df, decimals = 3) {
+  out_df <- df |>
+    as.data.frame() |>
+    mutate_if(is.numeric, round, digits=3) |>
+    mutate(across(everything(), as.character))
+  return(out_df)
+}
+
+concat_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
+  temp_df <- numeric_2_char_df(df, decimals)
+
+  out_df <- head(temp_df, nrow_head) |>
+    bind_rows(row_of_vdots(temp_df)) |>
+    bind_rows(tail(temp_df, nrow_tail))
+
+  return(out_df)
+}
+
+#############################################
