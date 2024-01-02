@@ -339,7 +339,10 @@ Evaluate the limitations of forecasting models based on past trends
 <section id="preparation" class="level2">
 <h2 class="anchored" data-anchor-id="preparation">Preparation</h2>
 <ul>
-<li>Read Sections 3.1-3.2</li>
+<li>Read Sections 3.1-3.2
+<ul>
+<li>Note: There is a typo in the book on page 47. Equation (3.5) gives the <em>sample ccf</em>, not the sample acf.</li>
+</ul></li>
 </ul>
 </section>
 <section id="learning-journal-exchange-10-mins" class="level2">
@@ -841,6 +844,28 @@ Evaluate the limitations of forecasting models based on past trends
 
 
 </div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>solar_decompose <span class="ot">&lt;-</span> <span class="fu">model</span>(rexburg_daily_ts, feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(max_solar_angle)) <span class="sc">|&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>temp_decompose <span class="ot">&lt;-</span> <span class="fu">model</span>(rexburg_daily_ts, feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(value)) <span class="sc">|&gt;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>solar_random <span class="ot">&lt;-</span> <span class="fu">ACF</span>(solar_decompose, random) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>()</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>temp_random <span class="ot">&lt;-</span> <span class="fu">ACF</span>(temp_decompose, random) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>()</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>random_decompose <span class="ot">&lt;-</span> <span class="fu">select</span>(solar_decompose, quarter, <span class="at">random_app =</span> random) <span class="sc">|&gt;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">left_join</span>(<span class="fu">select</span>(temp_decompose, quarter, <span class="at">random_act =</span> random))</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>joint_ccf_random <span class="ot">&lt;-</span> random_decompose <span class="sc">|&gt;</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">CCF</span>(<span class="at">y =</span> random_app, <span class="at">x =</span> random_act) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() </span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>(solar_random <span class="sc">+</span> temp_random) <span class="sc">/</span> joint_ccf_random</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>joint_ccf_random <span class="ot">&lt;-</span> random_decompose <span class="sc">|&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">CCF</span>(<span class="at">y =</span> random_app, <span class="at">x =</span> random_act) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>()</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>joint_ccf_random</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>random_decompose <span class="sc">|&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">CCF</span>(<span class="at">y =</span> random_app, <span class="at">x =</span> random_act)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 </section>

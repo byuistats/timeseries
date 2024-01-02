@@ -66,6 +66,7 @@ pacman::p_load(mosaic)
 ## Preparation
 
 -   Read Sections 3.1-3.2
+    -   Note: There is a typo in the book on page 47. Equation (3.5) gives the *sample ccf*, not the sample acf.
 
 
 ## Learning Journal Exchange (10 mins)
@@ -255,6 +256,41 @@ knitr::kable(
   row.names = FALSE
 )
 ```
+
+
+
+```{r}
+#| eval: false
+solar_decompose <- model(rexburg_daily_ts, feasts::classical_decomposition(max_solar_angle)) |>
+    components()
+temp_decompose <- model(rexburg_daily_ts, feasts::classical_decomposition(value)) |>
+    components()
+solar_random <- ACF(solar_decompose, random) |> autoplot()
+temp_random <- ACF(temp_decompose, random) |> autoplot()
+random_decompose <- select(solar_decompose, quarter, random_app = random) |>
+    left_join(select(temp_decompose, quarter, random_act = random))
+joint_ccf_random <- random_decompose |>
+    CCF(y = random_app, x = random_act) |> autoplot() 
+(solar_random + temp_random) / joint_ccf_random
+```
+
+```{r}
+#| eval: false
+joint_ccf_random <- random_decompose |>
+    CCF(y = random_app, x = random_act) |> autoplot()
+joint_ccf_random
+```
+
+```{r}
+#| eval: false
+random_decompose |>
+    CCF(y = random_app, x = random_act)
+```
+
+
+
+
+
 
 
 
