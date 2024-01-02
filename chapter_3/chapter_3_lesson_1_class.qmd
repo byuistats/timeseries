@@ -85,7 +85,7 @@ pacman::p_load(mosaic)
 -   Why are we interested in forecasting a time series?
 -   Give an example of a forecast for a time series that you have been interested in lately.
 
-## Cross-Correlation
+## Class Activity: Cross-Correlation (15 min)
 
 When one time series leads another, we can use the one to predict the other--at least in the short term. In this example, we will examine the relationship between the maximum angle the sun makes with the horizon and the daily high temperature in Rexburg, Idaho.
 
@@ -260,13 +260,13 @@ knitr::kable(
 
 
 
+
+::: callout-caution 
+Tyson, I need help getting the following code to run. Based on what I saw online, I think it might be failing, due to a conflict in the order in which packages are loaded.
+:::
+
 ```{r}
 #| eval: false
-
-# x_decompose <- x_df_ts |>
-#     model(feasts::classical_decomposition(x,
-#         type = "mult"))  |>
-#     components()
 
 solar_decompose <- rexburg_daily_ts |>
   model(feasts::classical_decomposition(max_solar_angle), type = "add") |>
@@ -296,8 +296,16 @@ random_decompose |>
 ```
 
 
+
+Compare the two plots below. The tab on the left shows the relationship between the maximum solar angle on a specific day with the high temperature for that day. The tab on the right provides a scatter plot of the maximum solar angle from 28 days ago and the daily high temperature for the current day.
+
+::: panel-tabset
+#### Not Lagged
+
 ```{r}
 #| warning: false
+#| echo: false
+
 ggplot(data = rexburg_daily_ts, aes(x = max_solar_angle, y = high_temp)) +
   geom_point() +  
   labs(
@@ -307,8 +315,13 @@ ggplot(data = rexburg_daily_ts, aes(x = max_solar_angle, y = high_temp)) +
   ) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
+
+#### Lagged 
+
 ```{r}
 #| warning: false
+#| echo: false
+
 ggplot(data = rexburg_daily_ts, aes(x = lag(max_solar_angle, 28), y = high_temp)) +
   geom_point() +  
   labs(
@@ -319,10 +332,64 @@ ggplot(data = rexburg_daily_ts, aes(x = lag(max_solar_angle, 28), y = high_temp)
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
+:::
 
 
+## Small Group Activity: Computing the Sample CCF (15 min)
 
+Using any tool, except pre-defined functions in R, find the ccf for the following data.
 
+```{r}
+#| echo: false
+
+set.seed(123)
+a <- 1.6
+b <- 4.1
+
+sim_df <- data.frame(t = 1:16) |>
+  mutate(
+    x = 5 * sin((t-a) / 12 * 2 * pi) + 20 + rnorm(n(),0,1.5),
+    y = 100 * sin((t-b) / 12 * 2 * pi) + 150 + rnorm(n(),0,30)
+  ) |>
+  round_df(1)
+
+start_date <- lubridate::ymd("2023-06-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(sim_df)-1),
+                by = "1 months")
+
+sim_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  x = pull(sim_df, x),
+  y = pull(sim_df, y)
+)
+
+sim_ts <- sim_tibble |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index) |>
+  dplyr::select(index, dates, year, month, x, y) 
+
+sim_df |>
+  dplyr::select(x, y) |>
+  display_table()
+```
+
+You can read these data into R using the following command:
+
+```{r}
+#| echo: false
+
+# build a string that gives the data
+x_str <- paste(sim_df$x, collapse = ", ")
+y_str <- paste(sim_df$y, collapse = ", ")
+x_str2 <- paste0("x = c(",x_str,")")
+y_str2 <- paste0("y = c(",y_str,")")
+xy_str <- paste0("df <- data.frame(",x_str2,", ",y_str2,")")
+```
+
+`r xy_str`
 
 
 
