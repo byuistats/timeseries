@@ -79,7 +79,14 @@ pacman::p_load(mosaic)
 -   Sign the Learning Journal review sheet for your peer
 
 
+## Small Group Discussion: Why Forecast? (5 min)
+
+-   Why are we interested in forecasting a time series?
+-   Give an example of a forecast for a time series that you have been interested in lately.
+
 ## Cross-Correlation
+
+When one time series leads another, we can use the one to predict the other--at least in the short term. In this example, we will examine the relationship between the maximum angle the sun makes with the horizon and the daily high temperature in Rexburg, Idaho.
 
 The figure below illustrates the daily high temperature in Rexburg, Idaho (in black) and the angle of the sun with the horizon at solar noon (in red).
 
@@ -164,7 +171,7 @@ rexburg_daily_ts <- rexburg_day |>
 rexburg_annual_ts <- summarise(index_by(rexburg_daily_ts, year), value = mean(value))
 
 rexburg_weather_plot <- autoplot(rexburg_daily_ts %>% filter(year > 2016), .vars = value) +
-  geom_line(aes(x = index, y = max_solar_angle), color = "#D55E00") +
+  geom_line(aes(x = index, y = max_solar_angle), color = "#D55E00", linewidth = 2) +
   scale_y_continuous(sec.axis = sec_axis(~., name = "Max Solar Angle (in degrees)")) +
   labs(
     x = "Date",
@@ -215,10 +222,39 @@ $$
 $$
 
 
+```{r}
+acf_solar <- ACF(rexburg_daily_ts, y = max_solar_angle) |> autoplot() +
+    labs(title = "Maximum Solar Angle")
+acf_temp <- ACF(rexburg_daily_ts, y = value) |> autoplot() +
+    labs(title = "Daily High Temperature")
+joint_ccf_plot <- rexburg_daily_ts |>
+  CCF(y = max_solar_angle, x = value) |> autoplot() +
+  labs(title = "CCF Plot")
+(acf_solar + acf_temp) / joint_ccf_plot
+```
+
+-   What do you observe in the acf plots for the two variables?
+    -   Does this fit your understanding of the autocorrelation that will exist in these variables? Why or why not?
+-   What do you observe in the ccf?
+    -   For what value of $k$ is the ccf maximized?
 
 
+```{r}
+#| echo: false
 
+temp <- rexburg_daily_ts |>
+  CCF(y = max_solar_angle, x = value) |>
+  numeric_2_char_df(decimals = 4) |>
+  mutate(" " = " ") |>
+  dplyr::select(" ", lag, ccf)
 
+knitr::kable(
+  list(temp[2:19,], temp[20:37,], temp[38:55,], temp[56:73,]),
+  caption = 'Values of ccf',
+  booktabs = TRUE,
+  row.names = FALSE
+)
+```
 
 
 

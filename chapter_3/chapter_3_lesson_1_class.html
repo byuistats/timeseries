@@ -20,6 +20,40 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -221,6 +255,7 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#learning-outcomes" id="toc-learning-outcomes" class="nav-link active" data-scroll-target="#learning-outcomes">Learning Outcomes</a></li>
   <li><a href="#preparation" id="toc-preparation" class="nav-link" data-scroll-target="#preparation">Preparation</a></li>
   <li><a href="#learning-journal-exchange-10-mins" id="toc-learning-journal-exchange-10-mins" class="nav-link" data-scroll-target="#learning-journal-exchange-10-mins">Learning Journal Exchange (10 mins)</a></li>
+  <li><a href="#small-group-discussion-why-forecast-5-min" id="toc-small-group-discussion-why-forecast-5-min" class="nav-link" data-scroll-target="#small-group-discussion-why-forecast-5-min">Small Group Discussion: Why Forecast? (5 min)</a></li>
   <li><a href="#cross-correlation" id="toc-cross-correlation" class="nav-link" data-scroll-target="#cross-correlation">Cross-Correlation</a>
   <ul class="collapse">
   <li><a href="#sample-cross-covariance-function" id="toc-sample-cross-covariance-function" class="nav-link" data-scroll-target="#sample-cross-covariance-function">Sample Cross-Covariance Function</a></li>
@@ -316,8 +351,16 @@ Evaluate the limitations of forecasting models based on past trends
 <li><p>Sign the Learning Journal review sheet for your peer</p></li>
 </ul>
 </section>
+<section id="small-group-discussion-why-forecast-5-min" class="level2">
+<h2 class="anchored" data-anchor-id="small-group-discussion-why-forecast-5-min">Small Group Discussion: Why Forecast? (5 min)</h2>
+<ul>
+<li>Why are we interested in forecasting a time series?</li>
+<li>Give an example of a forecast for a time series that you have been interested in lately.</li>
+</ul>
+</section>
 <section id="cross-correlation" class="level2">
 <h2 class="anchored" data-anchor-id="cross-correlation">Cross-Correlation</h2>
+<p>When one time series leads another, we can use the one to predict the other–at least in the short term. In this example, we will examine the relationship between the maximum angle the sun makes with the horizon and the daily high temperature in Rexburg, Idaho.</p>
 <p>The figure below illustrates the daily high temperature in Rexburg, Idaho (in black) and the angle of the sun with the horizon at solar noon (in red).</p>
 <div class="cell">
 <div class="cell-output-display">
@@ -353,6 +396,452 @@ Evaluate the limitations of forecasting models based on past trends
                     \sqrt{ c_0(x,x) c_0(y,y) }
                   }
 \]</span></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>acf_solar <span class="ot">&lt;-</span> <span class="fu">ACF</span>(rexburg_daily_ts, <span class="at">y =</span> max_solar_angle) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Maximum Solar Angle"</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>acf_temp <span class="ot">&lt;-</span> <span class="fu">ACF</span>(rexburg_daily_ts, <span class="at">y =</span> value) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Daily High Temperature"</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>joint_ccf_plot <span class="ot">&lt;-</span> rexburg_daily_ts <span class="sc">|&gt;</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">CCF</span>(<span class="at">y =</span> max_solar_angle, <span class="at">x =</span> value) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"CCF Plot"</span>)</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>(acf_solar <span class="sc">+</span> acf_temp) <span class="sc">/</span> joint_ccf_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_1_class_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<ul>
+<li>What do you observe in the acf plots for the two variables?
+<ul>
+<li>Does this fit your understanding of the autocorrelation that will exist in these variables? Why or why not?</li>
+</ul></li>
+<li>What do you observe in the ccf?
+<ul>
+<li>For what value of <span class="math inline">\(k\)</span> is the ccf maximized?</li>
+</ul></li>
+</ul>
+<div class="cell">
+<div class="cell-output-display">
+<table class="kable_wrapper table table-sm table-striped small" data-quarto-postprocess="true">
+<caption>Values of ccf</caption>
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<tbody>
+<tr class="odd">
+<td><table data-quarto-postprocess="true" class="table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th"></th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">lag</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">ccf</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-35D</td>
+<td style="text-align: left;">0.4134</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-34D</td>
+<td style="text-align: left;">0.4273</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-33D</td>
+<td style="text-align: left;">0.4411</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-32D</td>
+<td style="text-align: left;">0.4548</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-31D</td>
+<td style="text-align: left;">0.4684</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-30D</td>
+<td style="text-align: left;">0.4819</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-29D</td>
+<td style="text-align: left;">0.4952</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-28D</td>
+<td style="text-align: left;">0.5084</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-27D</td>
+<td style="text-align: left;">0.5215</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-26D</td>
+<td style="text-align: left;">0.5344</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-25D</td>
+<td style="text-align: left;">0.5472</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-24D</td>
+<td style="text-align: left;">0.5598</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-23D</td>
+<td style="text-align: left;">0.5723</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-22D</td>
+<td style="text-align: left;">0.5845</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-21D</td>
+<td style="text-align: left;">0.5966</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-20D</td>
+<td style="text-align: left;">0.6086</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-19D</td>
+<td style="text-align: left;">0.6204</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-18D</td>
+<td style="text-align: left;">0.6319</td>
+</tr>
+</tbody>
+</table></td>
+<td><table data-quarto-postprocess="true" class="table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th"></th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">lag</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">ccf</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-17D</td>
+<td style="text-align: left;">0.6433</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-16D</td>
+<td style="text-align: left;">0.6545</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-15D</td>
+<td style="text-align: left;">0.6654</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-14D</td>
+<td style="text-align: left;">0.6761</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-13D</td>
+<td style="text-align: left;">0.6866</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-12D</td>
+<td style="text-align: left;">0.697</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-11D</td>
+<td style="text-align: left;">0.7073</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-10D</td>
+<td style="text-align: left;">0.7173</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-9D</td>
+<td style="text-align: left;">0.727</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-8D</td>
+<td style="text-align: left;">0.7365</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-7D</td>
+<td style="text-align: left;">0.7458</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-6D</td>
+<td style="text-align: left;">0.755</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-5D</td>
+<td style="text-align: left;">0.7639</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-4D</td>
+<td style="text-align: left;">0.7726</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-3D</td>
+<td style="text-align: left;">0.781</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-2D</td>
+<td style="text-align: left;">0.7892</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">-1D</td>
+<td style="text-align: left;">0.7971</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">0D</td>
+<td style="text-align: left;">0.8048</td>
+</tr>
+</tbody>
+</table></td>
+<td><table data-quarto-postprocess="true" class="table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th"></th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">lag</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">ccf</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">1D</td>
+<td style="text-align: left;">0.812</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">2D</td>
+<td style="text-align: left;">0.8189</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">3D</td>
+<td style="text-align: left;">0.8255</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">4D</td>
+<td style="text-align: left;">0.8319</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">5D</td>
+<td style="text-align: left;">0.8381</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">6D</td>
+<td style="text-align: left;">0.8441</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">7D</td>
+<td style="text-align: left;">0.8498</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">8D</td>
+<td style="text-align: left;">0.8552</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">9D</td>
+<td style="text-align: left;">0.8605</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">10D</td>
+<td style="text-align: left;">0.8654</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">11D</td>
+<td style="text-align: left;">0.8701</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">12D</td>
+<td style="text-align: left;">0.8746</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">13D</td>
+<td style="text-align: left;">0.8788</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">14D</td>
+<td style="text-align: left;">0.8827</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">15D</td>
+<td style="text-align: left;">0.8864</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">16D</td>
+<td style="text-align: left;">0.8898</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">17D</td>
+<td style="text-align: left;">0.893</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">18D</td>
+<td style="text-align: left;">0.8959</td>
+</tr>
+</tbody>
+</table></td>
+<td><table data-quarto-postprocess="true" class="table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;" data-quarto-table-cell-role="th"></th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">lag</th>
+<th style="text-align: left;" data-quarto-table-cell-role="th">ccf</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">19D</td>
+<td style="text-align: left;">0.8985</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">20D</td>
+<td style="text-align: left;">0.9008</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">21D</td>
+<td style="text-align: left;">0.9028</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">22D</td>
+<td style="text-align: left;">0.9046</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">23D</td>
+<td style="text-align: left;">0.9061</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">24D</td>
+<td style="text-align: left;">0.9073</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">25D</td>
+<td style="text-align: left;">0.9082</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">26D</td>
+<td style="text-align: left;">0.9089</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">27D</td>
+<td style="text-align: left;">0.9092</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">28D</td>
+<td style="text-align: left;">0.9093</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">29D</td>
+<td style="text-align: left;">0.9092</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">30D</td>
+<td style="text-align: left;">0.9088</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">31D</td>
+<td style="text-align: left;">0.9081</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">32D</td>
+<td style="text-align: left;">0.9072</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">33D</td>
+<td style="text-align: left;">0.906</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">34D</td>
+<td style="text-align: left;">0.9046</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">35D</td>
+<td style="text-align: left;">0.9029</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;"></td>
+<td style="text-align: left;">36D</td>
+<td style="text-align: left;">0.901</td>
+</tr>
+</tbody>
+</table></td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
 </section>
 </section>
 <section id="recap-5-min" class="level2">

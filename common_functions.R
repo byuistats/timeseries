@@ -117,7 +117,7 @@ row_of_vdots <- function(df) {
 numeric_2_char_df <- function(df, decimals = 3) {
   out_df <- df |>
     as.data.frame() |>
-    mutate_if(is.numeric, round, digits=3) |>
+    mutate_if(is.numeric, round, digits=decimals) |>
     mutate(across(everything(), as.character))
   return(out_df)
 }
