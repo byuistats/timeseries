@@ -320,22 +320,37 @@ temp2 <- temp1 |>
     "(x-mean(x))(y-mean(y))" = xy
   ) |> 
   dplyr::select(-sign)
+
+row_of_vdots <- function(df) {
+  temp_df <- df |> head(1)
   
-display_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
-  temp <- df |>
-    round(decimals) |>
-    mutate(across(everything(), as.character))
-  
-  ellipsis <- temp |> head(1)
-  for (j in 1:)
-  
-  temp|>
-    head(nrow_head) |>
-    bind_rows() 
+  for (j in 1:ncol(temp_df)) {
+    if (names(df[j]) == "sign") {
+      temp_df = " "
+      } else {
+        temp_df[1,j] = "⋮"
+      }
+    } # for
+    
+  return(temp_df)
 }
 
-knitr::kable(temp2, format = "html", align='cccccccc', escape = FALSE, width = NA) |>
-  kable_styling(full_width = FALSE)
+concat_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
+  temp_df <- df |>
+    round(decimals) |>
+    mutate(across(everything(), as.character))
+
+  
+  temp_df|>
+    head(nrow_head) |>
+    bind_rows(ellipses) |>
+    bind_rows(tail(temp_df, nrow_tail))
+}
+
+
+concat_partial_table(cov_dat, min(25,max(6, min_row)), 6) |>
+knitr::kable(format = "html", align='cccccccc', escape = FALSE, width = NA) |>
+  display_table()
 ```
 
 The simulated values are plotted below, with vertical lines drawn at $x = \bar x$ and $y = \bar y$. The first simulated point $(i=1)$ is circled.
