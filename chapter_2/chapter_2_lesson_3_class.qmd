@@ -266,6 +266,144 @@ ggplot(data = df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +
 
 ## Application: Chocolate Search Trends
 
+Recall the Google Trends data for the term "chocolate" from the last lesson.
+The cleaned data are available in the file <a href="../data/chocolate.csv" download>chocolate.csv</a>.
+
+### Import the chocolate search data and convert to tsibble format
+
+Use the code below to import the data and convert it into a time series (tsibble) object.
+
+```{r}
+
+# load packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("tsibble", "fable",
+               "feasts", "tsibbledata",
+               "fable.prophet", "tidyverse",
+               "patchwork", "rio")
+
+# read in the data from a csv and make the tsibble
+# change the line below to include your file path
+chocolate_month <- rio::import("../data/chocolate.csv")
+start_date <- lubridate::ymd("2004-01-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(chocolate_month)-1),
+                by = "1 months")
+chocolate_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = pull(chocolate_month, chocolate)
+)
+chocolate_month_ts <- chocolate_tibble |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index)
+
+# generate the plot
+choc_plot <- autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+choc_plot
+```
+
+### Explore R commands summarizing time series data
+
+-   What does each of the following R commands give us?
+    -   class(chocolate_month_ts)
+    -   head(chocolate_month_ts, 1)
+    -   tail(chocolate_month_ts, 1)
+    -   guess_frequency(chocolate_month_ts$index)
+
+### Aggregate to the annual level
+
+To help visualize what is happening with a time series, we often aggregate the data in the time series to the annual level. This can make it easier to spot a trend.
+The first plot is the time series plot of the raw data, and the second plot is a time series plot of the annual means.
+
+```{r}
+chocolate_annual_ts <- summarise(index_by(chocolate_month_ts, year), value = mean(value))
+
+# monthly plot
+mp <- autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# yearly plot
+yp <- autoplot(chocolate_annual_ts, .vars = value) +
+  labs(
+    x = "Year",
+    y = "Searches",
+    title = "Mean Annual Google Searches for 'Chocolate'"
+  ) +
+  scale_x_continuous(breaks = seq(2004, max(chocolate_month_ts$year), by = 2)) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# display both simultaneously
+mp / yp
+```
+
+-   What do you observe in the trend?
+-   What do you suspect is causing this trend?
+
+### Boxplot of Seasonal Values
+
+To better visualize the effect of seasonal variation, we can make box plots by month.
+
+```{r}
+pbox <- ggplot(chocolate_month_ts, aes(x = factor(month), y = value)) +
+    geom_boxplot() +
+  labs(
+    x = "Month Number",
+    y = "Searches",
+    title = "Boxplots of Google Searches for 'Chocolate' by Month"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+pbox
+```
+-   What do you observe? 
+-   Which months tend to have the most searches?  Which months tend to have the fewest seraches?
+    -   Can you provide an explanation for this?
+
+
+## Additive Decomposition 
+
+The additive model for a time series, $\{x_t\}$, is:
+
+$$
+  x_t = m_t + s_t + z_t
+$$
+
+where $x_t$ is the observed series, $m_t$ is the trend, $s_t$ is the seasonal effect, $z_t$ is random variation, and $t = 1, 2, 3, \ldots, n$. We consider $z_t$ as a sequence of correlated random variables with mean 0.
+
+The residual is the part of the time series that is not explained by the trend or the seasonal effect. This is an estimate of $
+For an additive model, the residual is computed as:
+$$
+  Residual = Value - Trend - Seasonal
+$$
+
+The code below produces a plot showing the original data in the time series, the trend, the seasonal effect, and the residual (random component). 
+
+```{r}
+#| warning: false
+
+choc_decompose <- chocolate_month_ts |>
+    model(feasts::classical_decomposition(value,
+        type = "add"))  |>
+    components()
+
+autoplot(choc_decompose)
+```
+
+
 ::: callout-caution
 ## TYSON: We need to read in the chocolate search trends data, decompose it, then compute the autocorrelations on residuals. What do we need to do to make this work?
 :::
