@@ -173,14 +173,10 @@ compute_summaries <- function(df, digits = 4) {
     -   Explain how positive autocorrelation leads to underestimation of variance in short time series
     -   Explain how negative autocorrelation can improve efficiency of sample mean estimate
 </details>
-<details>
-<summary>Explain why there is not one correct model to describe a time series</summary>
-    -   Explain why there can be several suitable models for a given time series
-</details>
-<details>
-<summary>Compute the covariance of sums of random variables</summary>
-    -   Define the covariance of sums of random variables.
-</details>
+<!-- <details> -->
+<!-- <summary>Compute the covariance of sums of random variables</summary> -->
+<!--     -   Define the covariance of sums of random variables. -->
+<!-- </details> -->
 <details>
 <summary>Interpret correlograms to identify significant lags, correlations, trends, and seasonality</summary>
     -   Create a correlogram
@@ -214,15 +210,37 @@ compute_summaries <- function(df, digits = 4) {
 
 ### Correlograms
 
--   The table below gives the sample autocorrelation function, acf, for the data set from the previous lesson. Use these values to sketch a correlogram in your Learning Journal. The figure below can help you begin.
+In the previous lesson, we used the following time series as an example.
+Here are the values in that time series:
+
+```{r}
+#| echo: false
+set.seed(997)
+  
+# set parameters
+n <- 10
+rho <- 0.99
+mu <- 0
+sigma <- 3
+  
+# build population correlation matrix
+tmp.r <- matrix(rho, n, n)
+tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
+  
+# simulate correlated normal random data
+x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1)
+
+cat("x <- c(",paste(x1, collapse = ", "),")")
+```
+
+-   The table below gives the sample autocorrelation function, acf, for this data set. Use these values to sketch a correlogram in your Learning Journal. The figure below can help you begin.
 
 ```{r}
 #| echo: false
 
-x <- c( 4.4, 4.2, 4.2, 4, 4.4, 4.7, 4.9, 5.3, 5.4, 5.5 )
-df <- data.frame(x = x)
+df <- data.frame(x = x1)
 
-z <- acf(x, plot=FALSE, type = "correlation") 
+z <- acf(df$x, plot=FALSE, type = "correlation") 
 # acf(x, plot=TRUE, type = "correlation") ## Solution
 
 # z
@@ -274,6 +292,7 @@ The cleaned data are available in the file <a href="../data/chocolate.csv" downl
 Use the code below to import the data and convert it into a time series (tsibble) object.
 
 ```{r}
+#| warning: false
 
 # load packages
 if (!require("pacman")) install.packages("pacman")
@@ -299,102 +318,6 @@ chocolate_month_ts <- chocolate_tibble |>
   mutate(index = tsibble::yearmonth(dates)) |>
   as_tsibble(index = index)
 
-# generate the plot
-choc_plot <- autoplot(chocolate_month_ts, .vars = value) +
-  labs(
-    x = "Month",
-    y = "Searches",
-    title = "Relative Number of Google Searches for 'Chocolate'"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-choc_plot
-```
-
-### Explore R commands summarizing time series data
-
--   What does each of the following R commands give us?
-    -   class(chocolate_month_ts)
-    -   head(chocolate_month_ts, 1)
-    -   tail(chocolate_month_ts, 1)
-    -   guess_frequency(chocolate_month_ts$index)
-
-### Aggregate to the annual level
-
-To help visualize what is happening with a time series, we often aggregate the data in the time series to the annual level. This can make it easier to spot a trend.
-The first plot is the time series plot of the raw data, and the second plot is a time series plot of the annual means.
-
-```{r}
-chocolate_annual_ts <- summarise(index_by(chocolate_month_ts, year), value = mean(value))
-
-# monthly plot
-mp <- autoplot(chocolate_month_ts, .vars = value) +
-  labs(
-    x = "Month",
-    y = "Searches",
-    title = "Relative Number of Google Searches for 'Chocolate'"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-# yearly plot
-yp <- autoplot(chocolate_annual_ts, .vars = value) +
-  labs(
-    x = "Year",
-    y = "Searches",
-    title = "Mean Annual Google Searches for 'Chocolate'"
-  ) +
-  scale_x_continuous(breaks = seq(2004, max(chocolate_month_ts$year), by = 2)) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-# display both simultaneously
-mp / yp
-```
-
--   What do you observe in the trend?
--   What do you suspect is causing this trend?
-
-### Boxplot of Seasonal Values
-
-To better visualize the effect of seasonal variation, we can make box plots by month.
-
-```{r}
-pbox <- ggplot(chocolate_month_ts, aes(x = factor(month), y = value)) +
-    geom_boxplot() +
-  labs(
-    x = "Month Number",
-    y = "Searches",
-    title = "Boxplots of Google Searches for 'Chocolate' by Month"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-pbox
-```
--   What do you observe? 
--   Which months tend to have the most searches?  Which months tend to have the fewest seraches?
-    -   Can you provide an explanation for this?
-
-
-## Additive Decomposition 
-
-The additive model for a time series, $\{x_t\}$, is:
-
-$$
-  x_t = m_t + s_t + z_t
-$$
-
-where $x_t$ is the observed series, $m_t$ is the trend, $s_t$ is the seasonal effect, $z_t$ is random variation, and $t = 1, 2, 3, \ldots, n$. We consider $z_t$ as a sequence of correlated random variables with mean 0.
-
-The residual is the part of the time series that is not explained by the trend or the seasonal effect. This is an estimate of $
-For an additive model, the residual is computed as:
-$$
-  Residual = Value - Trend - Seasonal
-$$
-
-The code below produces a plot showing the original data in the time series, the trend, the seasonal effect, and the residual (random component). 
-
-```{r}
-#| warning: false
-
 choc_decompose <- chocolate_month_ts |>
     model(feasts::classical_decomposition(value,
         type = "add"))  |>
@@ -403,10 +326,17 @@ choc_decompose <- chocolate_month_ts |>
 autoplot(choc_decompose)
 ```
 
+Here is the correlogram for the chocolate search data:
 
-::: callout-caution
-## TYSON: We need to read in the chocolate search trends data, decompose it, then compute the autocorrelations on residuals. What do we need to do to make this work?
-:::
+```{r}
+acf(chocolate_month_ts$value, plot=TRUE, type = "correlation")
+```
+
+Here is the correlogram for the random component of this time series:
+
+```{r}
+acf(choc_decompose$random |> na.omit(), plot=TRUE, type = "correlation")
+```
 
 -   Is there a trend in the data? If so, speculate about the cause of this trend.
 -   Is there evidence of seasonal variation? If so, propose an explanation for the seasonal variation.
