@@ -398,7 +398,7 @@ The following code simulates 10 years of a monthly time series with a linear tre
 #| warning: false
 
 # Set random seed for reproducibility
-set.seed(12345) 
+set.seed(20) 
 
 # Set parameters & initialize vectors
 num_years <- 10
@@ -423,7 +423,7 @@ date_seq <- ymd(paste0(year_seq,"-",month_seq,"-01"))
 # Get data
 for (t in 1:n) {
   trend[t] <- a * t + 10
-  seasonal[t] <- b * sin(t / 12 * 2 * pi * 1)  + c * cos(t / 12 * 2 * pi * 3) + 5
+  seasonal[t] <- b * sin(t / 12 * 2 * pi * 1)  + c * cos(t / 12 * 2 * pi * 3)
   x[t] <- trend[t] + seasonal[t] + z[t]
 }
 
@@ -457,10 +457,16 @@ $$
   s_t = \sin \left( \frac{t\pi}{6} \right) + \frac{1}{2}\cos\left(\frac{t \pi}{18} \right) + 5
 $$
 
-Letting $t$ represent the month number across 10 years, we get the following time series, which is comprised of each of elements belows:
+Letting $t$ represent the month number across 10 years, we simulate a time series. Click on the tabs below to compare the actual construction of the time series (using the components generated in the code above) to the decomposition in R.
+
+::: panel-tabset
+#### Actual Construction
+
+Here is a plot of the components of the simulated data.
 
 ```{r}
-#| echo: false
+#| code-fold: true
+#| code-summary: "Show the code"
 
 trend_plot <- ggplot(x_df_ts, aes(x=Month, y=trend)) + 
   geom_line() +
@@ -514,10 +520,14 @@ x_plot / trend_plot / seasonal_plot / error_plot
 ```
 
 
+#### Decomposition
+
 Now, we use R to decompose the time series $\{x_t\}$.
 
 ```{r}
 #| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
 
 x_decompose <- x_df_ts |>
     model(feasts::classical_decomposition(x,
@@ -541,6 +551,8 @@ ggplot(df, aes(x=i, y=x)) +
        x="i", 
        y="x")
 ```
+:::
+
 
 -   How does the (estimated) decomposition compare to the theoretical values above?
     -   How well is the trend estimated?
