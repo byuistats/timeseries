@@ -9,6 +9,26 @@ library(dplyr)
 library(ggplot2)
 library(kableExtra)
 
+# functions
+
+numeric_2_char_df <- function(df, decimals = 3) {
+  out_df <- df |>
+    as.data.frame() |>
+    mutate_if(is.numeric, round, digits=decimals) |>
+    mutate(across(everything(), as.character))
+  return(out_df)
+}
+
+concat_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
+  temp_df <- numeric_2_char_df(df, decimals)
+
+  out_df <- head(temp_df, nrow_head) |>
+    bind_rows(row_of_vdots(temp_df)) |>
+    bind_rows(tail(temp_df, nrow_tail))
+
+  return(out_df)
+}
+
 # Define the UI
 ui <- fluidPage(
     titlePanel("Bivariate Normal Distribution Simulator"),
@@ -110,50 +130,41 @@ server <- function(input, output, session) {
       filter(sum_both <= 1) %>%
       nrow()
 
-    ellipsis <- data.frame(
-      i = ":",
-      x = ":",
-      y = ":",
-      xx = ":",
-      xx2 = ":",
-      yy = ":",
-      yy2 = ":",
-      xy = ":",
-      sign = " "
-    )
 
-    temp1 <- cov_dat %>%
-      round_df(3) %>%
-      mutate(across(everything(), as.character))
 
-    temp2 <- temp1 %>%
-      # include at least 6 and at most 25 rows in the top part;
-      # try to include at least one positive and one negative
-      # cross product
-      head(min(25,max(6, min_row))) %>%
-      bind_rows(ellipsis) %>%
-      bind_rows(ellipsis) %>%
-      bind_rows(temp1 %>% tail(3)) %>%
-      bind_rows(cov_dat_summary) %>%
+    cov_table <- cov_dat |>
+      numeric_2_char_df() |>
+      bind_rows(cov_dat_summary) |>
       mutate(
         xy = cell_spec(xy,
                        color = case_when(
-                         sign == "positive" ~ "#56B4E9",
-                         sign == "negative" ~ "#E69F00",
-                         TRUE ~ "Black"))) %>%
+                         xy > 0 ~ "#56B4E9",
+                         xy == 0 ~ "black",
+                         xy < 0 ~ "#E69F00"
+                       )
+        ),
+        sign = cell_spec(sign,
+                         color = case_when(
+                           sign == "positive" ~ "#56B4E9",
+                           sign == "negative" ~ "#E69F00"
+                         )
+        )
+      ) |>
       rename(
-        "x-mean(x)" = xx,
-        "(x-mean(x))^2" = xx2,
-        "y-mean(y)" = yy,
-        "(y-mean(y))^2" = yy2,
-        "(x-mean(x))(y-mean(y))" = xy
-      )# %>%
-      #select(-sign)
+        "x_t" = x,
+        "y_t" = y,
+        "x_t-mean(x)" = xx,
+        "(x_t-mean(x))^2" = xx2,
+        "y_t-mean(y)" = yy,
+        "(y_t-mean(y))^2" = yy2,
+        "(x_t-mean(x))(y_t-mean(y))" = xy
+      ) |>
+      concat_partial_table(min(25,max(6, min_row)), 6)
 
     sim_data <- sim_data
     return(
       list(
-        temp2 <- temp2,
+        cov_table <- cov_table,
         cov_dat <- cov_dat
       )
     )
@@ -170,7 +181,7 @@ server <- function(input, output, session) {
   output$kable <-function() {
     req(sim_data())
     knitr::kable(sim_data()[[1]], format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
-      kable_styling(full_width = FALSE)
+      kable_styling(full_width = FALSE, "striped")
   }
 
   output$plot<-renderPlot({

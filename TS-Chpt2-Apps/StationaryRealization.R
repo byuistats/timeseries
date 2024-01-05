@@ -29,11 +29,9 @@ ui <- fluidPage(
 
 # Define the server logic
 server <- function(input, output, session) {
-  #Reactive data input
-  sim_data <- eventReactive(input$go,{
+  output$plot<-renderPlot({
     set.seed(Sys.time())
-
-    # Specify parameters
+    #Reactive data input
     n <- input$n             # Max 500
     a <- input$a        # Max 1
     n_reps <- input$n_reps       # Max 9
@@ -52,11 +50,6 @@ server <- function(input, output, session) {
 
       df <- rbind(df, temp)
     }
-    return(df)
-  })
-
-  output$plot<-renderPlot({
-    df <- sim_data()
     n_reps <- input$n_reps
     library(ggokabeito)
     ggplot(df, aes(x = i, y = x, color = factor(rep))) +
