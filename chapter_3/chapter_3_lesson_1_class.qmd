@@ -8,10 +8,13 @@ sidebar: false
 
 ```{r}
 #| include: false
-source("../common_functions.R")
-
 # Need mosaic for deg2rad and rad2deg
 pacman::p_load(mosaic)
+
+# need to load after mosiac because mosaic overwrites fable::Model()
+source("../common_functions.R")
+
+
 ```
 
 ```{=html}
@@ -264,12 +267,13 @@ knitr::kable(
 
 
 
-::: callout-caution 
-Tyson, I need help getting the following code to run. Based on what I saw online, I think it might be failing, due to a conflict in the order in which packages are loaded.
+::: callout-important 
+Done! I'm not sure which of these needed to run so eval is still set to false on everything but the code doesn't throw errors anymore.
 :::
 
 ```{r}
 #| eval: false
+
 
 solar_decompose <- rexburg_daily_ts |>
   model(feasts::classical_decomposition(max_solar_angle), type = "add") |>
@@ -281,7 +285,7 @@ temp_random <- ACF(temp_decompose, random) |> autoplot()
 random_decompose <- select(solar_decompose, quarter, random_app = random) |>
     left_join(select(temp_decompose, quarter, random_act = random))
 joint_ccf_random <- random_decompose |>
-    CCF(y = random_app, x = random_act) |> autoplot() 
+    CCF(y = random_app, x = random_act) |> autoplot()
 (solar_random + temp_random) / joint_ccf_random
 ```
 
@@ -390,13 +394,17 @@ You can read these data into R using the following command:
 # build a string that gives the data
 xy_string <- rep("",4)
 xy_string[1] <- "df <- data.frame("
-xy_string[2] <- paste0("     x = c(", paste(sim_df$x, collapse = ", "), ")," )
-xy_string[3] <- paste0("     y = c(", paste(sim_df$y, collapse = ", "), ")" )
+xy_string[2] <- paste0(" \t x = c(", paste(sim_df$x, collapse = ", "), ")," )
+xy_string[3] <- paste0(" \t y = c(", paste(sim_df$y, collapse = ", "), ")" )
 xy_string[4] <- ")"
-xy_str <- paste(xy_string, "\n", collapse="")
+xystr <- paste(xy_string, " \n ", collapse="")
 ```
-::: callout-caution 
+
+
+::: callout-important 
 Tyson, will you please see if you can make xy_str (or something that replaces it) print so that it looks like this: (on four lines, with the middle two lines indented?)
+
+So with it in an R chunk like this, they can just hover in the top right corner and copy/paste the code in the correct format that way. I did find a function that will print it like needed and that is shown below
 ```{r}
 df <- data.frame(
   x = c(17.6, 20.7, 25.7, 24.9, 25.1, 26.3, 22.2, 17.1, 15.6, 14.6, 16.9, 16.8, 19.1, 21.2, 22.5, 27.4),
@@ -406,7 +414,11 @@ df <- data.frame(
 
 :::
 
-`r xy_str`
+
+```{r}
+#| echo: false
+cat(xystr)
+```
 
 
 
@@ -426,7 +438,7 @@ style="font-size:.8em;">Class Activity</a>
 
 ::: {#Solutions style="display:none;"}
 
-Solutions to Class Activity
+## Solutions to Class Activity
 
 ```{r}
 #| echo: false

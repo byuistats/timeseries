@@ -1,16 +1,15 @@
 # Load packages ----
 
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, kableExtra,
+pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite dplyr::select()
+               tidyverse, kableExtra,
                tsibble, fable,
                feasts, tsibbledata,
                fable.prophet,
                patchwork,
                ggthemes,
                see,   # okabeito color scheme
-               MASS, # MVNorm
                ggokabeito, # colorblind palette
-               kableExtra, # formatting tables
                stringr, # string manipulation
                lubridate # date manipulation
 )
