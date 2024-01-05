@@ -23,21 +23,265 @@ pacman::p_load(tidyverse, kableExtra,
                lubridate # date manipulation
 )
 
-mar_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/march2022.csv") %>% filter(Id == "129")
-apr_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/april2022.csv") %>% filter(Id == "129")
-may_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/may2022.csv") %>% filter(Id == "129")
-jun_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/june2022.csv") %>% filter(Id == "129")
-jul_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/july2022.csv") %>% filter(Id == "129")
-aug_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/august2022.csv") %>% filter(Id == "129")
-sep_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/september2022.csv") %>% filter(Id == "129")
-oct_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/october2022.csv") %>% filter(Id == "129")
+# # Read in raw data (now deleted)
+# jun_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/june2022.csv") %>% filter(Id == "129")
+# jul_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/july2022.csv") %>% filter(Id == "129")
+#
+# # Create final data file
+# mar_df %>%
+#   bind_rows(jun_df, jul_df) %>%
+#   rio::export("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/ny_speeds_jun_jul_129.csv")
 
-# Create final data file
-mar_df %>%
-  bind_rows(apr_df, may_df, jun_df, jul_df, aug_df, sep_df, oct_df) %>%
+
+speed_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/ny_speeds_jun_jul_129.csv") %>%
   unique() %>%
   mutate(date = mdy_hms(DataAsOf)) %>%
-  filter(date >= mdy_hms("4/15/2022 10:13:11") & date <= mdy_hms("5/16/2022 14:00:00")) %>%
+  filter(date >= mdy_hms("6/22/2022 19:44:10") & date <= mdy_hms("7/22/2022 1:13:15")) %>%
+  arrange(date)
+
+five_min <- mdy_hm("1/1/2000 12:05") - mdy_hm("1/1/2000 12:00")
+
+all_times <- seq(mdy_hms("6/22/2022 19:40:00"), mdy_hms("7/22/2022 1:15:00"), five_min)
+
+all_times_df <- data.frame(date = all_times)
+
+stop_point <- mdy_hms("7/17/2022 4:30:00")
+speed_df |>
+  bind_rows(all_times_df) %>%
   arrange(date) %>%
-  dplyr::select(-date) %>%
+  mutate(rounded = round_date(date, "5 mins")) %>%
+  group_by(rounded) %>%
+  mutate(count = n()) %>%
+  filter(!(is.na(Id) & count > 1)) %>% # Eliminates rows corresponding to duplicated valid times
+  mutate(count = n()) %>%
+  group_by() %>%
+  #
+  # Bunched values come before the NA
+  mutate(
+    rounded_year = year(rounded),
+    rounded_month = month(rounded),
+    rounded_day = day(rounded),
+    rounded_hour = hour(rounded),
+    rounded_minute = minute(rounded)
+  ) %>%
+  mutate(
+    rounded_hour = ifelse(rounded_minute == 55 & count > 1 & is.na(lead(Id)), rounded_hour + 1, rounded_hour),
+    rounded_minute = ifelse(rounded_minute == 55 & count > 1 & is.na(lead(Id)), -5, rounded_minute)
+  ) %>%
+  mutate(rounded2 =
+           ifelse(
+             count > 1 & is.na(lead(Id)),
+             paste0(rounded_month,"/",rounded_day,"/",rounded_year," ",rounded_hour,":",rounded_minute+5,":00"),
+             paste0(rounded_month,"/",rounded_day,"/",rounded_year," ",rounded_hour,":",rounded_minute,":00")
+           )
+  ) %>%
+  mutate(
+    rounded3 = mdy_hms(rounded2)
+  ) %>%
+  filter(!(is.na(Id) & rounded3 == lag(rounded3))) %>%
+  #
+  # Bunched values come after NA
+  mutate(
+    rounded_year = year(rounded),
+    rounded_month = month(rounded),
+    rounded_day = day(rounded),
+    rounded_hour = hour(rounded),
+    rounded_minute = minute(rounded)
+  ) %>%
+  mutate(
+    rounded_hour = ifelse(rounded_minute == 0 & count > 1 & is.na(lag(Id)), rounded_hour - 1, rounded_hour),
+    rounded_minute = ifelse(rounded_minute == 0 & count > 1 & is.na(lag(Id)), 60, rounded_minute)
+  ) %>%
+  mutate(rounded2 =
+           ifelse(
+             count > 1 & is.na(lag(Id)),
+             paste0(rounded_month,"/",rounded_day,"/",rounded_year," ",rounded_hour,":",rounded_minute-5,":00"),
+             paste0(rounded_month,"/",rounded_day,"/",rounded_year," ",rounded_hour,":",rounded_minute,":00")
+           )
+  ) %>%
+  mutate(
+    rounded3 = mdy_hms(rounded2)
+  ) %>%
+  filter(!(is.na(Id) & rounded3 == lead(rounded3))) %>%
+  # filter(rounded3 <= ymd_hms("2022-07-11 10:05:00")) %>% tail
+  #
+  #
+  # Fills in missing values for a streak on 7/11 #########
+  mutate(
+    Id = ifelse(
+      rounded >= ymd_hms("2022-07-11 08:55:00") & rounded <= ymd_hms("2022-07-11 10:00:00"),
+      0,
+      Id
+      )
+  ) %>%
+  mutate(
+    Speed = ifelse(
+      rounded3 >= ymd_hms("2022-07-11 08:55:00") & rounded3 <= ymd_hms("2022-07-11 10:00:00"),
+      sample(seq(44.73, 53.4, 0.01), n(), replace = TRUE),
+      Speed
+    )
+  ) %>%
+  ########################################################
+  # Eliminate 7/1 at 00:00:00, which is a spurious value added earlier
+  filter(date != ymd_hms("2022-07-01 00:00:00")) %>%
+  #
+  #
+  mutate(
+    rounded_year = year(rounded3),
+    rounded_month = month(rounded3),
+    rounded_day = day(rounded3),
+    rounded_hour = hour(rounded3),
+    rounded_minute = minute(rounded3),
+    rounded_daily_minutes = rounded_hour * 60 + rounded_minute,
+    day_month_year = paste0(rounded_day,"/",rounded_month,"/",rounded_year)
+  ) %>%
+  mutate(new_day = ifelse(rounded_hour == 0 & rounded_minute == 0, 1, 0)) %>%
+  group_by(day_month_year) %>%
+  mutate(minute_sequence = 5 * (row_number() - 1)) %>%
+  group_by() %>%
+  mutate(minute_sequence =
+           ifelse(
+             month(rounded3) == 6 & day(rounded3) == 22,
+             minute_sequence + 1185,
+             minute_sequence
+             )
+  ) %>%
+  #
+  filter(minute_sequence < 1440) %>% # Eliminates extra daily observations
+  mutate(
+    new_hour = minute_sequence %/% 60,
+    new_minute = minute_sequence %% 60,
+    new_date_text = paste0(rounded_day,"/",rounded_month,"/",rounded_year," ",new_hour,":",new_minute),
+    date = dmy_hm(new_date_text)
+  ) %>%
+  dplyr::select(Id, Speed, TravelTime, Status, DataAsOf, linkId, date) %>%
+  # group_by() %>% mutate(diff = date - lag(date)) %>% tail(-1) %>% summarize(min = min(diff), max = max(diff)) %>%
   rio::export("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds.csv")
+
+
+
+# Stuff below here is junk #######################################
+
+#   filter(abs(minute_sequence - rounded_daily_minutes) > 5) %>%
+#   View
+#   #
+#   #
+#   ##########
+#   group_by(rounded3) %>%
+#   mutate(count = n()) %>%
+#   group_by() %>%
+#   # dplyr::select(Speed, rounded, rounded, id2) %>%
+#   # filter(date > stop_point) %>%
+#   filter(
+#       (
+#         count>1 |
+#           lead(count)>1 | lead(count,2)>1 | lead(count,3)>1 | lead(count,4)>1 |
+#           lead(count,5)>1 | lead(count,6)>1 | lead(count,7)>1 | lead(count,8)>1 |
+#           lead(count,9)>1 | lead(count,10)>1 | lead(count,11)>1 | lead(count,12)>1 |
+#           lead(count,13)>1 | lead(count,14)>1 | lead(count,15)>1 | lead(count,16)>1 |
+#           lead(count,17)>1 | lead(count,18)>1 | lead(count,19)>1 | lead(count,20)>1 |
+#           lag(count)>1 | lag(count,2)>1 | lag(count,3)>1 | lag(count,4)>1 |
+#           lag(count,5)>1 | lag(count,6)>1 | lag(count,7)>1 | lag(count,8)>1 |
+#           lag(count,9)>1 | lag(count,10)>1 | lag(count,11)>1 | lag(count,12)>1 |
+#           lag(count,13)>1 | lag(count,14)>1 | lag(count,15)>1 | lag(count,16)>1 |
+#           lag(count,17)>1 | lag(count,18)>1 | lag(count,19)>1 | lag(count,20)>1
+#       )
+#       &
+#       is.na(Id)
+#     ) %>%
+#   mutate(diff3 = rounded3 - lag(rounded3)) %>%
+#   # filter(is.na(Id) | is.na(lead(Id)) | is.na(lag(Id))) %>%
+#   # filter(hour(rounded3) %>% round() == 21) %>%
+#   # filter(is.na(Id)) %>%
+#   View()
+#   # dplyr::select(DataAsOf) %>%
+#   # pull()
+#
+# temp_df %>%
+#   dplyr::select(-date) %>%
+#   rio::export("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds.csv")
+#
+#
+# eight_min <- mdy_hm("1/1/2000 12:08") - mdy_hm("1/1/2000 12:00")
+# nine_min <- mdy_hm("1/1/2000 12:09") - mdy_hm("1/1/2000 12:00")
+# ten_min <- mdy_hm("1/1/2000 12:10") - mdy_hm("1/1/2000 12:00")
+#
+# # Create final data file
+# mar_df %>%
+#   bind_rows(apr_df, may_df, jun_df, jul_df, aug_df, sep_df, oct_df) %>%
+#   unique() %>%
+#   na.omit() %>%
+#   mutate(date = mdy_hms(DataAsOf)) %>%
+#   # filter(date >= mdy_hms("8/12/2022 21:50:00") & date <= mdy_hms("8/30/2022 14:30:00")) %>%
+#   # filter(date >= mdy_hms("8/12/2022 22:04:12") & date <= mdy_hms("8/30/2022 14:09:03")) %>%
+#   arrange(date) %>%
+#   mutate(diff = date - lag(date)) %>%
+#   filter(diff > ten_min) %>%
+#   mutate(diff2 = date - lag(date)) %>%
+#   # arrange(desc(diff2)) %>%
+# #%>%
+#   View()
+#   # rio::export("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds.csv")
+#
+#
+#   # Create final data file
+#   mar_df %>%
+#     bind_rows(apr_df, may_df, jun_df, jul_df, aug_df, sep_df, oct_df) %>%
+#     unique() %>%
+#     na.omit() %>%
+#     mutate(date = mdy_hms(DataAsOf)) %>%
+#     # filter(date >= mdy_hms("8/12/2022 21:50:00") & date <= mdy_hms("8/30/2022 14:30:00")) %>%
+#     # filter(date >= mdy_hms("8/12/2022 22:04:12") & date <= mdy_hms("8/30/2022 14:09:03")) %>%
+#     arrange(date) %>%
+#     mutate(diff = date - lag(date)) %>%
+#     filter(diff > ten_min) %>%
+#     mutate(diff2 = date - lag(date)) %>%
+#     arrange(desc(diff2)) %>%
+#     head()
+#
+#
+#   mar_df %>%
+#     bind_rows(apr_df, may_df, jun_df, jul_df, aug_df, sep_df, oct_df) %>%
+#     unique() %>%
+#     na.omit() %>%
+#     mutate(date = mdy_hms(DataAsOf)) %>%
+#     arrange(date) %>%
+#     mutate(diff = date - lag(date)) %>%
+#     mutate(diff1 = lag(diff,1)) %>%
+#     mutate(diff2 = lag(diff,2)) %>%
+#     mutate(diff3 = lag(diff,3)) %>%
+#     mutate(diff4 = lag(diff,4)) %>%
+#     mutate(rolling = (diff+diff1+diff2+diff3+diff4)/5 ) %>%
+#     mutate(start = ifelse(lag(rolling) > eight_min,1,0)) %>%
+#     mutate(end = ifelse(rolling > eight_min, 1, 0)) %>%
+#     filter(start + end == 1) %>%
+#     mutate(diff10 = date - lag(date)) %>%
+#     filter(end == 1) %>%
+#     arrange(desc(diff10)) %>%
+#     head
+#     View()
+#
+#
+#     mar_df %>%
+#       bind_rows(apr_df, may_df, jun_df, jul_df, aug_df, sep_df, oct_df) %>%
+#       unique() %>%
+#       na.omit() %>%
+#       mutate(date = mdy_hms(DataAsOf)) %>%
+#       filter(month(date) == 10 & day(date) == 13 & hour(date) >= 1) %>%
+#       View
+#
+#
+#     mar_df %>%
+#       bind_rows(apr_df, may_df, jun_df, jul_df, aug_df, sep_df, oct_df) %>%
+#       unique() %>%
+#       na.omit() %>%
+#       mutate(date = mdy_hms(DataAsOf)) %>%
+#       arrange(date) %>%
+#       mutate(diff = date - lag(date)) %>%
+#       mutate(diff_num = as.numeric(diff)) %>%
+#       filter(date > ymd_hms("2022-06-22 19:40:00") & date < ymd_hms("2022-07-22 01:15:00")) %>%
+#       mutate(rounded_time = round_date(date, "5 mins")) %>%
+#       mutate(gaps = ifelse(rounded_time - lag(rounded_time) > eight_min, (rounded_time - lag(rounded_time)) *10/6,0)) %>%
+#       mutate(duplicate = if_else(rounded_time == lag(rounded_time), 1, 0)) %>%
+#       rio::export("C:/Users/craigaj/Documents/deleteme.csv")
+#
