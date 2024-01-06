@@ -71,7 +71,14 @@ source("../common_functions.R")
 :::: {.columns}
 
 ::: {.column width="45%"}
-The Bruckner Expressway (I-278) cuts through the Bronx in New York City. Traffic sensors record the speed of cars every 5 minutes between Stratford Avenue and Castle Hill Avenue. 
+The Bruckner Expressway (I-278) cuts through the Bronx in New York City. Traffic sensors record the speed of cars every 5 minutes between Stratford Avenue and Castle Hill Avenue.
+
+The data from 7/2/2022 to 7/22/2022 are contained in the file <a href="../data/ny_speeds.csv" download>ny_speeds.csv</a>.
+(Source: City of New York Department of Transportation. Online Links: 
+[http://a841‐dotweb01.nyc.gov/datafeeds](https://data.beta.nyc/dataset/nyc-real-time-traffic-speed-data-feed-archived).)
+These data have been cleaned to align the observations with five minute intervals.
+
+We will read these data into a tsibble and then compute and plot the decomposition.
 :::
 
 ::: {.column width="10%"}
@@ -84,14 +91,11 @@ The Bruckner Expressway (I-278) cuts through the Bronx in New York City. Traffic
 
 ::::
 
-The data from 7/2/2022 to 7/22/2022 are contained in the file <a href="../data/ny_speeds.csv" download>ny_speeds.csv</a>.
-(Source: City of New York Department of Transportation. Online Links: 
-[http://a841‐dotweb01.nyc.gov/datafeeds](https://data.beta.nyc/dataset/nyc-real-time-traffic-speed-data-feed-archived)
-These data have been cleaned to align the observations with precise five minute intervals.
-
-We will read these files into a tsibble.
-
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
 # Read the ny_speeds data
 ny_speeds_dat <- rio::import("../data/ny_speeds.csv")
 
@@ -114,13 +118,6 @@ ny_speeds_tb <- ny_speeds_dat |>
 ny_speeds_ts <- ny_speeds_tb |>
   mutate(index = date) |>
   as_tsibble(index = index)
-
-# ny_speeds_ts |> head
-```
-
-
-```{r}
-#| warning: false
 
 ny_speeds_decompose <- ny_speeds_ts |>
     model(feasts::classical_decomposition(speed ~ season(60/5*24),
