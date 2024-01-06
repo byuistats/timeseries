@@ -132,3 +132,20 @@ concat_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
 }
 
 #############################################
+
+#
+
+get_toy_data <- function(n = 10, mu = 0, sigma = 3, rho = 0.99, random_seed = 997) {
+  set.seed(random_seed)
+
+  # build population correlation matrix
+  tmp.r <- matrix(rho, n, n)
+  tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
+
+  return( round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1) )
+}
+
+
+#############################################
+
+

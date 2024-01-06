@@ -39,24 +39,7 @@ library(tidyverse)
 #| include: false
 
 get_data_for_cov_table <- function(offset = 1) {
-  # set random number generator seed
-  set.seed(92401)
-  set.seed(16633)
-  set.seed(2686)
-  set.seed(997)
-  
-  # set parameters
-  n <- 10
-  rho <- 0.99
-  mu <- 0
-  sigma <- 3
-  
-  # build population correlation matrix
-  tmp.r <- matrix(rho, n, n)
-  tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
-  
-  # simulate correlated normal random data
-  x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1) 
+  x1 <- get_toy_data()
   
   # build a data frame
   df <- data.frame(t = 1:length(x1),
@@ -215,23 +198,14 @@ Here are the values in that time series:
 
 ```{r}
 #| echo: false
-set.seed(997)
-  
-# set parameters
-n <- 10
-rho <- 0.99
-mu <- 0
-sigma <- 3
-  
-# build population correlation matrix
-tmp.r <- matrix(rho, n, n)
-tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
-  
+
 # simulate correlated normal random data
-x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1)
+x1 <- get_toy_data()
 
 cat("x <- c(",paste(x1, collapse = ", "),")")
 ```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
 
 -   The table below gives the sample autocorrelation function, acf, for this data set. Use these values to sketch a correlogram in your Learning Journal. The figure below can help you begin.
 
@@ -281,6 +255,8 @@ ggplot(data = df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +
 <!-- -   Finish a partially-created correlogram with the r_k values computed -->
 
 -   Are any of the autocorrelations statistically significant? If so, which one(s)?
+
+:::
 
 ## Application: Chocolate Search Trends
 
@@ -338,12 +314,15 @@ Here is the correlogram for the random component of this time series:
 acf(choc_decompose$random |> na.omit(), plot=TRUE, type = "correlation")
 ```
 
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
 -   Is there a trend in the data? If so, speculate about the cause of this trend.
 -   Is there evidence of seasonal variation? If so, propose an explanation for the seasonal variation.
 -   What do the spikes in the correlogram tell us about this time series?
 -   Is there evidence of autocorrelations in the data after removing the trend and seasonal variation?
 -   There are two exceptionally large spikes in the observed data. Can you identify a cause for these spikes?
 
+:::
 
 ## Recap (5 mins)
 
