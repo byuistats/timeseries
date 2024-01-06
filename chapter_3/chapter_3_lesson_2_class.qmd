@@ -149,12 +149,12 @@ cat("x <- c(",paste(x1, collapse = ", "),")")
 ::: {.column width="45%"}
 The Bruckner Expressway (I-278) cuts through the Bronx in New York City. Traffic sensors record the speed of cars every 5 minutes between Stratford Avenue and Castle Hill Avenue.
 
-The data from 7/2/2022 to 7/22/2022 are contained in the file <a href="../data/ny_speeds.csv" download>ny_speeds.csv</a>.
+The data from 7/2/2022 to 7/17/2022 are contained in the file <a href="../data/ny_speeds.csv" download>ny_speeds.csv</a>.
 (Source: City of New York Department of Transportation. Online Links: 
 [http://a841‐dotweb01.nyc.gov/datafeeds](https://data.beta.nyc/dataset/nyc-real-time-traffic-speed-data-feed-archived).)
 These data have been cleaned to align the observations with five minute intervals.
 
-We will read these data into a tsibble and then compute and plot the decomposition.
+We will read these data into a tsibble.
 :::
 
 ::: {.column width="10%"}
@@ -186,22 +186,41 @@ ny_speeds_tb <- ny_speeds_dat |>
   ) |>
   rename(speed = Speed) |>
   dplyr::select(-Id, -TravelTime, -Status, -DataAsOf, -linkId) |>
-  #
-  # Limit the number of days
-  filter(date >= mdy("7/2/2022") & date < mdy("7/18/2022")) |>
   tibble()
 
 ny_speeds_ts <- ny_speeds_tb |>
   mutate(index = date) |>
   as_tsibble(index = index)
+```
+
+Next, we compute the decomposition. We expect that that traffic will fluctuate in with daily seasonality. The number of five-minute periods in a day is:
+
+$$
+\underbrace{\frac{60}{5}}_{\substack{\text{Number of} \\ \text{5-minute periods} \\ \text{per hour}}} \cdot \underbrace{24}_{\substack{\text{Number of} \\ \text{hours} \\ \text{per day}}} = ~~ 288~~\text{five-minute periods per day}
+$$
+
+That is, the time series will follow a cycle that repeats every 288 five-minute intervals.
+Due to the complexity of the time series, we will indicate this to R in our function call.
+observations. (Try omitting  "~season(288)" from the classical_decomposition statement and see what happens!)
+
+```{r}
+#| warning: false
 
 ny_speeds_decompose <- ny_speeds_ts |>
-    model(feasts::classical_decomposition(speed ~ season(60/5*24),
+    model(feasts::classical_decomposition(speed ~ season(288),
         type = "add"))  |>
     components()
 
 autoplot(ny_speeds_decompose)
 ```
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Why is there no estimate for the trend or the random component for the first half of the first day and the last half of the last day?
+
+:::
+
 
 ```{r}
 speed_plot <- ny_speeds_decompose |> 
