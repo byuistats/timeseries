@@ -56,6 +56,25 @@ round_as_text <- function(x, places) {
   return(as.character(round(x,12)))
 }
 
+# Converts a dataframe to char and rounds the values to a specified number of places
+convert_df_to_char <- function(df, decimals) {
+  out_df <- df %>%
+    mutate_if(is.numeric, round, digits=decimals) |>
+    mutate(across(everything(), as.character))
+  return(out_df)
+}
+
+# Converts a df
+blank_out_cells_in_df <- function(df, ncols_to_keep = 2, nrows_to_keep = 0, decimals = 3) {
+  out_df <- df |>
+    convert_df_to_char(decimals)
+
+  for (i in (nrows_to_keep + 1) : nrow(df))
+    for (j in (ncols_to_keep + 1) : ncol(df)) {
+      out_df[i,j] <- ""
+    }
+  return(out_df)
+}
 
 ##########################################################################
 # These functions color cells in a data frame of character vectors
