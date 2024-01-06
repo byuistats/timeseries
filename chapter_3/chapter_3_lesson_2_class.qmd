@@ -127,7 +127,7 @@ We assume that $a_1 = x_1$.
 :::
 
 
-## Class Activity: Applying the EWMA
+## Class Activity: Practice Applying the EWMA
 
 We will use the following data to practice applying the Exponentially Weighted Moving Average (EWMA) technique.
 
@@ -140,21 +140,22 @@ x1 <- get_toy_data()
 cat("x <- c(",paste(x1, collapse = ", "),")")
 ```
 
-
+Complete the table below by calculating the values of $a_t$.
 
 ```{r}
 #| echo: false
 
-sample_df <- data.frame(t = 1:length(x1), x_t = x1, a_t = x1, space = "") |>
+alpha <- 0.2
+
+ewma_toy_df <- data.frame(t = 1:length(x1), x_t = x1, a_t = x1, space = "") |>
   rename("Space for computations" = space)
 
-for (t in 2:length(x1)) 
-  {
-  sample_df$a_t[t] <- alpha * sample_df$x_t[t] + (1 - alpha) * sample_df$a_t[t-1]
+for (t in 2:length(x1)) {
+  ewma_toy_df$a_t[t] <- alpha * ewma_toy_df$x_t[t] + (1 - alpha) * ewma_toy_df$a_t[t-1]
 }
 
-sample_df %>%
-  # blank_out_cells_in_df() |>
+ewma_toy_df %>%
+  blank_out_cells_in_df() |>
   display_table()
 ```
 
@@ -166,7 +167,7 @@ sample_df %>%
 ::: {.column width="45%"}
 The Bruckner Expressway (I-278) cuts through the Bronx in New York City. Traffic sensors record the speed of cars every 5 minutes between Stratford Avenue and Castle Hill Avenue.
 
-The data from 7/2/2022 to 7/17/2022 are contained in the file <a href="../data/ny_speeds.csv" download>ny_speeds.csv</a>.
+The data from 7/2/2022 through 7/17/2022 are contained in the file <a href="../data/ny_speeds.csv" download>ny_speeds.csv</a>.
 (Source: City of New York Department of Transportation. Online Links: 
 [http://a841‐dotweb01.nyc.gov/datafeeds](https://data.beta.nyc/dataset/nyc-real-time-traffic-speed-data-feed-archived).)
 These data have been cleaned to align the observations with five minute intervals.
@@ -234,7 +235,7 @@ autoplot(ny_speeds_decompose)
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Working with your partner, identify evidence in the original time series of the daily seasonal trend.
+-   Working with your partner, identify evidence of the daily seasonal trend in the speed data.
 -   What do you no notice about this time series?
 -   How do you explain the sharp downward spikes in the data?
 -   Does there seem to be a trend in the data? Justify your answer.
@@ -244,6 +245,8 @@ autoplot(ny_speeds_decompose)
 
 
 ```{r}
+#| include = FALSE 
+
 speed_plot <- ny_speeds_decompose |> 
   filter((index) <= mdy_hm("7/3/2022 12:00")) |> 
   na.omit() |> 
@@ -258,13 +261,31 @@ rand_plot <- ny_speeds_decompose |>
 speed_plot / rand_plot
 ```
 
-Here are 48 hours of data, near the beginning of the time series.
+Here are 48 hours of data, near the beginning of the time series (from noon on July 2, 2022 to noon on July 4, 2022).
 
 ```{r}
 ny_speeds_decompose |> 
   filter((index) <= mdy_hm("7/4/2022 12:00")) |> 
   na.omit() |> 
   autoplot()
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Consider the seasonal variation. At about what time of day are the speeds highest? When are the speeds lowest?
+
+:::
+
+In order to use EWMA, we need to eliminate any trend and seasonal variation. So, we apply EWMA to the random component and then we can add the trend and seasonal components back in to get the final EWMA estimate for the time series.
+
+We demonstrate the computation of the first few values.
+
+```{r}
+ny_speeds_decompose |>
+  as.tibble() |>
+  mutate(date_time = paste0(month(index), "/", day(index), " ", hour(index), ":")) |>
+  select(-.model, -index) |>
+  na.omit()
 ```
 
 
@@ -294,29 +315,19 @@ Solutions to matching activity:
 :::
 
 
-<a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Class Activity</a>
+<a href="javascript:showhide('Solutions2')"
+style="font-size:.8em;">Class Activity: Practice Applying the EWMA</a>
 
-::: {#Solutions style="display:none;"}
-
-Solutions to Class Activity
-
-Matching Activity:
-
-1 - D
-
-2 - E
-
-3 - B
-
-4 - C
-
-5 - A
-
+::: {#Solutions2 style="display:none;"}
 
 ```{r}
 #| echo: false
-stuff <- "here"
+
+alpha <- 0.2
+
+ewma_toy_df %>%
+  dplyr::select(t, x_t, a_t) |>
+  display_table()
 ```
 
 :::

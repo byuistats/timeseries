@@ -76,6 +76,18 @@ blank_out_cells_in_df <- function(df, ncols_to_keep = 2, nrows_to_keep = 0, deci
   return(out_df)
 }
 
+########### String manipulation
+
+# Returns "char" right-most characters of "string"
+right <- function (string, char) {
+  substr(string, nchar(string)-(char-1), nchar(string))
+}
+
+# Returns "char" left-most characters of "string"
+left <- function (string, char) {
+  substr(string, 1, char)
+}
+
 ##########################################################################
 # These functions color cells in a data frame of character vectors
 # Works
