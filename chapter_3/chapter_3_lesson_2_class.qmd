@@ -1,6 +1,6 @@
 ---
 title: "Exponential Smoothing"
-subtitle: "Chapter 3: Lesson 3"
+subtitle: "Chapter 3: Lesson 2"
 format: html
 editor: source
 sidebar: false
@@ -68,10 +68,10 @@ source("../common_functions.R")
 
 ## Class Activity: Highway Speeds in New York City (45 mins)
 
-The Bruckner Expressway (I-278) cuts through the Bronx in New York City. Traffic sensors record the speed of cars every 5 minutes between Stratford Avenue and Castle Hill Avenue. The data from 4/15/2022 to 5/16/2022 are contained in the file <a href="../data/ny_speeds.csv" download>ny_speeds.csv</a>. 
+The Bruckner Expressway (I-278) cuts through the Bronx in New York City. Traffic sensors record the speed of cars every 5 minutes between Stratford Avenue and Castle Hill Avenue. The data from 7/2/2022 to 7/22/2022 are contained in the file <a href="../data/ny_speeds.csv" download>ny_speeds.csv</a>.
 (Source: City of New York Department of Transportation. Online Links: 
 [http://a841‐dotweb01.nyc.gov/datafeeds](https://data.beta.nyc/dataset/nyc-real-time-traffic-speed-data-feed-archived)
-These dates were selected, because they provided uninterrupted consecutive measurements.
+These data have been cleaned to align the observations with precise five minute intervals.
 
 We will read these files into a tsibble.
 
@@ -79,47 +79,59 @@ We will read these files into a tsibble.
 # Read the ny_speeds data
 ny_speeds_dat <- rio::import("../data/ny_speeds.csv")
 
-# three_min <- mdy_hm("1/1/2000 12:03") - mdy_hm("1/1/2000 12:00")
-# 
-# ny_speeds_tb <- ny_speeds_dat |>
-#   mutate(
-#     dates = mdy_hms(DataAsOf), # - three_min,
-#     dates = round_date(dates, "minute"),
-#     # dates = round_date(dates, "5 mins"),
-#     year = lubridate::year(dates),
-#     month = lubridate::month(dates),
-#     #
-#     day = lubridate::day(dates),
-#     hour = lubridate::hour(dates),
-#     min = lubridate::minute(dates)
-#   ) %>%
-#   rename(speed = Speed) |>
-#   dplyr::select(-Id, -TravelTime, -Status, -DataAsOf, -linkId) |>
-#   tibble()
-# 
-# 
-# rio::export(ny_speeds_tb, "temp.csv")
-# 
-# ny_speeds_ts <- ny_speeds_tb |>
-#   mutate(index = dates) |>
-#   as_tsibble(index = index)
-# # not working commented it out so I could push hw edits
-# # ny_speeds_ts <- ny_speeds_tb |>
-# #   mutate(index = dates) |>
-# #   as_tsibble(index = index)
+ny_speeds_tb <- ny_speeds_dat |>
+  mutate(
+    year = lubridate::year(date),
+    month = lubridate::month(date),
+    #
+    day = lubridate::day(date),
+    hour = lubridate::hour(date),
+    min = lubridate::minute(date)
+  ) |>
+  rename(speed = Speed) |>
+  dplyr::select(-Id, -TravelTime, -Status, -DataAsOf, -linkId) |>
+  #
+  # Limit the number of days
+  filter(date >= mdy("7/2/2022") & date < mdy("7/18/2022")) |>
+  tibble()
+
+ny_speeds_ts <- ny_speeds_tb |>
+  mutate(index = date) |>
+  as_tsibble(index = index)
+
+# ny_speeds_ts |> head
 ```
 
 
 ```{r}
 #| warning: false
 
-# ny_speeds_decompose <- ny_speeds_ts |>
-#     model(feasts::classical_decomposition(speed,
-#         type = "add"))  |>
-#     components()
-# 
-# autoplot(choc_decompose)
+ny_speeds_decompose <- ny_speeds_ts |>
+    model(feasts::classical_decomposition(speed ~ season(60/5*24),
+        type = "add"))  |>
+    components()
+
+autoplot(ny_speeds_decompose)
 ```
+
+```{r}
+speed_plot <- ny_speeds_decompose |> 
+  filter((index) <= mdy_hm("7/3/2022 12:00")) |> 
+  na.omit() |> 
+  dplyr::select(speed) |> 
+  autoplot(.vars = speed)
+rand_plot <- ny_speeds_decompose |> 
+  filter((index) <= mdy_hm("7/3/2022 12:00")) |> 
+  na.omit() |> 
+  dplyr::select(random) |> 
+  autoplot(.vars = random)
+
+speed_plot / rand_plot
+```
+
+
+
+
 
 ## Recap (5 min)
 

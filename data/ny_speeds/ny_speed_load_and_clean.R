@@ -23,6 +23,9 @@ pacman::p_load(tidyverse, kableExtra,
                lubridate # date manipulation
 )
 
+
+set.seed(1)
+
 # # Read in raw data (now deleted)
 # jun_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/june2022.csv") %>% filter(Id == "129")
 # jul_df <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds/july2022.csv") %>% filter(Id == "129")
@@ -46,7 +49,8 @@ all_times <- seq(mdy_hms("6/22/2022 19:40:00"), mdy_hms("7/22/2022 1:15:00"), fi
 all_times_df <- data.frame(date = all_times)
 
 stop_point <- mdy_hms("7/17/2022 4:30:00")
-speed_df |>
+
+cleaned_data <- speed_df |>
   bind_rows(all_times_df) %>%
   arrange(date) %>%
   mutate(rounded = round_date(date, "5 mins")) %>%
@@ -103,27 +107,50 @@ speed_df |>
     rounded3 = mdy_hms(rounded2)
   ) %>%
   filter(!(is.na(Id) & rounded3 == lead(rounded3))) %>%
-  # filter(rounded3 <= ymd_hms("2022-07-11 10:05:00")) %>% tail
+  #
+  #
+  # Delete extra value
+  filter(!(date == mdy_hms("7/21/2022 21:01:20"))) %>%
   #
   #
   # Fills in missing values for a streak on 7/11 #########
   mutate(
-    Id = ifelse(
-      rounded >= ymd_hms("2022-07-11 08:55:00") & rounded <= ymd_hms("2022-07-11 10:00:00"),
-      0,
-      Id
+    Id =
+      case_when(
+        rounded3 >= ymd_hms("2022-07-11 08:55:00") & rounded3 <= ymd_hms("2022-07-11 10:00:00") ~ 0,
+        rounded3 >= mdy_hm("7/8/2022 3:20") & rounded3 <= mdy_hm("7/8/2022 3:30") ~ 0,
+        rounded3 >= mdy_hm("7/11/2022 10:55") & rounded3 <= mdy_hm("7/11/2022 11:00") ~ 0,
+        date == ymd_hms("2022-07-14 21:20:00") & is.na(Id) ~ 0,
+        month(rounded3) == 6 & is.na(Id) ~ 0,
+        month(rounded3) == 7 & day(rounded3) == 1 & is.na(Id) ~ 0,
+        month(rounded3) == 7 & day(rounded3) == 11 & is.na(Id) ~ 0,
+        month(rounded3) == 7 & day(rounded3) == 16 & is.na(Id) ~ 0,
+        month(rounded3) == 7 & day(rounded3) == 21 & is.na(Id) ~ 0,
+        TRUE ~ Id
       )
   ) %>%
   mutate(
-    Speed = ifelse(
-      rounded3 >= ymd_hms("2022-07-11 08:55:00") & rounded3 <= ymd_hms("2022-07-11 10:00:00"),
-      sample(seq(44.73, 53.4, 0.01), n(), replace = TRUE),
-      Speed
-    )
+    Speed =
+      case_when(
+        rounded3 >= ymd_hms("2022-07-11 08:55:00") & rounded3 <= ymd_hms("2022-07-11 10:00:00") ~ sample(seq(44.73, 53.4, 0.01), n(), replace = TRUE),
+        rounded3 >= mdy_hm("7/8/2022 3:20") & rounded3 <= mdy_hm("7/8/2022 3:30") ~ sample(seq(56.54, 59.03, 0.01), n(), replace = TRUE),
+        rounded3 >= mdy_hm("7/11/2022 10:55") & rounded3 <= mdy_hm("7/11/2022 11:00") ~ sample(seq(49.08, 56.54, 0.01), n(), replace = TRUE),
+        date == ymd_hms("2022-07-14 21:20:00") ~ (lead(Speed) + lag(Speed)) / 2,
+        month(rounded3) == 6 & is.na(Speed) ~ (lead(Speed) + lag(Speed)) / 2,
+        month(rounded3) == 7 & day(rounded3) == 1 & is.na(Speed) ~ (lead(Speed) + lag(Speed)) / 2,
+        month(rounded3) == 7 & day(rounded3) == 11 & is.na(Speed) ~ (lead(Speed) + lag(Speed)) / 2,
+        month(rounded3) == 7 & day(rounded3) == 16 & is.na(Speed) ~ (lead(Speed) + lag(Speed)) / 2,
+        month(rounded3) == 7 & day(rounded3) == 21 & is.na(Speed) ~ (lead(Speed) + lag(Speed)) / 2,
+        TRUE ~ Speed
+      )
   ) %>%
   ########################################################
   # Eliminate 7/1 at 00:00:00, which is a spurious value added earlier
   filter(date != ymd_hms("2022-07-01 00:00:00")) %>%
+  #
+  # Eliminate all other rows with missing data. They do not need to be imputed,
+  # since there is enough data on that date
+  filter(!(is.na(Speed))) %>%
   #
   #
   mutate(
@@ -133,11 +160,12 @@ speed_df |>
     rounded_hour = hour(rounded3),
     rounded_minute = minute(rounded3),
     rounded_daily_minutes = rounded_hour * 60 + rounded_minute,
-    day_month_year = paste0(rounded_day,"/",rounded_month,"/",rounded_year)
+    month_day_year = paste0(rounded_month,"/",rounded_day,"/",rounded_year)
   ) %>%
-  mutate(new_day = ifelse(rounded_hour == 0 & rounded_minute == 0, 1, 0)) %>%
-  group_by(day_month_year) %>%
+  # mutate(new_day = ifelse(rounded_hour == 0 & rounded_minute == 0, 1, 0)) %>%
+  group_by(month_day_year) %>%
   mutate(minute_sequence = 5 * (row_number() - 1)) %>%
+  # mutate(max_min_sequence = max(minute_sequence)) %>% ##################### DEBUG
   group_by() %>%
   mutate(minute_sequence =
            ifelse(
@@ -146,21 +174,33 @@ speed_df |>
              minute_sequence
              )
   ) %>%
-  #
   filter(minute_sequence < 1440) %>% # Eliminates extra daily observations
   mutate(
     new_hour = minute_sequence %/% 60,
     new_minute = minute_sequence %% 60,
-    new_date_text = paste0(rounded_day,"/",rounded_month,"/",rounded_year," ",new_hour,":",new_minute),
-    date = dmy_hm(new_date_text)
+    new_date_text = paste0(rounded_month,"/",rounded_day,"/",rounded_year," ",new_hour,":",new_minute),
+    date = mdy_hm(new_date_text)
   ) %>%
-  dplyr::select(Id, Speed, TravelTime, Status, DataAsOf, linkId, date) %>%
-  # group_by() %>% mutate(diff = date - lag(date)) %>% tail(-1) %>% summarize(min = min(diff), max = max(diff)) %>%
+  # filter(new_hour == 24) %>% View
+  # filter(date >= ymd_hms("2022-07-01 00:00:00")) %>% View
+  # dplyr::select(date) %>% duplicates() %>% View
+  # group_by(month_day_year) %>% summarise(max = max(minute_sequence)) %>% group_by() %>% filter(max < 1435) %>% View
+  # group_by(month_day_year) %>% summarize(max_min_sequence = max(minute_sequence)) %>% filter(max_min_sequence < 1435) %>% View
+  # filter(is.na(Speed) | is.na(lag(Speed)) | is.na(lead(Speed))) %>% View
+  dplyr::select(Id, Speed, TravelTime, Status, DataAsOf, linkId, date)
+  #  # group_by() %>% mutate(diff = date - lag(date)) %>% tail(-1) %>% summarize(min = min(diff), max = max(diff)) %>%
+
+cleaned_data %>%
+  rio::export("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds.csv")
+
+# Only include data for July 2 onward to make it easier to see the decomposition.
+cleaned_data %>%
+  filter(date >= mdy("7/2/2022")) %>%
   rio::export("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/ny_speeds.csv")
 
 
 
-# Stuff below here is junk #######################################
+####################### Stuff below here is junk ###########################
 
 #   filter(abs(minute_sequence - rounded_daily_minutes) > 5) %>%
 #   View
