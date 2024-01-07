@@ -1,0 +1,361 @@
+---
+title: "Exponential Smoothing"
+subtitle: "Chapter 3: Lesson 2"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+## Learning Outcomes
+
+<details>    
+<summary>Implement simple exponential smoothing to estimate local mean levels</summary>
+    -   Explain forecasting by extrapolation 
+    -   State the assumptions of exponential smoothing
+    -   Define exponential weighted moving average (EWMA)
+    -   State the exponential smoothing forecasting equation
+    -   State the EWMA in geometric series form (in terms of x_t only Eq 3.18)
+    -   Explain the EWMA intuitively
+    -   Define the one-step-ahead prediction error (1PE)
+    -   State the SS1PE used to estimate the smoothing parameter of a EWMA
+    -   Indicate when the EWMA smoothing parameter is optimally set as 1/n
+</details>
+
+
+## Preparation
+
+-   Read Section 3.4.1
+
+
+## Learning Journal Exchange (10 mins)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+## Class Discussion: Theory Supporting the EWMA
+
+Our objective is to predict a future value given the first $n$ observations of a time series. One example would be to forecast sales of an existing product in a stable market.
+
+We assume the following about the time series:
+
+-   There is no systematic trend or seasonal effects (or that these have been removed).
+
+-   The mean is non-stationary (can change), but we have no idea about the direction.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Match the following definitions to the appropriate term.
+
+:::: {style="display: flex;"}
+<div>
+
+1.  A future observation of a time series
+2.  Model assumed in EWMA agorithm
+3.  Non-stationary mean
+4.  Random correlated error terms
+5.  A fixed constant between 0 and 1
+</div>
+
+<div>
+A.  $\alpha$
+B.  $\mu_t$
+C.  $w_t$
+D.  $x_{n+k}$
+E.  $x_t = \mu_t + w_t$
+</div>
+::::
+
+:::
+
+The idea is that we will use past observations to predict future observations. Our best prediction of future observations under this model is the mean of the estimate at the time of the last observation. In symbols, if we want to predict the value of the time series at time $n+k$, we use our estimate of the time series at time $n$: 
+
+$$
+\hat x_{n+k \mid n} = a_n, ~~~~~~~~~~~~~~~~~~\text{where}~~ k = 1, 2, 3, \ldots ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ (3.16)
+$$
+Here are three equivalent expressions that define the EWMA estimation technique:
+
+\begin{align}
+  a_t &= \alpha x_t + (1-\alpha) a_{t-1} & (3.15) \\
+  a_t &= \alpha (x_t - a_{t-1} ) + a_{t-1} & (3.17) \\
+  a_t &= \alpha x_t + \alpha(1-\alpha) x_{t-1} + \alpha(1-\alpha)^2 x_{t-2} + \alpha(1-\alpha)^3 x_{t-3} + \cdots & (3.18) 
+\end{align}
+
+We assume that $a_1 = x_1$.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What happens if $\alpha$ is close to 1?
+-   What happens if $\alpha$ is close to 0?
+-   What is a common "compromise" value for $\alpha$?
+-   Show that Equation (3.15) and (3.17) are equivalent.
+-   How would you show that Equation (3.18) is equivalent to Equation (3.17)?
+
+:::
+
+
+## Class Activity: Practice Applying the EWMA
+
+We will use the following data to practice applying the Exponentially Weighted Moving Average (EWMA) technique.
+
+```{r}
+#| echo: false
+
+# simulate correlated normal random data
+x1 <- get_toy_data()
+
+cat("x <- c(",paste(x1, collapse = ", "),")")
+```
+
+Complete the table below by calculating the values of $a_t$.
+
+```{r}
+#| echo: false
+
+alpha <- 0.2
+
+ewma_toy_df <- data.frame(t = 1:length(x1), x_t = x1, a_t = x1, space = "") |>
+  rename("Space for computations" = space)
+
+for (t in 2:length(x1)) {
+  ewma_toy_df$a_t[t] <- alpha * ewma_toy_df$x_t[t] + (1 - alpha) * ewma_toy_df$a_t[t-1]
+}
+
+ewma_toy_df %>%
+  blank_out_cells_in_df() |>
+  display_table()
+```
+
+
+## Class Activity: Highway Speeds in New York City (45 mins)
+
+:::: {.columns}
+
+::: {.column width="45%"}
+The Bruckner Expressway (I-278) cuts through the Bronx in New York City. Traffic sensors record the speed of cars every 5 minutes between Stratford Avenue and Castle Hill Avenue.
+
+The data from 7/2/2022 through 7/17/2022 are contained in the file <a href="data/ny_speeds.csv" download>ny_speeds.csv</a>.
+(Source: City of New York Department of Transportation. Online Links: 
+[http://a841‐dotweb01.nyc.gov/datafeeds](https://data.beta.nyc/dataset/nyc-real-time-traffic-speed-data-feed-archived).)
+These data have been cleaned to align the observations with five minute intervals.
+
+We will read these data into a tsibble.
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+![Google Map showing the location of the data collection.](images/ny_speed_google_map_small.png)
+:::
+
+::::
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+# Read the ny_speeds data
+ny_speeds_dat <- rio::import("data/ny_speeds.csv")
+
+ny_speeds_tb <- ny_speeds_dat |>
+  mutate(
+    year = lubridate::year(date),
+    month = lubridate::month(date),
+    #
+    day = lubridate::day(date),
+    hour = lubridate::hour(date),
+    min = lubridate::minute(date)
+  ) |>
+  rename(speed = Speed) |>
+  dplyr::select(-Id, -TravelTime, -Status, -DataAsOf, -linkId) |>
+  tibble()
+
+ny_speeds_ts <- ny_speeds_tb |>
+  mutate(index = date) |>
+  as_tsibble(index = index)
+```
+
+Next, we compute the decomposition. We expect that that traffic will fluctuate in with daily seasonality. The number of five-minute periods in a day is:
+
+$$
+\underbrace{\frac{60}{5}}_{\substack{\text{Number of} \\ \text{5-minute periods} \\ \text{per hour}}} \cdot \underbrace{24}_{\substack{\text{Number of} \\ \text{hours} \\ \text{per day}}} = ~~ 288~~\text{five-minute periods per day}
+$$
+
+That is, the time series will follow a cycle that repeats every 288 five-minute intervals.
+Due to the complexity of the time series, we will indicate this to R in our function call.
+observations. (Try omitting  "~season(288)" from the classical_decomposition statement and see what happens!)
+
+```{r}
+#| warning: false
+
+ny_speeds_decompose <- ny_speeds_ts |>
+    model(feasts::classical_decomposition(speed ~ season(288),
+        type = "add"))  |>
+    components()
+
+autoplot(ny_speeds_decompose)
+```
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Working with your partner, identify evidence of the daily seasonal trend in the speed data.
+-   What do you no notice about this time series?
+-   How do you explain the sharp downward spikes in the data?
+-   Does there seem to be a trend in the data? Justify your answer.
+-   Why is there no estimate for the trend or the random component for the first half of the first day and the last half of the last day?
+
+:::
+
+
+```{r}
+#| include = FALSE 
+
+speed_plot <- ny_speeds_decompose |> 
+  filter((index) <= mdy_hm("7/3/2022 12:00")) |> 
+  na.omit() |> 
+  dplyr::select(speed) |> 
+  autoplot(.vars = speed)
+rand_plot <- ny_speeds_decompose |> 
+  filter((index) <= mdy_hm("7/3/2022 12:00")) |> 
+  na.omit() |> 
+  dplyr::select(random) |> 
+  autoplot(.vars = random)
+
+speed_plot / rand_plot
+```
+
+Here are 48 hours of data, near the beginning of the time series (from noon on July 2, 2022 to noon on July 4, 2022).
+
+```{r}
+ny_speeds_decompose |> 
+  filter((index) <= mdy_hm("7/4/2022 12:00")) |> 
+  na.omit() |> 
+  autoplot()
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Consider the seasonal variation. At about what time of day are the speeds highest? When are the speeds lowest?
+
+:::
+
+In order to use EWMA, we need to eliminate any trend and seasonal variation. So, we apply EWMA to the random component and then we can add the trend and seasonal components back in to get the final EWMA estimate for the time series.
+
+We demonstrate the computation of the first few values.
+
+```{r}
+ny_speeds_decompose |>
+  as.tibble() |>
+  mutate(date_time = paste0(month(index), "/", day(index), " ", hour(index), ":")) |>
+  select(-.model, -index) |>
+  na.omit()
+```
+
+
+
+## Recap (5 min)
+
+Working with your partner, prepare to explain the following concepts to the class:
+
+-   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+-   yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">Matching Activity</a>
+
+::: {#Solutions1 style="display:none;"}
+
+Solutions to matching activity:
+
+1. D
+2. E
+3. B
+4. C
+5. A
+
+:::
+
+
+<a href="javascript:showhide('Solutions2')"
+style="font-size:.8em;">Class Activity: Practice Applying the EWMA</a>
+
+::: {#Solutions2 style="display:none;"}
+
+```{r}
+#| echo: false
+
+alpha <- 0.2
+
+ewma_toy_df %>%
+  dplyr::select(t, x_t, a_t) |>
+  display_table()
+```
+
+:::
+
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Class Activity</a>
+
+::: {#Solutions style="display:none;"}
+
+Solutions to Class Activity
+
+Matching Activity:
+
+1 - D
+
+2 - E
+
+3 - B
+
+4 - C
+
+5 - A
+
+
+```{r}
+#| echo: false
+stuff <- "here"
+```
+
+:::
