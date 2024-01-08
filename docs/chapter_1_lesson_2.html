@@ -78,6 +78,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
 <link href="site_libs/bootstrap/bootstrap-dark.min.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<meta name="shinylive:serviceworker_dir" content=".">
+<script src="site_libs/quarto-contrib/shinylive-0.2.3/shinylive/load-shinylive-sw.js" type="module"></script>
+<script src="site_libs/quarto-contrib/shinylive-0.2.3/shinylive/run-python-blocks.js" type="module"></script>
+<link href="site_libs/quarto-contrib/shinylive-0.2.3/shinylive/shinylive.css" rel="stylesheet">
+<link href="site_libs/quarto-contrib/shinylive-quarto-css/shinylive-quarto.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -300,7 +305,87 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># install.packages("pak")</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">#pak::pak("posit-dev/r-shinylive")</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<pre class="{shinylive-r}"><code># #| standalone: true</code></pre>
+<pre class="shinylive-r" data-engine="r"><code>#| standalone: true
+#| viewerHeight: 500
+library(shiny)
+library(shinylive)
+library(see)
+#  Define the UI
+ui &lt;- fluidPage(
+    titlePanel("Bivariate Normal Distribution Simulator"),
+
+    sidebarLayout(
+        sidebarPanel(
+            sliderInput("n", "Number of Points", min = 10, max = 500, value = 100, step =10),
+            sliderInput("sigma", "Sigma", min = 0, max = 5, value = 1, step =0.1),
+            sliderInput("scale", "Scale", min = 0.5, max = 20, value = 3, step =0.5),
+            sliderInput("n_reps", "# of Realizations", min = 1, max = 9, value = 5, step =1)
+        ),
+
+        mainPanel(
+          plotOutput("plot")
+        )
+    )
+)
+
+
+
+# Define the server logic
+server &lt;- function(input, output, session) {
+  output$plot&lt;-renderPlot({
+    set.seed(Sys.time())
+    #Reactive data input
+    n &lt;- input$n             # Max 500
+    n_reps &lt;- input$n_reps       # Max 9
+    sigma &lt;- input$sigma    # Max 5
+    scale &lt;- input$scale # Max 20
+    extra_values &lt;- 4
+
+    df &lt;- data.frame(i = as.integer(), x = as.numeric(), rep = as.integer())
+    t &lt;- rep(0, n + extra_values)
+    e1 &lt;- rep(0, n + extra_values)
+    for(i in 1:n_reps){
+      for(j in 1:(n + extra_values)) {
+        e1[j] &lt;- rnorm(1, mean = 0, sd = sigma)
+        t[j] &lt;- j
+      }
+
+      temp &lt;- data.frame(i = t-1,
+                         x = 5 * sin((t-1)*scale*2*pi/100)
+                         + e1 + lead(e1,1) + lead(e1,2) + lead(e1,3) + lead(e1,extra_values), # Create autocorrelation
+                         rep = i) %&gt;%
+        mutate(x = ifelse(i == 0, 0, x)) |&gt;
+        na.omit()
+
+      df &lt;- rbind(df, temp)
+    }
+
+    library(ggokabeito)
+    ggplot(df, aes(x = i, y = x, color = factor(rep))) +
+      # geom_line() +
+      geom_line(linewidth = ifelse(df$rep == 1, 1, 0.5)) +
+      scale_color_okabeito(
+        palette = "full",
+        reverse = TRUE,
+        order = c(1,7,8,5,6,3,4,2,9),
+        aesthetics = "color"
+      ) +
+      labs(title = paste0(n_reps," Realizations of a (Stationary) Deterministic Time Series"),
+           x = "Time",
+           y = "x") +
+      theme_bw() +
+      theme(plot.title = element_text(hjust = 0.5)) +
+      guides(color = guide_legend(title = "Realization"))
+    })
+# Not sure what this line was for
+  # acf(df %&gt;% filter(rep == 1) %&gt;% dplyr::select(x), plot=FALSE, lag.max=5)
+
+}
+
+
+# Run the application
+shinyApp(ui, server)
+</code></pre>
 <script type="text/javascript">
  function showhide(id) {
     var e = document.getElementById(id);
