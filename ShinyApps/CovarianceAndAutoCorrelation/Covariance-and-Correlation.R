@@ -4,7 +4,6 @@ if (!require("MASS")) install.packages("MASS")
 
 # Load required libraries
 library(shiny)
-library(MASS)
 library(dplyr)
 library(ggplot2)
 library(kableExtra)
@@ -31,7 +30,7 @@ concat_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
 
 # Define the UI
 ui <- fluidPage(
-    titlePanel("Bivariate Normal Distribution Simulator"),
+    titlePanel("Covariance & Correlation Exploration"),
 
     sidebarLayout(
         sidebarPanel(
