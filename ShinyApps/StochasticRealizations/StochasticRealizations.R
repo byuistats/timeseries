@@ -14,7 +14,7 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             sliderInput("n", "Number of Points", min = 10, max = 500, value = 100, step =10),
-            sliderInput("a", "Correlation Coefficient", min = 0, max = 1, value = 0.995, step =0.005),
+            sliderInput("a", "Period to Period Correlation \n (Persistence)", min = 0, max = 1, value = 0.995, step =0.005),
             sliderInput("n_reps", "# of Realizations", min = 1, max = 9, value = 5, step =1)
         ),
 
