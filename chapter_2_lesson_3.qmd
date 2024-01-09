@@ -188,6 +188,14 @@ compute_summaries <- function(df, digits = 4) {
 <!-- -   Sign the Learning Journal review sheet for your peer -->
 
 
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+-   What would you add to your learning journal after reading your partner's?
+-   What would you recommend your partner add to their learning journal?
+-   Sign the Learning Journal review sheet for your peer
+
+
 ## Introduction (10 mins)
 
 
@@ -204,8 +212,6 @@ x1 <- get_toy_data()
 
 cat("x <- c(",paste(x1, collapse = ", "),")")
 ```
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
 
 -   The table below gives the sample autocorrelation function, acf, for this data set. You may recognize some of these values from the previous lesson. 
 
@@ -230,7 +236,9 @@ z$acf |>
   display_table()
 ```
 
-Use these values to sketch the correlogram for these data in your Learning Journal. The figure below can help you begin.
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Use the acf values to sketch the correlogram for these data in your Learning Journal. The figure below can help you begin.
 
 ```{r}
 #| echo: false
@@ -335,57 +343,22 @@ acf(choc_decompose$random |> na.omit(), plot=TRUE, type = "correlation")
 :::
 
 
-## Small Group Activity: BYU-Idaho On-Campus Enrollment (30 min)
+## Small Group Activity: BYU-Idaho On-Campus Enrollment (25 min)
 
 The official number of on-campus BYU-Idaho students each semester is given in the file <a href="data/byui_enrollment.csv" download>byui_enrollment.csv</a>. 
 
-```{r}
-#| echo: false
-#| warning: false
-
-# read in the data from a csv and make the tsibble
-# change the line below to include your file path
-enrollment_df <- rio::import("data/byui_enrollment.csv")
-start_date <- lubridate::ymd("2019-05-01")
-date_seq <- seq(start_date,
-                start_date + months(nrow(enrollment_df)-1) * 4,
-                by = "4 months")
-enrollment_tibble <- tibble(
-  dates = date_seq,
-  year = lubridate::year(date_seq),
-  month = lubridate::month(date_seq),
-  value = pull(enrollment_df, enrollment)
-)
-enrollment_ts <- enrollment_tibble |>
-  mutate(index = tsibble::yearmonth(dates)) |>
-  as_tsibble(index = index)
-
-enrollment_decompose <- enrollment_ts |>
-    model(feasts::classical_decomposition(value,
-        type = "add"))  |>
-    components()
-
-autoplot(enrollment_decompose)
-
-acf(enrollment_decompose$value, type = "correlation")
-acf(enrollment_decompose$value, plot=FALSE, type = "correlation")
-acf(enrollment_decompose$value, plot=TRUE, type = "correlation")
-acf(enrollment_decompose$random |> na.omit(), plot=TRUE, type = "correlation")
-```
-
-
-```{r}
-enrollment_df <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv")
-enrollment_df %>% head()
-```
-
-
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
-Working with your partner, compute the values of the acf for these data. 
+Do the following:
+-   Create a tsibble with the BYU-Idaho enrollment data. (Hint: There are three semesters in a year, so treat the enrollments as observations taken every four months.)
+-   Plot the decomposition of this time series.
+-   Create the correlogram for these data.
+-   Is there evidence of seasonal variation? If so, propose an explanation for the seasonal variation.
+-   Is there evidence of autocorrelations in the data after removing the trend and seasonal variation?
 
--   What does the autocorrelation plot 
 :::
+
+
 
 
 
@@ -417,6 +390,65 @@ Solutions to correlogram activity
 x <- c( 4.4, 4.2, 4.2, 4, 4.4, 4.7, 4.9, 5.3, 5.4, 5.5 )
 acf(x, plot=FALSE, type = "correlation")
 acf(x, plot=TRUE, type = "correlation")
+```
+
+:::
+
+
+<a href="javascript:showhide('Solutions2')"
+style="font-size:.8em;">BYU-Idaho Enrollment</a>
+
+::: {#Solutions2 style="display:none;"}
+
+Solutions to BYU-Idaho Enrollment Activity
+
+
+```{r}
+#| warning: false
+
+# read in the data from a csv and make the tsibble
+# change the line below to include your file path
+enrollment_df <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv")
+start_date <- lubridate::ymd("2019-05-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(enrollment_df)-1) * 4,
+                by = "4 months")
+enrollment_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = pull(enrollment_df, enrollment)
+)
+enrollment_ts <- enrollment_tibble |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index)
+
+enrollment_decompose <- enrollment_ts |>
+    model(feasts::classical_decomposition(value,
+        type = "add"))  |>
+    components()
+
+autoplot(enrollment_decompose)
+```
+
+
+```{r}
+acf(enrollment_decompose$value, type = "correlation")
+```
+
+
+```{r}
+acf(enrollment_decompose$value, plot=FALSE, type = "correlation")
+```
+
+
+```{r}
+acf(enrollment_decompose$value, plot=TRUE, type = "correlation")
+```
+
+
+```{r}
+acf(enrollment_decompose$random |> na.omit(), plot=TRUE, type = "correlation")
 ```
 
 :::
