@@ -341,40 +341,28 @@ Introduce the course structure and syllabus
 <h2 class="anchored" data-anchor-id="class-activity-google-trends-searches-for-chocolate-10-min">Class Activity: Google Trends (Searches for “Chocolate”) (10 min)</h2>
 <p>Google Trends allows you to download a time series showing the proportional number of searches for a given term. The month with the highest number of searches has a value of 100. The values for the other months are given as a percentage of the peak month’s value. The following table illustrates the data, as given by Google Trends.</p>
 <div class="cell">
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in (function (input = "", file = NULL, text = NULL, cmd = NULL, :
-Detected 1 column names but the data has 2 columns (i.e. invalid file). Added 1
-extra default column name for the first column which is guessed to be row names
-or an index. Use setnames() afterwards if this guess is not correct, or fix the
-file write command that created the file to create a valid file.</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in (function (input = "", file = NULL, text = NULL, cmd = NULL, :
-Stopped early on line 33. Expected 2 fields but found 1. Consider fill=TRUE and
-comment.char=. First discarded non-empty line: &lt;&lt;only screen and (
-min-resolution: 2dppx) {&gt;&gt;</code></pre>
-</div>
 <div class="cell-output cell-output-stdout">
-<pre><code>                                                           
-                                                  Category:
-        only screen and (   min--moz-device-pixel-ratio: 2)
-  only screen and (     -o-min-device-pixel-ratio: 2/1)    
-      only screen and (        min-device-pixel-ratio: 2)  
- only screen and (                min-resolution: 192dpi)  
-                                                     ⋮     
-    only screen and (     -o-min-device-pixel-ratio: 2/1)  
-      only screen and (        min-device-pixel-ratio: 2)  
- only screen and (                min-resolution: 192dpi)  
-                     @media     
- All categories             &lt;NA&gt;
-                       &lt;NA&gt; &lt;NA&gt;
-                       &lt;NA&gt; &lt;NA&gt;
-                       &lt;NA&gt; &lt;NA&gt;
-                       &lt;NA&gt; &lt;NA&gt;
-                       &lt;NA&gt;    ⋮
-                       &lt;NA&gt; &lt;NA&gt;
-                       &lt;NA&gt; &lt;NA&gt;
-                       &lt;NA&gt; &lt;NA&gt;</code></pre>
+<pre><code>                                     
+ Category: All categories            
+                                     
+ Month     chocolate: (United States)
+ 2004-01                           36
+ 2004-02                           45
+ 2004-03                           29
+ 2004-04                           32
+ 2004-05                           29
+ 2004-06                           26
+ 2004-07                           27
+ 2004-08                           27
+ 2004-09                           29
+ 2004-10                           33
+ 2004-11                           46
+ 2004-12                           67
+ 2005-01                           40
+    ⋮                               ⋮
+ 2023-10                           57
+ 2023-11                           69
+ 2023-12                          100</code></pre>
 </div>
 </div>
 <p>The cleaned version of the data used for this demonstration are available in the file <a href="data/chocolate.csv" download="">chocolate.csv</a>. We can read this directly into a data frame using the command <code>chocolate_month &lt;-</code>rio::import(“https://byuistats.github.io/timeseries/data/chocolate.csv”)`.</p>
@@ -382,30 +370,30 @@ min-resolution: 2dppx) {&gt;&gt;</code></pre>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(<span class="st">"pacman"</span>)) <span class="fu">install.packages</span>(<span class="st">"pacman"</span>)</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(<span class="st">"tsibble"</span>, <span class="st">"fable"</span>,</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>               <span class="st">"feasts"</span>, <span class="st">"tsibbledata"</span>,</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>               <span class="st">"fable.prophet"</span>, <span class="st">"tidyverse"</span>,</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>               <span class="st">"patchwork"</span>, <span class="st">"rio"</span>)</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># read in the data from a csv and make the tsibble</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co"># change the line below to include your file path</span></span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>chocolate_month <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/chocolate.csv"</span>)</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="st">"2004-01-01"</span>)</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>                start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(chocolate_month)<span class="sc">-</span><span class="dv">1</span>),</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">"1 months"</span>)</span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>chocolate_tibble <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">dates =</span> date_seq,</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(date_seq),</span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(date_seq),</span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">value =</span> dplyr<span class="sc">::</span><span class="fu">pull</span>(chocolate_month, chocolate)</span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>chocolate_month_ts <span class="ot">&lt;-</span> chocolate_tibble <span class="sc">|&gt;</span></span>
-<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(dates)) <span class="sc">|&gt;</span></span>
-<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span>
-<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>chocolate_month_ts <span class="sc">|&gt;</span> <span class="fu">head</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(<span class="st">"pacman"</span>)) <span class="fu">install.packages</span>(<span class="st">"pacman"</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(<span class="st">"tsibble"</span>, <span class="st">"fable"</span>,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>               <span class="st">"feasts"</span>, <span class="st">"tsibbledata"</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>               <span class="st">"fable.prophet"</span>, <span class="st">"tidyverse"</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>               <span class="st">"patchwork"</span>, <span class="st">"rio"</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co"># read in the data from a csv and make the tsibble</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># change the line below to include your file path</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>chocolate_month <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/chocolate.csv"</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="st">"2004-01-01"</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>                start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(chocolate_month)<span class="sc">-</span><span class="dv">1</span>),</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">"1 months"</span>)</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>chocolate_tibble <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">dates =</span> date_seq,</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(date_seq),</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(date_seq),</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">value =</span> dplyr<span class="sc">::</span><span class="fu">pull</span>(chocolate_month, chocolate)</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>chocolate_month_ts <span class="ot">&lt;-</span> chocolate_tibble <span class="sc">|&gt;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(dates)) <span class="sc">|&gt;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>chocolate_month_ts <span class="sc">|&gt;</span> <span class="fu">head</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tsibble: 6 x 5 [1M]
@@ -423,13 +411,13 @@ min-resolution: 2dppx) {&gt;&gt;</code></pre>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(chocolate_month_ts, <span class="at">.vars =</span> value) <span class="sc">+</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Month"</span>,</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Searches"</span>,</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Relative Number of Google Searches for 'Chocolate'"</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(chocolate_month_ts, <span class="at">.vars =</span> value) <span class="sc">+</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Month"</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Searches"</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Relative Number of Google Searches for 'Chocolate'"</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="chapter_1_lesson_1_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
