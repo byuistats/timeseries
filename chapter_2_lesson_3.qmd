@@ -262,7 +262,7 @@ ggplot(data = df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +
 
 :::
 
-## Application: Chocolate Search Trends
+## Application: Chocolate Search Trends (10 min)
 
 Recall the Google Trends data for the term "chocolate" from the last lesson.
 The cleaned data are available in the file <a href="data/chocolate.csv" download>chocolate.csv</a>.
@@ -326,13 +326,68 @@ acf(choc_decompose$random |> na.omit(), plot=TRUE, type = "correlation")
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Is there a trend in the data? If so, speculate about the cause of this trend.
+-   Is there a trend in the chocolate search data? If so, speculate about the cause of this trend.
 -   Is there evidence of seasonal variation? If so, propose an explanation for the seasonal variation.
 -   What do the spikes in the correlogram tell us about this time series?
 -   Is there evidence of autocorrelations in the data after removing the trend and seasonal variation?
 -   There are two exceptionally large spikes in the observed data. Can you identify a cause for these spikes?
 
 :::
+
+
+## Small Group Activity: BYU-Idaho On-Campus Enrollment (30 min)
+
+The official number of on-campus BYU-Idaho students each semester is given in the file <a href="data/byui_enrollment.csv" download>byui_enrollment.csv</a>. 
+
+```{r}
+#| echo: false
+#| warning: false
+
+# read in the data from a csv and make the tsibble
+# change the line below to include your file path
+enrollment_df <- rio::import("data/byui_enrollment.csv")
+start_date <- lubridate::ymd("2019-05-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(enrollment_df)-1) * 4,
+                by = "4 months")
+enrollment_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = pull(enrollment_df, enrollment)
+)
+enrollment_ts <- enrollment_tibble |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index)
+
+enrollment_decompose <- enrollment_ts |>
+    model(feasts::classical_decomposition(value,
+        type = "add"))  |>
+    components()
+
+autoplot(enrollment_decompose)
+
+acf(enrollment_decompose$value, type = "correlation")
+acf(enrollment_decompose$value, plot=FALSE, type = "correlation")
+acf(enrollment_decompose$value, plot=TRUE, type = "correlation")
+acf(enrollment_decompose$random |> na.omit(), plot=TRUE, type = "correlation")
+```
+
+
+```{r}
+#| eval: false
+rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv")
+```
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Working with your partner, compute the values of the acf for these data. 
+
+-   What does the autocorrelation plot 
+:::
+
+
 
 ## Recap (5 mins)
 
