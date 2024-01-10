@@ -57,14 +57,26 @@ round_as_text <- function(x, places) {
 }
 
 # Converts a dataframe to char and rounds the values to a specified number of places
-convert_df_to_char <- function(df, decimals) {
+convert_df_to_char <- function(df, decimals = 3) {
   out_df <- df %>%
+    as.data.frame() |>
     mutate_if(is.numeric, round, digits=decimals) |>
     mutate(across(everything(), as.character))
   return(out_df)
 }
 
-# Converts a df
+# Change a df to character, round, and set one specific value to ""
+blank_out_one_cell_in_df <- function(df, row_num, col_num, decimals = 3) {
+  out_df <- df |>
+    convert_df_to_char(decimals)
+
+  out_df[row_num, col_num] <- ""
+
+  return(out_df)
+}
+
+# Returns "" for all cells except the first ncols_to_keep columns and nrows_to_keep rows
+# Numeric values are rounded to "decimals" places
 blank_out_cells_in_df <- function(df, ncols_to_keep = 2, nrows_to_keep = 0, decimals = 3) {
   out_df <- df |>
     convert_df_to_char(decimals)
@@ -144,16 +156,8 @@ row_of_vdots <- function(df) {
   return(temp_df)
 }
 
-numeric_2_char_df <- function(df, decimals = 3) {
-  out_df <- df |>
-    as.data.frame() |>
-    mutate_if(is.numeric, round, digits=decimals) |>
-    mutate(across(everything(), as.character))
-  return(out_df)
-}
-
 concat_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
-  temp_df <- numeric_2_char_df(df, decimals)
+  temp_df <- convert_df_to_char(df, decimals)
 
   out_df <- head(temp_df, nrow_head) |>
     bind_rows(row_of_vdots(temp_df)) |>

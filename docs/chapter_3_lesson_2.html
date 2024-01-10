@@ -254,13 +254,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#preparation" id="toc-preparation" class="nav-link" data-scroll-target="#preparation">Preparation</a></li>
   <li><a href="#learning-journal-exchange-10-mins" id="toc-learning-journal-exchange-10-mins" class="nav-link" data-scroll-target="#learning-journal-exchange-10-mins">Learning Journal Exchange (10 mins)</a></li>
   <li><a href="#class-discussion-theory-supporting-the-ewma" id="toc-class-discussion-theory-supporting-the-ewma" class="nav-link" data-scroll-target="#class-discussion-theory-supporting-the-ewma">Class Discussion: Theory Supporting the EWMA</a></li>
-  <li><a href="#class-activity-practice-applying-the-ewma-10-min" id="toc-class-activity-practice-applying-the-ewma-10-min" class="nav-link" data-scroll-target="#class-activity-practice-applying-the-ewma-10-min">Class Activity: Practice Applying the EWMA (10 min)</a></li>
-  <li><a href="#add-in-one-step-prediction-error-1pe-for-toy-data" id="toc-add-in-one-step-prediction-error-1pe-for-toy-data" class="nav-link" data-scroll-target="#add-in-one-step-prediction-error-1pe-for-toy-data">ADD IN one-step prediction error, 1PE, for toy data</a>
+  <li><a href="#class-activity-practice-applying-the-ewma-20-min" id="toc-class-activity-practice-applying-the-ewma-20-min" class="nav-link" data-scroll-target="#class-activity-practice-applying-the-ewma-20-min">Class Activity: Practice Applying the EWMA (20 min)</a>
   <ul class="collapse">
+  <li><a href="#one-step-ahead-prediction-errors" id="toc-one-step-ahead-prediction-errors" class="nav-link" data-scroll-target="#one-step-ahead-prediction-errors">One-Step-Ahead Prediction Errors</a></li>
+  </ul></li>
   <li><a href="#class-activity-highway-speeds-in-new-york-city-15-mins" id="toc-class-activity-highway-speeds-in-new-york-city-15-mins" class="nav-link" data-scroll-target="#class-activity-highway-speeds-in-new-york-city-15-mins">Class Activity: Highway Speeds in New York City (15 mins)</a></li>
   <li><a href="#class-activity-ewma-in-r-10-min" id="toc-class-activity-ewma-in-r-10-min" class="nav-link" data-scroll-target="#class-activity-ewma-in-r-10-min">Class Activity: EWMA in R (10 min)</a></li>
   <li><a href="#recap-5-min" id="toc-recap-5-min" class="nav-link" data-scroll-target="#recap-5-min">Recap (5 min)</a></li>
-  </ul></li>
   </ul>
 </nav>
     </div>
@@ -408,8 +408,8 @@ Check Your Understanding
 </div>
 </div>
 </section>
-<section id="class-activity-practice-applying-the-ewma-10-min" class="level2">
-<h2 class="anchored" data-anchor-id="class-activity-practice-applying-the-ewma-10-min">Class Activity: Practice Applying the EWMA (10 min)</h2>
+<section id="class-activity-practice-applying-the-ewma-20-min" class="level2">
+<h2 class="anchored" data-anchor-id="class-activity-practice-applying-the-ewma-20-min">Class Activity: Practice Applying the EWMA (20 min)</h2>
 <p>We will use the following data to practice applying the Exponentially Weighted Moving Average (EWMA) technique.</p>
 <div class="cell">
 <div class="cell-output cell-output-stdout">
@@ -495,9 +495,59 @@ Check Your Understanding
 
 </div>
 </div>
+<section id="one-step-ahead-prediction-errors" class="level3">
+<h3 class="anchored" data-anchor-id="one-step-ahead-prediction-errors">One-Step-Ahead Prediction Errors</h3>
+<section id="definition" class="level4">
+<h4 class="anchored" data-anchor-id="definition">Definition</h4>
+<p>If we have a time series <span class="math inline">\(\{x_1, x_2, \ldots, x_n\}\)</span> and start with <span class="math inline">\(a_1 = x_1\)</span>, we can compute the value of <span class="math inline">\(a_t\)</span> if <span class="math inline">\(2 \le t \le n\)</span>. We define the one-step-ahead prediction error, <span class="math inline">\(e_t\)</span> as</p>
+<p><span class="math display">\[
+  e_t = x_t - \hat x_{t|t-1} = x_t - a_{t-1}
+\]</span></p>
 </section>
-<section id="add-in-one-step-prediction-error-1pe-for-toy-data" class="level1">
-<h1>ADD IN one-step prediction error, 1PE, for toy data</h1>
+<section id="calculation-of-alpha-in-r" class="level4">
+<h4 class="anchored" data-anchor-id="calculation-of-alpha-in-r">Calculation of <span class="math inline">\(\alpha\)</span> in R</h4>
+<p>R uses the one-step-ahead prediction error to estimate <span class="math inline">\(\alpha\)</span>. It chooses <span class="math inline">\(\alpha\)</span> to minimize</p>
+<p><span class="math display">\[
+  SS1PE = \sum_{t=2}^n e_t^2 = e_2^2 + e_3^2 + e_4^2 + \cdots + e_n^2
+\]</span></p>
+<p>where <span class="math inline">\(a_1 = x_1\)</span>.</p>
+<p>If the mean of a long time series has not changed much, then this will produce a value of <span class="math inline">\(\alpha\)</span> that is unduly small. A small value of <span class="math inline">\(\alpha\)</span> prevents the model from responding to rapid future changes in the time series.</p>
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>If the mean of the process does not change much, what is the optimal value of <span class="math inline">\(\alpha\)</span>? <!-- Answer: $\frac{1}{n}$ --></li>
+</ul>
+</div>
+</div>
+</section>
+<section id="computation-of-the-one-step-ahead-prediction-errors" class="level4">
+<h4 class="anchored" data-anchor-id="computation-of-the-one-step-ahead-prediction-errors">Computation of the One-Step-Ahead Prediction Errors</h4>
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Compute <span class="math inline">\(e_t\)</span> for the 10 values of <span class="math inline">\(x\)</span> given above. <!-- Answer: $\frac{1}{n}$ --></li>
+</ul>
+</div>
+</div>
+</section>
+</section>
+</section>
 <section id="class-activity-highway-speeds-in-new-york-city-15-mins" class="level2">
 <h2 class="anchored" data-anchor-id="class-activity-highway-speeds-in-new-york-city-15-mins">Class Activity: Highway Speeds in New York City (15 mins)</h2>
 <div class="columns">
@@ -882,58 +932,69 @@ Check Your Understanding
 <th style="text-align: center;" data-quarto-table-cell-role="th">t</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">x_t</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">a_t</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">e_t</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td style="text-align: center;">1</td>
 <td style="text-align: center;">4.4</td>
-<td style="text-align: center;">4.400000</td>
+<td style="text-align: center;">4.4</td>
+<td style="text-align: center;"></td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">2</td>
 <td style="text-align: center;">4.2</td>
-<td style="text-align: center;">4.360000</td>
+<td style="text-align: center;">4.36</td>
+<td style="text-align: center;">-0.2</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">3</td>
 <td style="text-align: center;">4.2</td>
-<td style="text-align: center;">4.328000</td>
+<td style="text-align: center;">4.328</td>
+<td style="text-align: center;">-0.16</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">4</td>
-<td style="text-align: center;">4.0</td>
-<td style="text-align: center;">4.262400</td>
+<td style="text-align: center;">4</td>
+<td style="text-align: center;">4.262</td>
+<td style="text-align: center;">-0.328</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">5</td>
 <td style="text-align: center;">4.4</td>
-<td style="text-align: center;">4.289920</td>
+<td style="text-align: center;">4.29</td>
+<td style="text-align: center;">0.138</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">6</td>
 <td style="text-align: center;">4.7</td>
-<td style="text-align: center;">4.371936</td>
+<td style="text-align: center;">4.372</td>
+<td style="text-align: center;">0.41</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">7</td>
 <td style="text-align: center;">4.9</td>
-<td style="text-align: center;">4.477549</td>
+<td style="text-align: center;">4.478</td>
+<td style="text-align: center;">0.528</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">8</td>
 <td style="text-align: center;">5.3</td>
-<td style="text-align: center;">4.642039</td>
+<td style="text-align: center;">4.642</td>
+<td style="text-align: center;">0.822</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center;">9</td>
 <td style="text-align: center;">5.4</td>
-<td style="text-align: center;">4.793631</td>
+<td style="text-align: center;">4.794</td>
+<td style="text-align: center;">0.758</td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">10</td>
 <td style="text-align: center;">5.5</td>
-<td style="text-align: center;">4.934905</td>
+<td style="text-align: center;">4.935</td>
+<td style="text-align: center;">0.706</td>
 </tr>
 </tbody>
 </table>
@@ -942,8 +1003,8 @@ Check Your Understanding
 </div>
 </div>
 </div>
-<p><a href="javascript:showhide('Solutions')" style="font-size:.8em;">Class Activity</a></p>
-<div id="Solutions" style="display:none;">
+<p><a href="javascript:showhide('Solutions3')" style="font-size:.8em;">Class Activity</a></p>
+<div id="Solutions3" style="display:none;">
 <p>Solutions to Class Activity</p>
 <p>Matching Activity:</p>
 <p>1 - D</p>
@@ -954,7 +1015,6 @@ Check Your Understanding
 </div>
 
 
-</section>
 </section>
 
 </main> <!-- /main -->

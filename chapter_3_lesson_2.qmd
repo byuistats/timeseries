@@ -126,7 +126,7 @@ We assume that $a_1 = x_1$.
 -   How would you show that Equation (3.18) is equivalent to Equation (3.17)?
 :::
 
-## Class Activity: Practice Applying the EWMA (10 min)
+## Class Activity: Practice Applying the EWMA (20 min)
 
 We will use the following data to practice applying the Exponentially Weighted Moving Average (EWMA) technique.
 
@@ -159,17 +159,43 @@ ewma_toy_df |>
 ```
 
 
-# ADD IN one-step prediction error, 1PE, for toy data
+
+### One-Step-Ahead Prediction Errors 
+
+#### Definition
+
+If we have a time series $\{x_1, x_2, \ldots, x_n\}$ and start with $a_1 = x_1$, we can compute the value of $a_t$ if $2 \le t \le n$.
+We define the one-step-ahead prediction error, $e_t$ as
+
+$$
+  e_t = x_t - \hat x_{t|t-1} = x_t - a_{t-1}
+$$
+
+#### Calculation of $\alpha$ in R
+
+R uses the one-step-ahead prediction error to estimate $\alpha$. It chooses $\alpha$ to minimize
+
+$$
+  SS1PE = \sum_{t=2}^n e_t^2 = e_2^2 + e_3^2 + e_4^2 + \cdots + e_n^2
+$$
+
+where $a_1 = x_1$.
+
+If the mean of a long time series has not changed much, then this will produce a value of $\alpha$ that is unduly small. A small value of $\alpha$ prevents the model from responding to rapid future changes in the time series.
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   If the mean of the process does not change much, what is the optimal value of $\alpha$? 
+<!-- Answer: $\frac{1}{n}$ -->
+:::
 
 
+#### Computation of the One-Step-Ahead Prediction Errors
 
 
-
-
-
-
-
-
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   Compute $e_t$ for the 10 values of $x$ given above.
+<!-- Answer: $\frac{1}{n}$ -->
+:::
 
 
 
@@ -592,14 +618,16 @@ alpha <- 0.2
 
 ewma_toy_df |>
   dplyr::select(t, x_t, a_t) |>
+  mutate(e_t = x_t - lag(a_t)) |>
+  blank_out_one_cell_in_df(row_num = 1, col_num = 4, decimals = 3) |>
   display_table()
 ```
 :::
 
-<a href="javascript:showhide('Solutions')"
+<a href="javascript:showhide('Solutions3')"
 style="font-size:.8em;">Class Activity</a>
 
-::: {#Solutions style="display:none;"}
+::: {#Solutions3 style="display:none;"}
 Solutions to Class Activity
 
 Matching Activity:
