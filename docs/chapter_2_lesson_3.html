@@ -311,13 +311,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <summary>
 Explain the theoretical implications of autocorrelation for the estimation of time series statistics
 </summary>
-<pre><code>-   Explain how positive autocorrelation leads to underestimation of variance in short time series
--   Explain how negative autocorrelation can improve efficiency of sample mean estimate</code></pre>
+<ul>
+<li>Explain how positive autocorrelation leads to underestimation of variance in short time series</li>
+<li>Explain how negative autocorrelation can improve efficiency of sample mean estimate</li>
+</ul>
 </details>
-<!-- <details> -->
-<!-- <summary>Compute the covariance of sums of random variables</summary> -->
-<!--     -   Define the covariance of sums of random variables. -->
-<!-- </details> -->
 <details>
 <summary>
 Interpret correlograms to identify significant lags, correlations, trends, and seasonality
@@ -435,43 +433,43 @@ Check Your Understanding
 <h3 class="anchored" data-anchor-id="import-the-chocolate-search-data-and-convert-to-tsibble-format">Import the chocolate search data and convert to tsibble format</h3>
 <p>Use the code below to import the data and convert it into a time series (tsibble) object.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># load packages</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(<span class="st">"pacman"</span>)) <span class="fu">install.packages</span>(<span class="st">"pacman"</span>)</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(<span class="st">"tsibble"</span>, <span class="st">"fable"</span>,</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>               <span class="st">"feasts"</span>, <span class="st">"tsibbledata"</span>,</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>               <span class="st">"fable.prophet"</span>, <span class="st">"tidyverse"</span>,</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>               <span class="st">"patchwork"</span>, <span class="st">"rio"</span>)</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># read in the data from a csv and make the tsibble</span></span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co"># change the line below to include your file path</span></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>chocolate_month <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/chocolate.csv"</span>)</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="st">"2004-01-01"</span>)</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>                start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(chocolate_month)<span class="sc">-</span><span class="dv">1</span>),</span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">"1 months"</span>)</span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>chocolate_tibble <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">dates =</span> date_seq,</span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(date_seq),</span>
-<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(date_seq),</span>
-<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">pull</span>(chocolate_month, chocolate)</span>
-<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>chocolate_month_ts <span class="ot">&lt;-</span> chocolate_tibble <span class="sc">|&gt;</span></span>
-<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(dates)) <span class="sc">|&gt;</span></span>
-<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span>
-<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>choc_decompose <span class="ot">&lt;-</span> chocolate_month_ts <span class="sc">|&gt;</span></span>
-<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(value,</span>
-<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
-<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
-<span id="cb4-29"><a href="#cb4-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-30"><a href="#cb4-30" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(choc_decompose)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># load packages</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(<span class="st">"pacman"</span>)) <span class="fu">install.packages</span>(<span class="st">"pacman"</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(<span class="st">"tsibble"</span>, <span class="st">"fable"</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>               <span class="st">"feasts"</span>, <span class="st">"tsibbledata"</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>               <span class="st">"fable.prophet"</span>, <span class="st">"tidyverse"</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>               <span class="st">"patchwork"</span>, <span class="st">"rio"</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># read in the data from a csv and make the tsibble</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co"># change the line below to include your file path</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>chocolate_month <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/chocolate.csv"</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="st">"2004-01-01"</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>                start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(chocolate_month)<span class="sc">-</span><span class="dv">1</span>),</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">"1 months"</span>)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>chocolate_tibble <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  <span class="at">dates =</span> date_seq,</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(date_seq),</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(date_seq),</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">pull</span>(chocolate_month, chocolate)</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>chocolate_month_ts <span class="ot">&lt;-</span> chocolate_tibble <span class="sc">|&gt;</span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(dates)) <span class="sc">|&gt;</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>choc_decompose <span class="ot">&lt;-</span> chocolate_month_ts <span class="sc">|&gt;</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(value,</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(choc_decompose)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="chapter_2_lesson_3_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Here are the values of the acf for the chocolate search data:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(chocolate_month_ts<span class="sc">$</span>value, <span class="at">plot=</span><span class="cn">FALSE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(chocolate_month_ts<span class="sc">$</span>value, <span class="at">plot=</span><span class="cn">FALSE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
 Autocorrelations of series 'chocolate_month_ts$value', by lag
@@ -486,14 +484,14 @@ Autocorrelations of series 'chocolate_month_ts$value', by lag
 </div>
 <p>Here is the associated correlogram:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(chocolate_month_ts<span class="sc">$</span>value, <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(chocolate_month_ts<span class="sc">$</span>value, <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="chapter_2_lesson_3_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>If we consider only the random component of this time series, the correlogram is:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(choc_decompose<span class="sc">$</span>random <span class="sc">|&gt;</span> <span class="fu">na.omit</span>(), <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(choc_decompose<span class="sc">$</span>random <span class="sc">|&gt;</span> <span class="fu">na.omit</span>(), <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="chapter_2_lesson_3_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
 </div>
@@ -563,8 +561,8 @@ Download Homework
 <div id="Solutions" style="display:none;">
 <p>Solutions to correlogram activity</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>( <span class="fl">4.4</span>, <span class="fl">4.2</span>, <span class="fl">4.2</span>, <span class="dv">4</span>, <span class="fl">4.4</span>, <span class="fl">4.7</span>, <span class="fl">4.9</span>, <span class="fl">5.3</span>, <span class="fl">5.4</span>, <span class="fl">5.5</span> )</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(x, <span class="at">plot=</span><span class="cn">FALSE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="fu">c</span>( <span class="fl">4.4</span>, <span class="fl">4.2</span>, <span class="fl">4.2</span>, <span class="dv">4</span>, <span class="fl">4.4</span>, <span class="fl">4.7</span>, <span class="fl">4.9</span>, <span class="fl">5.3</span>, <span class="fl">5.4</span>, <span class="fl">5.5</span> )</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(x, <span class="at">plot=</span><span class="cn">FALSE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
 Autocorrelations of series 'x', by lag
@@ -572,7 +570,7 @@ Autocorrelations of series 'x', by lag
      0      1      2      3      4      5      6      7      8      9 
  1.000  0.763  0.448  0.074 -0.237 -0.419 -0.470 -0.344 -0.226 -0.089 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(x, <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(x, <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="chapter_2_lesson_3_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
 </div>
@@ -582,41 +580,41 @@ Autocorrelations of series 'x', by lag
 <div id="Solutions2" style="display:none;">
 <p>Solutions to BYU-Idaho Enrollment Activity</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># read in the data from a csv and make the tsibble</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="co"># change the line below to include your file path</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>enrollment_df <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/byui_enrollment.csv"</span>)</span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="st">"2019-05-01"</span>)</span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>                start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(enrollment_df)<span class="sc">-</span><span class="dv">1</span>) <span class="sc">*</span> <span class="dv">4</span>,</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">"4 months"</span>)</span>
-<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>enrollment_tibble <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">dates =</span> date_seq,</span>
-<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(date_seq),</span>
-<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(date_seq),</span>
-<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">pull</span>(enrollment_df, enrollment)</span>
-<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>enrollment_ts <span class="ot">&lt;-</span> enrollment_tibble <span class="sc">|&gt;</span></span>
-<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(dates)) <span class="sc">|&gt;</span></span>
-<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span>
-<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>enrollment_decompose <span class="ot">&lt;-</span> enrollment_ts <span class="sc">|&gt;</span></span>
-<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(value,</span>
-<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
-<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
-<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-23"><a href="#cb12-23" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(enrollment_decompose)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># read in the data from a csv and make the tsibble</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co"># change the line below to include your file path</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>enrollment_df <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/byui_enrollment.csv"</span>)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="st">"2019-05-01"</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>                start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(enrollment_df)<span class="sc">-</span><span class="dv">1</span>) <span class="sc">*</span> <span class="dv">4</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">"4 months"</span>)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>enrollment_tibble <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">dates =</span> date_seq,</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(date_seq),</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(date_seq),</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">pull</span>(enrollment_df, enrollment)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>enrollment_ts <span class="ot">&lt;-</span> enrollment_tibble <span class="sc">|&gt;</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(dates)) <span class="sc">|&gt;</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>enrollment_decompose <span class="ot">&lt;-</span> enrollment_ts <span class="sc">|&gt;</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(value,</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(enrollment_decompose)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="chapter_2_lesson_3_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(enrollment_decompose<span class="sc">$</span>value, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(enrollment_decompose<span class="sc">$</span>value, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="chapter_2_lesson_3_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(enrollment_decompose<span class="sc">$</span>value, <span class="at">plot=</span><span class="cn">FALSE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(enrollment_decompose<span class="sc">$</span>value, <span class="at">plot=</span><span class="cn">FALSE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>
 Autocorrelations of series 'enrollment_decompose$value', by lag
@@ -628,13 +626,13 @@ Autocorrelations of series 'enrollment_decompose$value', by lag
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(enrollment_decompose<span class="sc">$</span>value, <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(enrollment_decompose<span class="sc">$</span>value, <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="chapter_2_lesson_3_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(enrollment_decompose<span class="sc">$</span>random <span class="sc">|&gt;</span> <span class="fu">na.omit</span>(), <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(enrollment_decompose<span class="sc">$</span>random <span class="sc">|&gt;</span> <span class="fu">na.omit</span>(), <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="chapter_2_lesson_3_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="672"></p>
 </div>
