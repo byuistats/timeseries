@@ -3023,7 +3023,7 @@ vertical-align: -.125em;
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#learning-objectives" id="toc-learning-objectives" class="nav-link active" data-scroll-target="#learning-objectives">Learning Objectives</a></li>
+  <li><a href="#learning-outcomes" id="toc-learning-outcomes" class="nav-link active" data-scroll-target="#learning-outcomes">Learning Outcomes</a></li>
   <li><a href="#data-background" id="toc-data-background" class="nav-link" data-scroll-target="#data-background">Data Background</a>
   <ul class="collapse">
   <li><a href="#question-1---context-and-measurement-20-points" id="toc-question-1---context-and-measurement-20-points" class="nav-link" data-scroll-target="#question-1---context-and-measurement-20-points">Question 1 - Context and Measurement (20 points)</a></li>
@@ -3057,32 +3057,67 @@ vertical-align: -.125em;
 
 </header>
 
-<section id="learning-objectives" class="level2">
-<h2 class="anchored" data-anchor-id="learning-objectives">Learning Objectives</h2>
-<p>1.1 Use technical language to describe the main features of time series data</p>
-<p>1.3 Use R to describe key features of time series data.</p>
-<p>1.4 Plot time series data to visualize trends, seasonal patterns, and potential outliers.</p>
+<section id="learning-outcomes" class="level2">
+<h2 class="anchored" data-anchor-id="learning-outcomes">Learning Outcomes</h2>
+<details>
+<summary>
+Use technical language to describe the main features of time series data
+</summary>
+<pre><code>-   Define time series analysis
+-   Define time series
+-   Define sampling interval
+-   Define serial dependence or autocorrelation
+-   Define a time series trend
+-   Define seasonal variation
+-   Define cycle
+-   Differentiate between deterministic and stochastic trends</code></pre>
+</details>
+<details>
+<summary>
+Use R to describe key features of time series data
+</summary>
+<pre><code>-   Create a seasonal summmary of a time series</code></pre>
+</details>
+<details>
+<summary>
+Plot time series data to visualize trends, seasonal patterns, and potential outliers
+</summary>
+<pre><code>-   Plot a &quot;ts&quot; object
+-   Make boxplots to examine distribution of values within each season</code></pre>
+</details>
 <p><a href="https://docs.google.com/spreadsheets/d/1iYftJo380M2d9rV-KexgEaCjkKbqK3Ip7uEdn-Y15B4/edit?usp=sharing">Chapter 1 Outcome Map</a></p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Packages to be loaded in R</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(<span class="st">&quot;pacman&quot;</span>)) <span class="fu">install.packages</span>(<span class="st">&quot;pacman&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(tidyverse, </span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>               tsibble, fable,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>               feasts, tsibbledata,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>               fable.prophet,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>               patchwork,</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>               lubridate, </span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>               rio </span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
 </section>
 <section id="data-background" class="level2">
 <h2 class="anchored" data-anchor-id="data-background">Data Background</h2>
 <p>The first part of any time series analysis is context. You cannot properly analyze data without knowing what the data is measuring. Without context, the most simple features of data can be obscure and inscrutable. This homework assignment will center around three data series: the US unemployment series, the term premium series, and the Google Trends series of the search term “chocolate.”</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Google Trends Data: chocolate searches</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>chocolate <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">&quot;https://byuistats.github.io/timeseries/data/chocolate.csv&quot;</span>)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Macroeconomic Data: unemployment rate</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>unemp_rate <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">&quot;https://byuistats.github.io/timeseries/data/unemp_rate.csv&quot;</span>)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Financial Data: term premium (10 year)</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>term_prem10 <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">&quot;https://byuistats.github.io/timeseries/data/term_prem10.csv&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Google Trends Data: chocolate searches</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>chocolate <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">&quot;https://byuistats.github.io/timeseries/data/chocolate.csv&quot;</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Macroeconomic Data: unemployment rate</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>unemp_rate <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">&quot;https://byuistats.github.io/timeseries/data/unemp_rate.csv&quot;</span>)</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Financial Data: term premium (10 year)</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>term_prem10 <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">&quot;https://byuistats.github.io/timeseries/data/term_prem10.csv&quot;</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <section id="question-1---context-and-measurement-20-points" class="level3">
 <h3 class="anchored" data-anchor-id="question-1---context-and-measurement-20-points">Question 1 - Context and Measurement (20 points)</h3>
 <p>Please research these three time series. Each of the subheadings below has a link to a source to help you get started. In the spaces below, give the data collection process, unit of analysis, and meaning of each observation for each of these time series.</p>
 <section id="a-us-unemployment" class="level4">
-<h4 class="anchored" data-anchor-id="a-us-unemployment"><a href="https://www.bls.gov/cps/cps_htgm.htm">a) US unemployment</a></h4>
-<p><a href="https://www.bls.gov/cps/cps_htgm.htm">https://www.bls.gov/cps/cps_htgm.htm</a></p>
+<h4 class="anchored" data-anchor-id="a-us-unemployment">a) US unemployment</h4>
+<p><a href="https://www.bls.gov/cps/cps_htgm.htm" class="uri">https://www.bls.gov/cps/cps_htgm.htm</a></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="Answer">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -3098,8 +3133,8 @@ Answer
 </div>
 </section>
 <section id="b-the-term-premium" class="level4">
-<h4 class="anchored" data-anchor-id="b-the-term-premium"><a href="https://www.newyorkfed.org/research/data_indicators/term-premia-tabs#/overview">b) The Term Premium</a></h4>
-<p><a href="https://www.newyorkfed.org/research/data_indicators/term-premia-tabs#/overview">https://www.newyorkfed.org/research/data_indicators/term-premia-tabs#/overview</a></p>
+<h4 class="anchored" data-anchor-id="b-the-term-premium">b) The Term Premium</h4>
+<p><a href="https://www.newyorkfed.org/research/data_indicators/term-premia-tabs#/overview" class="uri">https://www.newyorkfed.org/research/data_indicators/term-premia-tabs#/overview</a></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="Answer">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -3115,8 +3150,8 @@ Answer
 </div>
 </section>
 <section id="c-chocolate-trends" class="level4">
-<h4 class="anchored" data-anchor-id="c-chocolate-trends"><a href="https://support.google.com/trends/answer/4365533?hl=en">c) Chocolate Trends</a></h4>
-<p><a href="https://support.google.com/trends/answer/4365533?hl=en">https://support.google.com/trends/answer/4365533?hl=en</a></p>
+<h4 class="anchored" data-anchor-id="c-chocolate-trends">c) Chocolate Trends</h4>
+<p><a href="https://support.google.com/trends/answer/4365533?hl=en" class="uri">https://support.google.com/trends/answer/4365533?hl=en</a></p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="Answer">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -3137,7 +3172,7 @@ Answer
 <h2 class="anchored" data-anchor-id="plots-trends-and-seasonal-variation">Plots, Trends, and Seasonal Variation</h2>
 <section id="question-2---key-definitions-20-points" class="level3">
 <h3 class="anchored" data-anchor-id="question-2---key-definitions-20-points">Question 2 - Key Definitions (20 points)</h3>
-<p>Define the terms “sampling interval,” “time series trend,” “seasonal variation,” “cycle,” “deterministic trend,” and “stochastic trend” in your own words.</p>
+<p>Define the terms “sampling interval,” “time series trend,” “seasonal variation,” “cycle,” “deterministic trend,” and “stochastic trend.”</p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="Answer">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -3173,7 +3208,7 @@ Answer
 </div>
 <div class="callout-body-container callout-body">
 <div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Please provide your code here</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Please provide your code here</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <!-- Delete this and put your written answer here. The three colons mark the end of your answer. -->
 </div>
@@ -3191,70 +3226,65 @@ Answer
 <tbody>
 <tr class="odd">
 <td><strong>Criteria</strong></td>
-<td><strong>Ratings</strong></td>
-<td><strong>Total Points</strong></td>
-</tr>
-<tr class="even">
-<td></td>
 <td><strong>Mastery (20)</strong></td>
 <td><strong>Incomplete (0)</strong></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><h4 id="question-1-context-and-measurement" class="anchored"><strong>Question 1: Context and Measurement</strong></h4></td>
 <td>The student demonstrates a clear understanding of the context for each data series (US unemployment, term premium, and Google Trends for “chocolate”). The explanation includes details about the data collection process, unit of analysis, and the meaning of each observation.</td>
 <td>The student fails to provide a clear understanding of the context for one or more data series.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td></td>
 <td><strong>Mastery (20)</strong></td>
 <td><strong>Incomplete (0)</strong></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><h4 id="question-2-definitions" class="anchored"><strong>Question 2: Definitions</strong></h4></td>
 <td>The student correctly defined each of the terms “sampling interval,” “time series trend,” “seasonal variation,” “cycle,” “deterministic trend,” and “stochastic trend.”</td>
 <td>The student did not provide a correct definition for one or more of the terms.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td></td>
 <td><strong>Mastery (20)</strong></td>
 <td><strong>Incomplete (0)</strong></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><h4 id="question-3-technical-language" class="anchored"><strong>Question 3: Technical Language</strong></h4></td>
 <td>The student uses appropriate technical language from Question 2 to describe the main features of time series data and provides accurate definitions. Outcome 1.1</td>
 <td>The student does not use technical language to describe the main features of time series data or does not define one or more specified terms. The student fails to present a decomposition of time series data.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td></td>
 <td><strong>Mastery (20)</strong></td>
 <td><strong>Incomplete (0)</strong></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><h4 id="question-3-r-programming-usage" class="anchored"><strong>Question 3: R Programming Usage</strong></h4></td>
 <td>The student effectively utilizes R to describe key features of time series data. Code snippets or outputs are appropriately included to support the analysis. Outcome 1.3</td>
 <td>The student does not use R to describe key features of time series data or does not demonstrate proficiency in one or more specified R functions. The student fails to present a decomposition of time series data.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td></td>
 <td><strong>Mastery (20)</strong></td>
 <td><strong>Incomplete (0)</strong></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><h4 id="question-3-data-visualization" class="anchored"><strong>Question 3: Data Visualization</strong></h4></td>
 <td>The student creates clear and informative plots to visualize trends, seasonal patterns, and potential outliers for each data series. The illustrations enhance the overall understanding of the time series data. Outcome 1.4, Outcome 1.3.4</td>
 <td>The student does not include visualizations or the visualizations provided are unclear and do not effectively represent the data, including the decomposition.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td></td>
 <td><strong>Mastery (20)</strong></td>
 <td><strong>Incomplete (0)</strong></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><h4 id="question-3-contrast-of-trends-and-seasonal-features" class="anchored"><strong>Question 3: Contrast of Trends and Seasonal Features</strong></h4></td>
 <td>The student provides a thoughtful and detailed contrast of the trends and seasonal features among the US unemployment, term premium, and chocolate Google search series. Outcome 1.1, Outcome 1.3</td>
 <td>The student does not provide a clear contrast of trends and seasonal features for the specified data series.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td></td>
 <td></td>
 <td></td>
