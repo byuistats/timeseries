@@ -11,7 +11,8 @@ pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite d
                see,   # okabeito color scheme
                ggokabeito, # colorblind palette
                stringr, # string manipulation
-               lubridate # date manipulation
+               lubridate, # date manipulation
+               rio # for easy i/o
 )
 
 # Palette ----
