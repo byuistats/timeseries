@@ -197,27 +197,13 @@ The figure below illustrates realizations of a deterministic time series. The da
 <!-- ::: -->
 
 
-## Hands-on Exercise: Exploring a time series in R (Google Trends: Chocolate) (20 min)
+## Class Activity: Importing Data and Creating a tsibble Object (5 min)
 
 Recall the Google Trends data for the term "chocolate" from the last lesson. The cleaned data are available in the file <a href="data/chocolate.csv" download>chocolate.csv</a>. Here are the first few rows of the csv:
 
-```{r}
-#| echo: false
-#| message: false
+![https://byuistats.github.io/timeseries/data/chocolate.csv](images/chocolate_csv_image.png)
 
-if (!require("pacman")) install.packages("pacman")
-pacman::p_load("tsibble", "fable",
-               "feasts", "tsibbledata",
-               "fable.prophet", "tidyverse",
-               "patchwork", "rio")
-
-# read in the data from a csv
-rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |> 
-  head()
-```
-
-
-### Import the chocolate search data and convert to tsibble format
+### Import the Data
 
 Use the code below to import the chocolate data and convert it into a time series (tsibble) object. You can click on the clipboard icon in the upper right-hand corner of the box below to copy the code.
 
@@ -271,9 +257,9 @@ choc_plot
     -   guess_frequency(chocolate_month_ts\$index)
 :::
 
-### Estimating the Trend: Aggregating to the Annual Level
+## Estimating the Trend: Aggregating to the Annual Level
 
-To help visualize what is happening with a time series, we often aggregate the data in the time series to the annual level. This can make it easier to spot a trend. The first plot is the time series plot of the raw data, and the second plot is a time series plot of the annual means.
+To help visualize what is happening with a time series, we often aggregate the data in the time series to the annual level by computing the mean of the observations in a given year. This can make it easier to spot a trend. The first plot is the time series plot of the raw data, and the second plot is a time series plot of the annual means.
 
 ```{r}
 chocolate_annual_ts <- summarise(index_by(chocolate_month_ts, year), value = mean(value))
@@ -306,12 +292,12 @@ mp / yp
 -   What do you suspect is causing this trend?
 :::
 
-### Estimating the Seasonal Effect: Side-by-Side Boxplots by Month
+## Estimating the Seasonal Effect: Side-by-Side Boxplots by Month
 
 To better visualize the effect of seasonal variation, we can make box plots by month.
 
 ```{r}
-pbox <- ggplot(chocolate_month_ts, aes(x = factor(month), y = value)) +
+ggplot(chocolate_month_ts, aes(x = factor(month), y = value)) +
     geom_boxplot() +
   labs(
     x = "Month Number",
@@ -319,8 +305,6 @@ pbox <- ggplot(chocolate_month_ts, aes(x = factor(month), y = value)) +
     title = "Boxplots of Google Searches for 'Chocolate' by Month"
   ) +
   theme(plot.title = element_text(hjust = 0.5))
-
-pbox
 ```
 
 ::: {.callout-tip icon="false" title="Check Your Understanding"}
