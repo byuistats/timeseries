@@ -160,7 +160,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="dropdown-header">Lesson 3</li>
         <li>
     <a class="dropdown-item" href="./chapter_1_lesson_3.html" rel="" target="">
- <span class="dropdown-text">Averages for Time Series</span></a>
+ <span class="dropdown-text">Additive and Multiplicative Models</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li class="dropdown-header">Lesson 4</li>
@@ -260,8 +260,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#import-the-chocolate-search-data-and-convert-to-tsibble-format" id="toc-import-the-chocolate-search-data-and-convert-to-tsibble-format" class="nav-link" data-scroll-target="#import-the-chocolate-search-data-and-convert-to-tsibble-format">Import the chocolate search data and convert to tsibble format</a></li>
   <li><a href="#explore-r-commands-summarizing-time-series-data" id="toc-explore-r-commands-summarizing-time-series-data" class="nav-link" data-scroll-target="#explore-r-commands-summarizing-time-series-data">Explore R commands summarizing time series data</a></li>
-  <li><a href="#aggregate-to-the-annual-level" id="toc-aggregate-to-the-annual-level" class="nav-link" data-scroll-target="#aggregate-to-the-annual-level">Aggregate to the annual level</a></li>
-  <li><a href="#boxplot-of-seasonal-values" id="toc-boxplot-of-seasonal-values" class="nav-link" data-scroll-target="#boxplot-of-seasonal-values">Boxplot of Seasonal Values</a></li>
+  <li><a href="#estimating-the-trend-aggregating-to-the-annual-level" id="toc-estimating-the-trend-aggregating-to-the-annual-level" class="nav-link" data-scroll-target="#estimating-the-trend-aggregating-to-the-annual-level">Estimating the Trend: Aggregating to the Annual Level</a></li>
+  <li><a href="#estimating-the-seasonal-effect-side-by-side-boxplots-by-month" id="toc-estimating-the-seasonal-effect-side-by-side-boxplots-by-month" class="nav-link" data-scroll-target="#estimating-the-seasonal-effect-side-by-side-boxplots-by-month">Estimating the Seasonal Effect: Side-by-Side Boxplots by Month</a></li>
   </ul></li>
   <li><a href="#when-to-use-additive-vs.-multiplicative-decomposition-5-min" id="toc-when-to-use-additive-vs.-multiplicative-decomposition-5-min" class="nav-link" data-scroll-target="#when-to-use-additive-vs.-multiplicative-decomposition-5-min">When to use additive vs.&nbsp;multiplicative decomposition (5 min)</a></li>
   <li><a href="#additive-decomposition" id="toc-additive-decomposition" class="nav-link" data-scroll-target="#additive-decomposition">Additive Decomposition</a></li>
@@ -381,7 +381,9 @@ Check Your Understanding
 </div>
 <div class="callout-body-container callout-body">
 <p>Working with a partner, match the definitions on the left with the terms on the right.</p>
-<!-- https://bookdown.org/yihui/rmarkdown-cookbook/multi-column.html -->
+<!-- Code Source: https://bookdown.org/yihui/rmarkdown-cookbook/multi-column.html -->
+<section id="vocabulary-matching" class="level3">
+<h3 class="anchored" data-anchor-id="vocabulary-matching">Vocabulary Matching</h3>
 <div style="display: flex;">
 <div>
 <ol type="1">
@@ -392,22 +394,6 @@ Check Your Understanding
 <li>Observations in which values are related to lagged observations of the same variable</li>
 <li>Random trend that does not follow a discernible or predictable pattern</li>
 <li>Can be modeled with mathematical functions, facilitating the long-term prediction of the behavior</li>
-<li>Number of observations of a time series</li>
-<li>Discrete observations of a time series, taken at times <span class="math inline">\(1, 2, \ldots, n\)</span>.</li>
-<li>Lead time</li>
-<li>Forecast made at time <span class="math inline">\(t\)</span> for a future value <span class="math inline">\(k\)</span> time units in the future</li>
-<li>Additive decomposition</li>
-<li>Additive decomposition model after taking the logarithm</li>
-<li>Multiplicative model</li>
-<li>Centered moving average</li>
-<li>Estimate of monthly additive effect</li>
-<li>Estimate of monthly multiplicative effect</li>
-<li>Seasonally adjusted mean for the month corresponding to time <span class="math inline">\(t\)</span></li>
-<li>Seasonal adjusted series (additive seasonal effect)</li>
-<li>Seasonal adjusted series (multiplicative seasonal effect)</li>
-<li>The trend as observed at time <span class="math inline">\(t\)</span></li>
-<li>The seasonal effect, as observed at time <span class="math inline">\(t\)</span></li>
-<li>The error term (a sequence of correlated random variables with mean zero), as observed at time <span class="math inline">\(t\)</span></li>
 </ol>
 </div>
 <div>
@@ -419,26 +405,69 @@ Check Your Understanding
 <li>Stochastic Trend</li>
 <li>Time Plot</li>
 <li>Trend</li>
+</ol>
+</div>
+</div>
+</section>
+<section id="nomenclature-matching" class="level3">
+<h3 class="anchored" data-anchor-id="nomenclature-matching">Nomenclature Matching</h3>
+<div style="display: flex;">
+<div>
+<ol start="8" type="1">
+<li>Number of observations of a time series</li>
+<li>Discrete observations of a time series, taken at times <span class="math inline">\(1, 2, \ldots, n\)</span>.</li>
+<li>Lead time</li>
+<li>The trend as observed at time <span class="math inline">\(t\)</span></li>
+<li>The seasonal effect, as observed at time <span class="math inline">\(t\)</span></li>
+<li>The error term (a sequence of correlated random variables with mean zero), as observed at time <span class="math inline">\(t\)</span></li>
+<li>Centered moving average for obsrvations made monthly</li>
+<li>Estimate of monthly additive effect</li>
+<li>Estimate of monthly multiplicative effect</li>
+</ol>
+</div>
+<div>
+<ol start="8" type="A">
 <li><span class="math inline">\(n\)</span></li>
-<li><span class="math inline">\(\{x_t\}\)</span></li>
 <li><span class="math inline">\(k\)</span></li>
-<li><span class="math inline">\(\hat x_{t+k \mid t}\)</span></li>
 <li><span class="math inline">\(m_t\)</span></li>
 <li><span class="math inline">\(\hat m_t\)</span></li>
 <li><span class="math inline">\(s_t\)</span></li>
-<li><span class="math inline">\(\hat s_t = x_t - \hat m_t\)</span></li>
+<li><span class="math inline">\(\hat s_t = x_t - \hat m_t ~~~~~~~~~~~~~~~~~~~~~~~~~\)</span></li>
 <li><span class="math inline">\(\hat s_t = \dfrac{x_t}{\hat m_t}\)</span></li>
-<li><span class="math inline">\(\bar s_t\)</span></li>
+<li><span class="math inline">\(\{x_t\}\)</span></li>
 <li><span class="math inline">\(z_t\)</span></li>
+</ol>
+</div>
+</div>
+<p>where <span class="math inline">\(\hat m_t = \dfrac{\frac{1}{2}x_{t-6} + x_{t-5} + \cdots + x_{t-1} + x_t + x_{t+1} + \cdot + x_{t+5} + \frac{1}{2} x_{t+6}}{12}\)</span>.</p>
+</section>
+<section id="additional-nomenclature-matching" class="level3">
+<h3 class="anchored" data-anchor-id="additional-nomenclature-matching">Additional Nomenclature Matching</h3>
+<div style="display: flex;">
+<div>
+<ol start="17" type="1">
+<li>Forecast made at time <span class="math inline">\(t\)</span> for a future value <span class="math inline">\(k\)</span> time units in the future <span class="math inline">\(~~~~~~~~~~~~~~~\)</span></li>
+<li>Additive decomposition</li>
+<li>Additive decomposition model after taking the logarithm</li>
+<li>Multiplicative model</li>
+<li>Seasonally adjusted mean for the month corresponding to time <span class="math inline">\(t\)</span></li>
+<li>Seasonal adjusted series (additive seasonal effect)</li>
+<li>Seasonal adjusted series (multiplicative seasonal effect) <span class="math inline">\(~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\)</span></li>
+</ol>
+</div>
+<div>
+<ol start="17" type="A">
+<li><span class="math inline">\(\bar s_t\)</span></li>
 <li><span class="math inline">\(x_t = m_t + s_t + z_t\)</span></li>
 <li><span class="math inline">\(x_t = m_t \cdot s_t + z_t\)</span></li>
 <li><span class="math inline">\(\log(x_t) = m_t + s_t + z_t\)</span></li>
 <li><span class="math inline">\(x_t - \bar s_t\)</span></li>
 <li><span class="math inline">\(\frac{x_t}{\bar s_t}\)</span></li>
+<li><span class="math inline">\(\hat x_{t+k \mid t}\)</span></li>
 </ol>
 </div>
 </div>
-<p>where <span class="math inline">\(\hat m_t = \dfrac{\frac{1}{2}x_{t-6} + x_{t-5} + \cdots + x_{t-1} + x_t + x_{t+1} + \cdot + x_{t+5} + \frac{1}{2} x_{t+6}}{12}\)</span>.</p>
+</section>
 </div>
 </div>
 </section>
@@ -456,10 +485,6 @@ Check Your Understanding
 <h3 class="anchored" data-anchor-id="deterministic-time-series">Deterministic Time Series</h3>
 <p>The figure below illustrates realizations of a deterministic time series. The data fluctuate around a sine curve.</p>
  <iframe id="deterministic" src="https://posit.byui.edu/content/4d25268b-d562-455c-ac47-5a9871770e7c" style="border: none; width: 100%; height: 550px" frameborder="0"></iframe>
-<p><a href="javascript:showhide('Meme')" style="font-size:.8em;">Meme</a></p>
-<div id="Meme" style="display:none;">
-<p><img src="images/MobiusMeme.png" class="img-fluid"></p>
-</div>
 <!-- <a href="javascript:showhide('Meme')" -->
 <!-- style="font-size:.8em;">Meme</a> -->
 <!-- ::: {#Meme style="display:none;"} -->
@@ -537,8 +562,8 @@ Check Your Understanding
 </div>
 </div>
 </section>
-<section id="aggregate-to-the-annual-level" class="level3">
-<h3 class="anchored" data-anchor-id="aggregate-to-the-annual-level">Aggregate to the annual level</h3>
+<section id="estimating-the-trend-aggregating-to-the-annual-level" class="level3">
+<h3 class="anchored" data-anchor-id="estimating-the-trend-aggregating-to-the-annual-level">Estimating the Trend: Aggregating to the Annual Level</h3>
 <p>To help visualize what is happening with a time series, we often aggregate the data in the time series to the annual level. This can make it easier to spot a trend. The first plot is the time series plot of the raw data, and the second plot is a time series plot of the annual means.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>chocolate_annual_ts <span class="ot">&lt;-</span> <span class="fu">summarise</span>(<span class="fu">index_by</span>(chocolate_month_ts, year), <span class="at">value =</span> <span class="fu">mean</span>(value))</span>
@@ -585,8 +610,8 @@ Check Your Understanding
 </div>
 </div>
 </section>
-<section id="boxplot-of-seasonal-values" class="level3">
-<h3 class="anchored" data-anchor-id="boxplot-of-seasonal-values">Boxplot of Seasonal Values</h3>
+<section id="estimating-the-seasonal-effect-side-by-side-boxplots-by-month" class="level3">
+<h3 class="anchored" data-anchor-id="estimating-the-seasonal-effect-side-by-side-boxplots-by-month">Estimating the Seasonal Effect: Side-by-Side Boxplots by Month</h3>
 <p>To better visualize the effect of seasonal variation, we can make box plots by month.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>pbox <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(chocolate_month_ts, <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">factor</span>(month), <span class="at">y =</span> value)) <span class="sc">+</span></span>
@@ -1475,7 +1500,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   </div>
   <div class="nav-page nav-page-next">
       <a href="./chapter_1_lesson_3.html" class="pagination-link">
-        <span class="nav-page-text">Averages for Time Series</span> <i class="bi bi-arrow-right-short"></i>
+        <span class="nav-page-text">Additive and Multiplicative Models</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
