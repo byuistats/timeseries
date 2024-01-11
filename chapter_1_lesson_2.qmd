@@ -199,14 +199,29 @@ The figure below illustrates realizations of a deterministic time series. The da
 
 ## Hands-on Exercise: Exploring a time series in R (Google Trends: Chocolate) (20 min)
 
-Recall the Google Trends data for the term "chocolate" from the last lesson. The cleaned data are available in the file <a href="data/chocolate.csv" download>chocolate.csv</a>.
+Recall the Google Trends data for the term "chocolate" from the last lesson. The cleaned data are available in the file <a href="data/chocolate.csv" download>chocolate.csv</a>. Here are the first few rows of the csv:
+
+```{r}
+#| echo: false
+#| message: false
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("tsibble", "fable",
+               "feasts", "tsibbledata",
+               "fable.prophet", "tidyverse",
+               "patchwork", "rio")
+
+# read in the data from a csv
+rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |> 
+  head()
+```
+
 
 ### Import the chocolate search data and convert to tsibble format
 
-Use the code below to import the data and convert it into a time series (tsibble) object.
+Use the code below to import the chocolate data and convert it into a time series (tsibble) object. You can click on the clipboard icon in the upper right-hand corner of the box below to copy the code.
 
 ```{r}
-
 # load packages
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load("tsibble", "fable",
@@ -214,19 +229,22 @@ pacman::p_load("tsibble", "fable",
                "fable.prophet", "tidyverse",
                "patchwork", "rio")
 
-# read in the data from a csv and make the tsibble
-# change the line below to include your file path
+# read in the data from a csv
 chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv")
 start_date <- lubridate::ymd("2004-01-01")
 date_seq <- seq(start_date,
                 start_date + months(nrow(chocolate_month)-1),
                 by = "1 months")
+
+# create a tibble
 chocolate_tibble <- tibble(
   dates = date_seq,
   year = lubridate::year(date_seq),
   month = lubridate::month(date_seq),
   value = pull(chocolate_month, chocolate)
 )
+
+# create a tsibble
 chocolate_month_ts <- chocolate_tibble |>
   mutate(index = tsibble::yearmonth(dates)) |>
   as_tsibble(index = index)
