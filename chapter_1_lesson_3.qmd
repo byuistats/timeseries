@@ -64,120 +64,10 @@ source("common_functions.R")
 -   What would you recommend your partner add to their learning journal?
 -   Sign the Learning Journal review sheet for your peer
 
-## Vocabulary and Nomenclature Matching Activity (15 min)
-
-::: {.callout-tip icon="false" title="Check Your Understanding"}
-Working with a partner, match the definitions on the left with the terms on the right.
-
-<!-- https://bookdown.org/yihui/rmarkdown-cookbook/multi-column.html -->
-
-::: {style="display: flex;"}
-<div>
-
-1.  A figure with time on the horizontal axis and the value of a random variable on the vertical axis
-2.  A systematic change in a time series that does not appear to be periodic
-3.  Repeated pattern within each year (or any other time period)
-4.  Repeated pattern that does not correspond to some fixed natural period
-5.  Observations in which values are related to lagged observations of the same variable
-6.  Random trend that does not follow a discernible or predictable pattern
-7.  Can be modeled with mathematical functions, facilitating the long-term prediction of the behavior
-8.  Number of observations of a time series
-9.  Discrete observations of a time series, taken at times $1, 2, \ldots, n$.
-10. Lead time
-11. Forecast made at time $t$ for a future value $k$ time units in the future
-12. Additive decomposition
-13. Additive decomposition model after taking the logarithm
-14. Multiplicative model
-15. Centered moving average
-16. Estimate of monthly additive effect
-17. Estimate of monthly multiplicative effect
-18. Seasonally adjusted mean for the month corresponding to time $t$
-19. Seasonal adjusted series (additive seasonal effect)
-20. Seasonal adjusted series (multiplicative seasonal effect)
-21. The trend as observed at time $t$
-22. The seasonal effect, as observed at time $t$
-23. The error term (a sequence of correlated random variables with mean zero), as observed at time $t$
-
-</div>
-
-<div>
-
-A.  Cycle
-B.  Correlated (Serially Dependent) Data
-C.  Deterministic Trend
-D.  Seasonal Variation
-E.  Stochastic Trend
-F.  Time Plot
-G.  Trend
-H.  $n$
-I.  $\{x_t\}$
-J.  $k$
-K.  $\hat x_{t+k \mid t}$
-L.  $m_t$
-M.  $\hat m_t$
-N.  $s_t$
-O.  $\hat s_t = x_t - \hat m_t$
-P.  $\hat s_t = \dfrac{x_t}{\hat m_t}$
-Q.  $\bar s_t$
-R.  $z_t$
-S.  $x_t = m_t + s_t + z_t$
-T.  $x_t = m_t \cdot s_t + z_t$
-U.  $\log(x_t) = m_t + s_t + z_t$
-V.  $x_t - \bar s_t$
-W.  $\frac{x_t}{\bar s_t}$
-
-</div>
-:::
-
-where $\hat m_t = \dfrac{\frac{1}{2}x_{t-6} + x_{t-5} + \cdots + x_{t-1} + x_t + x_{t+1} + \cdot + x_{t+5} + \frac{1}{2} x_{t+6}}{12}$.
-:::
-
-## Comparison of Deterministic and Stochastic Time Series (5 min)
-
-### Stochastic Time Series
-
-The following app illustrates a few realizations of a stochastic time series.
-
-```{=html}
- <iframe id="stochastic" src="https://posit.byui.edu/content/728a7ddc-97d2-44ee-9977-fc648102b986" style="border: none; width: 100%; height: 500px" frameborder="0"></iframe>
-```
--   If a stochastic time series displays an upward trend, can we conclude that trend will continue in the same direction? Why or why not?
-
-### Deterministic Time Series
-
-The figure below illustrates realizations of a deterministic time series. The data fluctuate around a sine curve.
-
-```{=html}
- <iframe id="deterministic" src="https://posit.byui.edu/content/4d25268b-d562-455c-ac47-5a9871770e7c" style="border: none; width: 100%; height: 550px" frameborder="0"></iframe>
-```
-
-
-<a href="javascript:showhide('Meme')"
-style="font-size:.8em;">Meme</a>
-
-::: {#Meme style="display:none;"}
-![](images/MobiusMeme.png)
-:::
-
-<!-- <a href="javascript:showhide('Meme')" -->
-<!-- style="font-size:.8em;">Meme</a> -->
-
-<!-- ::: {#Meme style="display:none;"} -->
-
-<!-- ![](images/MobiusMeme.png) -->
-
-<!-- ::: -->
-
-
-## Hands-on Exercise: Exploring a time series in R (Google Trends: Chocolate) (20 min)
-
-Recall the Google Trends data for the term "chocolate" from the last lesson. The cleaned data are available in the file <a href="data/chocolate.csv" download>chocolate.csv</a>.
-
-### Import the chocolate search data and convert to tsibble format
-
-Use the code below to import the data and convert it into a time series (tsibble) object.
+## STARTING HERE
 
 ```{r}
+#| include: false
 
 # load packages
 if (!require("pacman")) install.packages("pacman")
@@ -186,24 +76,27 @@ pacman::p_load("tsibble", "fable",
                "fable.prophet", "tidyverse",
                "patchwork", "rio")
 
-# read in the data from a csv and make the tsibble
-# change the line below to include your file path
+# read in the data from a csv
 chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv")
-start_date <- lubridate::ymd("2004-01-01")
+start_date <- lubridate::ymd("2004-01-01")  
 date_seq <- seq(start_date,
                 start_date + months(nrow(chocolate_month)-1),
                 by = "1 months")
+
+# create a tibble including variables dates, year, month, value
 chocolate_tibble <- tibble(
   dates = date_seq,
   year = lubridate::year(date_seq),
   month = lubridate::month(date_seq),
   value = pull(chocolate_month, chocolate)
 )
+
+# create a tsibble where the index variable is the year/month
 chocolate_month_ts <- chocolate_tibble |>
   mutate(index = tsibble::yearmonth(dates)) |>
   as_tsibble(index = index)
 
-# generate the plot
+# generate the ts plot
 choc_plot <- autoplot(chocolate_month_ts, .vars = value) +
   labs(
     x = "Month",
@@ -212,18 +105,101 @@ choc_plot <- autoplot(chocolate_month_ts, .vars = value) +
   ) +
   theme(plot.title = element_text(hjust = 0.5))
 
-choc_plot
 ```
 
-### Explore R commands summarizing time series data
 
-::: {.callout-tip icon="false" title="Check Your Understanding"}
--   What does each of the following R commands give us?
-    -   class(chocolate_month_ts)
-    -   head(chocolate_month_ts, 1)
-    -   tail(chocolate_month_ts, 1)
-    -   guess_frequency(chocolate_month_ts\$index)
-:::
+
+
+
+## Estimating the Trend: Moving Average (5 min)
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+# Computes the moving average of values in a time series
+compute_moving_average <- function(df, variable, periods = 12) {
+  sum <- 0
+
+  for (i in 1:(periods / 2)) {
+    sum <- sum + lead(eval(substitute(variable), df), i)           # x_{t+i}
+    sum <- sum + lag(eval(substitute(variable), df), i)            # x_{t-i}
+  }
+  sum <- sum + eval(substitute(variable), df)
+  sum <- sum - lag(eval(substitute(variable), df), periods / 2) / 2
+  sum <- sum - lead(eval(substitute(variable), df), periods / 2) / 2
+  df$m_hat <- sum / periods
+  return(df)
+}
+
+chocolate_annual_ts <- summarise(
+    index_by(chocolate_month_ts, year), 
+    value = mean(value)
+  ) |>
+  mutate(index = tsibble::yearmonth( mdy(paste0("7/1/",year)) )) |>
+  as_tsibble(index = index)
+
+# monthly plot
+mp <- autoplot(chocolate_month_ts, .vars = value) +
+  geom_line(data = chocolate_annual_ts, 
+            aes(x = index, y = value), 
+            color = "#56B4E9") +
+  geom_line(data = chocolate_month_ts %>% compute_moving_average(value), 
+            aes(x = index, y = m_hat), 
+            color = "#E69F00") +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+mp
+```
+
+The blue line illustrates the mean of all the values for each year, plotted at July 1 for each of the respective years. The orange line is the moving average computed using Equation (1.6).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ### Aggregate to the annual level
 
@@ -260,12 +236,30 @@ mp / yp
 -   What do you suspect is causing this trend?
 :::
 
-### Boxplot of Seasonal Values
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Estimating the Seasonal Effect: Side-by-Side Boxplots by Month (10 min)
 
 To better visualize the effect of seasonal variation, we can make box plots by month.
 
 ```{r}
-pbox <- ggplot(chocolate_month_ts, aes(x = factor(month), y = value)) +
+ggplot(chocolate_month_ts, aes(x = factor(month), y = value)) +
     geom_boxplot() +
   labs(
     x = "Month Number",
@@ -273,8 +267,6 @@ pbox <- ggplot(chocolate_month_ts, aes(x = factor(month), y = value)) +
     title = "Boxplots of Google Searches for 'Chocolate' by Month"
   ) +
   theme(plot.title = element_text(hjust = 0.5))
-
-pbox
 ```
 
 ::: {.callout-tip icon="false" title="Check Your Understanding"}

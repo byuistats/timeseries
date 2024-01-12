@@ -89,6 +89,23 @@ blank_out_cells_in_df <- function(df, ncols_to_keep = 2, nrows_to_keep = 0, deci
   return(out_df)
 }
 
+
+########### Compute moving average
+compute_moving_average <- function(df, variable, periods = 12) {
+  sum <- 0
+
+  for (i in 1:(periods / 2)) {
+    sum <- sum + lead(eval(substitute(variable), df), i)           # x_{t+i}
+    sum <- sum + lag(eval(substitute(variable), df), i)            # x_{t-i}
+  }
+  sum <- sum + eval(substitute(variable), df)
+  sum <- sum - lag(eval(substitute(variable), df), periods / 2) / 2
+  sum <- sum - lead(eval(substitute(variable), df), periods / 2) / 2
+  df$m_hat <- sum / periods
+  return(df)
+}
+
+
 ########### String manipulation
 
 # Returns "char" right-most characters of "string"
