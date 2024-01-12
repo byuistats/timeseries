@@ -171,6 +171,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <a class="dropdown-item" href="./chapter_1_lesson_4.html" rel="" target="">
  <span class="dropdown-text">Averages for Time Series</span></a>
   </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 5</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_5.html" rel="" target="">
+ <span class="dropdown-text">Decomposition of Time Series</span></a>
+  </li>  
     </ul>
   </li>
   <li class="nav-item dropdown ">
@@ -330,19 +336,11 @@ Use technical language to describe the main features of time series data
 </details>
 <details>
 <summary>
-Use R to describe key features of time series data
-</summary>
-<ul>
-<li>Create a seasonal summmary of a time series</li>
-</ul>
-</details>
-<details>
-<summary>
 Plot time series data to visualize trends, seasonal patterns, and potential outliers
 </summary>
 <ul>
 <li>Plot a “ts” object</li>
-<li>Make boxplots to examine distribution of values within each season</li>
+<li>Plot the estimated trend of a time series by computing the mean of one full period</li>
 </ul>
 </details>
 </section>
@@ -375,14 +373,14 @@ Check Your Understanding
 <div class="callout-body-container callout-body">
 <p>Working with a partner, match the definitions on the left with the terms on the right.</p>
 <!-- Code Source: https://bookdown.org/yihui/rmarkdown-cookbook/multi-column.html -->
-<section id="vocabulary-matching" class="level3">
-<h3 class="anchored" data-anchor-id="vocabulary-matching">Vocabulary Matching</h3>
+<section id="vocabulary-matching" class="level4">
+<h4 class="anchored" data-anchor-id="vocabulary-matching">Vocabulary Matching</h4>
 <div style="display: flex;">
 <div>
 <ol type="1">
 <li>A figure with time on the horizontal axis and the value of a random variable on the vertical axis</li>
 <li>A systematic change in a time series that does not appear to be periodic</li>
-<li>Repeated pattern within each year (or any other time period)</li>
+<li>Repeated pattern within each year (or any other fixed time period)</li>
 <li>Repeated pattern that does not correspond to some fixed natural period</li>
 <li>Observations in which values are related to lagged observations of the same variable</li>
 <li>Random trend that does not follow a discernible or predictable pattern</li>
@@ -402,13 +400,13 @@ Check Your Understanding
 </div>
 </div>
 </section>
-<section id="nomenclature-matching" class="level3">
-<h3 class="anchored" data-anchor-id="nomenclature-matching">Nomenclature Matching</h3>
+<section id="nomenclature-matching" class="level4">
+<h4 class="anchored" data-anchor-id="nomenclature-matching">Nomenclature Matching</h4>
 <div style="display: flex;">
 <div>
 <ol start="8" type="1">
-<li>Number of observations of a time series</li>
 <li>Discrete observations of a time series, taken at times <span class="math inline">\(1, 2, \ldots, n\)</span>.</li>
+<li>Number of observations of a time series</li>
 <li>Lead time</li>
 <li>The trend as observed at time <span class="math inline">\(t\)</span></li>
 <li>The seasonal effect, as observed at time <span class="math inline">\(t\)</span></li>
@@ -434,18 +432,18 @@ Check Your Understanding
 </div>
 <p>where <span class="math inline">\(\hat m_t = \dfrac{\frac{1}{2}x_{t-6} + x_{t-5} + \cdots + x_{t-1} + x_t + x_{t+1} + \cdot + x_{t+5} + \frac{1}{2} x_{t+6}}{12}\)</span>.</p>
 </section>
-<section id="additional-nomenclature-matching" class="level3">
-<h3 class="anchored" data-anchor-id="additional-nomenclature-matching">Additional Nomenclature Matching</h3>
+<section id="additional-nomenclature-matching" class="level4">
+<h4 class="anchored" data-anchor-id="additional-nomenclature-matching">Additional Nomenclature Matching</h4>
 <div style="display: flex;">
 <div>
 <ol start="17" type="1">
-<li>Forecast made at time <span class="math inline">\(t\)</span> for a future value <span class="math inline">\(k\)</span> time units in the future <span class="math inline">\(~~~~~~~~~~~~~~~\)</span></li>
-<li>Additive decomposition</li>
+<li>Forecast made at time <span class="math inline">\(t\)</span> for a future value <span class="math inline">\(k\)</span> time units in the future <span class="math inline">\(~~~~~~~~~~~~~~~~~~~~~~\)</span></li>
+<li>Additive decomposition model</li>
 <li>Additive decomposition model after taking the logarithm</li>
-<li>Multiplicative model</li>
+<li>Multiplicative decomposition model</li>
 <li>Seasonally adjusted mean for the month corresponding to time <span class="math inline">\(t\)</span></li>
 <li>Seasonal adjusted series (additive seasonal effect)</li>
-<li>Seasonal adjusted series (multiplicative seasonal effect) <span class="math inline">\(~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\)</span></li>
+<li>Seasonal adjusted series (multiplicative seasonal effect)</li>
 </ol>
 </div>
 <div>
@@ -657,6 +655,33 @@ Check Your Understanding
 <p><img src="chapter_1_lesson_2_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<p>If you want to superimpose these plots, it would make sense to align the mean value for the year with the middle of the year. Here is a plot superimposing the annual mean aligned with July 1 (in blue) on the values of the time series (in black).</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>chocolate_annual_ts <span class="ot">&lt;-</span> <span class="fu">summarise</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">index_by</span>(chocolate_month_ts, year), </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">value =</span> <span class="fu">mean</span>(value)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>( <span class="fu">mdy</span>(<span class="fu">paste0</span>(<span class="st">"7/1/"</span>,year)) )) <span class="sc">|&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># combined plot</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(chocolate_month_ts, <span class="at">.vars =</span> value) <span class="sc">+</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> chocolate_annual_ts, </span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>            <span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> value), </span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>            <span class="at">color =</span> <span class="st">"#56B4E9"</span>) <span class="sc">+</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Month"</span>,</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Searches"</span>,</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Relative Number of Google Searches for 'Chocolate'"</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="chapter_1_lesson_2_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
 <div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -698,77 +723,144 @@ Download Assignment
 <p><a href="https://byuistats.github.io/timeseries/homework/homework_1_2.qmd" download="homework_1_2.qmd"> homework_1_2.qmd </a></p>
 </div>
 </div>
-<p><a href="javascript:showhide('Solutions')" style="font-size:.8em;">Which Model? &amp; Matching Solutions</a></p>
+<p><a href="javascript:showhide('Solutions')" style="font-size:.8em;">Matching</a></p>
 <div id="Solutions" style="display:none;">
-<p>Solutions to Which Model Should I Use?:</p>
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Matching Solutions</p>
+<section id="vocabulary-matching-1" class="level4">
+<h4 class="anchored" data-anchor-id="vocabulary-matching-1">Vocabulary Matching</h4>
 <table class="table">
 <colgroup>
-<col style="width: 48%">
-<col style="width: 24%">
-<col style="width: 26%">
+<col style="width: 63%">
+<col style="width: 36%">
 </colgroup>
-<thead>
-<tr class="header">
-<th></th>
-<th>Rexburg Temperature</th>
-<th>S&amp;P 500 Closing Price</th>
-</tr>
-</thead>
 <tbody>
 <tr class="odd">
-<td>Deterministic or stochastic trend?</td>
-<td>Deterministic</td>
-<td>Stochastic</td>
+<td>1.&nbsp; A figure with time on the horizontal axis and the value of a random variable on the vertical axis</td>
+<td>F.&nbsp; Time Plot</td>
 </tr>
 <tr class="even">
-<td>Is there a seasonal effect?</td>
-<td>Yes</td>
-<td>No</td>
+<td>2.&nbsp; A systematic change in a time series that does not appear to be periodic</td>
+<td>G.&nbsp; Trend</td>
 </tr>
 <tr class="odd">
-<td>Is there evidence of cycles?</td>
-<td>Yes</td>
-<td>Yes</td>
+<td>3.&nbsp; Repeated pattern within each year (or any other fixed time period)</td>
+<td>D.&nbsp; Seasonal Variation</td>
 </tr>
 <tr class="even">
-<td>Does the variation get bigger over time?</td>
-<td>No</td>
-<td>Yes</td>
+<td>4.&nbsp; Repeated pattern that does not correspond to some fixed natural period</td>
+<td>A.&nbsp; Cycle</td>
 </tr>
 <tr class="odd">
-<td>Additive or multiplicative model?</td>
-<td>Additive</td>
-<td>Multiplicative</td>
+<td>5.&nbsp; Observations in which values are related to lagged observations of the same variable</td>
+<td>B.&nbsp; Correlated (Serially Dependent) Data</td>
+</tr>
+<tr class="even">
+<td>6.&nbsp; Random trend that does not follow a discernible or predictable pattern</td>
+<td>E.&nbsp; Stochastic Trend</td>
+</tr>
+<tr class="odd">
+<td>7.&nbsp; Can be modeled with mathematical functions, facilitating the long-term prediction of the behavior</td>
+<td>C.&nbsp; Deterministic Trend</td>
 </tr>
 </tbody>
 </table>
-<div style="display: flex;">
-<div>
-<ol type="1">
-<li>A figure with time on the horizontal axis and the value of a random variable on the vertical axis : F. Time Plot</li>
-<li>A systematic change in a time series that does not appear to be periodic : G. Trend</li>
-<li>Repeated pattern within each year (or any other time period) : D. Seasonal Variation</li>
-<li>Repeated pattern that does not correspond to some fixed natural period : A. Cycle</li>
-<li>Observations in which values are related to lagged observations of the same variable : B. Correlated (Serially Dependent) Data</li>
-<li>Random trend that does not follow a discernible or predictable pattern : E. Stochastic Trend</li>
-<li>Can be modeled with mathematical functions, facilitating the long-term prediction of the behavior : C. Deterministic Trend</li>
-<li>Number of observations of a time series : H. <span class="math inline">\(n\)</span></li>
-<li>Discrete observations of a time series, taken at times <span class="math inline">\(1, 2, \ldots, n\)</span>. : I. <span class="math inline">\(\{x_t\}\)</span></li>
-<li>Lead time : J. <span class="math inline">\(k\)</span></li>
-<li>Forecast made at time <span class="math inline">\(t\)</span> for a future value <span class="math inline">\(k\)</span> time units in the future : K. <span class="math inline">\(\hat x_{t+k \mid t}\)</span></li>
-<li>Additive decomposition : S. <span class="math inline">\(x_t = m_t + s_t + z_t\)</span></li>
-<li>Additive decomposition model after taking the logarithm : U. <span class="math inline">\(\log(x_t) = m_t + s_t + z_t\)</span></li>
-<li>Multiplicative model : T. <span class="math inline">\(x_t = m_t \cdot s_t + z_t\)</span></li>
-<li>Centered moving average : M. <span class="math inline">\(\hat m_t\)</span></li>
-<li>Estimate of monthly additive effect : O. <span class="math inline">\(\hat s_t = x_t - \hat m_t\)</span></li>
-<li>Estimate of monthly multiplicative effect : P. <span class="math inline">\(\hat s_t = \dfrac{x_t}{\hat m_t}\)</span></li>
-<li>Seasonally adjusted mean for the month corresponding to time <span class="math inline">\(t\)</span> : Q. <span class="math inline">\(\bar s_t\)</span></li>
-<li>Seasonal adjusted series (additive seasonal effect) : V. <span class="math inline">\(x_t - \bar s_t\)</span></li>
-<li>Seasonal adjusted series (multiplicative seasonal effect) : W. <span class="math inline">\(\frac{x_t}{\bar s_t}\)</span></li>
-<li>The trend as observed at time <span class="math inline">\(t\)</span> : L. <span class="math inline">\(m_t\)</span></li>
-<li>The seasonal effect, as observed at time <span class="math inline">\(t\)</span> : N. <span class="math inline">\(s_t\)</span></li>
-<li>The error term (a sequence of correlated random variables with mean zero), as observed at time <span class="math inline">\(t\)</span> : R. <span class="math inline">\(z_t\)</span></li>
-</ol>
+</section>
+<section id="nomenclature-matching-1" class="level4">
+<h4 class="anchored" data-anchor-id="nomenclature-matching-1">Nomenclature Matching</h4>
+<table class="table">
+<colgroup>
+<col style="width: 63%">
+<col style="width: 36%">
+</colgroup>
+<tbody>
+<tr class="odd">
+<td>8.&nbsp; Discrete observations of a time series, taken at times $1, 2, \ldots, n$.</td>
+<td>O.&nbsp; $\{x_t\}$</td>
+</tr>
+<tr class="even">
+<td>9.&nbsp; Number of observations of a time series</td>
+<td>H.&nbsp; $n$</td>
+</tr>
+<tr class="odd">
+<td>10. Lead time</td>
+<td>I.&nbsp; $k$</td>
+</tr>
+<tr class="even">
+<td>11. The trend as observed at time $t$</td>
+<td>J.&nbsp; $m_t$</td>
+</tr>
+<tr class="odd">
+<td>12. The seasonal effect, as observed at time $t$</td>
+<td>L.&nbsp; $s_t$</td>
+</tr>
+<tr class="even">
+<td>13. The error term (a sequence of correlated random variables with mean zero), as observed at time $t$</td>
+<td>P.&nbsp; $z_t$</td>
+</tr>
+<tr class="odd">
+<td>14. Centered moving average for obsrvations made monthly</td>
+<td>K.&nbsp; $\hat m_t$</td>
+</tr>
+<tr class="even">
+<td>15. Estimate of monthly additive effect</td>
+<td>M.&nbsp; $\hat s_t = x_t - \hat m_t ~$</td>
+</tr>
+<tr class="odd">
+<td>16. Estimate of monthly multiplicative effect</td>
+<td>N.&nbsp; $\hat s_t = \dfrac{x_t}{\hat m_t}$</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="additional-nomenclature-matching-1" class="level4">
+<h4 class="anchored" data-anchor-id="additional-nomenclature-matching-1">Additional Nomenclature Matching</h4>
+<table class="table">
+<colgroup>
+<col style="width: 63%">
+<col style="width: 36%">
+</colgroup>
+<tbody>
+<tr class="odd">
+<td>17. Forecast made at time $t$ for a future value $k$ time units in the future</td>
+<td>W.&nbsp; $\hat x_{t+k \mid t}$</td>
+</tr>
+<tr class="even">
+<td>18. Additive decomposition model</td>
+<td>R.&nbsp; $x_t = m_t + s_t + z_t$</td>
+</tr>
+<tr class="odd">
+<td>19. Additive decomposition model after taking the logarithm</td>
+<td>T.&nbsp; $\log(x_t) = m_t + s_t + z_t$</td>
+</tr>
+<tr class="even">
+<td>20. Multiplicative decomposition model</td>
+<td>S.&nbsp; $x_t = m_t \cdot s_t + z_t$</td>
+</tr>
+<tr class="odd">
+<td>21. Seasonally adjusted mean for the month corresponding to time $t$</td>
+<td>Q.&nbsp; $\bar s_t$</td>
+</tr>
+<tr class="even">
+<td>22. Seasonal adjusted series (additive seasonal effect)</td>
+<td>U.&nbsp; $x_t - \bar s_t$</td>
+</tr>
+<tr class="odd">
+<td>23. Seasonal adjusted series (multiplicative seasonal effect)&nbsp;</td>
+<td>V.&nbsp; $\frac{x_t}{\bar s_t}$</td>
+</tr>
+</tbody>
+</table>
+</section>
 </div>
 </div>
 </div>

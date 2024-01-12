@@ -12,7 +12,8 @@ pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite d
                ggokabeito, # colorblind palette
                stringr, # string manipulation
                lubridate, # date manipulation
-               rio # for easy i/o
+               rio, # for easy i/o
+               tidyquant
 )
 
 # Palette ----
@@ -104,6 +105,13 @@ compute_moving_average <- function(df, variable, periods = 12) {
   df$m_hat <- sum / periods
   return(df)
 }
+
+# # # # # # # # # # # # # Testing
+# set.seed(1)
+# x <- rnorm(100,5,2)
+# df1 <- data.frame(x=x)
+# compute_moving_average(df1, x) |> head(12)
+
 
 
 ########### String manipulation

@@ -73,14 +73,14 @@ Working with a partner, match the definitions on the left with the terms on the 
 
 <!-- Code Source: https://bookdown.org/yihui/rmarkdown-cookbook/multi-column.html -->
 
-### Vocabulary Matching
+#### Vocabulary Matching
 
 ::: {style="display: flex;"}
 <div>
 
 1.  A figure with time on the horizontal axis and the value of a random variable on the vertical axis
 2.  A systematic change in a time series that does not appear to be periodic
-3.  Repeated pattern within each year (or any other time period)
+3.  Repeated pattern within each year (or any other fixed time period)
 4.  Repeated pattern that does not correspond to some fixed natural period
 5.  Observations in which values are related to lagged observations of the same variable
 6.  Random trend that does not follow a discernible or predictable pattern
@@ -101,14 +101,13 @@ G.  Trend
 </div>
 :::
 
-
-### Nomenclature Matching
+#### Nomenclature Matching
 
 ::: {style="display: flex;"}
 <div>
 
-8.  Number of observations of a time series
-9.  Discrete observations of a time series, taken at times $1, 2, \ldots, n$.
+8.  Discrete observations of a time series, taken at times $1, 2, \ldots, n$.
+9.  Number of observations of a time series
 10. Lead time
 11. The trend as observed at time $t$
 12. The seasonal effect, as observed at time $t$
@@ -136,19 +135,18 @@ P.  $z_t$
 
 where $\hat m_t = \dfrac{\frac{1}{2}x_{t-6} + x_{t-5} + \cdots + x_{t-1} + x_t + x_{t+1} + \cdot + x_{t+5} + \frac{1}{2} x_{t+6}}{12}$.
 
-
-### Additional Nomenclature Matching
+#### Additional Nomenclature Matching
 
 ::: {style="display: flex;"}
 <div>
 
-17. Forecast made at time $t$ for a future value $k$ time units in the future $~~~~~~~~~~~~~~~$
-18. Additive decomposition
+17. Forecast made at time $t$ for a future value $k$ time units in the future $~~~~~~~~~~~~~~~~~~~~~~$
+18. Additive decomposition model
 19. Additive decomposition model after taking the logarithm
-20. Multiplicative model
+20. Multiplicative decomposition model
 21. Seasonally adjusted mean for the month corresponding to time $t$
 22. Seasonal adjusted series (additive seasonal effect)
-23. Seasonal adjusted series (multiplicative seasonal effect) $~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~$
+23. Seasonal adjusted series (multiplicative seasonal effect) 
 
 </div>
 
@@ -164,14 +162,9 @@ W.  $\hat x_{t+k \mid t}$
 
 </div>
 :::
-
-
-::: 
-
+:::
 
 ## Comparison of Deterministic and Stochastic Time Series (10 min)
-
-
 
 ### Stochastic Time Series
 
@@ -189,15 +182,15 @@ The figure below illustrates realizations of a deterministic time series. The da
 ```{=html}
  <iframe id="deterministic" src="https://posit.byui.edu/content/4d25268b-d562-455c-ac47-5a9871770e7c" style="border: none; width: 100%; height: 550px" frameborder="0"></iframe>
 ```
-
-
 <!-- <a href="javascript:showhide('Meme')" -->
+
 <!-- style="font-size:.8em;">Meme</a> -->
 
 <!-- ::: {#Meme style="display:none;"} -->
-<!-- ![](images/MobiusMeme.png) -->
-<!-- ::: -->
 
+<!-- ![](images/MobiusMeme.png) -->
+
+<!-- ::: -->
 
 ## Class Activity: Importing Data and Creating a tsibble Object (5 min)
 
@@ -256,16 +249,15 @@ choc_plot
 ### Explore R commands summarizing time series data
 
 ::: {.callout-tip icon="false" title="Check Your Understanding"}
--   What does each of the following R commands give us?
-    <!-- -   class(chocolate_month_ts) -->
+-   What does each of the following R commands give us? <!-- -   class(chocolate_month_ts) -->
     -   head(chocolate_month_ts, 1)
     -   tail(chocolate_month_ts, 1)
-    -   guess_frequency(chocolate_month_ts$index)
+    -   guess_frequency(chocolate_month_ts\$index)
 :::
 
 ## Estimating the Trend: Annual Aggregation (5 min)
 
-To help visualize what is happening with a time series, we can simply aggregate the data in the time series to the annual level by computing the mean of the observations in a given year. This can make it easier to spot a trend. 
+To help visualize what is happening with a time series, we can simply aggregate the data in the time series to the annual level by computing the mean of the observations in a given year. This can make it easier to spot a trend.
 
 For the chocolate data, when we average the data for each year, we get:
 
@@ -280,7 +272,6 @@ chocolate_annual_ts <- summarise(
 chocolate_annual_ts
 ```
 
-
 ```{r}
 #| echo: false
 
@@ -289,10 +280,6 @@ chocolate_annual_ts |>
   concat_partial_table(nrow_head = 6, nrow_tail= 3, decimals = 4) |>
   display_table()
 ```
-
-
-
-
 
 The first plot is the time series plot of the raw data, and the second plot is a time series plot of the annual means.
 
@@ -322,14 +309,38 @@ yp <- autoplot(chocolate_annual_ts, .vars = value) +
 mp / yp
 ```
 
+If you want to superimpose these plots, it would make sense to align the mean value for the year with the middle of the year. Here is a plot superimposing the annual mean aligned with July 1 (in blue) on the values of the time series (in black).
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: true
+
+chocolate_annual_ts <- summarise(
+    index_by(chocolate_month_ts, year), 
+    value = mean(value)
+  ) |>
+  mutate(index = tsibble::yearmonth( mdy(paste0("7/1/",year)) )) |>
+  as_tsibble(index = index)
+
+# combined plot
+autoplot(chocolate_month_ts, .vars = value) +
+  geom_line(data = chocolate_annual_ts, 
+            aes(x = index, y = value), 
+            color = "#56B4E9") +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
 
 ::: {.callout-tip icon="false" title="Check Your Understanding"}
 -   What do the annually-aggregated data tell us about the trend?
 -   What do you observe in the trend?
 -   What do you suspect is causing this trend?
 :::
-
-
 
 ## Recap (5 min)
 
@@ -347,50 +358,52 @@ mp / yp
 :::
 
 <a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Which Model? & Matching Solutions</a>
+style="font-size:.8em;">Matching</a>
 
 ::: {#Solutions style="display:none;"}
-Solutions to Which Model Should I Use?:
 
-|                                          | Rexburg Temperature | S&P 500 Closing Price |
-|------------------------------------------|---------------------|-----------------------|
-| Deterministic or stochastic trend?       | Deterministic       | Stochastic            |
-| Is there a seasonal effect?              | Yes                 | No                    |
-| Is there evidence of cycles?             | Yes                 | Yes                   |
-| Does the variation get bigger over time? | No                  | Yes                   |
-| Additive or multiplicative model?        | Additive            | Multiplicative        |
+::: {.callout-tip icon="false" title="Check Your Understanding"}
 
-::: {style="display: flex;"}
-<div>
+Matching Solutions
 
-1.  A figure with time on the horizontal axis and the value of a random variable on the vertical axis : F. Time Plot
-2.  A systematic change in a time series that does not appear to be periodic : G. Trend
-3.  Repeated pattern within each year (or any other time period) : D. Seasonal Variation
-4.  Repeated pattern that does not correspond to some fixed natural period : A. Cycle
-5.  Observations in which values are related to lagged observations of the same variable : B. Correlated (Serially Dependent) Data
-6.  Random trend that does not follow a discernible or predictable pattern : E. Stochastic Trend
-7.  Can be modeled with mathematical functions, facilitating the long-term prediction of the behavior : C. Deterministic Trend
-8.  Number of observations of a time series : H. $n$
-9.  Discrete observations of a time series, taken at times $1, 2, \ldots, n$. : I. $\{x_t\}$
-10. Lead time : J. $k$
-11. Forecast made at time $t$ for a future value $k$ time units in the future : K. $\hat x_{t+k \mid t}$
-12. Additive decomposition : S. $x_t = m_t + s_t + z_t$
-13. Additive decomposition model after taking the logarithm : U. $\log(x_t) = m_t + s_t + z_t$
-14. Multiplicative model : T. $x_t = m_t \cdot s_t + z_t$
-15. Centered moving average : M. $\hat m_t$
-16. Estimate of monthly additive effect : O. $\hat s_t = x_t - \hat m_t$
-17. Estimate of monthly multiplicative effect : P. $\hat s_t = \dfrac{x_t}{\hat m_t}$
-18. Seasonally adjusted mean for the month corresponding to time $t$ : Q. $\bar s_t$
-19. Seasonal adjusted series (additive seasonal effect) : V. $x_t - \bar s_t$
-20. Seasonal adjusted series (multiplicative seasonal effect) : W. $\frac{x_t}{\bar s_t}$
-21. The trend as observed at time $t$ : L. $m_t$
-22. The seasonal effect, as observed at time $t$ : N. $s_t$
-23. The error term (a sequence of correlated random variables with mean zero), as observed at time $t$ : R. $z_t$
+#### Vocabulary Matching
 
-</div>
+|                                                                                                       |                                          |
+|----------------------------------------------|--------------------------|
+| 1.  A figure with time on the horizontal axis and the value of a random variable on the vertical axis | F.  Time Plot                            |
+| 2.  A systematic change in a time series that does not appear to be periodic                          | G.  Trend                                |
+| 3.  Repeated pattern within each year (or any other fixed time period)                                | D.  Seasonal Variation                   |
+| 4.  Repeated pattern that does not correspond to some fixed natural period                            | A.  Cycle                                |
+| 5.  Observations in which values are related to lagged observations of the same variable              | B.  Correlated (Serially Dependent) Data |
+| 6.  Random trend that does not follow a discernible or predictable pattern                            | E.  Stochastic Trend                     |
+| 7.  Can be modeled with mathematical functions, facilitating the long-term prediction of the behavior | C.  Deterministic Trend                  |
+
+#### Nomenclature Matching
+
+|                                                                                                           |                                             |
+|----------------------------------------------|--------------------------|
+| 8.  Discrete observations of a time series, taken at times \$1, 2, \\ldots, n\$.                          | O.  \$\\{x_t\\}\$                           |
+| 9.  Number of observations of a time series                                                               | H.  \$n\$                                   |
+| 10\. Lead time                                                                                            | I.  \$k\$                                   |
+| 11\. The trend as observed at time \$t\$                                                                  | J.  \$m_t\$                                 |
+| 12\. The seasonal effect, as observed at time \$t\$                                                       | L.  \$s_t\$                                 |
+| 13\. The error term (a sequence of correlated random variables with mean zero), as observed at time \$t\$ | P.  \$z_t\$                                 |
+| 14\. Centered moving average for obsrvations made monthly                                                 | K.  \$\\hat m_t\$                           |
+| 15\. Estimate of monthly additive effect                                                                  | M.  \$\\hat s_t = x_t - \\hat m_t \~\$      |
+| 16\. Estimate of monthly multiplicative effect                                                            | N.  \$\\hat s_t = \\dfrac{x_t}{\\hat m_t}\$ |
+
+#### Additional Nomenclature Matching
+
+|                                                                                    |                                      |
+|----------------------------------------------|--------------------------|
+| 17\. Forecast made at time \$t\$ for a future value \$k\$ time units in the future | W.  \$\\hat x\_{t+k \\mid t}\$       |
+| 18\. Additive decomposition model                                                  | R.  \$x_t = m_t + s_t + z_t\$        |
+| 19\. Additive decomposition model after taking the logarithm                       | T.  \$\\log(x_t) = m_t + s_t + z_t\$ |
+| 20\. Multiplicative decomposition model                                            | S.  \$x_t = m_t \\cdot s_t + z_t\$   |
+| 21\. Seasonally adjusted mean for the month corresponding to time \$t\$            | Q.  \$\\bar s_t\$                    |
+| 22\. Seasonal adjusted series (additive seasonal effect)                           | U.  \$x_t - \\bar s_t\$              |
+| 23\. Seasonal adjusted series (multiplicative seasonal effect)                     | V.  \$\\frac{x_t}{\\bar s_t}\$       |
+
 :::
+
 :::
-
-
-
-
