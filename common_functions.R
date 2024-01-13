@@ -110,8 +110,12 @@ compute_moving_average <- function(df, variable, periods = 12) {
 # set.seed(1)
 # x <- rnorm(100,5,2)
 # df1 <- data.frame(x=x)
-# compute_moving_average(df1, x) |> head(12)
-
+#
+# df1 %>%
+#   compute_moving_average(x, 12) %>%
+# mutate( m_hat2 =
+#           ( 1 / 2 * lag(x,6) + lag(x,5) + lag(x,4) + lag(x,3) + lag(x,2) + lag(x) + x + lead(x,1) + lead(x,2) + lead(x,3) + lead(x,4) + lead(x,5) + 1 / 2 * lead(x,6)) /12
+# ) %>% View
 
 
 ########### String manipulation
