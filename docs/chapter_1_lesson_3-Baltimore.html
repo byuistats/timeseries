@@ -257,7 +257,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#city-of-baltimore-crime-data-2011-2016-summary" id="toc-city-of-baltimore-crime-data-2011-2016-summary" class="nav-link" data-scroll-target="#city-of-baltimore-crime-data-2011-2016-summary">City of Baltimore Crime Data (2011-2016) Summary</a></li>
   </ul></li>
   <li><a href="#key-information" id="toc-key-information" class="nav-link" data-scroll-target="#key-information">Key Information</a></li>
-  <li><a href="#estimating-the-trend-moving-average-5-min" id="toc-estimating-the-trend-moving-average-5-min" class="nav-link" data-scroll-target="#estimating-the-trend-moving-average-5-min">Estimating the Trend: Moving Average (5 min)</a></li>
   </ul>
 </nav>
     </div>
@@ -304,20 +303,24 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </script>
 <section id="learning-outcomes" class="level2">
 <h2 class="anchored" data-anchor-id="learning-outcomes">Learning Outcomes</h2>
+<details>
 <summary>
 Decompose time series into trends, seasonal variation, and residuals
 </summary>
 <ul>
-<li>Define moving average of a time series</li>
+<li>Define smoothing</li>
+<li>Compute the centered moving average for a time series</li>
 <li>Estimate the trend component using moving averages</li>
 </ul>
-
+</details>
 <details>
 <summary>
 Plot time series data to visualize trends, seasonal patterns, and potential outliers
 </summary>
 <ul>
 <li>Plot the estimated trend of a time series using a moving average</li>
+<li>Make box plots to examine seasonality</li>
+<li>Interpret the trend and seasonal pattern observed in a time series</li>
 </ul>
 </details>
 </section>
@@ -365,13 +368,13 @@ Plot time series data to visualize trends, seasonal patterns, and potential outl
 <p>Explore the data on <a href="https://data.world/data-society/city-of-baltimore-crime-data">data.world</a>.</p>
 <p><strong>Packages</strong></p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dygraphs)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyquant)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(forecast)</span>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># library(dplyr)</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co"># library(tidyr)</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># library(ggplot2)</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># library(tidyverse)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># library(dygraphs)</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># library(tidyquant)</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># library(forecast)</span></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="sc">!</span><span class="fu">require</span>(<span class="st">"pacman"</span>)) <span class="fu">install.packages</span>(<span class="st">"pacman"</span>)</span>
@@ -380,174 +383,144 @@ Plot time series data to visualize trends, seasonal patterns, and potential outl
 <span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>               <span class="st">"fable.prophet"</span>, <span class="st">"tidyverse"</span>,</span>
 <span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>               <span class="st">"patchwork"</span>, <span class="st">"rio"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p><strong>Data Import</strong></p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"https://query.data.world/s/gibquqj7violcatsd74xyyg7r4fwxp?dws=00000"</span>, <span class="at">header=</span><span class="cn">TRUE</span>, <span class="at">stringsAsFactors=</span><span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p><strong>Data Summary and Aggregation</strong></p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Group by CrimeDate column and summarize from Total.Incidents column</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>summary_df <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(CrimeDate) <span class="sc">%&gt;%</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_incidents =</span> <span class="fu">sum</span>(Total.Incidents),</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">average_incidents =</span> <span class="fu">mean</span>(Total.Incidents),</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">max_incidents =</span> <span class="fu">max</span>(Total.Incidents),</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">min_incidents =</span> <span class="fu">min</span>(Total.Incidents)</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p><strong>Data Transformation and Formatting</strong></p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Select relevant columns, format CrimeDate, and arrange the data</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>crime_data <span class="ot">&lt;-</span> summary_df <span class="sc">%&gt;%</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(CrimeDate, total_incidents) <span class="sc">%&gt;%</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">CrimeDate =</span> <span class="fu">as.Date</span>(CrimeDate, <span class="at">format =</span> <span class="st">"%m/%d/%Y"</span>)) <span class="sc">%&gt;%</span></span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(CrimeDate)</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Uncomment the line below to see the formatted table</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># crim_data</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p><strong>Create Time Series Data</strong></p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert formatted data to tsibble with CrimeDate as the index</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>crime_tsibble <span class="ot">&lt;-</span> <span class="fu">as_tsibble</span>(crime_data, <span class="at">index =</span> CrimeDate)</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Uncomment the line below to see the tsibble</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># crime_tsibble</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p><strong>Monthly Plot of Total Incidents</strong></p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a monthly plot of total incidents over time</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>crime_plot <span class="ot">&lt;-</span> <span class="fu">autoplot</span>(crime_tsibble, <span class="at">.vars =</span> total_incidents) <span class="sc">+</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Month"</span>,</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Total Incidents"</span>,</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Total Incidents Over Time"</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the plot</span></span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>crime_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="chapter_1_lesson_3-Baltimore_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-<p><strong>Calculate Mean Annual Total Incidents</strong></p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate mean annual total incidents</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>crime_annual_ts <span class="ot">&lt;-</span> crime_tsibble <span class="sc">%&gt;%</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">index_by</span>(<span class="at">year =</span> <span class="fu">year</span>(CrimeDate)) <span class="sc">%&gt;%</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">value =</span> <span class="fu">mean</span>(total_incidents))</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Uncomment the line below to see the table</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co"># crime_annual_ts</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p><strong>Convert to Time Series and Plot Mean Annual Total Incidents</strong></p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert to ts object</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>crime_annual_ts_ts <span class="ot">&lt;-</span> <span class="fu">ts</span>(crime_annual_ts<span class="sc">$</span>value, <span class="at">frequency =</span> <span class="dv">1</span>)</span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot mean annual total incidents using autoplot</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(crime_annual_ts_ts) <span class="sc">+</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Year"</span>,</span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Mean Total Incidents"</span>,</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Mean Annual Total Incidents"</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="chapter_1_lesson_3-Baltimore_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-<p><strong>Monthly Boxplots of Total Incidents</strong></p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a categorical month variable to the tsibble</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>crime_tsibble <span class="ot">&lt;-</span> crime_tsibble <span class="sc">%&gt;%</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">month =</span> <span class="fu">factor</span>(<span class="fu">month</span>(CrimeDate)))</span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Create boxplots</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(crime_tsibble, <span class="fu">aes</span>(<span class="at">x =</span> month, <span class="at">y =</span> total_incidents)) <span class="sc">+</span></span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Month"</span>,</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Total Incidents"</span>,</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Boxplots of Total Incidents by Month"</span></span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="chapter_1_lesson_3-Baltimore_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-</section>
-</section>
-<section id="estimating-the-trend-moving-average-5-min" class="level2">
-<h2 class="anchored" data-anchor-id="estimating-the-trend-moving-average-5-min">Estimating the Trend: Moving Average (5 min)</h2>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Assuming 'crime_tsibble' is your tsibble</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>crime_tsibble <span class="ot">&lt;-</span> crime_tsibble <span class="sc">%&gt;%</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">year =</span> <span class="fu">year</span>(CrimeDate))  <span class="co"># Extract year from CrimeDate</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a daily plot</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>dp <span class="ot">&lt;-</span> <span class="fu">autoplot</span>(crime_tsibble, <span class="at">.vars =</span> total_incidents) <span class="sc">+</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Total Incidents"</span>,</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Total Incidents Over Time"</span></span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate mean monthly total incidents</span></span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  mean_monthly_incidents <span class="ot">&lt;-</span> crime_tsibble <span class="sc">%&gt;%</span></span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as.data.frame</span>() <span class="sc">|&gt;</span></span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(year, month) <span class="sc">|&gt;</span></span>
-<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarize</span>(<span class="at">value =</span> <span class="fu">mean</span>(total_incidents)) <span class="sc">|&gt;</span></span>
-<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>( <span class="fu">mdy</span>(<span class="fu">paste0</span>(month, <span class="st">"/15/"</span>, year)) )) <span class="sc">|&gt;</span></span>
-<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>`summarise()` has grouped output by 'year'. You can override using the
-`.groups` argument.</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate mean annual total incidents</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  mean_annual_incidents <span class="ot">&lt;-</span> crime_tsibble <span class="sc">%&gt;%</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as.data.frame</span>() <span class="sc">|&gt;</span></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(year) <span class="sc">|&gt;</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarize</span>(<span class="at">value =</span> <span class="fu">mean</span>(total_incidents)) <span class="sc">|&gt;</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>( <span class="fu">mdy</span>(<span class="fu">paste0</span>(<span class="st">"7/1/"</span>,year)) )) <span class="sc">|&gt;</span></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a yearly plot</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  yp <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(mean_annual_incidents, <span class="fu">aes</span>(<span class="at">x =</span> year, <span class="at">y =</span> value)) <span class="sc">+</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>() <span class="sc">+</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Year"</span>,</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Mean Total Crime Incidents"</span>,</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Mean Total Crime Incidents"</span></span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(<span class="dv">2004</span>, <span class="fu">max</span>(crime_tsibble<span class="sc">$</span>year), <span class="at">by =</span> <span class="dv">2</span>)) <span class="sc">+</span></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a monthly plot</span></span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>  mp <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(mean_monthly_incidents, <span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> value)) <span class="sc">+</span></span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>() <span class="sc">+</span></span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Year"</span>,</span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Mean Total Crime Incidents"</span>,</span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Mean Total Crime Incidents"</span></span>
-<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
-<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    <span class="co"># scale_x_continuous(breaks = seq(2004, max(crime_tsibble$year), by = 2)) +</span></span>
-<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
-<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Display both simultaneously</span></span>
-<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>  dp <span class="sc">/</span> mp</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="chapter_1_lesson_3-Baltimore_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
-</div>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>  dp <span class="sc">/</span> yp</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="chapter_1_lesson_3-Baltimore_files/figure-html/unnamed-chunk-12-2.png" class="img-fluid" width="672"></p>
-</div>
-</div>
+<!-- **Data Import** -->
+<!-- ```{r} -->
+<!-- df <- read.csv("https://query.data.world/s/gibquqj7violcatsd74xyyg7r4fwxp?dws=00000", header=TRUE, stringsAsFactors=FALSE) -->
+<!-- ``` -->
+<!-- **Data Summary and Aggregation** -->
+<!-- ```{r} -->
+<!-- # Group by CrimeDate column and summarize from Total.Incidents column -->
+<!-- summary_df <- df %>% -->
+<!--   group_by(CrimeDate) %>% -->
+<!--   summarise( -->
+<!--     total_incidents = sum(Total.Incidents), -->
+<!--     average_incidents = mean(Total.Incidents), -->
+<!--     max_incidents = max(Total.Incidents), -->
+<!--     min_incidents = min(Total.Incidents) -->
+<!--   ) -->
+<!-- ``` -->
+<!-- **Data Transformation and Formatting** -->
+<!-- ```{r} -->
+<!-- # Select relevant columns, format CrimeDate, and arrange the data -->
+<!-- crime_data <- summary_df %>% -->
+<!--   select(CrimeDate, total_incidents) %>% -->
+<!--   mutate(CrimeDate = as.Date(CrimeDate, format = "%m/%d/%Y")) %>% -->
+<!--   arrange(CrimeDate) -->
+
+<!-- # Uncomment the line below to see the formatted table -->
+<!-- # crim_data -->
+<!-- ``` -->
+<!-- **Create Time Series Data** -->
+<!-- ```{r} -->
+<!-- # Convert formatted data to tsibble with CrimeDate as the index -->
+<!-- crime_tsibble <- as_tsibble(crime_data, index = CrimeDate) -->
+<!-- # Uncomment the line below to see the tsibble -->
+<!-- # crime_tsibble -->
+<!-- ``` -->
+<!-- **Monthly Plot of Total Incidents** -->
+<!-- ```{r} -->
+<!-- # Create a monthly plot of total incidents over time -->
+<!-- crime_plot <- autoplot(crime_tsibble, .vars = total_incidents) + -->
+<!--   labs( -->
+<!--     x = "Month", -->
+<!--     y = "Total Incidents", -->
+<!--     title = "Total Incidents Over Time" -->
+<!--   ) + -->
+<!--   theme(plot.title = element_text(hjust = 0.5)) -->
+<!-- # Display the plot -->
+<!-- crime_plot -->
+<!-- ``` -->
+<!-- **Calculate Mean Annual Total Incidents** -->
+<!-- ```{r} -->
+<!-- # Calculate mean annual total incidents -->
+<!-- crime_annual_ts <- crime_tsibble %>% -->
+<!--   index_by(year = year(CrimeDate)) %>% -->
+<!--   summarise(value = mean(total_incidents)) -->
+
+<!-- # Uncomment the line below to see the table -->
+<!-- # crime_annual_ts -->
+<!-- ``` -->
+<!-- **Convert to Time Series and Plot Mean Annual Total Incidents** -->
+<!-- ```{r} -->
+<!-- # Convert to ts object -->
+<!-- crime_annual_ts_ts <- ts(crime_annual_ts$value, frequency = 1) -->
+<!-- # Plot mean annual total incidents using autoplot -->
+<!-- autoplot(crime_annual_ts_ts) + -->
+<!--   labs( -->
+<!--     x = "Year", -->
+<!--     y = "Mean Total Incidents", -->
+<!--     title = "Mean Annual Total Incidents" -->
+<!--   ) + -->
+<!--   theme_minimal() -->
+<!-- ``` -->
+<!-- **Monthly Boxplots of Total Incidents** -->
+<!-- ```{r} -->
+<!-- # Add a categorical month variable to the tsibble -->
+<!-- crime_tsibble <- crime_tsibble %>% -->
+<!--   mutate(month = factor(month(CrimeDate))) -->
+<!-- # Create boxplots -->
+<!-- ggplot(crime_tsibble, aes(x = month, y = total_incidents)) + -->
+<!--   geom_boxplot() + -->
+<!--   labs( -->
+<!--     x = "Month", -->
+<!--     y = "Total Incidents", -->
+<!--     title = "Boxplots of Total Incidents by Month" -->
+<!--   ) + -->
+<!--   theme(plot.title = element_text(hjust = 0.5)) -->
+<!-- ``` -->
+<!-- ## Estimating the Trend: Moving Average (5 min) -->
+<!-- ```{r} -->
+<!-- # Assuming 'crime_tsibble' is your tsibble -->
+<!-- crime_tsibble <- crime_tsibble %>% -->
+<!--   mutate(year = year(CrimeDate))  # Extract year from CrimeDate -->
+<!-- # Create a daily plot -->
+<!-- dp <- autoplot(crime_tsibble, .vars = total_incidents) + -->
+<!--     labs( -->
+<!--       x = "Month", -->
+<!--       y = "Total Incidents", -->
+<!--       title = "Total Incidents Over Time" -->
+<!--     ) + -->
+<!--     theme(plot.title = element_text(hjust = 0.5)) -->
+<!--   # Calculate mean monthly total incidents -->
+<!--   mean_monthly_incidents <- crime_tsibble %>% -->
+<!--     as.data.frame() |> -->
+<!--     group_by(year, month) |> -->
+<!--     summarize(value = mean(total_incidents)) |> -->
+<!--   mutate(index = tsibble::yearmonth( mdy(paste0(month, "/15/", year)) )) |> -->
+<!--   as_tsibble(index = index) -->
+<!--   # Calculate mean annual total incidents -->
+<!--   mean_annual_incidents <- crime_tsibble %>% -->
+<!--     as.data.frame() |> -->
+<!--     group_by(year) |> -->
+<!--     summarize(value = mean(total_incidents)) |> -->
+<!--   mutate(index = tsibble::yearmonth( mdy(paste0("7/1/",year)) )) |> -->
+<!--   as_tsibble(index = index) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- # Create a yearly plot -->
+<!--   yp <- ggplot(mean_annual_incidents, aes(x = year, y = value)) + -->
+<!--     geom_line() + -->
+<!--     labs( -->
+<!--       x = "Year", -->
+<!--       y = "Mean Total Crime Incidents", -->
+<!--       title = "Mean Total Crime Incidents" -->
+<!--     ) + -->
+<!--     scale_x_continuous(breaks = seq(2004, max(crime_tsibble$year), by = 2)) + -->
+<!--     theme(plot.title = element_text(hjust = 0.5)) -->
+<!-- # Create a monthly plot -->
+<!--   mp <- ggplot(mean_monthly_incidents, aes(x = index, y = value)) + -->
+<!--     geom_line() + -->
+<!--     labs( -->
+<!--       x = "Year", -->
+<!--       y = "Mean Total Crime Incidents", -->
+<!--       title = "Mean Total Crime Incidents" -->
+<!--     ) + -->
+<!--     # scale_x_continuous(breaks = seq(2004, max(crime_tsibble$year), by = 2)) + -->
+<!--     theme(plot.title = element_text(hjust = 0.5)) -->
+<!--   # Display both simultaneously -->
+<!--   dp / mp -->
+<!--   dp / yp -->
+<!-- ``` -->
 <!-- ### Aggregate to the annual level -->
 <!-- To help visualize what is happening with a time series, we often aggregate the data in the time series to the annual level. This can make it easier to spot a trend. The first plot is the time series plot of the raw data, and the second plot is a time series plot of the annual means. -->
 <!-- ```{r} -->
@@ -1076,6 +1049,7 @@ Plot time series data to visualize trends, seasonal patterns, and potential outl
 <!-- ::: -->
 
 
+</section>
 </section>
 
 </main> <!-- /main -->

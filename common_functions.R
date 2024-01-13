@@ -49,7 +49,7 @@ round_df <- function(df, digits) {
 # Displays the kable table
 display_table <- function(df) {
   df %>%
-    knitr::kable(format = "html", align='cccccccccccccc', escape = FALSE, width = NA) %>%
+    knitr::kable(format = "html", align='cccccccccccccc', escape = FALSE, width = NA, row.names = FALSE) %>%
     kable_styling(full_width = FALSE, "striped")
 }
 
@@ -194,6 +194,12 @@ concat_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
     bind_rows(tail(temp_df, nrow_tail))
 
   return(out_df)
+}
+
+
+display_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
+  concat_partial_table(df, nrow_head, nrow_tail, decimals) |>
+  display_table()
 }
 
 #############################################
