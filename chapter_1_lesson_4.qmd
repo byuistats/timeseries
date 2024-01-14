@@ -249,17 +249,6 @@ $$
   \hat s_t = x_t - \hat m_t
 $$
 
-If we compute the mean of $\hat s_t$ for all values for which it is defined, we get a value that is reasonably close to 0, but not exactly zero. We adjust this by subtracting the mean from $\hat s_t$ to get the seasonally adjusted mean:
-
-$$
-  \bar s_t = \hat s_t - \bar {\hat s_t}
-$$
-
-Finally, we compute the seasonally adjusted series by subtracting $\bar s_t$ from each of the observed values:
-
-$$
-  \text{seasonally adjusted series} = x_t - \bar s_t
-$$
 
 
 ```{r}
@@ -280,7 +269,7 @@ deaths_shat_ts |>
     s_hat = as.character(s_hat),
   ) |> 
   mutate(
-    s_hat = ifelse(row_number() <= 12, "", s_hat),
+    s_hat = ifelse(row_number() <= 14, "", s_hat),
     deaths = as.character(deaths)
     # adjusted_s_hat = ifelse(row_number() <= 12, "", adjusted_s_hat),
     # seasonally_adjusted = ifelse(row_number() <= 12, "", seasonally_adjusted)
@@ -311,7 +300,26 @@ deaths_shat_ts |>
 
 ### Seasonally Adjusted Mean
 
-Next, we need to compute the seasonally adjusted mean. This is the mean (across years) of $\hat s_t$ for each month. To compute this, it can be convenient to organize the values of $\hat s_t$ in a table, where the columns give the year and the rows give the month.
+# FIX THIS NOTATION .... FIX THIS NOTATION .... FIX THIS NOTATION .... FIX THIS NOTATION .... 
+
+Next, we compute the mean of $\hat s_t$ for all values within each month. Call these values $\bar {\hat s_t}$. 
+
+The mean of the $\bar {\hat s_t}$ values will be reasonably close to, but not exactly zero. We adjust these values by subtracting the overall mean from $\bar {\hat s_t}$ for each of the months to get the seasonally adjusted mean:
+
+$$
+  \bar s_t = \hat s_t - \bar {\hat s_t}
+$$
+
+where $\bar {\hat s_t}$ is the average of the $\hat s_t$ values corresponding to month $t$.
+
+Finally, we compute the seasonally adjusted series by subtracting $\bar s_t$ from each of the observed values:
+
+$$
+  \text{seasonally adjusted series} = x_t - \bar s_t
+$$
+
+
+Next, we need to compute the seasonally adjusted mean. This is the mean (across years) of $\hat s_t$ for each month. To compute this, it can be convenient to organize the values of $\hat s_t$ in a table, where the rows give the year and the columns give the month.
 
 ```{r}
 #| echo: false
@@ -354,6 +362,8 @@ wider_df2 |>
   mutate(Oct = ifelse(row_number() == 1, "______", Oct)) |>
   mutate(Nov = ifelse(row_number() == 1, "______", Nov)) |>
   mutate(Dec = ifelse(row_number() == 1, "______", Dec)) |>
+  mutate(Jan = ifelse(row_number() == 2, "______", Jan)) |>
+  mutate(Feb = ifelse(row_number() == 2, "______", Feb)) |>
   mutate(Nov = ifelse(row_number() == n(), "______", Nov)) |>
   mutate(Dec = ifelse(row_number() == n(), "______", Dec)) |>
   rename(Year = year) |>
@@ -362,6 +372,9 @@ wider_df2 |>
   color_specific_cell(1, 10, "#0072B2") |>
   color_specific_cell(1, 11, "#0072B2") |>
   color_specific_cell(1, 12, "#0072B2") |>
+  color_specific_cell(1, 13, "#0072B2") |>
+  color_specific_cell(2, 2, "#0072B2") |>
+  color_specific_cell(2, 3, "#0072B2") |>
   color_last_row2("#0072B2") |>
   rbind(c("Adjusted",rep("______",12))) |>
   color_last_row2("#0072B2") |>
@@ -370,7 +383,7 @@ wider_df2 |>
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   The table above gives the values of $\hat s_t$. Fill in the missing values in the first row of table above. (Note you already computed these.)
+-   The table above gives the values of $\hat s_t$. Fill in the missing values in the first two rows of table above. (Note you already computed these.)
 -   The second-to-last row (labeled "Mean") gives the values of $\bar s_t$. Fill in the two missing numbers
 -   Compute the mean of the $\bar s_t$ values. (This number should be relatively close to 0.)
 -   Subtract the mean of the $\bar s_t$ values from each $\bar s_t$ to get $\bar s_t$, the seasonally adjusted mean for month $t$. 
@@ -378,6 +391,7 @@ wider_df2 |>
 :::
 
 
+# CALCULATE THE RANDOM TERM AND PLOT THE DECOMPOSITION....................ADD THIS.....................
 
 
 ### Visualizing the Seasonally Adjusted Series
@@ -404,6 +418,7 @@ adj_s_bar_df <- deaths_ts2 |>
 # Get seasonally adjusted time series
 adjusted_ts <- deaths_ts2 |>
   left_join(adj_s_bar_df, by = join_by(month)) |>
+  mutate(random = deaths - m_hat - adjusted_s_bar) |>
   mutate(seasonally_adjusted = deaths - adjusted_s_bar) |>
   dplyr::select(-s_bar_bar)
 ```
@@ -476,6 +491,17 @@ splot <- autoplot(adjusted_ts, .vars = s_hat) +
   # coord_cartesian(ylim = c(0,4500)) +
   theme(plot.title = element_text(hjust = 0.5))
 
+rplot <- autoplot(adjusted_ts, .vars = random) +
+  # geom_line(aes(x = index, y = seasonally_adjusted), color = "#D55E00") +
+  # geom_line(aes(x = index, y = m_hat), color = "#0072B2") +
+  labs(
+    x = "Month",
+    y = "Traffic Fatalities",
+    title = "random: Traffic Fatalities in the United States (by Month)"
+  ) +
+  # coord_cartesian(ylim = c(0,4500)) +
+  theme(plot.title = element_text(hjust = 0.5))
+
 
 seasplot <- autoplot(adjusted_ts, .vars = seasonally_adjusted) +
   # geom_line(aes(x = index, y = seasonally_adjusted), color = "#D55E00") +
@@ -488,7 +514,7 @@ seasplot <- autoplot(adjusted_ts, .vars = seasonally_adjusted) +
   # coord_cartesian(ylim = c(0,4500)) +
   theme(plot.title = element_text(hjust = 0.5))
 
-xplot / mplot 
+xplot / mplot ############### / rplot
 
 splot /seasplot
 ```
@@ -532,11 +558,12 @@ Solutions for the computations from this lesson
 
 adjusted_ts |> 
   round_df(1) |>
-  filter(row_number() <= 12) |>
+  filter(row_number() <= 14) |>
   mutate(
     s_hat = cell_spec(s_hat, color = "#E69F00"),
-    adjusted_s_bar = cell_spec(adjusted_s_bar, color = "#E69F00"),
-    seasonally_adjusted = cell_spec(seasonally_adjusted, color = "#E69F00")
+    adjusted_s_bar = cell_spec(adjusted_s_bar, color = "#009E73"),
+    random = cell_spec(random, color = "#009E73"),
+    seasonally_adjusted = cell_spec(seasonally_adjusted, color = "#009E73")
   ) |>
   display_table()
 ```
@@ -572,6 +599,8 @@ wider_df3 |>
   color_specific_cell(1, 11, "#0072B2") |>
   color_specific_cell(1, 12, "#0072B2") |>
   color_specific_cell(1, 13, "#0072B2") |>
+  color_specific_cell(2, 2, "#0072B2") |>
+  color_specific_cell(2, 3, "#0072B2") |>
   color_last_row2("#0072B2") |>
   color_2nd_to_last_row2("#0072B2") |>
   display_table()
