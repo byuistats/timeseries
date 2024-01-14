@@ -1,0 +1,202 @@
+---
+title: "Chapter 1, Lesson 4: In-Class Worksheet"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+
+```{r}
+#| echo: false
+
+deaths_df <- rio::import("https://byuistats.github.io/timeseries/data/traffic_deaths.xlsx")
+
+# Method 1: Create date from scratch based on pattern of rows
+# This only works if the data are in ascending order with no missing values
+# Note: This file is not in the right order, so this code gives the wrong tsibble
+# unless you sort the Excel file before proceeding.
+start_date <- lubridate::ymd("2017-01-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(deaths_df)-1),
+                by = "1 months")
+deaths_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = pull(deaths_df, Deaths)
+)
+
+# Method 2: Build using the date information in the Excel file
+deaths_tibble <- deaths_df |>
+  mutate(
+    date_str = paste("1", Month, Year),
+    dates = dmy(date_str),
+    year = lubridate::year(dates),
+    month = lubridate::month(dates),
+    value = Deaths
+  ) |>
+  dplyr::select(dates, year, month, value)  |> 
+  tibble()
+
+# Create the index variable and convert to a tsibble
+deaths_ts <- deaths_tibble |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index) |>
+  dplyr::select(index, dates, year, month, value) |>
+  rename(deaths = value) # rename value to emphasize data context
+```
+
+
+```{r}
+#| echo: false
+
+# computes the 12-month centered moving average (m_hat)
+deaths_ts <- deaths_ts |> 
+  mutate(
+    m_hat = (
+          (1/2) * lag(deaths, 6)
+          + lag(deaths, 5)
+          + lag(deaths, 4)
+          + lag(deaths, 3)
+          + lag(deaths, 2)
+          + lag(deaths, 1)
+          + deaths
+          + lead(deaths, 1)
+          + lead(deaths, 2)
+          + lead(deaths, 3)
+          + lead(deaths, 4)
+          + lead(deaths, 5)
+          + (1/2) * lead(deaths, 6)
+        ) / 12
+  )
+```
+
+#### Table 1: Compute $\hat s_t$; then use Table 2 to find the adjusted $\hat s_t$, the random component, and the seasonally adjusted time series values
+
+```{r}
+#| echo: false
+
+deaths_shat_ts <- deaths_ts |>
+  dplyr::select(index, month, deaths, m_hat) |>
+  mutate(s_hat = deaths - m_hat)
+#   mutate( 
+#     adjusted_s_hat = s_hat - mean(s_hat, na.rm = TRUE),
+#     seasonally_adjusted = deaths - adjusted_s_hat
+#   )
+
+deaths_shat_ts |>
+  round_df(1) |>
+  mutate(
+    m_hat = as.character(m_hat),
+    s_hat = as.character(s_hat),
+  ) |> 
+  mutate(
+    s_hat = ifelse(row_number() <= 12, "", s_hat),
+    deaths = as.character(deaths),
+    adjusted_s_hat = "",
+    random = "",
+    seasonally_adjusted = ""
+  ) |>
+  # color_specific_cell(row_num = 12, col_num = 4, color = "#009E73") |>
+  # color_specific_cell(row_num = 6, col_num = 3, color = "#009E73") |>
+  # color_specific_cell(row_num = 7, col_num = 3, color = "#009E73") |>
+  # color_specific_cell(row_num = 8, col_num = 3, color = "#009E73") |>
+  # color_specific_cell(row_num = 9, col_num = 3, color = "#009E73") |>
+  # color_specific_cell(row_num = 10, col_num = 3, color = "#009E73") |>
+  # color_specific_cell(row_num = 11, col_num = 3, color = "#009E73") |>
+  # color_specific_cell(row_num = 12, col_num = 3, color = "#009E73") |>
+  # color_specific_cell(row_num = 13, col_num = 3, color = "#009E73") |>
+  # color_specific_cell(row_num = 14, col_num = 3, color = "#009E73") |>
+  # color_specific_cell(row_num = 15, col_num = 3, color = "#009E73") |>
+  # color_specific_cell(row_num = 16, col_num = 3, color = "#009E73") |>
+  # color_specific_cell(row_num = 17, col_num = 3, color = "#009E73") |>
+  # color_specific_cell(row_num = 18, col_num = 3, color = "#009E73") |>
+  head(12) |>
+  display_table()
+```
+
+#### Table 2: $\hat s_t$ values; used to compute the adjusted $\hat s_t$
+```{r}
+#| echo: false
+
+# Compute s_hat
+deaths_shat_df <- deaths_ts |>
+  data.frame() |>
+  mutate(month = month(dates, label=TRUE)) |>
+  round_df(1) |> # Round df to make the computations simpler
+  mutate(s_hat = deaths - m_hat)
+
+wider_df <- deaths_shat_df |>
+  dplyr::select(year, month, s_hat) |> 
+  pivot_wider(values_from = "s_hat", names_from = "month")
+
+wider_df2 <- wider_df %>% 
+  bind_rows(colMeans(wider_df[ , -c(1)], na.rm = TRUE)) |>
+  round_df(1) |>
+  mutate(
+    Jan = round_as_text(Jan),
+    Feb = round_as_text(Feb),
+    Mar = round_as_text(Mar),
+    Apr = round_as_text(Apr),
+    May = round_as_text(May),
+    Jun = round_as_text(Jun),
+    Jul = round_as_text(Jul),
+    Aug = round_as_text(Aug),
+    Sep = round_as_text(Sep),
+    Oct = round_as_text(Oct),
+    Nov = round_as_text(Nov),
+    Dec = round_as_text(Dec)
+  ) |>
+  mutate(year = ifelse(row_number() == n(), "Mean", year))
+
+wider_df2 |>
+  # Hide bar_s_t values for November and December
+  mutate(Jul = ifelse(row_number() == 1, "______", Jul)) |>
+  mutate(Aug = ifelse(row_number() == 1, "______", Aug)) |>
+  mutate(Sep = ifelse(row_number() == 1, "______", Sep)) |>
+  mutate(Oct = ifelse(row_number() == 1, "______", Oct)) |>
+  mutate(Nov = ifelse(row_number() == 1, "______", Nov)) |>
+  mutate(Dec = ifelse(row_number() == 1, "______", Dec)) |>
+  mutate(Nov = ifelse(row_number() == n(), "______", Nov)) |>
+  mutate(Dec = ifelse(row_number() == n(), "______", Dec)) |>
+  rename(Year = year) |>
+  # color_specific_cell(1, 8, "#0072B2") |>
+  # color_specific_cell(1, 9, "#0072B2") |>
+  # color_specific_cell(1, 10, "#0072B2") |>
+  # color_specific_cell(1, 11, "#0072B2") |>
+  # color_specific_cell(1, 12, "#0072B2") |>
+  # color_last_row2("#0072B2") |>
+  rbind(c("Adjusted",rep("______",12))) |>
+  # color_last_row2("#0072B2") |>
+  display_table()
+```
+

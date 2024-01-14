@@ -192,6 +192,9 @@ autoplot(deaths_ts, .vars = deaths) +
 These side-by-side box plots illustrate the seasonal effect present in the data.
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 ggplot(deaths_ts, aes(x = factor(month), y = deaths)) +
     geom_boxplot() +
   labs(
@@ -208,34 +211,16 @@ ggplot(deaths_ts, aes(x = factor(month), y = deaths)) +
 
 :::
 
-## Computing the Seasonally Adjusted Series (40 min)
+## Computing the Seasonally Adjusted Series (35 min)
 
 Our objective is to find an estimate for the time series that does not fluctuate with the seasons. This is called the seasonally adjusted series.
 
 ### Centered Moving Average
 
-First, we compute the centered moving average, $\hat m_t$. This computation was explored in detail in the previous lesson. 
-To emphasize the computation of the centered moving average, the observed data values that were used to find $\hat m_t$ for December 2017 are shown in <span style="color:#009E73;">breen</span>. 
-
-The centered moving average, $\hat m_t$, is then used to compute the monthly additive effect, $\hat s_t$:
-
-$$
-  \hat s_t = x_t - \hat m_t
-$$
-
-If we compute the mean of $\hat s_t$ for all values for which it is defined, we get a value that is reasonably close to 0, but not exactly zero. We adjust this by subtracting the mean from $\hat s_t$ to get the seasonally adjusted mean:
-
-$$
-  \bar s_t = \hat s_t - \bar {\hat s_t}
-$$
-
-Finally, we compute the seasonally adjusted series by subtracting $\bar s_t$ from each of the observed values:
-
-$$
-  \text{seasonally adjusted series} = x_t - \bar s_t
-$$
+First, we compute the centered moving average, $\hat m_t$. This computation was explored in detail in the previous lesson. This code can be used to compute the 12-month centered moving average.
 
 ```{r}
+# computes the 12-month centered moving average (m_hat)
 deaths_ts <- deaths_ts |> 
   mutate(
     m_hat = (
@@ -255,6 +240,27 @@ deaths_ts <- deaths_ts |>
         ) / 12
   )
 ```
+
+To emphasize the computation of the centered moving average, the observed data values that were used to find $\hat m_t$ for December 2017 are shown in <span style="color:#009E73;">green</span> in the table below. 
+
+The centered moving average, $\hat m_t$, is then used to compute the monthly additive effect, $\hat s_t$:
+
+$$
+  \hat s_t = x_t - \hat m_t
+$$
+
+If we compute the mean of $\hat s_t$ for all values for which it is defined, we get a value that is reasonably close to 0, but not exactly zero. We adjust this by subtracting the mean from $\hat s_t$ to get the seasonally adjusted mean:
+
+$$
+  \bar s_t = \hat s_t - \bar {\hat s_t}
+$$
+
+Finally, we compute the seasonally adjusted series by subtracting $\bar s_t$ from each of the observed values:
+
+$$
+  \text{seasonally adjusted series} = x_t - \bar s_t
+$$
+
 
 ```{r}
 #| echo: false
@@ -379,6 +385,9 @@ wider_df2 |>
 This code calculates the seasonally adjusted time series, beginning with the tsibble deaths_ts.
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 # Compute s_hat
 deaths_ts2 <- deaths_ts |>
   mutate(s_hat = deaths - m_hat)
@@ -402,7 +411,10 @@ adjusted_ts <- deaths_ts2 |>
 The figure below illustrates the original time series (in black), the centered moving average $\hat m_t$ (in blue), and the seasonally adjusted series (in red).
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 #| warning: false
+
 autoplot(adjusted_ts, .vars = deaths) +
   geom_line(aes(x = index, y = seasonally_adjusted), color = "#D55E00") +
   geom_line(aes(x = index, y = m_hat), color = "#0072B2") +
@@ -559,6 +571,7 @@ wider_df3 |>
   color_specific_cell(1, 10, "#0072B2") |>
   color_specific_cell(1, 11, "#0072B2") |>
   color_specific_cell(1, 12, "#0072B2") |>
+  color_specific_cell(1, 13, "#0072B2") |>
   color_last_row2("#0072B2") |>
   color_2nd_to_last_row2("#0072B2") |>
   display_table()

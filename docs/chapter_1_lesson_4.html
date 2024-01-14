@@ -264,7 +264,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#time-series-plot" id="toc-time-series-plot" class="nav-link" data-scroll-target="#time-series-plot">Time Series Plot</a></li>
   </ul></li>
-  <li><a href="#computing-the-seasonally-adjusted-series-40-min" id="toc-computing-the-seasonally-adjusted-series-40-min" class="nav-link" data-scroll-target="#computing-the-seasonally-adjusted-series-40-min">Computing the Seasonally Adjusted Series (40 min)</a>
+  <li><a href="#computing-the-seasonally-adjusted-series-35-min" id="toc-computing-the-seasonally-adjusted-series-35-min" class="nav-link" data-scroll-target="#computing-the-seasonally-adjusted-series-35-min">Computing the Seasonally Adjusted Series (35 min)</a>
   <ul class="collapse">
   <li><a href="#centered-moving-average" id="toc-centered-moving-average" class="nav-link" data-scroll-target="#centered-moving-average">Centered Moving Average</a></li>
   <li><a href="#seasonally-adjusted-mean" id="toc-seasonally-adjusted-mean" class="nav-link" data-scroll-target="#seasonally-adjusted-mean">Seasonally Adjusted Mean</a></li>
@@ -480,6 +480,8 @@ Check Your Understanding
 <h4 class="anchored" data-anchor-id="visualization-of-seasonal-effect">Visualization of Seasonal Effect</h4>
 <p>These side-by-side box plots illustrate the seasonal effect present in the data.</p>
 <div class="cell">
+<details>
+<summary>Show the code</summary>
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(deaths_ts, <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">factor</span>(month), <span class="at">y =</span> deaths)) <span class="sc">+</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
@@ -488,6 +490,7 @@ Check Your Understanding
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Boxplots of Traffic Deaths by Month"</span></span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output-display">
 <p><img src="chapter_1_lesson_4_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
 </div>
@@ -510,12 +513,34 @@ Check Your Understanding
 </section>
 </section>
 </section>
-<section id="computing-the-seasonally-adjusted-series-40-min" class="level2">
-<h2 class="anchored" data-anchor-id="computing-the-seasonally-adjusted-series-40-min">Computing the Seasonally Adjusted Series (40 min)</h2>
+<section id="computing-the-seasonally-adjusted-series-35-min" class="level2">
+<h2 class="anchored" data-anchor-id="computing-the-seasonally-adjusted-series-35-min">Computing the Seasonally Adjusted Series (35 min)</h2>
 <p>Our objective is to find an estimate for the time series that does not fluctuate with the seasons. This is called the seasonally adjusted series.</p>
 <section id="centered-moving-average" class="level3">
 <h3 class="anchored" data-anchor-id="centered-moving-average">Centered Moving Average</h3>
-<p>First, we compute the centered moving average, <span class="math inline">\(\hat m_t\)</span>. This computation was explored in detail in the previous lesson. To emphasize the computation of the centered moving average, the observed data values that were used to find <span class="math inline">\(\hat m_t\)</span> for December 2017 are shown in <span style="color:#009E73;">breen</span>.</p>
+<p>First, we compute the centered moving average, <span class="math inline">\(\hat m_t\)</span>. This computation was explored in detail in the previous lesson. This code can be used to compute the 12-month centered moving average.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># computes the 12-month centered moving average (m_hat)</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>deaths_ts <span class="ot">&lt;-</span> deaths_ts <span class="sc">|&gt;</span> </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">m_hat =</span> (</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>          (<span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">lag</span>(deaths, <span class="dv">6</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lag</span>(deaths, <span class="dv">5</span>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lag</span>(deaths, <span class="dv">4</span>)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lag</span>(deaths, <span class="dv">3</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lag</span>(deaths, <span class="dv">2</span>)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lag</span>(deaths, <span class="dv">1</span>)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> deaths</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lead</span>(deaths, <span class="dv">1</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lead</span>(deaths, <span class="dv">2</span>)</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lead</span>(deaths, <span class="dv">3</span>)</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lead</span>(deaths, <span class="dv">4</span>)</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lead</span>(deaths, <span class="dv">5</span>)</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> (<span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">lead</span>(deaths, <span class="dv">6</span>)</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        ) <span class="sc">/</span> <span class="dv">12</span></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>To emphasize the computation of the centered moving average, the observed data values that were used to find <span class="math inline">\(\hat m_t\)</span> for December 2017 are shown in <span style="color:#009E73;">green</span> in the table below.</p>
 <p>The centered moving average, <span class="math inline">\(\hat m_t\)</span>, is then used to compute the monthly additive effect, <span class="math inline">\(\hat s_t\)</span>:</p>
 <p><span class="math display">\[
   \hat s_t = x_t - \hat m_t
@@ -528,26 +553,6 @@ Check Your Understanding
 <p><span class="math display">\[
   \text{seasonally adjusted series} = x_t - \bar s_t
 \]</span></p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>deaths_ts <span class="ot">&lt;-</span> deaths_ts <span class="sc">|&gt;</span> </span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">m_hat =</span> (</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>          (<span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">lag</span>(deaths, <span class="dv">6</span>)</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lag</span>(deaths, <span class="dv">5</span>)</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lag</span>(deaths, <span class="dv">4</span>)</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lag</span>(deaths, <span class="dv">3</span>)</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lag</span>(deaths, <span class="dv">2</span>)</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lag</span>(deaths, <span class="dv">1</span>)</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> deaths</span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lead</span>(deaths, <span class="dv">1</span>)</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lead</span>(deaths, <span class="dv">2</span>)</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lead</span>(deaths, <span class="dv">3</span>)</span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lead</span>(deaths, <span class="dv">4</span>)</span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lead</span>(deaths, <span class="dv">5</span>)</span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> (<span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">lead</span>(deaths, <span class="dv">6</span>)</span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        ) <span class="sc">/</span> <span class="dv">12</span></span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
 <div class="cell">
 <div class="cell-output-display">
 <table class="table table-striped table-sm small" data-quarto-postprocess="true">
@@ -1161,6 +1166,8 @@ Check Your Understanding
 <h3 class="anchored" data-anchor-id="visualizing-the-seasonally-adjusted-series">Visualizing the Seasonally Adjusted Series</h3>
 <p>This code calculates the seasonally adjusted time series, beginning with the tsibble deaths_ts.</p>
 <div class="cell">
+<details>
+<summary>Show the code</summary>
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute s_hat</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>deaths_ts2 <span class="ot">&lt;-</span> deaths_ts <span class="sc">|&gt;</span></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">s_hat =</span> deaths <span class="sc">-</span> m_hat)</span>
@@ -1179,9 +1186,12 @@ Check Your Understanding
 <span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(adj_s_bar_df, <span class="at">by =</span> <span class="fu">join_by</span>(month)) <span class="sc">|&gt;</span></span>
 <span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">seasonally_adjusted =</span> deaths <span class="sc">-</span> adjusted_s_bar) <span class="sc">|&gt;</span></span>
 <span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>s_bar_bar)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 </div>
 <p>The figure below illustrates the original time series (in black), the centered moving average <span class="math inline">\(\hat m_t\)</span> (in blue), and the seasonally adjusted series (in red).</p>
 <div class="cell">
+<details>
+<summary>Show the code</summary>
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(adjusted_ts, <span class="at">.vars =</span> deaths) <span class="sc">+</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> seasonally_adjusted), <span class="at">color =</span> <span class="st">"#D55E00"</span>) <span class="sc">+</span></span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> m_hat), <span class="at">color =</span> <span class="st">"#0072B2"</span>) <span class="sc">+</span></span>
@@ -1192,6 +1202,7 @@ Check Your Understanding
 <span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
 <span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">4500</span>)) <span class="sc">+</span></span>
 <span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output-display">
 <p><img src="chapter_1_lesson_4_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
 </div>
@@ -1434,7 +1445,7 @@ Download Assignment
 <td style="text-align: center;"><span style="     color: #0072B2 !important;">228.8</span></td>
 <td style="text-align: center;"><span style="     color: #0072B2 !important;">302.8</span></td>
 <td style="text-align: center;"><span style="     color: #0072B2 !important;">91.5</span></td>
-<td style="text-align: center;">72.4</td>
+<td style="text-align: center;"><span style="     color: #0072B2 !important;">72.4</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center;">2018</td>
