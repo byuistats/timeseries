@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>BYUI-Timeseries-Drafts - Decomposition of Time Series</title>
+<title>BYUI-Timeseries-Drafts - Additive Models</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -169,13 +169,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="dropdown-header">Lesson 4</li>
         <li>
     <a class="dropdown-item" href="./chapter_1_lesson_4.html" rel="" target="">
- <span class="dropdown-text">Decomposition of Time Series</span></a>
+ <span class="dropdown-text">Additive Models</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li class="dropdown-header">Lesson 5</li>
         <li>
     <a class="dropdown-item" href="./chapter_1_lesson_5.html" rel="" target="">
- <span class="dropdown-text">Additive and Multiplicative Models</span></a>
+ <span class="dropdown-text">Multiplicative Models</span></a>
   </li>  
     </ul>
   </li>
@@ -281,7 +281,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Decomposition of Time Series</h1>
+<h1 class="title">Additive Models</h1>
 <p class="subtitle lead">Chapter 1: Lesson 4</p>
 </div>
 
@@ -321,14 +321,21 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="anchored" data-anchor-id="learning-outcomes">Learning Outcomes</h2>
 <details>
 <summary>
+Use R to describe key features of time series data
+</summary>
+<ul>
+<li>Import CSV data and convert to tsibble format</li>
+</ul>
+</details>
+<details>
+<summary>
 Decompose time series into trends, seasonal variation, and residuals
 </summary>
 <ul>
-<li>Explain the differences between additive and multiplicative models</li>
-<li>Explain the differences between additive and multiplicative estimators of seasonal variation</li>
 <li>Implement additive decomposition</li>
-<li>Implement multiplicative decomposition</li>
-<li>Obtain residuals as difference between original series and trend + seasonal estimates</li>
+<li>Explain how to remove seasonal variation using an estimate for seasonal component of a time series</li>
+<li>Compute a seasonally-adjusted time series</li>
+<li>Obtain the random component as difference between original series and trend + seasonal estimates</li>
 </ul>
 </details>
 </section>
@@ -447,7 +454,7 @@ Decompose time series into trends, seasonal variation, and residuals
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Traffic Fatalities"</span>,</span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Traffic Fatalities in the United States (by Month)"</span></span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">4500</span>)) <span class="sc">+</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">4500</span>)) <span class="sc">+</span></span>
 <span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
@@ -1389,48 +1396,130 @@ Check Your Understanding
 </section>
 <section id="visualizing-the-seasonally-adjusted-series" class="level3">
 <h3 class="anchored" data-anchor-id="visualizing-the-seasonally-adjusted-series">Visualizing the Seasonally Adjusted Series</h3>
-<p>This code calculates the seasonally adjusted time series, beginning with the tsibble deaths_ts.</p>
+<p>This code calculates the decomposition, including the seasonally adjusted time series, beginning with the tsibble deaths_ts.</p>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute s_hat</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>deaths_ts2 <span class="ot">&lt;-</span> deaths_ts <span class="sc">|&gt;</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">s_hat =</span> deaths <span class="sc">-</span> m_hat)</span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute s_bar and the adjusted s_bar</span></span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>adj_s_bar_df <span class="ot">&lt;-</span> deaths_ts2 <span class="sc">|&gt;</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.frame</span>() <span class="sc">|&gt;</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(month) <span class="sc">|&gt;</span></span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">s_bar =</span> <span class="fu">mean</span>(s_hat, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">s_bar_bar =</span> <span class="fu">mean</span>(s_bar)) <span class="sc">|&gt;</span></span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">adjusted_s_bar =</span> s_bar <span class="sc">-</span> s_bar_bar) <span class="sc">|&gt;</span></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(month, adjusted_s_bar, s_bar_bar)</span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Get seasonally adjusted time series</span></span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>adjusted_ts <span class="ot">&lt;-</span> deaths_ts2 <span class="sc">|&gt;</span></span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(adj_s_bar_df, <span class="at">by =</span> <span class="fu">join_by</span>(month)) <span class="sc">|&gt;</span></span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">random =</span> deaths <span class="sc">-</span> m_hat <span class="sc">-</span> adjusted_s_bar) <span class="sc">|&gt;</span></span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">seasonally_adjusted_x =</span> deaths <span class="sc">-</span> adjusted_s_bar) <span class="sc">|&gt;</span></span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>s_bar_bar)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>deaths_decompose <span class="ot">&lt;-</span> deaths_ts <span class="sc">|&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(deaths,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>()</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>deaths_decompose <span class="sc">|&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">7</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
+<div class="cell-output-display">
+<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">.model</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">index</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">deaths</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">trend</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">seasonal</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">random</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">season_adjust</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">feasts::classical_decomposition(deaths, type = "add")</td>
+<td style="text-align: center;">2017 Jan</td>
+<td style="text-align: center;">3034</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">-345.2231</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">3379.223</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">feasts::classical_decomposition(deaths, type = "add")</td>
+<td style="text-align: center;">2017 Feb</td>
+<td style="text-align: center;">2748</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">-690.7752</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">3438.775</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">feasts::classical_decomposition(deaths, type = "add")</td>
+<td style="text-align: center;">2017 Mar</td>
+<td style="text-align: center;">3164</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">-365.3481</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">3529.348</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">feasts::classical_decomposition(deaths, type = "add")</td>
+<td style="text-align: center;">2017 Apr</td>
+<td style="text-align: center;">3238</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">-339.5668</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">3577.567</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">feasts::classical_decomposition(deaths, type = "add")</td>
+<td style="text-align: center;">2017 May</td>
+<td style="text-align: center;">3416</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">101.3707</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">3314.629</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">feasts::classical_decomposition(deaths, type = "add")</td>
+<td style="text-align: center;">2017 Jun</td>
+<td style="text-align: center;">3492</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">282.4957</td>
+<td style="text-align: center;">NA</td>
+<td style="text-align: center;">3209.504</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">feasts::classical_decomposition(deaths, type = "add")</td>
+<td style="text-align: center;">2017 Jul</td>
+<td style="text-align: center;">3730</td>
+<td style="text-align: center;">3351.583</td>
+<td style="text-align: center;">366.9436</td>
+<td style="text-align: center;">11.47309</td>
+<td style="text-align: center;">3363.056</td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(deaths_decompose)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="chapter_1_lesson_4_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
+</div>
 </div>
 <p>The figure below illustrates the original time series (in black), the centered moving average <span class="math inline">\(\hat m_t\)</span> (in blue), and the seasonally adjusted series (in red).</p>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(adjusted_ts, <span class="at">.vars =</span> deaths) <span class="sc">+</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> seasonally_adjusted_x), <span class="at">color =</span> <span class="st">"#D55E00"</span>) <span class="sc">+</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> m_hat), <span class="at">color =</span> <span class="st">"#0072B2"</span>) <span class="sc">+</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Month"</span>,</span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Traffic Fatalities"</span>,</span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Traffic Fatalities in the United States (by Month)"</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">4500</span>)) <span class="sc">+</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>deaths_decompose <span class="sc">|&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> deaths_decompose, <span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> deaths), <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> deaths_decompose, <span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> season_adjust), <span class="at">color =</span> <span class="st">"#D55E00"</span>) <span class="sc">+</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> deaths_decompose, <span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> trend), <span class="at">color =</span> <span class="st">"#0072B2"</span>) <span class="sc">+</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Month"</span>,</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Traffic Fatalities"</span>,</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Traffic Fatalities in the United States (by Month)"</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_cartesian</span>(<span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>,<span class="dv">4500</span>)) <span class="sc">+</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="chapter_1_lesson_4_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_1_lesson_4_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
@@ -2192,7 +2281,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   </div>
   <div class="nav-page nav-page-next">
       <a href="./chapter_1_lesson_5.html" class="pagination-link">
-        <span class="nav-page-text">Additive and Multiplicative Models</span> <i class="bi bi-arrow-right-short"></i>
+        <span class="nav-page-text">Multiplicative Models</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

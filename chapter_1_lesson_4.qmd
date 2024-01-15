@@ -1,5 +1,5 @@
 ---
-title: "Decomposition of Time Series"
+title: "Additive Models"
 subtitle: "Chapter 1: Lesson 4"
 format: html
 editor: source
@@ -169,7 +169,7 @@ autoplot(deaths_ts, .vars = deaths) +
     y = "Traffic Fatalities",
     title = "Traffic Fatalities in the United States (by Month)"
   ) +
-  coord_cartesian(ylim = c(0,4500)) +
+  coord_cartesian(ylim = c(0, 4500)) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
@@ -441,32 +441,30 @@ adjusted_ts |>
 
 ### Visualizing the Seasonally Adjusted Series
 
-This code calculates the seasonally adjusted time series, beginning with the tsibble deaths_ts.
+This code calculates the decomposition, including the seasonally adjusted time series, beginning with the tsibble deaths_ts.
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
+deaths_decompose <- deaths_ts |>
+  model(feasts::classical_decomposition(deaths,
+          type = "add"))  |>
+  components()
 
-# Compute s_hat
-deaths_ts2 <- deaths_ts |>
-  mutate(s_hat = deaths - m_hat)
-
-# Compute s_bar and the adjusted s_bar
-adj_s_bar_df <- deaths_ts2 |>
-  data.frame() |>
-  group_by(month) |>
-  summarize(s_bar = mean(s_hat, na.rm = TRUE)) |>
-  mutate(s_bar_bar = mean(s_bar)) |>
-  mutate(adjusted_s_bar = s_bar - s_bar_bar) |>
-  dplyr::select(month, adjusted_s_bar, s_bar_bar)
-
-# Get seasonally adjusted time series
-adjusted_ts <- deaths_ts2 |>
-  left_join(adj_s_bar_df, by = join_by(month)) |>
-  mutate(random = deaths - m_hat - adjusted_s_bar) |>
-  mutate(seasonally_adjusted_x = deaths - adjusted_s_bar) |>
-  dplyr::select(-s_bar_bar)
+deaths_decompose |>
+  head(7) |>
+  display_table()
 ```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+autoplot(deaths_decompose)
+```
+
 
 The figure below illustrates the original time series (in black), the centered moving average $\hat m_t$ (in blue), and the seasonally adjusted series (in red).
 
@@ -475,9 +473,11 @@ The figure below illustrates the original time series (in black), the centered m
 #| code-summary: "Show the code"
 #| warning: false
 
-autoplot(adjusted_ts, .vars = deaths) +
-  geom_line(aes(x = index, y = seasonally_adjusted_x), color = "#D55E00") +
-  geom_line(aes(x = index, y = m_hat), color = "#0072B2") +
+deaths_decompose |>
+  ggplot() +
+  geom_line(data = deaths_decompose, aes(x = index, y = deaths), color = "black") +
+  geom_line(data = deaths_decompose, aes(x = index, y = season_adjust), color = "#D55E00") +
+  geom_line(data = deaths_decompose, aes(x = index, y = trend), color = "#0072B2") +
   labs(
     x = "Month",
     y = "Traffic Fatalities",
@@ -497,72 +497,6 @@ autoplot(adjusted_ts, .vars = deaths) +
 :::
 
 
-
-```{r}
-#| warning: false
-#| include: false
-#| echo: false
-#| eval: false
-xplot <- autoplot(adjusted_ts, .vars = deaths) +
-  # geom_line(aes(x = index, y = seasonally_adjusted_x), color = "#D55E00") +
-  # geom_line(aes(x = index, y = m_hat), color = "#0072B2") +
-  labs(
-    x = "Month",
-    y = "Traffic Fatalities",
-    title = "Traffic Fatalities in the United States (by Month)"
-  ) +
-  # coord_cartesian(ylim = c(0,4500)) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-mplot <- autoplot(adjusted_ts, .vars = m_hat) +
-  # geom_line(aes(x = index, y = seasonally_adjusted_x), color = "#D55E00") +
-  # geom_line(aes(x = index, y = m_hat), color = "#0072B2") +
-  labs(
-    x = "Month",
-    y = "Traffic Fatalities",
-    title = "m: Traffic Fatalities in the United States (by Month)"
-  ) +
-  # coord_cartesian(ylim = c(0,4500)) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-splot <- autoplot(adjusted_ts, .vars = s_hat) +
-  # geom_line(aes(x = index, y = seasonally_adjusted_x), color = "#D55E00") +
-  # geom_line(aes(x = index, y = m_hat), color = "#0072B2") +
-  labs(
-    x = "Month",
-    y = "Traffic Fatalities",
-    title = "s: Traffic Fatalities in the United States (by Month)"
-  ) +
-  # coord_cartesian(ylim = c(0,4500)) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-rplot <- autoplot(adjusted_ts, .vars = random) +
-  # geom_line(aes(x = index, y = seasonally_adjusted_x), color = "#D55E00") +
-  # geom_line(aes(x = index, y = m_hat), color = "#0072B2") +
-  labs(
-    x = "Month",
-    y = "Traffic Fatalities",
-    title = "random: Traffic Fatalities in the United States (by Month)"
-  ) +
-  # coord_cartesian(ylim = c(0,4500)) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-
-seasplot <- autoplot(adjusted_ts, .vars = seasonally_adjusted_x) +
-  # geom_line(aes(x = index, y = seasonally_adjusted_x), color = "#D55E00") +
-  # geom_line(aes(x = index, y = m_hat), color = "#0072B2") +
-  labs(
-    x = "Month",
-    y = "Traffic Fatalities",
-    title = "seas.adj.: Traffic Fatalities in the United States (by Month)"
-  ) +
-  # coord_cartesian(ylim = c(0,4500)) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-xplot / mplot ############### / rplot
-
-splot /seasplot
-```
 
 ## Recap (5 min)
 
@@ -600,6 +534,28 @@ Solutions for the computations from this lesson
 
 ```{r}
 #| echo: false
+
+# THIS IS THE HARD WAY. JUST USE THE DECOMPOSITION FUNCTION ABOVE...
+
+# Compute s_hat
+deaths_ts2 <- deaths_ts |>
+  mutate(s_hat = deaths - m_hat)
+
+# Compute s_bar and the adjusted s_bar
+adj_s_bar_df <- deaths_ts2 |>
+  data.frame() |>
+  group_by(month) |>
+  summarize(s_bar = mean(s_hat, na.rm = TRUE)) |>
+  mutate(s_bar_bar = mean(s_bar)) |>
+  mutate(adjusted_s_bar = s_bar - s_bar_bar) |>
+  dplyr::select(month, adjusted_s_bar, s_bar_bar)
+
+# Get seasonally adjusted time series
+adjusted_ts <- deaths_ts2 |>
+  left_join(adj_s_bar_df, by = join_by(month)) |>
+  mutate(random = deaths - m_hat - adjusted_s_bar) |>
+  mutate(seasonally_adjusted_x = deaths - adjusted_s_bar) |>
+  dplyr::select(-s_bar_bar)
 
 adjusted_ts |> 
   round_df(1) |>
