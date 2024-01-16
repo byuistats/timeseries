@@ -42,8 +42,315 @@ source("common_functions.R")
 
 
 
+## Holt-Winters (Additive)
 
-## Class Activity: XXXXXXX (15 mins)
+## Small Group Activity: Decomposition of Baltimore Crime Data (20 min)
+
+### Background 
+
+The City of Baltimore publishes crime data, which can be accessed through a query. 
+This dataset is sourced from the City of Baltimore Open Data and is updated monthly. 
+You can explore the data on [data.world](https://data.world/data-society/city-of-baltimore-crime-data).
+
+Use the following code to import the data:
+
+
+<!-- **Packages** -->
+<!-- ```{r, warning=FALSE} -->
+<!-- # library(dplyr) -->
+<!-- # library(tidyr) -->
+<!-- # library(ggplot2) -->
+<!-- # library(tidyverse) -->
+<!-- # library(dygraphs) -->
+<!-- # library(tidyquant) -->
+<!-- # library(forecast) -->
+<!-- ``` -->
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("tsibble", "fable",
+               "feasts", "tsibbledata",
+               "fable.prophet", "tidyverse",
+               "patchwork", "rio")
+
+crime_df <- read.csv("https://query.data.world/s/gibquqj7violcatsd74xyyg7r4fwxp?dws=00000", header=TRUE, stringsAsFactors=FALSE)
+```
+
+
+```{r}
+#| include: false
+#| eval: false
+# # Store the data, in case the query stops working
+# rio::export(crime_df, "data/baltimore_crime.csv")
+```
+
+
+The data set consists of `r nrow(crime_df)` rows and `r ncol(crime_df)` columns. 
+There are a few key variables:
+
+- **Date and Time:** Records the date and time of each incident.
+- **Location:** Detailed coordinates of each incident.
+- **Crime Type:** Description of the type of crime.
+
+When exploring a new time series, it is crucial to carefully examine the data. Here are a few rows of the original data set. 
+
+```{r}
+#| echo: false
+
+# View data
+crime_df |> 
+  display_partial_table(6,1)
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Using the command `crime_df |> summary()`, we learn that the `Total.Incidents` always equals 1. What does each row in the data frame represent?
+
+:::
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Data Summary and Aggregation
+# Group by dates column and summarize from Total.Incidents column
+daily_summary_df <- crime_df |>
+  rename(dates = CrimeDate) |>
+  group_by(dates) |>
+  summarise(incidents = sum(Total.Incidents))
+
+
+# Data Transformation and Formatting
+# Select relevant columns, format dates, and arrange the data
+crime_data <- daily_summary_df |>
+  select(dates, incidents) |>
+  mutate(dates = mdy(dates)) |>
+  mutate(
+    month = month(dates),
+    day = day(dates),
+    year = year(dates)
+  ) |>
+  select(dates, month, day, year, incidents) |>
+  arrange(dates)
+
+# Convert formatted data to a tsibble with dates as the index
+crime_tsibble <- as_tsibble(crime_data, index = dates)
+```
+
+Here are a few rows of the summarized data.
+
+```{r}
+#| echo: false
+
+# View data
+daily_summary_df |>
+  display_partial_table(6,3) 
+```
+
+The following table summarizes the number of days in each month for which crime data were reported.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_data |>
+  mutate(month_char = format(as.Date(dates), '%b') ) |>
+  group_by(month, month_char, year) |>
+  summarise(n = n(), .groups = "keep") |>
+  group_by() |>
+  arrange(year, month) |>
+  select(-month) |>
+  rename(Year = year) |>
+  pivot_wider(names_from = month_char, values_from = n) |>
+  display_table()
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you observe about the data?
+-   What are some problems that could arise from incomplete data?
+-   How do you recommend we address the missing data?
+
+:::
+
+Here is a time plot of the number of crimes reported in Baltimore daily.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Time series plot of total incidents over time
+crime_plot <- autoplot(crime_tsibble, .vars = incidents) +
+  labs(
+    x = "Time",
+    y = "Total Crime Incidents",
+    title = "Total Crime Incidents Over Time"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Display the plot
+crime_plot
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you notice about this time plot?
+    - Describe the trend
+    - Is there evidence of seasonality?
+    - Is the additive or multiplicative model appropriate?
+    - Which date has the highest number of recorded crimes? Can you determine a reason for this spike?
+
+:::
+
+### Monthly Summary
+
+We could analyze the data at the daily level, but for simplicity we will model the monthly totals.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_monthly_ts <- crime_tsibble |>
+  index_by(month_year = floor_date(as_date(dates), "month")) |>
+  summarise(value = sum(incidents))
+
+# Plot mean annual total incidents using autoplot
+autoplot(crime_monthly_ts, .vars = value) +
+  labs(
+    x = "Year",
+    y = "Total Monthly Crime Incidents",
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+There is incomplete data for `r temp <- crime_tsibble |> arrange(dates) |> as.data.frame() |> tail(1); temp |> select(year) |> pull()`, as data were not provided after `r last_date <- temp |> select(dates) |> pull(); paste0(month(last_date), "/", day(last_date), "/", year(last_date))`. We will only consider data through `r month(paste0(month(last_date)-1, "/1/", year(last_date)), label = TRUE, abbr = FALSE)` `r ifelse(month(last_date) == 1, year(last_date)-1, year(last_date))`.
+<!-- ~ -->
+<!-- This is hard-coded.. -->
+We will omit any data after October 2016.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_monthly_ts <- crime_monthly_ts |>
+  filter(month_year < mdy("10/31/2016"))
+```
+
+
+### Moving Average
+
+We can use the following function to compute the moving average
+
+```{r}
+# compute moving average
+compute_moving_average <- function(df, variable, periods = 12) {
+  sum <- 0
+  
+  for (i in 1:(periods / 2)) {
+    sum <- sum + lead(eval(substitute(variable), df), i)           # x_{t+i}
+    sum <- sum + lag(eval(substitute(variable), df), i)            # x_{t-i}
+  }
+
+  sum <- sum + eval(substitute(variable), df)
+  sum <- sum - lag(eval(substitute(variable), df), periods / 2) / 2
+  sum <- sum - lead(eval(substitute(variable), df), periods / 2) / 2
+
+  df$m_hat <- sum / periods
+
+  return(df)
+}
+
+crime_decomposition <- crime_monthly_ts |>
+  compute_moving_average(value)
+```
+
+Here are the first few rows of this new file. 
+```{r}
+#| echo: false
+
+crime_decomposition |>
+  head(13) |>
+  display_table()
+```
+
+### Estimated Monthly Multiplicative Effect
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Use the 12-month centered moving average computed above to calculate the estimated monthly multiplictive effect.
+-   Question1
+-   Question2
+
+:::
+
+
+
+
+<a href="javascript:showhide('Solutions0')"
+style="font-size:.8em;">Balitmore Crime Time Plot</a>
+
+::: {#Solutions0 style="display:none;"}
+
+```{r}
+# Dates with high criminal activity
+crime_data |> arrange(desc(incidents)) |> head()
+```
+
+On April 27, 2015, 419 crimes were recorded. These are associated with protests over arrest of Freddie Gray.
+:::
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
