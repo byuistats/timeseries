@@ -491,6 +491,337 @@ On April 27, 2015, 419 crimes were recorded. These are associated with protests 
 
 
 
+## CHOCOLATE DATA ANALYSIS STARTS HERE
+
+```{r}
+#| include: false
+
+# load packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("tsibble", "fable",
+               "feasts", "tsibbledata",
+               "fable.prophet", "tidyverse",
+               "patchwork", "rio")
+
+# read in the data from a csv
+chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv")
+start_date <- lubridate::ymd("2004-01-01")  
+date_seq <- seq(start_date,
+                start_date + months(nrow(chocolate_month)-1),
+                by = "1 months")
+
+# create a tibble including variables dates, year, month, value
+chocolate_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = pull(chocolate_month, chocolate)
+)
+
+# create a tsibble where the index variable is the year/month
+chocolate_month_ts <- chocolate_tibble |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index)
+
+# generate the ts plot
+choc_plot <- autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+
+
+
+## Estimating the Trend: Moving Average (5 min)
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+# Computes the moving average of values in a time series
+compute_moving_average <- function(df, variable, periods = 12) {
+  sum <- 0
+
+  for (i in 1:(periods / 2)) {
+    sum <- sum + lead(eval(substitute(variable), df), i)           # x_{t+i}
+    sum <- sum + lag(eval(substitute(variable), df), i)            # x_{t-i}
+  }
+  sum <- sum + eval(substitute(variable), df)
+  sum <- sum - lag(eval(substitute(variable), df), periods / 2) / 2
+  sum <- sum - lead(eval(substitute(variable), df), periods / 2) / 2
+  df$m_hat <- sum / periods
+  return(df)
+}
+
+chocolate_annual_ts <- summarise(
+    index_by(chocolate_month_ts, year), 
+    value = mean(value)
+  ) |>
+  mutate(index = tsibble::yearmonth( mdy(paste0("7/1/",year)) )) |>
+  as_tsibble(index = index)
+
+# monthly plot
+mp <- autoplot(chocolate_month_ts, .vars = value) +
+  geom_line(data = chocolate_annual_ts, 
+            aes(x = index, y = value), 
+            color = "#56B4E9") +
+  geom_line(data = chocolate_month_ts |> compute_moving_average(value), 
+            aes(x = index, y = m_hat), 
+            color = "#E69F00") +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+mp
+```
+
+The blue line illustrates the mean of all the values for each year, plotted at July 1 for each of the respective years. The orange line is the moving average computed using Equation (1.6).
+
+
+
+## Estimating the Trend: Moving Average (5 min)
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+# Computes the moving average of values in a time series
+compute_moving_average <- function(df, variable, periods = 12) {
+  sum <- 0
+
+  for (i in 1:(periods / 2)) {
+    sum <- sum + lead(eval(substitute(variable), df), i)           # x_{t+i}
+    sum <- sum + lag(eval(substitute(variable), df), i)            # x_{t-i}
+  }
+  sum <- sum + eval(substitute(variable), df)
+  sum <- sum - lag(eval(substitute(variable), df), periods / 2) / 2
+  sum <- sum - lead(eval(substitute(variable), df), periods / 2) / 2
+  df$m_hat <- sum / periods
+  return(df)
+}
+
+chocolate_annual_ts <- summarise(
+    index_by(chocolate_month_ts, year), 
+    value = mean(value)
+  ) |>
+  mutate(index = tsibble::yearmonth( mdy(paste0("7/1/",year)) )) |>
+  as_tsibble(index = index)
+
+# monthly plot
+mp <- autoplot(chocolate_month_ts, .vars = value) +
+  geom_line(data = chocolate_annual_ts, 
+            aes(x = index, y = value), 
+            color = "#56B4E9") +
+  geom_line(data = chocolate_month_ts |> compute_moving_average(value), 
+            aes(x = index, y = m_hat), 
+            color = "#E69F00") +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+mp
+```
+
+The blue line illustrates the mean of all the values for each year, plotted at July 1 for each of the respective years. The orange line is the moving average computed using Equation (1.6).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Aggregate to the annual level
+
+To help visualize what is happening with a time series, we often aggregate the data in the time series to the annual level. This can make it easier to spot a trend. The first plot is the time series plot of the raw data, and the second plot is a time series plot of the annual means.
+
+```{r}
+chocolate_annual_ts <- summarise(index_by(chocolate_month_ts, year), value = mean(value))
+
+# monthly plot
+mp <- autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# yearly plot
+yp <- autoplot(chocolate_annual_ts, .vars = value) +
+  labs(
+    x = "Year",
+    y = "Searches",
+    title = "Mean Annual Google Searches for 'Chocolate'"
+  ) +
+  scale_x_continuous(breaks = seq(2004, max(chocolate_month_ts$year), by = 2)) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# display both simultaneously
+mp / yp
+```
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   What do you observe in the trend?
+-   What do you suspect is causing this trend?
+:::
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## When to use additive vs. multiplicative decomposition (5 min)
+
+<!-- -   Additive: Constant variance -->
+<!-- -   Multiplicative: Variance grows with the value of the time series -->
+
+## Additive Decomposition
+
+The additive model for a time series, $\{x_t\}$, is:
+
+$$
+  x_t = m_t + s_t + z_t
+$$
+
+where $x_t$ is the observed series, $m_t$ is the trend, $s_t$ is the seasonal effect, $z_t$ is random variation, and $t = 1, 2, 3, \ldots, n$. We consider $z_t$ as a sequence of correlated random variables with mean 0.
+
+The residual is the part of the time series that is not explained by the trend or the seasonal effect. This is an estimate of \$ For an additive model, the residual is computed as: $$
+  Residual = Value - Trend - Seasonal
+$$
+
+The code below produces a plot showing the original data in the time series, the trend, the seasonal effect, and the residual (random component).
+
+```{r}
+#| warning: false
+
+choc_decompose <- chocolate_month_ts |>
+    model(feasts::classical_decomposition(value,
+        type = "add"))  |>
+    components()
+
+autoplot(choc_decompose)
+```
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   How does the trend and seasonality compare to the plots made previously?
+-   What do you observe in the residual?
+    -   Are there any unusual spikes? Use Google to try to determine what may have caused the usual spikes.
+:::
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

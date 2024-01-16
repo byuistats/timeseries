@@ -595,7 +595,7 @@ Complete a table like the following in your Learning Journal to compare characte
 <!-- Compare Rexburg weather and Basel, Switzerland Weather. (Better yet, Melbourne, Austrailia) -->
 
 
-## Apple's Quarterly Revenue
+## Small Group Activity: Apple's Quarterly Revenue (25 min)
 
 ```{r}
 apple_raw <- rio::import("data/apple_revenue.csv")
@@ -622,7 +622,7 @@ autoplot(apple_ts, .vars = revenue) +
   labs(
     x = "Quarter",
     y = "Apple Revenue, Billions $US",
-    title = "Quarterly Apple Revenue, Billions of U.S. Dollars"
+    title = "Apple's Quarterly Revenue, Billions of U.S. Dollars"
   ) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
@@ -638,16 +638,16 @@ autoplot(apple_ts, .vars = revenue) +
 :::
 
 
-## Computing the Seasonally Adjusted Series (35 min)
+We want to find the seasonally adjusted series for a multiplicative model.
 
-We to find an estimate for the time series that does not fluctuate with the seasons. This is called the seasonally adjusted series.
+### Centered Moving Average and Estimated Monthly Multiplicative Effect
 
-### Centered Moving Average
-
-First, we compute the centered moving average, $\hat m_t$. This code can be used to compute the four-quarter centered moving average.
+First, we compute the centered moving average, $\hat m_t$. 
 
 ```{r}
-# computes the 12-month centered moving average (m_hat)
+#| include: false
+
+# computes the 4-month centered moving average (m_hat)
 apple_ts <- apple_ts |> 
   mutate(
     m_hat = (
@@ -660,15 +660,67 @@ apple_ts <- apple_ts |>
   )
 ```
 
-To emphasize the computation of the centered moving average, the observed data values that were used to find $\hat m_t$ for December 2017 are shown in <span style="color:#009E73;">green</span> in the table below. 
 
-The centered moving average, $\hat m_t$, is then used to compute the monthly additive effect, $\hat s_t$:
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Write a mutate statement that will compute the 4-quarter moving average for the variable "revenue" in the tsibble apple_ts. You can use the mutate statement from [Chapter 1 Lesson 4](https://byuistats.github.io/timeseries/chapter_1_lesson_4.html#centered-moving-average) as a starting point.
+
+```{r}
+#| eval: false
+
+# computes the 4-month centered moving average (m_hat)
+apple_ts <- apple_ts |> 
+  mutate(
+    m_hat = 
+      # Your code goes here
+  )
+```
+
+:::
+
+```{r}
+#| echo: false
+
+# Defines example quarter to illustrate computation of m_hat
+sample_year <- 2007
+sample_qtr <- 1
+row_of_sample_m_hat <- apple_ts |>
+  as.data.frame() |>
+  mutate(row_num = row_number()) |>
+  filter(year == sample_year & quarter == sample_qtr) |>
+  dplyr::select(row_num) |>
+  pull()
+```
+
+
+To emphasize the computation of the centered moving average, the observed data values that were used to find $\hat m_t$ for the 
+`r 
+  apple_ts |> 
+    as.data.frame() |>
+    mutate(
+      quarter_text = case_when(
+        quarter == 1 ~ "first",
+        quarter == 2 ~ "second",
+        quarter == 3 ~ "third",
+        quarter == 4 ~ "fourth",
+        TRUE ~ "--ERROR--" 
+        )
+    ) |>
+    filter(row_number() == row_of_sample_m_hat) |>
+    dplyr::select(quarter_text) |>
+    pull()
+`
+quarter of `r sample_year` are shown in <span style="color:#009E73;">green</span> in the table below. 
+
+The centered moving average, $\hat m_t$, is then used to compute the quarterly multiplictive effect, $\hat s_t$:
 
 $$
   \hat s_t = \dfrac{ x_t }{ \hat m_t }
 $$
 
-
+#### Computation of the Centered Moving Average, $\hat m_t$, and the Quarterly Multiplicative Effect, $\hat s_t$
 
 ```{r}
 #| echo: false
@@ -688,45 +740,47 @@ apple_shat_ts |>
     s_hat = as.character(s_hat),
   ) |> 
   mutate(
+    m_hat = ifelse(row_number() %in% c(4,6,8), "______", m_hat),
     s_hat = ifelse(row_number() <= 7, "______", s_hat),
     revenue = as.character(revenue)
     # adjusted_s_hat = ifelse(row_number() <= 12, "", adjusted_s_hat),
     # seasonally_adjusted_x = ifelse(row_number() <= 12, "", seasonally_adjusted_x)
   ) |>
   convert_df_to_char(2) |>
-  color_specific_cell(row_num = 7, col_num = 5, color = "#009E73") |>
-  color_specific_cell(row_num = 5, col_num = 4, color = "#009E73") |>
-  color_specific_cell(row_num = 6, col_num = 4, color = "#009E73") |>
-  color_specific_cell(row_num = 7, col_num = 4, color = "#009E73") |>
-  color_specific_cell(row_num = 8, col_num = 4, color = "#009E73") |>
-  color_specific_cell(row_num = 9, col_num = 4, color = "#009E73") |>
-  display_partial_table(14, 8)
+  color_specific_cell(row_num = row_of_sample_m_hat, col_num = 5, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat-2, col_num = 4, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat-1, col_num = 4, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat, col_num = 4, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat+1, col_num = 4, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat+2, col_num = 4, color = "#009E73") |>
+  display_partial_table(14, 5)
 ```
 
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Working with your assigned partner, fill in the missing values of $\hat s_t$ in the table above. 
+-   Working with your assigned partner, fill in the missing values of $\hat m_t$ in the table above. 
+-   Then, find the missing values of $\hat s_t$. 
 
 :::
 
 
-### Seasonally Adjusted Mean
 
-Next, we need to compute the mean (across years) of $\hat s_t$ by month. To compute this, it can be convenient to organize the values of $\hat s_t$ in a table, where the rows give the year and the columns give the month.
 
-The overall mean of these means will be reasonably close to, but not exactly zero. We adjust these values by subtracting the overall mean from $\bar {\hat s_t}$ for each of the months to get the seasonally adjusted mean:
 
-$$
-  \bar s_t = \bar {\hat s_t} - \left( \bar{\bar {\hat s_t}} + 1 \right)
-$$
 
-where $\bar {\hat s_t}$ is the mean of the $\hat s_t$ values corresponding to month $t$, and $\bar{\bar {\hat s_t}}$ is the mean of the $\bar {\hat s_t}$ values.
+### Seasonally Adjusted Factor
 
-#### Table of $\hat s_t$ values for each quarter
+Next, we need to compute the mean (across years) of $\hat s_t$ by month. To help us calculate this, it can be convenient to organize the values of $\hat s_t$ in a table, where the rows give the year and the columns give the quarter.
+
+The overall mean of these means will be reasonably close to, but not exactly one.
+We adjust these values by dividing the quarterly means by the overall mean.
+
+#### Computation of the Seasonally Adjusted Factor, $\bar s_t$
 
 ```{r}
 #| echo: false
+#| warning: false
 
 # Compute s_hat
 apple_shat_ts2 <- apple_shat_ts |>
@@ -735,11 +789,11 @@ apple_shat_ts2 <- apple_shat_ts |>
   round_df(2) # Round df to make the computations simpler
 
 wider_df <- apple_shat_ts2 |>
-  dplyr::select(year, quarter, s_hat) |> 
+  dplyr::select(year, quarter, s_hat) |>
   pivot_wider(values_from = "s_hat", names_from = "quarter")
 
-wider_df2 <- wider_df %>% 
-  round_df(2) 
+wider_df2 <- wider_df %>%
+  round_df(2)
 
 wider_df3 <- wider_df2 |>
   # Hide bar_s_t values for November and December
@@ -750,7 +804,7 @@ wider_df3 <- wider_df2 |>
   mutate(Q1 = ifelse(row_number() == 2, "______", Q1)) |>
   mutate(Q2 = ifelse(row_number() == 2, "______", Q2)) |>
   mutate(Q3 = ifelse(row_number() == 2, "______", Q3)) |>
-  rename(Year = year) 
+  rename(Year = year)
 
 column_sum <- wider_df3 |>
   pivot_longer(cols = c("Q1", "Q2", "Q3", "Q4"), values_to = "revenue", names_to = "quarter") |>
@@ -774,7 +828,7 @@ wider_df3 |>
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   The table above gives the values of $\hat s_t$. Fill in the missing values in the first two rows of table above. (Note you already computed these.)
+-   The table above gives the values of $\hat s_t$. Fill in the missing values in the first two rows of the table above. (Note you already computed these.)
 -   The second-to-last row (labeled "Mean") gives the values of $\bar s_t$. Find the mean of the $\hat s_t$ values for each quarter. Call these means $\bar {\hat s_t}$. To simplify your computations, the sum of the values visible in the table above is summarized here: 
 
 ```{r} 
@@ -787,14 +841,15 @@ column_sum |>
 ```
 
 -   Compute the mean of the $\bar {\hat s_t}$ values. Call this number $\bar {\bar {\hat s_t}}$ (This number should be relatively close to 1.)
--   Divide each of the $\bar {\hat s_t}$ values by $\bar {\bar {\hat s_t}}$ to get $\bar s_t$, the seasonally adjusted mean for month $t$. (Note that the mean of the $\bar s_t$ values is 1.)
+-   Divide each of the $\bar {\hat s_t}$ values by $\bar {\bar {\hat s_t}}$ to get $\bar s_t$, the seasonally adjusted factor for month $t$. (Note that the mean of the $\bar s_t$ values will be 1.)
 
 $$ \bar s_t = \frac{ \left( \bar {\hat s_t} \right) }{ \left( \bar {\bar {\hat s_t}} \right) } $$
 
 :::
 
+### Random Component and the Seasonally Adjusted Time Series
 
-Using R's definition of the multiplicative model, we calculate the random component by dividing the values in the time series by the product of the trend and the seasonally adjusted mean:
+Using R's definition of the multiplicative model, we calculate the random component by dividing the values in the time series by the product of the trend and the seasonally adjusted factor:
 
 $$
   random_t = \dfrac{ x_t }{ \hat m_t \cdot \bar s_t }
@@ -806,12 +861,17 @@ $$
   \text{seasonally adjusted series} = \dfrac{ x_t }{ \bar s_t }
 $$
 
-Compute the values missing from the table below.
+Use these equations to calculate the values missing from the table below. The adjusted seasonal effect $\bar s_t$ (adjusted_s_bar) was computed in the last row of the previous table.
+
+#### Computation of the Random Component and the Seasonally Adjusted Time Series
 
 ```{r}
 #| echo: false
+#| warning: false
 
-# THIS CODE IS DUPLICATED BELOW, BUT IT IS NEEDED HERE TO GET THE adjusted_ts
+num_blank_rows <- 7
+num_addl_rows <- 3
+
 # Compute s_hat
 apple_ts2 <- apple_ts |>
   mutate(s_hat = revenue / m_hat)
@@ -834,14 +894,14 @@ adjusted_ts <- apple_ts2 |>
   as.data.frame() |>
   dplyr::select(index, revenue, m_hat, s_hat, adjusted_s_bar, random, seasonally_adjusted_x) 
 
-three_more_rows_from_adjusted_ts <- head(adjusted_ts,7+3) |> 
+three_more_rows_from_adjusted_ts <- head(adjusted_ts,num_blank_rows + num_addl_rows) |> 
   tail(3) |> 
   convert_df_to_char(1)
 
 adjusted_ts |>
-  as.tibble() |>
+  as_tibble() |>
   round_df(1) |>
-  filter(row_number() <= 7) |>
+  filter(row_number() <= num_blank_rows) |>
   mutate(
     s_hat = cell_spec(s_hat, color = ""),
     adjusted_s_bar = "______",
@@ -852,7 +912,7 @@ adjusted_ts |>
   bind_rows(three_more_rows_from_adjusted_ts) |>
   dplyr::select(index, revenue, m_hat, s_hat, adjusted_s_bar, random, seasonally_adjusted_x) |>
   rename(quarter = index) |>
-  display_table()
+  display_partial_table(num_blank_rows + num_addl_rows, 0)
 ```
 
 
@@ -862,735 +922,6 @@ adjusted_ts |>
 
 
 
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-<!-- # DONE TO HERE -->
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Small Group Activity: Decomposition of Baltimore Crime Data (20 min)
-
-### Background 
-
-The City of Baltimore publishes crime data, which can be accessed through a query. 
-This dataset is sourced from the City of Baltimore Open Data and is updated monthly. 
-You can explore the data on [data.world](https://data.world/data-society/city-of-baltimore-crime-data).
-
-Use the following code to import the data:
-
-
-<!-- **Packages** -->
-<!-- ```{r, warning=FALSE} -->
-<!-- # library(dplyr) -->
-<!-- # library(tidyr) -->
-<!-- # library(ggplot2) -->
-<!-- # library(tidyverse) -->
-<!-- # library(dygraphs) -->
-<!-- # library(tidyquant) -->
-<!-- # library(forecast) -->
-<!-- ``` -->
-
-
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-if (!require("pacman")) install.packages("pacman")
-pacman::p_load("tsibble", "fable",
-               "feasts", "tsibbledata",
-               "fable.prophet", "tidyverse",
-               "patchwork", "rio")
-
-crime_df <- read.csv("https://query.data.world/s/gibquqj7violcatsd74xyyg7r4fwxp?dws=00000", header=TRUE, stringsAsFactors=FALSE)
-```
-
-
-```{r}
-#| include: false
-#| eval: false
-# # Store the data, in case the query stops working
-# rio::export(crime_df, "data/baltimore_crime.csv")
-```
-
-
-The data set consists of `r nrow(crime_df)` rows and `r ncol(crime_df)` columns. 
-There are a few key variables:
-
-- **Date and Time:** Records the date and time of each incident.
-- **Location:** Detailed coordinates of each incident.
-- **Crime Type:** Description of the type of crime.
-
-When exploring a new time series, it is crucial to carefully examine the data. Here are a few rows of the original data set. 
-
-```{r}
-#| echo: false
-
-# View data
-crime_df |> 
-  display_partial_table(6,1)
-```
-
-
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   Using the command `crime_df |> summary()`, we learn that the `Total.Incidents` always equals 1. What does each row in the data frame represent?
-
-:::
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-# Data Summary and Aggregation
-# Group by dates column and summarize from Total.Incidents column
-daily_summary_df <- crime_df |>
-  rename(dates = CrimeDate) |>
-  group_by(dates) |>
-  summarise(incidents = sum(Total.Incidents))
-
-
-# Data Transformation and Formatting
-# Select relevant columns, format dates, and arrange the data
-crime_data <- daily_summary_df |>
-  select(dates, incidents) |>
-  mutate(dates = mdy(dates)) |>
-  mutate(
-    month = month(dates),
-    day = day(dates),
-    year = year(dates)
-  ) |>
-  select(dates, month, day, year, incidents) |>
-  arrange(dates)
-
-# Convert formatted data to a tsibble with dates as the index
-crime_tsibble <- as_tsibble(crime_data, index = dates)
-```
-
-Here are a few rows of the summarized data.
-
-```{r}
-#| echo: false
-
-# View data
-daily_summary_df |>
-  display_partial_table(6,3) 
-```
-
-The following table summarizes the number of days in each month for which crime data were reported.
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-crime_data |>
-  mutate(month_char = format(as.Date(dates), '%b') ) |>
-  group_by(month, month_char, year) |>
-  summarise(n = n(), .groups = "keep") |>
-  group_by() |>
-  arrange(year, month) |>
-  select(-month) |>
-  rename(Year = year) |>
-  pivot_wider(names_from = month_char, values_from = n) |>
-  display_table()
-```
-
-
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   What do you observe about the data?
--   What are some problems that could arise from incomplete data?
--   How do you recommend we address the missing data?
-
-:::
-
-Here is a time plot of the number of crimes reported in Baltimore daily.
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-# Time series plot of total incidents over time
-crime_plot <- autoplot(crime_tsibble, .vars = incidents) +
-  labs(
-    x = "Time",
-    y = "Total Crime Incidents",
-    title = "Total Crime Incidents Over Time"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-# Display the plot
-crime_plot
-```
-
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   What do you notice about this time plot?
-    - Describe the trend
-    - Is there evidence of seasonality?
-    - Is the additive or multiplicative model appropriate?
-    - Which date has the highest number of recorded crimes? Can you determine a reason for this spike?
-
-:::
-
-### Monthly Summary
-
-We could analyze the data at the daily level, but for simplicity we will model the monthly totals.
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-crime_monthly_ts <- crime_tsibble |>
-  index_by(month_year = floor_date(as_date(dates), "month")) |>
-  summarise(value = sum(incidents))
-
-# Plot mean annual total incidents using autoplot
-autoplot(crime_monthly_ts, .vars = value) +
-  labs(
-    x = "Year",
-    y = "Total Monthly Crime Incidents",
-    title = "Total Monthly Crime Incidents"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
-There is incomplete data for `r temp <- crime_tsibble |> arrange(dates) |> as.data.frame() |> tail(1); temp |> select(year) |> pull()`, as data were not provided after `r last_date <- temp |> select(dates) |> pull(); paste0(month(last_date), "/", day(last_date), "/", year(last_date))`. We will only consider data through `r month(paste0(month(last_date)-1, "/1/", year(last_date)), label = TRUE, abbr = FALSE)` `r ifelse(month(last_date) == 1, year(last_date)-1, year(last_date))`.
-<!-- ~ -->
-<!-- This is hard-coded.. -->
-We will omit any data after October 2016.
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-crime_monthly_ts <- crime_monthly_ts |>
-  filter(month_year < mdy("10/31/2016"))
-```
-
-
-### Moving Average
-
-We can use the following function to compute the moving average
-
-```{r}
-# compute moving average
-compute_moving_average <- function(df, variable, periods = 12) {
-  sum <- 0
-  
-  for (i in 1:(periods / 2)) {
-    sum <- sum + lead(eval(substitute(variable), df), i)           # x_{t+i}
-    sum <- sum + lag(eval(substitute(variable), df), i)            # x_{t-i}
-  }
-
-  sum <- sum + eval(substitute(variable), df)
-  sum <- sum - lag(eval(substitute(variable), df), periods / 2) / 2
-  sum <- sum - lead(eval(substitute(variable), df), periods / 2) / 2
-
-  df$m_hat <- sum / periods
-
-  return(df)
-}
-
-crime_decomposition <- crime_monthly_ts |>
-  compute_moving_average(value)
-```
-
-Here are the first few rows of this new file. 
-```{r}
-#| echo: false
-
-crime_decomposition |>
-  head(13) |>
-  display_table()
-```
-
-### Estimated Monthly Additive Effect
-
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   Use the 12-month centered moving average computed above to calculate the estimated monthly additive effect.
--   Question1
--   Question2
-
-:::
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# DONE TO HERE
-
-
-**Calculate Mean Crime Incidents Monthly by Year**
-
-```{r}
-# Calculate mean annual total incidents
-crime_annual_ts <- crime_tsibble |>
-  index_by(year = year(dates)) |>
-  summarise(value = mean(incidents))
-
-# Plot mean annual total incidents using autoplot
-autoplot(crime_annual_ts, .vars = value) +
-  labs(
-    x = "Year",
-    y = "Mean Daily Crime Incidents",
-    title = "Mean Daily Crime Incidents"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
-
-**Monthly Boxplots of Total Crime Incidents**
-
-```{r}
-# Create boxplots
-ggplot(crime_tsibble, aes(x = month, y = incidents)) +
-  geom_boxplot() +
-  labs(
-    x = "Month",
-    y = "Total Crime Incidents",
-    title = "Boxplots of Total Crime Incidents by Month"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
-
-
-## Estimating the Trend: Moving Average (5 min)
-
-```{r}
-# Create a daily plot
-dp <- autoplot(crime_tsibble, .vars = incidents) +
-    labs(
-      x = "Month",
-      y = "Total Crime Incidents",
-      title = "Total Crime Incidents Over Time"
-    ) +
-    theme(plot.title = element_text(hjust = 0.5))
-
-  # Calculate mean monthly total incidents
-  mean_monthly_incidents <- crime_tsibble |>
-    as.data.frame() |>
-    group_by(year, month) |>
-    summarize(value = mean(incidents)) |>
-  mutate(index = tsibble::yearmonth( mdy(paste0(month, "/15/", year)) )) |>
-  as_tsibble(index = index)
-
-  # Calculate mean annual total incidents
-  mean_annual_incidents <- crime_tsibble |>
-    as.data.frame() |>
-    group_by(year) |>
-    summarize(value = mean(incidents)) |>
-  mutate(index = tsibble::yearmonth( mdy(paste0("7/1/",year)) )) |>
-  as_tsibble(index = index)
-```
-
-
-```{r}
-# Create a yearly plot
-  yp <- ggplot(mean_annual_incidents, aes(x = year, y = value)) +
-    geom_line() +
-    labs(
-      x = "Year",
-      y = "Mean Total Crime Incidents",
-      title = "Annual Mean Total Crime Incidents"
-    ) +
-    scale_x_continuous(breaks = seq(2004, max(crime_tsibble$year), by = 2)) +
-    theme(plot.title = element_text(hjust = 0.5))
-
-# Create a monthly plot
-  mp <- ggplot(mean_monthly_incidents, aes(x = index, y = value)) +
-    geom_line() +
-    labs(
-      x = "Year",
-      y = "Mean Total Crime Incidents",
-      title = "Monthly Mean Total Crime Incidents"
-    ) +
-    # scale_x_continuous(breaks = seq(2004, max(crime_tsibble$year), by = 2)) +
-    theme(plot.title = element_text(hjust = 0.5))
-
-  # Display both simultaneously
-  dp / mp
-  dp / yp
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## STARTING HERE
-
-```{r}
-#| include: false
-
-# load packages
-if (!require("pacman")) install.packages("pacman")
-pacman::p_load("tsibble", "fable",
-               "feasts", "tsibbledata",
-               "fable.prophet", "tidyverse",
-               "patchwork", "rio")
-
-# read in the data from a csv
-chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv")
-start_date <- lubridate::ymd("2004-01-01")  
-date_seq <- seq(start_date,
-                start_date + months(nrow(chocolate_month)-1),
-                by = "1 months")
-
-# create a tibble including variables dates, year, month, value
-chocolate_tibble <- tibble(
-  dates = date_seq,
-  year = lubridate::year(date_seq),
-  month = lubridate::month(date_seq),
-  value = pull(chocolate_month, chocolate)
-)
-
-# create a tsibble where the index variable is the year/month
-chocolate_month_ts <- chocolate_tibble |>
-  mutate(index = tsibble::yearmonth(dates)) |>
-  as_tsibble(index = index)
-
-# generate the ts plot
-choc_plot <- autoplot(chocolate_month_ts, .vars = value) +
-  labs(
-    x = "Month",
-    y = "Searches",
-    title = "Relative Number of Google Searches for 'Chocolate'"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-```
-
-
-
-
-
-## Estimating the Trend: Moving Average (5 min)
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-#| warning: false
-
-# Computes the moving average of values in a time series
-compute_moving_average <- function(df, variable, periods = 12) {
-  sum <- 0
-
-  for (i in 1:(periods / 2)) {
-    sum <- sum + lead(eval(substitute(variable), df), i)           # x_{t+i}
-    sum <- sum + lag(eval(substitute(variable), df), i)            # x_{t-i}
-  }
-  sum <- sum + eval(substitute(variable), df)
-  sum <- sum - lag(eval(substitute(variable), df), periods / 2) / 2
-  sum <- sum - lead(eval(substitute(variable), df), periods / 2) / 2
-  df$m_hat <- sum / periods
-  return(df)
-}
-
-chocolate_annual_ts <- summarise(
-    index_by(chocolate_month_ts, year), 
-    value = mean(value)
-  ) |>
-  mutate(index = tsibble::yearmonth( mdy(paste0("7/1/",year)) )) |>
-  as_tsibble(index = index)
-
-# monthly plot
-mp <- autoplot(chocolate_month_ts, .vars = value) +
-  geom_line(data = chocolate_annual_ts, 
-            aes(x = index, y = value), 
-            color = "#56B4E9") +
-  geom_line(data = chocolate_month_ts |> compute_moving_average(value), 
-            aes(x = index, y = m_hat), 
-            color = "#E69F00") +
-  labs(
-    x = "Month",
-    y = "Searches",
-    title = "Relative Number of Google Searches for 'Chocolate'"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-mp
-```
-
-The blue line illustrates the mean of all the values for each year, plotted at July 1 for each of the respective years. The orange line is the moving average computed using Equation (1.6).
-
-
-
-## Estimating the Trend: Moving Average (5 min)
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-#| warning: false
-
-# Computes the moving average of values in a time series
-compute_moving_average <- function(df, variable, periods = 12) {
-  sum <- 0
-
-  for (i in 1:(periods / 2)) {
-    sum <- sum + lead(eval(substitute(variable), df), i)           # x_{t+i}
-    sum <- sum + lag(eval(substitute(variable), df), i)            # x_{t-i}
-  }
-  sum <- sum + eval(substitute(variable), df)
-  sum <- sum - lag(eval(substitute(variable), df), periods / 2) / 2
-  sum <- sum - lead(eval(substitute(variable), df), periods / 2) / 2
-  df$m_hat <- sum / periods
-  return(df)
-}
-
-chocolate_annual_ts <- summarise(
-    index_by(chocolate_month_ts, year), 
-    value = mean(value)
-  ) |>
-  mutate(index = tsibble::yearmonth( mdy(paste0("7/1/",year)) )) |>
-  as_tsibble(index = index)
-
-# monthly plot
-mp <- autoplot(chocolate_month_ts, .vars = value) +
-  geom_line(data = chocolate_annual_ts, 
-            aes(x = index, y = value), 
-            color = "#56B4E9") +
-  geom_line(data = chocolate_month_ts |> compute_moving_average(value), 
-            aes(x = index, y = m_hat), 
-            color = "#E69F00") +
-  labs(
-    x = "Month",
-    y = "Searches",
-    title = "Relative Number of Google Searches for 'Chocolate'"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-mp
-```
-
-The blue line illustrates the mean of all the values for each year, plotted at July 1 for each of the respective years. The orange line is the moving average computed using Equation (1.6).
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-### Aggregate to the annual level
-
-To help visualize what is happening with a time series, we often aggregate the data in the time series to the annual level. This can make it easier to spot a trend. The first plot is the time series plot of the raw data, and the second plot is a time series plot of the annual means.
-
-```{r}
-chocolate_annual_ts <- summarise(index_by(chocolate_month_ts, year), value = mean(value))
-
-# monthly plot
-mp <- autoplot(chocolate_month_ts, .vars = value) +
-  labs(
-    x = "Month",
-    y = "Searches",
-    title = "Relative Number of Google Searches for 'Chocolate'"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-# yearly plot
-yp <- autoplot(chocolate_annual_ts, .vars = value) +
-  labs(
-    x = "Year",
-    y = "Searches",
-    title = "Mean Annual Google Searches for 'Chocolate'"
-  ) +
-  scale_x_continuous(breaks = seq(2004, max(chocolate_month_ts$year), by = 2)) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-# display both simultaneously
-mp / yp
-```
-
-::: {.callout-tip icon="false" title="Check Your Understanding"}
--   What do you observe in the trend?
--   What do you suspect is causing this trend?
-:::
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## When to use additive vs. multiplicative decomposition (5 min)
-
-<!-- -   Additive: Constant variance -->
-<!-- -   Multiplicative: Variance grows with the value of the time series -->
-
-## Additive Decomposition
-
-The additive model for a time series, $\{x_t\}$, is:
-
-$$
-  x_t = m_t + s_t + z_t
-$$
-
-where $x_t$ is the observed series, $m_t$ is the trend, $s_t$ is the seasonal effect, $z_t$ is random variation, and $t = 1, 2, 3, \ldots, n$. We consider $z_t$ as a sequence of correlated random variables with mean 0.
-
-The residual is the part of the time series that is not explained by the trend or the seasonal effect. This is an estimate of \$ For an additive model, the residual is computed as: $$
-  Residual = Value - Trend - Seasonal
-$$
-
-The code below produces a plot showing the original data in the time series, the trend, the seasonal effect, and the residual (random component).
-
-```{r}
-#| warning: false
-
-choc_decompose <- chocolate_month_ts |>
-    model(feasts::classical_decomposition(value,
-        type = "add"))  |>
-    components()
-
-autoplot(choc_decompose)
-```
-
-::: {.callout-tip icon="false" title="Check Your Understanding"}
--   How does the trend and seasonality compare to the plots made previously?
--   What do you observe in the residual?
-    -   Are there any unusual spikes? Use Google to try to determine what may have caused the usual spikes.
-:::
 
 ## Recap (5 min)
 
@@ -1616,19 +947,36 @@ autoplot(choc_decompose)
 
 
 
+
+
+
+
+
+
 <a href="javascript:showhide('Solutions1')"
-style="font-size:.8em;">Balitmore Crime Time Plot</a>
+style="font-size:.8em;">Which Model? & Matching Solutions</a>
 
 ::: {#Solutions1 style="display:none;"}
 
+This code can be used to compute the four-quarter centered moving average.
+
 ```{r}
-# Dates with high criminal activity
-crime_data |> arrange(desc(incidents)) |> head()
+#| eval: false
+
+# computes the 4-month centered moving average (m_hat)
+apple_ts <- apple_ts |> 
+  mutate(
+    m_hat = (
+          (1/2) * lag(revenue, 2)
+          + lag(revenue, 1)
+          + revenue
+          + lead(revenue, 1)
+          + (1/2) * lead(revenue, 2)
+        ) / 4
+  )
 ```
 
-On April 27, 2015, 419 crimes were recorded. These are associated with protests over arrest of Freddie Gray.
 :::
-
 
 
 
@@ -1640,6 +988,7 @@ style="font-size:.8em;">Which Model? & Matching Solutions</a>
 ::: {#Solutions2 style="display:none;"}
 
 :::
+
 
 
 
