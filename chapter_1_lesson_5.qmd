@@ -51,13 +51,15 @@ source("common_functions.R")
 
 
 
-## Class Activity: Exploring simulated time series data (10 min)
+## Class Activity: Exploring Simulated Time Series Data (15 min)
 
 So far, you have learned how to estimate a trend using aggregated data (i.e., an annual average) or a moving average. We will compute the seasonal effect and use this to get the random component. 
 
 ### Additive Model
 
 The code hidden below simulates 10 years of a monthly time series with a linear trend and seasonal variation based on an additive model. Because the data are simulated, we know exactly which functions were used to create it, and we can observe what happens when we decompose this function.
+
+#### Table 1: Simulated Data (Additive Model)
 
 ```{r}
 #| code-fold: true
@@ -235,6 +237,8 @@ ggplot(df, aes(x=i, y=x)) +
 
 We now simulate data and apply R's multiplicative model. This implies that the error term, $z_t$, has a mean of 1, rather than 0.
 
+#### Table 2: Simulated Data (Multiplicative Model)
+
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -411,7 +415,7 @@ ggplot(df, aes(x=i, y=x)) +
 
 
 
-### Additive and Multiplicative Models in the Textbook and R
+### Models in the Textbook Versus R
 
 Both the textbook and R use the same model in the additive case:
 
@@ -438,7 +442,7 @@ $$ You can investigate R's definition by executing this command in RStudio.
 
 
 
-### Which Model Should I Use? Additive or Multiplicative?
+### Which Model Should I Use: Additive or Multiplicative?
 
 Compare the following two time series.
 
@@ -534,7 +538,7 @@ rexburg_weather_plot <- autoplot(rexburg_daily_ts, .vars = value) +
 
 
 
-##################### S&P 500
+# S&P 500
 
 replaceCommas<-function(x){
   x<-as.numeric(gsub("\\,", "", x))
@@ -595,9 +599,15 @@ Complete a table like the following in your Learning Journal to compare characte
 <!-- Compare Rexburg weather and Basel, Switzerland Weather. (Better yet, Melbourne, Austrailia) -->
 
 
-## Small Group Activity: Apple's Quarterly Revenue (25 min)
+## Small Group Activity: Apple's Quarterly Revenue (30 min)
+
+The code below imports and plots the quarterly revenue for Apple Inc. (in billions of U.S. dollars).
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# apple_raw <- rio::import("https://byuistats.github.io/timeseries/data/apple_revenue.csv")
 apple_raw <- rio::import("data/apple_revenue.csv")
 
 apple_tibble <- apple_raw |>
@@ -638,9 +648,9 @@ autoplot(apple_ts, .vars = revenue) +
 :::
 
 
-We want to find the seasonally adjusted series for a multiplicative model.
+We want to find the seasonally adjusted series for a multiplicative model. This is a multi-step process.
 
-### Centered Moving Average and Estimated Quarterly Multiplicative Effect
+### Centered Moving Average 
 
 First, we compute the centered moving average, $\hat m_t$. 
 
@@ -714,13 +724,15 @@ To emphasize the computation of the centered moving average, the observed data v
 `
 quarter of `r sample_year` are shown in <span style="color:#009E73;">green</span> in the table below. 
 
+### Estimated Quarterly Multiplicative Effect
+
 The centered moving average, $\hat m_t$, is then used to compute the quarterly multiplictive effect, $\hat s_t$:
 
 $$
   \hat s_t = \dfrac{ x_t }{ \hat m_t }
 $$
 
-#### Computation of the Centered Moving Average, $\hat m_t$, and the Quarterly Multiplicative Effect, $\hat s_t$
+#### Table 3: Computation of the Centered Moving Average, $\hat m_t$, and the Estimated Quarterly Multiplicative Effect, $\hat s_t$
 
 ```{r}
 #| echo: false
@@ -769,14 +781,14 @@ apple_shat_ts |>
 
 
 
-### Seasonally Adjusted Factor
+### Seasonally Adjusted Factors
 
 Next, we need to compute the mean (across years) of $\hat s_t$ by month. To help us calculate this, it can be convenient to organize the values of $\hat s_t$ in a table, where the rows give the year and the columns give the quarter.
 
 The overall mean of these means will be reasonably close to, but not exactly one.
 We adjust these values by dividing the quarterly means by the overall mean.
 
-#### Computation of the Seasonally Adjusted Factor, $\bar s_t$
+#### Table 4: Computation of the Seasonally Adjusted Factors, $\bar s_t$
 
 ```{r}
 #| echo: false
@@ -852,7 +864,7 @@ $$ \bar s_t = \frac{ \left( \bar {\hat s_t} \right) }{ \left( \bar {\bar {\hat s
 Using R's definition of the multiplicative model, we calculate the random component by dividing the values in the time series by the product of the trend and the seasonally adjusted factor:
 
 $$
-  random_t = \dfrac{ x_t }{ \hat m_t \cdot \bar s_t }
+  \text{random component} = \dfrac{ x_t }{ \hat m_t \cdot \bar s_t }
 $$
 
 The seasonally adjusted series is computed by dividing the respective observed values by $\bar s_t$:
@@ -861,9 +873,9 @@ $$
   \text{seasonally adjusted series} = \dfrac{ x_t }{ \bar s_t }
 $$
 
-Use these equations to calculate the values missing from the table below. The adjusted seasonal effect $\bar s_t$ (adjusted_s_bar) was computed in the last row of the previous table.
+Use these equations to calculate the values missing from the table below. The adjusted seasonal effect $\bar s_t$ (s_bar) was computed in the last row of the previous table.
 
-#### Computation of the Random Component and the Seasonally Adjusted Time Series
+#### Table 5: Computation of the Random Component and the Seasonally Adjusted Time Series
 
 ```{r}
 #| echo: false
@@ -876,26 +888,26 @@ num_addl_rows <- 3
 apple_ts2 <- apple_ts |>
   mutate(s_hat = revenue / m_hat)
 
-# Compute s_bar and the adjusted s_bar
+# Compute the unadjusted_s_bar and s_bar
 adj_s_bar_df <- apple_ts2 |>
   data.frame() |>
   group_by(quarter) |>
-  summarize(s_bar = mean(s_hat, na.rm = TRUE)) |>
-  mutate(s_bar_bar = mean(s_bar)) |>
-  mutate(adjusted_s_bar = s_bar / s_bar_bar) |>
-  dplyr::select(quarter, adjusted_s_bar, s_bar_bar)
+  summarize(unadjusted_s_bar = mean(s_hat, na.rm = TRUE)) |>
+  mutate(s_bar_bar = mean(unadjusted_s_bar)) |>
+  mutate(s_bar = unadjusted_s_bar / s_bar_bar) |>
+  dplyr::select(quarter, s_bar, s_bar_bar)
 
 # Get seasonally adjusted time series
 adjusted_ts <- apple_ts2 |>
   left_join(adj_s_bar_df, by = join_by(quarter)) |>
-  mutate(random = revenue / ( m_hat * adjusted_s_bar) ) |> 
-  mutate(seasonally_adjusted_x = revenue / adjusted_s_bar) |>
+  mutate(random = revenue / ( m_hat * s_bar) ) |> 
+  mutate(seasonally_adjusted_x = revenue / s_bar) |>
   dplyr::select(-s_bar_bar) |>
   as.data.frame() |>
-  dplyr::select(index, revenue, m_hat, s_hat, adjusted_s_bar, random, seasonally_adjusted_x) 
+  dplyr::select(index, revenue, m_hat, s_hat, s_bar, random, seasonally_adjusted_x) 
 
-three_more_rows_from_adjusted_ts <- head(adjusted_ts,num_blank_rows + num_addl_rows) |> 
-  tail(3) |> 
+additional_rows_from_adjusted_ts <- head(adjusted_ts,num_blank_rows + num_addl_rows) |> 
+  tail(num_addl_rows) |> 
   convert_df_to_char(1)
 
 adjusted_ts |>
@@ -904,13 +916,13 @@ adjusted_ts |>
   filter(row_number() <= num_blank_rows) |>
   mutate(
     s_hat = cell_spec(s_hat, color = ""),
-    adjusted_s_bar = "______",
+    s_bar = "______",
     random = "______",
     seasonally_adjusted_x = "______"
   ) |> 
   convert_df_to_char() |>
-  bind_rows(three_more_rows_from_adjusted_ts) |>
-  dplyr::select(index, revenue, m_hat, s_hat, adjusted_s_bar, random, seasonally_adjusted_x) |>
+  bind_rows(additional_rows_from_adjusted_ts) |>
+  dplyr::select(index, revenue, m_hat, s_hat, s_bar, random, seasonally_adjusted_x) |>
   rename(quarter = index) |>
   display_partial_table(num_blank_rows + num_addl_rows, 0)
 ```

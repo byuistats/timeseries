@@ -76,7 +76,7 @@ source("common_functions.R")
 
 
 
-## Converting from a data file to a tsibble (5 min)
+## Converting from a Data File to a Tsibble (5 min)
 
 This is a demonstration of two ways to convert an Excel 
 or csv data file to a tsibble.
@@ -187,7 +187,9 @@ autoplot(deaths_ts, .vars = deaths) +
 
 :::
 
-#### Visualization of Seasonal Effect
+
+
+### Visualization of Seasonal Effects: Side-by-Side Box Plots
 
 These side-by-side box plots illustrate the seasonal effect present in the data.
 
@@ -243,13 +245,15 @@ deaths_ts <- deaths_ts |>
 
 To emphasize the computation of the centered moving average, the observed data values that were used to find $\hat m_t$ for December 2017 are shown in <span style="color:#009E73;">green</span> in the table below. 
 
+### Estimated Monthly Additive Effect
+
 The centered moving average, $\hat m_t$, is then used to compute the monthly additive effect, $\hat s_t$:
 
 $$
   \hat s_t = x_t - \hat m_t
 $$
 
-
+#### Figure 1: Computation of the Centered Moving Average, $\hat m_t$, and the Estimated Monthly Additive Effect, $\hat s_t$
 
 ```{r}
 #| echo: false
@@ -298,18 +302,22 @@ deaths_shat_ts |>
 
 :::
 
-### Seasonally Adjusted Mean
+### Seasonally Adjusted Means
 
 
-Next, we need to compute the mean (across years) of $\hat s_t$ by month. To compute this, it can be convenient to organize the values of $\hat s_t$ in a table, where the rows give the year and the columns give the month.
+Next, we need to compute the mean (across years) of $\hat s_t$ by month. To compute this, it can be convenient to organize the values of $\hat s_t$ in a table, where the rows give the year and the columns give the month. We will calculate the mean of the $\hat s_t$ values for each month. We will call this $\bar {\hat s_t}$, the unadjusted monthly additive components.
 
-The overall mean of these means will be reasonably close to, but not exactly zero. We adjust these values by subtracting the overall mean from $\bar {\hat s_t}$ for each of the months to get the seasonally adjusted mean:
+The overall mean of these unadjusted monthly additive components $\left( \bar {\bar {\hat s_t}} \right)$ will be reasonably close to, but not exactly zero. We adjust these values by subtracting their overall mean, $\bar{\bar {\hat s_t}}$, from from each of them:
 
 $$
   \bar s_t = \bar {\hat s_t} - \bar{\bar {\hat s_t}}
 $$
 
 where $\bar {\hat s_t}$ is the mean of the $\hat s_t$ values corresponding to month $t$, and $\bar{\bar {\hat s_t}}$ is the mean of the $\bar {\hat s_t}$ values.
+
+This yields $\bar s_t$, the seasonally adjusted mean for each month.
+
+#### Table 2: Computation of $\bar s_t$
 
 ```{r}
 #| echo: false
@@ -384,10 +392,13 @@ $\bar s_t$ is the seasonally adjusted mean for month $t$.
 
 :::
 
+
+### Computing the Random Component and the Seasonally Adjusted Series
+
 We calculate the random component by subtracting the trend and seasonally adjusted mean from the time series:
 
 $$
-  random_t = x_t - \hat m_t - \bar s_t
+  \text{random component} = x_t - \hat m_t - \bar s_t
 $$
 
 The seasonally adjusted series is computed by subtracting $\bar s_t$ from each of the observed values:
@@ -398,53 +409,60 @@ $$
 
 Compute the values missing from the table below.
 
+#### Table 3: Computation of $\bar s$, the Random Component, and the Seasonally Adjusted Time Series
+
 ```{r}
 #| echo: false
+
+num_blank_rows <- 14
+num_addl_rows <- 2
 
 # THIS CODE IS DUPLICATED BELOW, BUT IT IS NEEDED HERE TO GET THE adjusted_ts
 # Compute s_hat
 deaths_ts2 <- deaths_ts |>
   mutate(s_hat = deaths - m_hat)
 
-# Compute s_bar and the adjusted s_bar
-adj_s_bar_df <- deaths_ts2 |>
+# Compute the unadjusted_s_bar and s_bar
+s_bar_df <- deaths_ts2 |>
   data.frame() |>
   group_by(month) |>
-  summarize(s_bar = mean(s_hat, na.rm = TRUE)) |>
-  mutate(s_bar_bar = mean(s_bar)) |>
-  mutate(adjusted_s_bar = s_bar - s_bar_bar) |>
-  dplyr::select(month, adjusted_s_bar, s_bar_bar)
+  summarize(unadjusted_s_bar = mean(s_hat, na.rm = TRUE)) |>
+  mutate(s_bar_bar = mean(unadjusted_s_bar)) |>
+  mutate(s_bar = unadjusted_s_bar - s_bar_bar) |>
+  dplyr::select(month, s_bar, s_bar_bar)
 
 # Get seasonally adjusted time series
 adjusted_ts <- deaths_ts2 |>
-  left_join(adj_s_bar_df, by = join_by(month)) |>
-  mutate(random = deaths - m_hat - adjusted_s_bar) |>
-  mutate(seasonally_adjusted_x = deaths - adjusted_s_bar) |>
+  left_join(s_bar_df, by = join_by(month)) |>
+  mutate(random = deaths - m_hat - s_bar) |>
+  mutate(seasonally_adjusted_x = deaths - s_bar) |>
   dplyr::select(-s_bar_bar)
 
-two_more_rows_from_adjusted_ts <- head(adjusted_ts,16) |> 
-  tail(2) |> 
+two_more_rows_from_adjusted_ts <- head(adjusted_ts, num_blank_rows + num_addl_rows) |> 
+  tail(num_addl_rows) |> 
   convert_df_to_char(1)
 
 adjusted_ts |>
   data.frame() |>
   round_df(1) |>
-  filter(row_number() <= 14) |>
+  filter(row_number() <= num_blank_rows) |>
   mutate(
     s_hat = cell_spec(s_hat, color = ""),
-    adjusted_s_bar = "______",
+    s_bar = "______",
     random = "______",
     seasonally_adjusted_x = "______"
   ) |>
   convert_df_to_char() |>
   bind_rows(two_more_rows_from_adjusted_ts) |>
-  display_table()
+  display_partial_table(num_blank_rows + num_addl_rows, 0)
 ```
 
 
 ### Visualizing the Seasonally Adjusted Series
 
 This code calculates the decomposition, including the seasonally adjusted time series, beginning with the tsibble deaths_ts.
+
+#### Table 4: First Few Rows of the Decomposition of the Traffic Deaths Time Series
 
 ```{r}
 #| code-fold: true
@@ -455,7 +473,7 @@ deaths_decompose <- deaths_ts |>
   components()
 
 deaths_decompose |>
-  head(7) |>
+  head(8) |>
   display_table()
 ```
 
@@ -495,7 +513,8 @@ deaths_decompose |>
 -   Do you observe a trend in the time series?
     -   What does this trend suggest?
 -   In February 2020, there is a spike in the seasonally adjusted time series. Refer to the values in the original time series to explain why this occurred.
--   In April 2020, there is a dip in the seasonally adjusted time series. Refer to the values in the original time series to explain why this occurred.
+-   In April 2020, there is a dip in the seasonally adjusted time series. Refer to the values in the original time series to explain why this occurred. 
+    -   What would explain this phenomenon?
 
 :::
 
@@ -535,6 +554,8 @@ style="font-size:.8em;">Team Activity: Computational Practice</a>
 
 Solutions for the computations from this lesson
 
+#### Table 3: (Solutions)
+
 ```{r}
 #| echo: false
 
@@ -544,20 +565,20 @@ Solutions for the computations from this lesson
 deaths_ts2 <- deaths_ts |>
   mutate(s_hat = deaths - m_hat)
 
-# Compute s_bar and the adjusted s_bar
-adj_s_bar_df <- deaths_ts2 |>
+# Compute the unadjusted_s_bar and s_bar
+s_bar_df <- deaths_ts2 |>
   data.frame() |>
   group_by(month) |>
-  summarize(s_bar = mean(s_hat, na.rm = TRUE)) |>
-  mutate(s_bar_bar = mean(s_bar)) |>
-  mutate(adjusted_s_bar = s_bar - s_bar_bar) |>
-  dplyr::select(month, adjusted_s_bar, s_bar_bar)
+  summarize(unadjusted_s_bar = mean(s_hat, na.rm = TRUE)) |>
+  mutate(s_bar_bar = mean(unadjusted_s_bar)) |>
+  mutate(s_bar = unadjusted_s_bar - s_bar_bar) |>
+  dplyr::select(month, s_bar, s_bar_bar)
 
 # Get seasonally adjusted time series
 adjusted_ts <- deaths_ts2 |>
-  left_join(adj_s_bar_df, by = join_by(month)) |>
-  mutate(random = deaths - m_hat - adjusted_s_bar) |>
-  mutate(seasonally_adjusted_x = deaths - adjusted_s_bar) |>
+  left_join(s_bar_df, by = join_by(month)) |>
+  mutate(random = deaths - m_hat - s_bar) |>
+  mutate(seasonally_adjusted_x = deaths - s_bar) |>
   dplyr::select(-s_bar_bar)
 
 adjusted_ts |> 
@@ -565,7 +586,7 @@ adjusted_ts |>
   filter(row_number() <= 14) |>
   mutate(
     s_hat = cell_spec(s_hat, color = "#E69F00"),
-    adjusted_s_bar = cell_spec(adjusted_s_bar, color = "#009E73"),
+    s_bar = cell_spec(s_bar, color = "#009E73"),
     random = cell_spec(random, color = "#009E73"),
     seasonally_adjusted_x = cell_spec(seasonally_adjusted_x, color = "#009E73")
   ) |>
@@ -574,11 +595,12 @@ adjusted_ts |>
   display_table()
 ```
 
+#### Table 2: (Solutions)
 
 ```{r}
 #| echo: false
 
-s_bar_bar_value <- adj_s_bar_df %>% 
+s_bar_bar_value <- s_bar_df %>% 
   summarize(s_bar_bar = round(mean(s_bar_bar), 1)) |>
   dplyr::select(s_bar_bar) |>
   pull()
