@@ -755,12 +755,19 @@ apple_shat_ts |>
     # seasonally_adjusted_x = ifelse(row_number() <= 12, "", seasonally_adjusted_x)
   ) |>
   convert_df_to_char(3) |>
-  color_specific_cell(row_num = row_of_sample_m_hat, col_num = 5, color = "#009E73") |>
-  color_specific_cell(row_num = row_of_sample_m_hat-2, col_num = 4, color = "#009E73") |>
-  color_specific_cell(row_num = row_of_sample_m_hat-1, col_num = 4, color = "#009E73") |>
-  color_specific_cell(row_num = row_of_sample_m_hat, col_num = 4, color = "#009E73") |>
-  color_specific_cell(row_num = row_of_sample_m_hat+1, col_num = 4, color = "#009E73") |>
-  color_specific_cell(row_num = row_of_sample_m_hat+2, col_num = 4, color = "#009E73") |>
+  dplyr::select(index, revenue, m_hat, s_hat) |> 
+  rename(
+    quarter = index,
+    "revenue, $$x_t$$" = revenue,
+    "$$ \\hat m_t $$" = m_hat,
+    "$$ \\hat s_t $$" = s_hat
+  ) |>
+  color_specific_cell(row_num = row_of_sample_m_hat, col_num = 3, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat-2, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat-1, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat+1, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat+2, col_num = 2, color = "#009E73") |>
   display_partial_table(14, 5)
 ```
 
@@ -826,9 +833,9 @@ wider_df3 |>
   color_specific_cell(2, 2, "#0072B2") |>
   color_specific_cell(2, 3, "#0072B2") |>
   color_specific_cell(2, 4, "#0072B2") |>
-  rbind(c("Mean",rep("______",4))) |>
+  rbind(c("Mean", rep("______",4))) |>
   color_last_row2("#0072B2") |>
-  rbind(c("Adjusted",rep("______",4))) |>
+  rbind(c("$$ \\bar s_t $$", rep("______",4))) |>
   color_last_row2("#0072B2") |>
   display_table()
 ```
@@ -919,7 +926,13 @@ adjusted_ts |>
   convert_df_to_char() |>
   bind_rows(additional_rows_from_adjusted_ts) |>
   dplyr::select(index, revenue, m_hat, s_hat, s_bar, random, seasonally_adjusted_x) |>
-  rename(quarter = index) |>
+  rename(
+    quarter = index, 
+    "revenue, $$x_t$$" = revenue,
+    "$$ \\hat m_t $$" = m_hat, 
+    "$$ \\hat s_t $$" = s_hat, 
+    "$$ \\bar s_t $$" = s_bar,
+  ) |>
   display_partial_table(num_blank_rows + num_addl_rows, 0)
 ```
 
@@ -930,12 +943,14 @@ adjusted_ts |>
 
 ### Visualizing the Seasonally Adjusted Series
 
-This code calculates the decomposition, including the seasonally adjusted time series, beginning with the tsibble deaths_ts.
+The R code below calculates the decomposition, including the seasonally adjusted time series, beginning with the tsibble `apple_ts`.
 
 #### Table 6: First Few Rows of the Decomposition of the Apple Revenue Time Series
 
 ```{r}
 #| code-fold: true
+#| code-summary: "Show the code"
+
 apple_decompose <- apple_ts |>
   model(feasts::classical_decomposition(revenue,
           type = "mult"))  |>
@@ -1050,100 +1065,9 @@ apple_ts <- apple_ts |>
 
 
 <a href="javascript:showhide('Solutions2')"
-style="font-size:.8em;">Table 1</a>
+style="font-size:.8em;">Tables 4 and 5</a>
 
 ::: {#Solutions2 style="display:none;"}
-
-Solutions for the computations from this lesson
-
-#### Table 3: (Solutions)
-
-```{r}
-#| include: false
-#| eval: false
-
-# THIS IS THE HARD WAY. JUST USE THE DECOMPOSITION FUNCTION ABOVE...
-
-# Compute s_hat
-deaths_ts2 <- deaths_ts |>
-  mutate(s_hat = deaths - m_hat)
-
-# Compute the unadjusted_s_bar and s_bar
-s_bar_df <- deaths_ts2 |>
-  data.frame() |>
-  group_by(month) |>
-  summarize(unadjusted_s_bar = mean(s_hat, na.rm = TRUE)) |>
-  mutate(s_bar_bar = mean(unadjusted_s_bar)) |>
-  mutate(s_bar = unadjusted_s_bar - s_bar_bar) |>
-  dplyr::select(month, s_bar, s_bar_bar)
-
-# Get seasonally adjusted time series
-adjusted_ts <- deaths_ts2 |>
-  left_join(s_bar_df, by = join_by(month)) |>
-  mutate(random = deaths - m_hat - s_bar) |>
-  mutate(seasonally_adjusted_x = deaths - s_bar) |>
-  dplyr::select(-s_bar_bar)
-
-adjusted_ts |> 
-  round_df(3) |>
-  filter(row_number() <= num_blank_rows) |>
-  mutate(
-    s_hat = cell_spec(s_hat, color = "#E69F00"),
-    s_bar = cell_spec(s_bar, color = "#009E73"),
-    random = cell_spec(random, color = "#009E73"),
-    seasonally_adjusted_x = cell_spec(seasonally_adjusted_x, color = "#009E73")
-  ) |>
-  convert_df_to_char() |>
-  bind_rows(additional_rows_from_adjusted_ts) |>
-  display_table()
-```
-
-#### Table 2: (Solutions)
-
-```{r}
-#| include: false
-#| eval: false
-
-s_bar_bar_value <- s_bar_df %>% 
-  summarize(s_bar_bar = round(mean(s_bar_bar), 1)) |>
-  dplyr::select(s_bar_bar) |>
-  pull()
-
-wider_df3 <- wider_df2 |>
-  bind_rows(
-    wider_df2 |> tail(1)
-  ) 
-
-# Subtract the mean of \bar s_t to make the mean of the adjusted values be zero.
-for (j in 2:ncol(wider_df3)) {
-  wider_df3[nrow(wider_df3), j] = 
-    as.character(
-      as.numeric(wider_df3[nrow(wider_df3), j]) - s_bar_bar_value
-    )
-}
-
-wider_df3 |> 
-  mutate(year = ifelse(row_number() == n(), "Adjusted", year)) |>
-  rename(Year = year) |>
-  color_specific_cell(1, 8, "#0072B2") |>
-  color_specific_cell(1, 9, "#0072B2") |>
-  color_specific_cell(1, 10, "#0072B2") |>
-  color_specific_cell(1, 11, "#0072B2") |>
-  color_specific_cell(1, 12, "#0072B2") |>
-  color_specific_cell(1, 13, "#0072B2") |>
-  color_specific_cell(2, 2, "#0072B2") |>
-  color_specific_cell(2, 3, "#0072B2") |>
-  color_last_row2("#0072B2") |>
-  color_2nd_to_last_row2("#0072B2") |>
-  display_table()
-```
-
-:::
-
-
-
-
-
 
 Solutions for the computations from this lesson
 
@@ -1221,16 +1145,21 @@ wider_df3 |>
   color_last_row2("#0072B2") |>
   display_table()
 ```
+:::
+
+
+
+
+
+
+
 
 ```{r}
+#| include: false
+
+# R's solutions -- matches the values above :)
 apple_decompose
 ```
 
 
 
-<a href="javascript:showhide('Solutions3')"
-style="font-size:.8em;">Table 2</a>
-
-::: {#Solutions3 style="display:none;"}
-
-:::

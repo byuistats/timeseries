@@ -13,7 +13,8 @@ pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite d
                stringr, # string manipulation
                lubridate, # date manipulation
                rio, # for easy i/o
-               tidyquant
+               tidyquant,
+               gt # grammar of tables, for LaTeX in tables
 )
 
 # Palette ----
