@@ -28,8 +28,31 @@ concat_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
   return(out_df)
 }
 
+round_df <- function(df, digits) {
+  nums <- vapply(df, is.numeric, FUN.VALUE = logical(1))
+  df[,nums] <- round(df[,nums], digits = digits)
+  (df)
+}
+
+row_of_vdots <- function(df) {
+  temp_df <- df |>
+    # mutate(across(everything(), as.character)) |>
+    head(1)
+
+  for (j in 1:ncol(temp_df)) {
+    if (names(temp_df[j]) == "sign") {
+      temp_df[1,j] = " "
+    } else {
+      temp_df[1,j] = "⋮"
+    }
+  } # for
+
+  return(temp_df)
+}
+
 # Define the UI
 ui <- fluidPage(
+  withMathJax(),
     titlePanel("Covariance & Correlation Exploration"),
 
     sidebarLayout(
@@ -45,7 +68,8 @@ ui <- fluidPage(
 
         mainPanel(
           plotOutput("plot"),
-          tableOutput("kable")
+          tableOutput("kable"),
+          uiOutput("formula")
         )
     )
 )
@@ -177,6 +201,14 @@ server <- function(input, output, session) {
     sim_data()[[1]]
   })
 
+  output$formula <- renderUI({
+    mean_xval <- round(mean(mvn_data$x), 3)
+    mean_yval <- round(mean(mvn_data$y), 3)
+    withMathJax(paste0("The resulting table illustrates some of the simulated values. The mean of the $x$ values is $\bar x =", mean_val,"$. The mean of the $y$ values is $\bar y =", mean_yval$. We will soon use the values $(x-\bar x)$, $(x-\bar x)^2$, $(y-\bar y)$, $(y-\bar y)^2$, and $(x-\bar x)(y-\bar y),"$$")))
+    #withMathJax(paste0("Use this formula: $$\\hat{A}_{\\small{\\textrm{M€}}} =", my_calculated_value,"$$"))
+  })
+
+  <!-- -->
   output$kable <-function() {
     req(sim_data())
     knitr::kable(sim_data()[[1]], format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
