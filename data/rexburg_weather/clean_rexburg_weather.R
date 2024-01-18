@@ -14,7 +14,7 @@ pacman::p_load("tsibble", "fable",
                "lubridate"
 )
 
-weather_dat <- rio::import("data/rexburg_weather.csv")
+weather_dat <- rio::import("data/rexburg_weather/rexburg_weather_raw.csv")
 
 head(weather_dat)
 
@@ -62,6 +62,8 @@ weather_clean <- w2 %>%
   rename(rexburg_airport_high = rexburg) %>%
   select(dates, rexburg_airport_high, imputed) %>%
   filter(dates > mdy("01/01/1999"))
+
+rio::export(weather_clean, "data/rexburg_weather.csv")
 
 weather_clean %>%
   mutate(years = year(dates)) %>%
@@ -133,52 +135,4 @@ rex_decompose <- rexburg_daily_ts |>
   components()
 autoplot(rex_decompose)
 
-
-##################### S&P 500
-
-
-replaceCommas<-function(x){
-  x<-as.numeric(gsub("\\,", "", x))
-}
-
-sp500_dat <- rio::import("data/sp500.csv") %>%
-  mutate(dates = mdy(Date))
-
-
-head(sp500_dat)
-
-sp500_day <- sp500_dat %>%
-  mutate(date_seq = dates) %>%
-  mutate(
-    dates = date_seq,
-    year = lubridate::year(date_seq),
-    month = lubridate::month(date_seq),
-    value = replaceCommas(Close)
-  ) %>%
-  select(-date_seq) %>%
-  tibble()
-
-sp500_ts <- sp500_day |>
-  mutate(index = dates) |>
-  as_tsibble(index = index)
-
-sp500_annual_ts <- summarise(index_by(sp500_ts, year), value = mean(value))
-sp500_annual_ts
-
-
-mp <- autoplot(sp500_ts, .vars = value) +
-  labs(y = "S&P 500 Daily Closing Price")
-yp <- autoplot(sp500_annual_ts) +
-  labs(y = "S&P 500 Daily Closing Price")
-# +
-#   scale_x_continuous(breaks = seq(1900, 2010, by = 2))
-mp / yp
-
-
-# Plot annual and monthly summaries
-
-psum <- autoplot(summarise(index_by(sp500_ts, year), value = sum(value)))
-pbox <- ggplot(sp500_ts, aes(x = factor(month), y = value)) +
-  geom_boxplot()
-psum / pbox
 
