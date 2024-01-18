@@ -46,12 +46,44 @@ round_df <- function(df, digits) {
   (df)
 }
 
+# Used to create a table with ellipses in the middle
 
-# Displays the kable table
-display_table <- function(df) {
-  df %>%
-    knitr::kable(format = "html", align='cccccccccccccc', escape = FALSE, width = NA, row.names = FALSE) %>%
-    kable_styling(full_width = FALSE, "striped")
+row_of_vdots <- function(df) {
+  temp_df <- df |>
+    # mutate(across(everything(), as.character)) |>
+    head(1)
+
+  for (j in 1:ncol(temp_df)) {
+    if (names(temp_df[j]) == "sign") {
+      temp_df[1,j] = " "
+    } else {
+      temp_df[1,j] = "⋮"
+    }
+  } # for
+
+  return(temp_df)
+}
+
+concat_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
+  temp_df <- convert_df_to_char(df, decimals)
+
+  out_df <- head(temp_df, nrow_head) |>
+    bind_rows(row_of_vdots(temp_df)) |>
+    bind_rows(tail(temp_df, nrow_tail))
+
+  return(out_df)
+}
+
+display_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3, min_col_width = "0in") {
+  concat_partial_table(df, nrow_head, nrow_tail, decimals) |>
+    display_table(min_col_width)
+}
+
+display_table <- function(df, min_col_width = "0in") {
+  df |>
+    knitr::kable(format = "html", align='cccccccccccccc', escape = FALSE, width = NA, row.names = FALSE) |>
+    kable_styling(full_width = FALSE, "striped") |>
+    column_spec(1:ncol(df), width_min = min_col_width)
 }
 
 # Rounds a value to a specific number of places and returns a character string
@@ -169,39 +201,7 @@ color_2nd_to_last_row2 <- function(df, color) {
 }
 ##########################################################################
 
-# Used to create a table with ellipses in the middle
 
-row_of_vdots <- function(df) {
-  temp_df <- df |>
-    # mutate(across(everything(), as.character)) |>
-    head(1)
-
-  for (j in 1:ncol(temp_df)) {
-    if (names(temp_df[j]) == "sign") {
-      temp_df[1,j] = " "
-    } else {
-      temp_df[1,j] = "⋮"
-    }
-  } # for
-
-  return(temp_df)
-}
-
-concat_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
-  temp_df <- convert_df_to_char(df, decimals)
-
-  out_df <- head(temp_df, nrow_head) |>
-    bind_rows(row_of_vdots(temp_df)) |>
-    bind_rows(tail(temp_df, nrow_tail))
-
-  return(out_df)
-}
-
-
-display_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3) {
-  concat_partial_table(df, nrow_head, nrow_tail, decimals) |>
-  display_table()
-}
 
 #############################################
 

@@ -1,0 +1,339 @@
+---
+title: "Chapter 1 Lesson 5: In-Class Worksheet"
+format: html
+editor: source
+sidebar: false
+---
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+<!-- Note: I would like to have Table 5 first and Table 4 second, but it did not fit well on the page.  -->
+
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+#### Start by finding the values of $\hat s_t$ in Table 5. Use Table 4 as needed to complete Table 5.
+
+
+```{r}
+#| echo: false
+
+apple_raw <- rio::import("https://byuistats.github.io/timeseries/data/apple_revenue.csv")
+apple_raw <- rio::import("data/apple_revenue.csv")
+
+apple_tibble <- apple_raw |>
+  mutate(
+    dates = mdy(date),
+    year = lubridate::year(dates),
+    quarter = lubridate::quarter(dates),
+    value = revenue_billions
+  ) |>
+  dplyr::select(dates, year, quarter, value)  |> 
+  arrange(dates) |>
+  tibble()
+
+# Create the index variable and convert to a tsibble
+apple_ts <- apple_tibble |>
+  mutate(index = tsibble::yearquarter(dates)) |>
+  as_tsibble(index = index) |>
+  dplyr::select(index, dates, year, quarter, value) |>
+  rename(revenue = value) # rename value to emphasize data context
+
+
+# computes the 4-quarter centered moving average (m_hat)
+apple_ts <- apple_ts |> 
+  mutate(
+    m_hat = (
+          (1/2) * lag(revenue, 2)
+          + lag(revenue, 1)
+          + revenue
+          + lead(revenue, 1)
+          + (1/2) * lead(revenue, 2)
+        ) / 4
+  )
+
+apple_shat_ts <- apple_ts |>
+  dplyr::select(index, year, quarter, revenue, m_hat) |>
+  mutate(s_hat = revenue / m_hat)
+
+
+```
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+
+# Compute s_hat
+apple_shat_ts2 <- apple_shat_ts |>
+  data.frame() |>
+  mutate(quarter = paste0("Q",quarter)) |>
+  round_df(3) # Round df to make the computations simpler
+
+wider_df <- apple_shat_ts2 |>
+  dplyr::select(year, quarter, s_hat) |>
+  pivot_wider(values_from = "s_hat", names_from = "quarter")
+
+wider_df2 <- wider_df %>%
+  round_df(3)
+
+wider_df3 <- wider_df2 |>
+  # Hide bar_s_t values for November and December
+  # mutate(Q1 = ifelse(row_number() == 1, "", Q1)) |>
+  # mutate(Q2 = ifelse(row_number() == 1, "", Q2)) |>
+  mutate(Q3 = ifelse(row_number() == 1, "", Q3)) |>
+  mutate(Q4 = ifelse(row_number() == 1, "", Q4)) |>
+  mutate(Q1 = ifelse(row_number() == 2, "", Q1)) |>
+  mutate(Q2 = ifelse(row_number() == 2, "", Q2)) |>
+  mutate(Q3 = ifelse(row_number() == 2, "", Q3)) |>
+  rename(Year = year)
+
+column_sum <- wider_df3 |>
+  pivot_longer(cols = c("Q1", "Q2", "Q3", "Q4"), values_to = "revenue", names_to = "quarter") |>
+  mutate(revenue = as.numeric(revenue)) |>
+  group_by(quarter) |>
+  summarise(sum = sum(revenue, na.rm = TRUE))
+```
+
+
+<!-- Blank line for visual spacing -->
+<br>
+
+#### Table 5: Compute $\hat s_t$; then use Table 4 to find $\bar s_t$. Use $\bar s_t$ to find the random component and the seasonally adjusted time series values.
+
+```{r}
+#| echo: false
+#| warning: false
+
+num_blank_rows <- 7
+num_addl_rows <- 3
+
+# Compute s_hat
+apple_ts2 <- apple_ts |>
+  mutate(s_hat = revenue / m_hat) 
+
+# Compute the unadjusted_s_bar and s_bar
+adj_s_bar_df <- apple_ts2 |>
+  data.frame() |>
+  group_by(quarter) |>
+  summarize(unadjusted_s_bar = mean(s_hat, na.rm = TRUE)) |>
+  mutate(s_bar_bar = mean(unadjusted_s_bar)) |>
+  mutate(s_bar = unadjusted_s_bar / s_bar_bar) |>
+  dplyr::select(quarter, s_bar, s_bar_bar)
+
+# Get seasonally adjusted time series
+adjusted_ts <- apple_ts2 |>
+  left_join(adj_s_bar_df, by = join_by(quarter)) |>
+  mutate(random = revenue / ( m_hat * s_bar) ) |> 
+  mutate(seasonally_adjusted_x = revenue / s_bar) |>
+  dplyr::select(-s_bar_bar) |>
+  as.data.frame() |>
+  dplyr::select(index, revenue, m_hat, s_hat, s_bar, random, seasonally_adjusted_x) 
+
+additional_rows_from_adjusted_ts <- head(adjusted_ts,num_blank_rows + num_addl_rows) |> 
+  tail(num_addl_rows) |> 
+  convert_df_to_char(3)
+
+adjusted_ts |>
+  as_tibble() |>
+  round_df(3) |>
+  filter(row_number() <= num_blank_rows) |>
+  mutate(
+    s_hat = "",
+    s_bar = "",
+    random = "",
+    seasonally_adjusted_x = ""
+  ) |> 
+  convert_df_to_char() |>
+  bind_rows(additional_rows_from_adjusted_ts) |>
+  dplyr::select(index, revenue, m_hat, s_hat, s_bar, random, seasonally_adjusted_x) |>
+  rename(
+    Quarter = index, 
+    "Revenue $$x_t$$" = revenue,
+    "$$ \\hat m_t $$" = m_hat, 
+    "$$ \\hat s_t $$" = s_hat, 
+    "$$ \\bar s_t $$" = s_bar,
+    Random = random,
+    "Seasonally Adjusted $$x_t$$" = seasonally_adjusted_x
+  ) |>
+  display_partial_table(num_blank_rows + num_addl_rows, 0)
+```
+
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+#### Table 4: Table of $\hat s_t$ values, quarterly means of $\hat s_t$, and seasonally adjusted factor $\bar s_t$.
+
+```{r}
+#| echo: false
+
+wider_df3 |>
+  rbind(c("Mean", rep("",4))) |>
+  rbind(c("$$ \\bar s_t $$", rep("",4))) |>
+  display_table()
+```
+
+
+<!-- <a href="javascript:showhide('Solutions2')" -->
+<!-- style="font-size:.8em;">Tables 4 and 5</a> -->
+
+<!-- ::: {#Solutions2 style="display:none;"} -->
+
+<!-- Solutions for the computations from this lesson -->
+
+<!-- #### Table 5: (Solutions) -->
+
+<!-- ```{r} -->
+<!-- #| echo: false -->
+
+<!-- adjusted_ts |>  -->
+<!--   round_df(3) |> -->
+<!--   filter(row_number() <= num_blank_rows) |> -->
+<!--   mutate( -->
+<!--     s_hat = cell_spec(s_hat, color = "#E69F00"), -->
+<!--     s_bar = cell_spec(s_bar, color = "#009E73"), -->
+<!--     random = cell_spec(random, color = "#009E73"), -->
+<!--     seasonally_adjusted_x = cell_spec(seasonally_adjusted_x, color = "#009E73") -->
+<!--   ) |> -->
+<!--   convert_df_to_char() |> -->
+<!--   bind_rows(additional_rows_from_adjusted_ts) |> -->
+<!--   rename( -->
+<!--     Quarter = index,  -->
+<!--     "Revenue $$x_t$$" = revenue, -->
+<!--     "$$ \\hat m_t $$" = m_hat,  -->
+<!--     "$$ \\hat s_t $$" = s_hat,  -->
+<!--     "$$ \\bar s_t $$" = s_bar, -->
+<!--     Random = random, -->
+<!--     "Seasonally Adjusted $$x_t$$" = seasonally_adjusted_x -->
+<!--   ) |> -->
+<!--   display_table() -->
+<!-- ``` -->
+
+<!-- #### Table 4: (Solutions) -->
+
+<!-- ```{r} -->
+<!-- #| echo: false -->
+<!-- #| warning: false -->
+<!-- #| eval: false -->
+
+<!-- # Compute s_hat -->
+<!-- apple_shat_ts2 <- apple_shat_ts |> -->
+<!--   data.frame() |> -->
+<!--   mutate(quarter = paste0("Q",quarter)) |> -->
+<!--   round_df(3) # Round df to make the computations simpler -->
+
+<!-- wider_df <- apple_shat_ts2 |> -->
+<!--   dplyr::select(year, quarter, s_hat) |> -->
+<!--   pivot_wider(values_from = "s_hat", names_from = "quarter") -->
+
+<!-- wider_df2 <- wider_df %>% -->
+<!--   round_df(3) -->
+
+<!-- wider_df3 <- wider_df2 |> -->
+<!--   rename(Year = year) -->
+
+<!-- column_sum <- wider_df3 |> -->
+<!--   pivot_longer(cols = c("Q1", "Q2", "Q3", "Q4"), values_to = "revenue", names_to = "quarter") |> -->
+<!--   mutate(revenue = as.numeric(revenue)) |> -->
+<!--   group_by(quarter) |> -->
+<!--   summarise(mean = mean(revenue, na.rm = TRUE)) |> -->
+<!--   group_by() |>  -->
+<!--   mutate( -->
+<!--     grand_mean = mean(mean), -->
+<!--     adjusted = mean / grand_mean -->
+<!--   ) |> -->
+<!--   dplyr::select(-grand_mean) |>  -->
+<!--   # mutate(Year = "Mean") |> -->
+<!--   # pivot_wider(names_from = quarter, values_from = c("mean", "adjusted")) |> -->
+<!--   convert_df_to_char(3) |> -->
+<!--   dplyr::select(-quarter) |> -->
+<!--   transpose() |> -->
+<!--   rename(Q1 = V1, Q2 = V2, Q3 = V3, Q4 = V4) |> -->
+<!--   mutate(Year = c("Mean","$$ \\bar s_t $$")) |> -->
+<!--   dplyr::select(Year, Q1:Q4) -->
+
+<!-- wider_df3 |> -->
+<!--   convert_df_to_char() |> -->
+<!--   color_specific_cell(1, 4, "#0072B2") |> -->
+<!--   color_specific_cell(1, 5, "#0072B2") |> -->
+<!--   color_specific_cell(2, 2, "#0072B2") |> -->
+<!--   color_specific_cell(2, 3, "#0072B2") |> -->
+<!--   color_specific_cell(2, 4, "#0072B2") |> -->
+<!--   rbind(column_sum |> head(1)) |> -->
+<!--   color_last_row2("#0072B2") |> -->
+<!--   rbind(column_sum |> tail(1)) |> -->
+<!--   color_last_row2("#0072B2") |> -->
+<!--   display_table() -->
+<!-- ``` -->
+<!-- ::: -->
+
+
+
+
+
+
