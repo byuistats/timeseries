@@ -9,6 +9,7 @@ sidebar: false
 ```{r}
 #| include: false
 source("common_functions.R")
+pacman::p_load(data.table) # for transpose
 ```
 
 ```{=html}
@@ -608,16 +609,17 @@ The code below imports and plots the quarterly revenue for Apple Inc. (in billio
 #| code-summary: "Show the code"
 
 apple_raw <- rio::import("https://byuistats.github.io/timeseries/data/apple_revenue.csv")
+apple_raw <- rio::import("data/apple_revenue.csv")
 
 apple_tibble <- apple_raw |>
   mutate(
-    date_str = paste((quarter - 1) * 3 + 1, year),
-    dates = my(date_str),
+    dates = mdy(date),
     year = lubridate::year(dates),
     quarter = lubridate::quarter(dates),
-    value = net_revenue_b
+    value = revenue_billions
   ) |>
   dplyr::select(dates, year, quarter, value)  |> 
+  arrange(dates) |>
   tibble()
 
 # Create the index variable and convert to a tsibble
@@ -640,7 +642,8 @@ autoplot(apple_ts, .vars = revenue) +
 
 -   What do you notice?
     -   Does it seem like there is a trend in the time series?
-    -   Is there evidence of a seasonal effect? If so, when is the number of fatalities particularly high? particularly low?
+    -   Is there evidence of a seasonal effect? If so, during which quarter(s) are the revenues particularly high? particularly low?
+    -   Can you attribute a reason for this behavior?
 
 -   Is an additive or multiplicative model more appropriate? Why?
 
@@ -695,18 +698,15 @@ apple_ts <- apple_ts |>
 # Defines example quarter to illustrate computation of m_hat
 sample_year <- 2007
 sample_qtr <- 1
+
 row_of_sample_m_hat <- apple_ts |>
   as.data.frame() |>
   mutate(row_num = row_number()) |>
   filter(year == sample_year & quarter == sample_qtr) |>
   dplyr::select(row_num) |>
   pull()
-```
 
-
-To emphasize the computation of the centered moving average, the observed data values that were used to find $\hat m_t$ for the 
-`r 
-  apple_ts |> 
+sample_quarter <- apple_ts |> 
     as.data.frame() |>
     mutate(
       quarter_text = case_when(
@@ -720,8 +720,9 @@ To emphasize the computation of the centered moving average, the observed data v
     filter(row_number() == row_of_sample_m_hat) |>
     dplyr::select(quarter_text) |>
     pull()
-`
-quarter of `r sample_year` are shown in <span style="color:#009E73;">green</span> in the table below. 
+```
+
+To emphasize the computation of the centered moving average, the observed data values that were used to find $\hat m_t$ for the `r sample_quarter` quarter of `r sample_year` are shown in <span style="color:#009E73;">green</span> in the table below. 
 
 ### Estimated Quarterly Multiplicative Effect
 
@@ -739,13 +740,9 @@ $$
 apple_shat_ts <- apple_ts |>
   dplyr::select(index, year, quarter, revenue, m_hat) |>
   mutate(s_hat = revenue / m_hat)
-#   mutate( 
-#     adjusted_s_hat = s_hat - mean(s_hat, na.rm = TRUE),
-#     seasonally_adjusted_x = deaths - adjusted_s_hat
-#   )
 
 apple_shat_ts |>
-  round_df(2) |>
+  round_df(3) |>
   mutate(
     m_hat = as.character(m_hat),
     s_hat = as.character(s_hat),
@@ -757,7 +754,7 @@ apple_shat_ts |>
     # adjusted_s_hat = ifelse(row_number() <= 12, "", adjusted_s_hat),
     # seasonally_adjusted_x = ifelse(row_number() <= 12, "", seasonally_adjusted_x)
   ) |>
-  convert_df_to_char(2) |>
+  convert_df_to_char(3) |>
   color_specific_cell(row_num = row_of_sample_m_hat, col_num = 5, color = "#009E73") |>
   color_specific_cell(row_num = row_of_sample_m_hat-2, col_num = 4, color = "#009E73") |>
   color_specific_cell(row_num = row_of_sample_m_hat-1, col_num = 4, color = "#009E73") |>
@@ -797,14 +794,14 @@ We adjust these values by dividing the quarterly means by the overall mean.
 apple_shat_ts2 <- apple_shat_ts |>
   data.frame() |>
   mutate(quarter = paste0("Q",quarter)) |>
-  round_df(2) # Round df to make the computations simpler
+  round_df(3) # Round df to make the computations simpler
 
 wider_df <- apple_shat_ts2 |>
   dplyr::select(year, quarter, s_hat) |>
   pivot_wider(values_from = "s_hat", names_from = "quarter")
 
 wider_df2 <- wider_df %>%
-  round_df(2)
+  round_df(3)
 
 wider_df3 <- wider_df2 |>
   # Hide bar_s_t values for November and December
@@ -885,7 +882,7 @@ num_addl_rows <- 3
 
 # Compute s_hat
 apple_ts2 <- apple_ts |>
-  mutate(s_hat = revenue / m_hat)
+  mutate(s_hat = revenue / m_hat) 
 
 # Compute the unadjusted_s_bar and s_bar
 adj_s_bar_df <- apple_ts2 |>
@@ -907,11 +904,11 @@ adjusted_ts <- apple_ts2 |>
 
 additional_rows_from_adjusted_ts <- head(adjusted_ts,num_blank_rows + num_addl_rows) |> 
   tail(num_addl_rows) |> 
-  convert_df_to_char(1)
+  convert_df_to_char(3)
 
 adjusted_ts |>
   as_tibble() |>
-  round_df(1) |>
+  round_df(3) |>
   filter(row_number() <= num_blank_rows) |>
   mutate(
     s_hat = cell_spec(s_hat, color = ""),
@@ -928,6 +925,65 @@ adjusted_ts |>
 
 
 
+
+
+
+### Visualizing the Seasonally Adjusted Series
+
+This code calculates the decomposition, including the seasonally adjusted time series, beginning with the tsibble deaths_ts.
+
+#### Table 6: First Few Rows of the Decomposition of the Apple Revenue Time Series
+
+```{r}
+#| code-fold: true
+apple_decompose <- apple_ts |>
+  model(feasts::classical_decomposition(revenue,
+          type = "mult"))  |>
+  components()
+
+apple_decompose |>
+  head(8) |>
+  display_table()
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+autoplot(apple_decompose)
+```
+
+
+The figure below illustrates the original time series (in black), the centered moving average $\hat m_t$ (in blue), and the seasonally adjusted series (in red).
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+apple_decompose |>
+  ggplot() +
+  geom_line(data = apple_decompose, aes(x = index, y = revenue), color = "black") +
+  geom_line(data = apple_decompose, aes(x = index, y = season_adjust), color = "#D55E00") +
+  geom_line(data = apple_decompose, aes(x = index, y = trend), color = "#0072B2") +
+  labs(
+    x = "Quarter",
+    y = "Quarterly Revenue, Billions",
+    title = "Apple Inc. Quarterly Revenue (in Billions of U.S. Dollars)"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Do you observe a trend in the time series?
+    -   What does this trend suggest?
+-   In what quarter does Apple tend to have the greatest revenue?
+    -   What would explain this phenomenon?
+
+:::
 
 
 
@@ -998,6 +1054,90 @@ style="font-size:.8em;">Table 1</a>
 
 ::: {#Solutions2 style="display:none;"}
 
+Solutions for the computations from this lesson
+
+#### Table 3: (Solutions)
+
+```{r}
+#| include: false
+#| eval: false
+
+# THIS IS THE HARD WAY. JUST USE THE DECOMPOSITION FUNCTION ABOVE...
+
+# Compute s_hat
+deaths_ts2 <- deaths_ts |>
+  mutate(s_hat = deaths - m_hat)
+
+# Compute the unadjusted_s_bar and s_bar
+s_bar_df <- deaths_ts2 |>
+  data.frame() |>
+  group_by(month) |>
+  summarize(unadjusted_s_bar = mean(s_hat, na.rm = TRUE)) |>
+  mutate(s_bar_bar = mean(unadjusted_s_bar)) |>
+  mutate(s_bar = unadjusted_s_bar - s_bar_bar) |>
+  dplyr::select(month, s_bar, s_bar_bar)
+
+# Get seasonally adjusted time series
+adjusted_ts <- deaths_ts2 |>
+  left_join(s_bar_df, by = join_by(month)) |>
+  mutate(random = deaths - m_hat - s_bar) |>
+  mutate(seasonally_adjusted_x = deaths - s_bar) |>
+  dplyr::select(-s_bar_bar)
+
+adjusted_ts |> 
+  round_df(3) |>
+  filter(row_number() <= num_blank_rows) |>
+  mutate(
+    s_hat = cell_spec(s_hat, color = "#E69F00"),
+    s_bar = cell_spec(s_bar, color = "#009E73"),
+    random = cell_spec(random, color = "#009E73"),
+    seasonally_adjusted_x = cell_spec(seasonally_adjusted_x, color = "#009E73")
+  ) |>
+  convert_df_to_char() |>
+  bind_rows(additional_rows_from_adjusted_ts) |>
+  display_table()
+```
+
+#### Table 2: (Solutions)
+
+```{r}
+#| include: false
+#| eval: false
+
+s_bar_bar_value <- s_bar_df %>% 
+  summarize(s_bar_bar = round(mean(s_bar_bar), 1)) |>
+  dplyr::select(s_bar_bar) |>
+  pull()
+
+wider_df3 <- wider_df2 |>
+  bind_rows(
+    wider_df2 |> tail(1)
+  ) 
+
+# Subtract the mean of \bar s_t to make the mean of the adjusted values be zero.
+for (j in 2:ncol(wider_df3)) {
+  wider_df3[nrow(wider_df3), j] = 
+    as.character(
+      as.numeric(wider_df3[nrow(wider_df3), j]) - s_bar_bar_value
+    )
+}
+
+wider_df3 |> 
+  mutate(year = ifelse(row_number() == n(), "Adjusted", year)) |>
+  rename(Year = year) |>
+  color_specific_cell(1, 8, "#0072B2") |>
+  color_specific_cell(1, 9, "#0072B2") |>
+  color_specific_cell(1, 10, "#0072B2") |>
+  color_specific_cell(1, 11, "#0072B2") |>
+  color_specific_cell(1, 12, "#0072B2") |>
+  color_specific_cell(1, 13, "#0072B2") |>
+  color_specific_cell(2, 2, "#0072B2") |>
+  color_specific_cell(2, 3, "#0072B2") |>
+  color_last_row2("#0072B2") |>
+  color_2nd_to_last_row2("#0072B2") |>
+  display_table()
+```
+
 :::
 
 
@@ -1005,6 +1145,86 @@ style="font-size:.8em;">Table 1</a>
 
 
 
+Solutions for the computations from this lesson
+
+#### Table 5: (Solutions)
+
+```{r}
+#| echo: false
+
+adjusted_ts |> 
+  round_df(3) |>
+  filter(row_number() <= num_blank_rows) |>
+  mutate(
+    s_hat = cell_spec(s_hat, color = "#E69F00"),
+    s_bar = cell_spec(s_bar, color = "#009E73"),
+    random = cell_spec(random, color = "#009E73"),
+    seasonally_adjusted_x = cell_spec(seasonally_adjusted_x, color = "#009E73")
+  ) |>
+  convert_df_to_char() |>
+  bind_rows(additional_rows_from_adjusted_ts) |>
+  display_table()
+```
+
+#### Table 4: (Solutions)
+
+```{r}
+#| echo: false
+#| warning: false
+
+# Compute s_hat
+apple_shat_ts2 <- apple_shat_ts |>
+  data.frame() |>
+  mutate(quarter = paste0("Q",quarter)) |>
+  round_df(3) # Round df to make the computations simpler
+
+wider_df <- apple_shat_ts2 |>
+  dplyr::select(year, quarter, s_hat) |>
+  pivot_wider(values_from = "s_hat", names_from = "quarter")
+
+wider_df2 <- wider_df %>%
+  round_df(3)
+
+wider_df3 <- wider_df2 |>
+  rename(Year = year)
+
+column_sum <- wider_df3 |>
+  pivot_longer(cols = c("Q1", "Q2", "Q3", "Q4"), values_to = "revenue", names_to = "quarter") |>
+  mutate(revenue = as.numeric(revenue)) |>
+  group_by(quarter) |>
+  summarise(mean = mean(revenue, na.rm = TRUE)) |>
+  group_by() |> 
+  mutate(
+    grand_mean = mean(mean),
+    adjusted = mean / grand_mean
+  ) |>
+  dplyr::select(-grand_mean) |> 
+  # mutate(Year = "Mean") |>
+  # pivot_wider(names_from = quarter, values_from = c("mean", "adjusted")) |>
+  convert_df_to_char(3) |>
+  dplyr::select(-quarter) |>
+  transpose() |>
+  rename(Q1 = V1, Q2 = V2, Q3 = V3, Q4 = V4) |>
+  mutate(Year = c("Mean","$$ \\bar s_t $$")) |>
+  dplyr::select(Year, Q1:Q4)
+
+wider_df3 |>
+  convert_df_to_char() |>
+  color_specific_cell(1, 4, "#0072B2") |>
+  color_specific_cell(1, 5, "#0072B2") |>
+  color_specific_cell(2, 2, "#0072B2") |>
+  color_specific_cell(2, 3, "#0072B2") |>
+  color_specific_cell(2, 4, "#0072B2") |>
+  rbind(column_sum |> head(1)) |>
+  color_last_row2("#0072B2") |>
+  rbind(column_sum |> tail(1)) |>
+  color_last_row2("#0072B2") |>
+  display_table()
+```
+
+```{r}
+apple_decompose
+```
 
 
 
