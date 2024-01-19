@@ -676,7 +676,7 @@ Check Your Understanding
 <span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">min =</span> lubridate<span class="sc">::</span><span class="fu">minute</span>(date)</span>
 <span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
 <span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">speed =</span> Speed) <span class="sc">|&gt;</span></span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>Id, <span class="sc">-</span>TravelTime, <span class="sc">-</span>Status, <span class="sc">-</span>DataAsOf, <span class="sc">-</span>linkId) <span class="sc">|&gt;</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(date, year, month, day, hour, min, speed) <span class="sc">|&gt;</span></span>
 <span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>()</span>
 <span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>ny_speeds_ts <span class="ot">&lt;-</span> ny_speeds_tb <span class="sc">|&gt;</span></span>
@@ -684,20 +684,44 @@ Check Your Understanding
 <span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
-<p>Next, we compute the decomposition. We expect that that traffic will fluctuate in with daily seasonality. The number of five-minute periods in a day is:</p>
-<p><span class="math display">\[
-\underbrace{\frac{60}{5}}_{\substack{\text{Number of} \\ \text{5-minute periods} \\ \text{per hour}}} \cdot \underbrace{24}_{\substack{\text{Number of} \\ \text{hours} \\ \text{per day}}} = ~~ 288~~\text{five-minute periods per day}
-\]</span></p>
-<p>That is, the time series will follow a cycle that repeats every 288 five-minute intervals. Due to the complexity of the time series, we will indicate this to R in our function call. (Try replacing “speed ~ season(288)” in the classical_decomposition command with “speed” and see what happens!)</p>
+<p>Here are the first few lines of the tsibble:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>ny_speeds_decompose <span class="ot">&lt;-</span> ny_speeds_ts <span class="sc">|&gt;</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(speed <span class="sc">~</span> <span class="fu">season</span>(<span class="dv">288</span>),</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(ny_speeds_decompose)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 10 x 8 [5m] &lt;UTC&gt;
+   date                 year month   day  hour   min speed index              
+   &lt;dttm&gt;              &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;dbl&gt; &lt;dttm&gt;             
+ 1 2022-07-02 00:00:00  2022     7     2     0     0  52.2 2022-07-02 00:00:00
+ 2 2022-07-02 00:05:00  2022     7     2     0     5  53.4 2022-07-02 00:05:00
+ 3 2022-07-02 00:10:00  2022     7     2     0    10  55.9 2022-07-02 00:10:00
+ 4 2022-07-02 00:15:00  2022     7     2     0    15  56.5 2022-07-02 00:15:00
+ 5 2022-07-02 00:20:00  2022     7     2     0    20  56.5 2022-07-02 00:20:00
+ 6 2022-07-02 00:25:00  2022     7     2     0    25  53.4 2022-07-02 00:25:00
+ 7 2022-07-02 00:30:00  2022     7     2     0    30  55.9 2022-07-02 00:30:00
+ 8 2022-07-02 00:35:00  2022     7     2     0    35  54.7 2022-07-02 00:35:00
+ 9 2022-07-02 00:40:00  2022     7     2     0    40  53.4 2022-07-02 00:40:00
+10 2022-07-02 00:45:00  2022     7     2     0    45  54.0 2022-07-02 00:45:00</code></pre>
+</div>
+</div>
+<p>Here is a time plot of the data:</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(ny_speeds_ts, <span class="at">.vars =</span> speed) <span class="sc">+</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Date / Time"</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Traffic Speed (mph)"</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Bruckner Expressway Traffic Speed"</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output-display">
-<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>The data set spans 16 days. There is a strong daily pattern, which can be seen by the 16 pairs of peaks and valleys. It might be easier to see if we look at the observations from the first 2 days.</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
@@ -711,25 +735,55 @@ Check Your Understanding
 </div>
 <div class="callout-body-container callout-body">
 <ul>
-<li>Working with your partner, identify evidence of the daily seasonal trend in the speed data.</li>
 <li>What do you no notice about this time series?</li>
+<li>During what parts of the day does the traffic flow tend to be slowest? fastest? What is the reason for this behavior?</li>
+</ul>
+</div>
+</div>
+<p>Next, we compute the decomposition. We expect that that traffic will fluctuate with daily seasonality. The number of five-minute periods in a day is:</p>
+<p><span class="math display">\[
+\underbrace{\frac{60}{5}}_{\substack{\text{Number of} \\ \text{5-minute periods} \\ \text{per hour}}} \cdot \underbrace{24}_{\substack{\text{Number of} \\ \text{hours} \\ \text{per day}}} = ~~ 288~~\text{five-minute periods per day}
+\]</span></p>
+<p>That is, the time series will follow a cycle that repeats every 288 five-minute intervals. Due to the complexity of the time series, we will indicate this to R in our function call. (Try replacing “speed ~ season(288)” in the classical_decomposition command with “speed” and see what happens!)</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>ny_speeds_decompose <span class="ot">&lt;-</span> ny_speeds_ts <span class="sc">|&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(speed <span class="sc">~</span> <span class="fu">season</span>(<span class="dv">288</span>),</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(ny_speeds_decompose)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Working with your partner, identify evidence of the daily seasonal component of the speed data.</li>
 <li>How do you explain the sharp downward spikes in the data?</li>
 <li>Does there seem to be a trend in the data? Justify your answer.</li>
 <li>Why is there no estimate for the trend or the random component for the first half of the first day and the last half of the last day?</li>
 </ul>
 </div>
 </div>
-<p>Here are 48 hours of data, near the beginning of the time series (from noon on July 2, 2022 to noon on July 4, 2022).</p>
+<p>Here is a plot of the decomposition for the first 4 days of the time series (July 2, 2022 at 0:00 to July 6, 2022 at 0:00).</p>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>ny_speeds_decompose <span class="sc">|&gt;</span> </span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>((index) <span class="sc">&lt;=</span> <span class="fu">mdy_hm</span>(<span class="st">"7/4/2022 12:00"</span>)) <span class="sc">|&gt;</span> </span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">na.omit</span>() <span class="sc">|&gt;</span> </span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>ny_speeds_decompose <span class="sc">|&gt;</span> </span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>((index) <span class="sc">&lt;=</span> <span class="fu">mdy_hm</span>(<span class="st">"7/6/2022 0:00"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
@@ -747,7 +801,20 @@ Check Your Understanding
 </ul>
 </div>
 </div>
-<p>In order to use EWMA, we need to eliminate any trend and seasonal variation. So, we apply EWMA to the random component and then we can add the trend and seasonal components back in to get the final EWMA estimate for the time series.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Applying the EWMA when there is a trend and/or seasonal variation
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>One assumption for the EWMA is that there is no trend or seasonal variation. If present, we need to eliminate the trend and seasonal variation before applying the EWMA algorithm. In this case, we decompose the time series and compute the EWMA for the random component. Finally, we add the trend and seasonal components back in to get the EWMA estimate for the time series.</p>
+</div>
+</div>
+<p>These data demonstrate distinct seasonal variation. We will need to apply the EWMA algorithm to the random component and later add the seasonal component and trend to our EWMA estimate.</p>
 <p>We demonstrate the computation of the EWMA for a few choices of <span class="math inline">\(\alpha\)</span>.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" aria-current="page">EWMA with <span class="math inline">\(\alpha = 0.2\)</span></a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false">EWMA with <span class="math inline">\(\alpha = 0.01\)</span></a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false">EWMA with <span class="math inline">\(\alpha = 0.75\)</span></a></li></ul>
@@ -807,16 +874,16 @@ Check Your Understanding
 
 </div>
 </div>
-<p>Here is a plot of the EWMA against the random component:</p>
+<p>Here is a plot of the EWMA (in red) and the random component (in black) for a four-hour period:</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>Here is a plot showing the EWMA for all the data.</p>
+<p>Here is a plot showing the EWMA (in red) for all the data.</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-15-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </div>
@@ -878,13 +945,13 @@ Check Your Understanding
 <p>Here is a plot of the EWMA against the random component:</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Here is a plot showing the EWMA for all the data.</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </div>
@@ -946,13 +1013,13 @@ Check Your Understanding
 <p>Here is a plot of the EWMA against the random component:</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-20-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Here is a plot showing the EWMA for all the data.</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-21-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </div>
@@ -961,38 +1028,335 @@ Check Your Understanding
 <p>Once we have obtained the EWMA for the random component, we can add to it the trend and seasonality to get the EWMA for the original speed data.</p>
 <div class="cell">
 <div class="cell-output-display">
-<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-22-1.png" class="img-fluid" width="672"></p>
 </div>
 <div class="cell-output-display">
-<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-18-2.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-22-2.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
 <section id="class-activity-ewma-in-r-10-min" class="level2">
 <h2 class="anchored" data-anchor-id="class-activity-ewma-in-r-10-min">Class Activity: EWMA in R (10 min)</h2>
-<p>The following code can be used to compute the EWMA in R.</p>
+<p>The following code can be used to compute the EWMA for the random component of the New York highway speed data in R.</p>
+<p>We have already decomposed the model, so we have isolated the estimated values for the random component. This is portion of the tsibble <code>ny_speeds_decompose</code>:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>ny_speeds_ewma <span class="ot">&lt;-</span> ny_speeds_decompose <span class="sc">|&gt;</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(<span class="at">Additive =</span> <span class="fu">ETS</span>(speed <span class="sc">~</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>        <span class="fu">trend</span>(<span class="st">"A"</span>, <span class="at">alpha =</span> <span class="fl">0.2</span>, <span class="at">beta =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>        <span class="fu">error</span>(<span class="st">"A"</span>) <span class="sc">+</span> <span class="fu">season</span>(<span class="st">"N"</span>),</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">opt_crit =</span> <span class="st">"amse"</span>, <span class="at">nmse =</span> <span class="dv">1</span>))</span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">report</span>(ny_speeds_ewma)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">.model</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">index</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">speed</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">trend</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">seasonal</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">random</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">season_adjust</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-02 00:00:00</td>
+<td style="text-align: center; min-width: 0in;">52.19</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">2.557</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">49.633</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-02 00:05:00</td>
+<td style="text-align: center; min-width: 0in;">53.43</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">2.884</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">50.546</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-02 00:10:00</td>
+<td style="text-align: center; min-width: 0in;">55.92</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">2.463</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">53.457</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-02 11:55:00</td>
+<td style="text-align: center; min-width: 0in;">30.44</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">-4.195</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">34.635</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-02 12:00:00</td>
+<td style="text-align: center; min-width: 0in;">26.71</td>
+<td style="text-align: center; min-width: 0in;">51.969</td>
+<td style="text-align: center; min-width: 0in;">-7.002</td>
+<td style="text-align: center; min-width: 0in;">-18.258</td>
+<td style="text-align: center; min-width: 0in;">33.712</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-02 12:05:00</td>
+<td style="text-align: center; min-width: 0in;">25.47</td>
+<td style="text-align: center; min-width: 0in;">51.973</td>
+<td style="text-align: center; min-width: 0in;">-8.906</td>
+<td style="text-align: center; min-width: 0in;">-17.597</td>
+<td style="text-align: center; min-width: 0in;">34.376</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-02 12:10:00</td>
+<td style="text-align: center; min-width: 0in;">25.47</td>
+<td style="text-align: center; min-width: 0in;">51.969</td>
+<td style="text-align: center; min-width: 0in;">-9.405</td>
+<td style="text-align: center; min-width: 0in;">-17.095</td>
+<td style="text-align: center; min-width: 0in;">34.875</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-17 11:45:00</td>
+<td style="text-align: center; min-width: 0in;">53.43</td>
+<td style="text-align: center; min-width: 0in;">54.612</td>
+<td style="text-align: center; min-width: 0in;">-4.153</td>
+<td style="text-align: center; min-width: 0in;">2.971</td>
+<td style="text-align: center; min-width: 0in;">57.583</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-17 11:50:00</td>
+<td style="text-align: center; min-width: 0in;">54.05</td>
+<td style="text-align: center; min-width: 0in;">54.616</td>
+<td style="text-align: center; min-width: 0in;">-4.485</td>
+<td style="text-align: center; min-width: 0in;">3.918</td>
+<td style="text-align: center; min-width: 0in;">58.535</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-17 11:55:00</td>
+<td style="text-align: center; min-width: 0in;">53.43</td>
+<td style="text-align: center; min-width: 0in;">54.626</td>
+<td style="text-align: center; min-width: 0in;">-4.195</td>
+<td style="text-align: center; min-width: 0in;">2.999</td>
+<td style="text-align: center; min-width: 0in;">57.625</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-17 12:00:00</td>
+<td style="text-align: center; min-width: 0in;">50.33</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">-7.002</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">57.332</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-17 23:45:00</td>
+<td style="text-align: center; min-width: 0in;">55.3</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">-1.237</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">56.537</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-17 23:50:00</td>
+<td style="text-align: center; min-width: 0in;">55.92</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">-1.905</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">57.825</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(speed ~ season(288), type = "add")</td>
+<td style="text-align: center; min-width: 0in;">2022-07-17 23:55:00</td>
+<td style="text-align: center; min-width: 0in;">57.16</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">1.528</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">55.632</td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>When applying EWMA to the random component of the time series, delete the variable <code>.model</code> and all <code>NA</code> values from the data frame. If you neglect this step, there will be errors in the code below.</p>
+</div>
+</div>
+<p>We drop the variable <code>.model</code> and omit all NA values. (Remember the first half-day and the last half-day in the time series do not yield estimates for the random component.)</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>ny_speeds_random <span class="ot">&lt;-</span> ny_speeds_decompose <span class="sc">|&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">na.omit</span>() <span class="sc">|&gt;</span>                                <span class="co"># Omit all NA values</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>.model)                             <span class="co"># Eliminate the variable .model</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We execute the EWMA algorithm on the random component using <span class="math inline">\(\alpha = 0.2\)</span>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>ny_speeds_model1 <span class="ot">&lt;-</span> ny_speeds_random <span class="sc">|&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">Additive =</span> <span class="fu">ETS</span>(random <span class="sc">~</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">trend</span>(<span class="st">"A"</span>, <span class="at">alpha =</span> <span class="fl">0.2</span>, <span class="at">beta =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">error</span>(<span class="st">"A"</span>) <span class="sc">+</span> <span class="fu">season</span>(<span class="st">"N"</span>),</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>                       <span class="at">opt_crit =</span> <span class="st">"amse"</span>, <span class="at">nmse =</span> <span class="dv">1</span>))</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="fu">report</span>(ny_speeds_model1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>Series: speed 
+<pre><code>Series: random 
 Model: ETS(A,A,N) 
   Smoothing parameters:
     alpha = 0.2 
     beta  = 0 
 
   Initial states:
-     l[0]        b[0]
- 54.30461 0.000149596
+      l[0]        b[0]
+ -13.52924 0.003643793
 
-  sigma^2:  23.7701
+  sigma^2:  22.2348
 
      AIC     AICc      BIC 
-53473.13 53473.14 53492.44 </code></pre>
+49563.94 49563.94 49583.05 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">components</span>(ny_speeds_model1)<span class="sc">$</span>remainder<span class="sc">^</span><span class="dv">2</span>, <span class="at">na.rm =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 95965.59</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">augment</span>(ny_speeds_model1) <span class="sc">|&gt;</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> random)) <span class="sc">+</span></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> .fitted, <span class="at">color =</span> <span class="st">"Fitted"</span>)) <span class="sc">+</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">color =</span> <span class="st">""</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-26-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>ny_speeds_model0 <span class="ot">&lt;-</span> ny_speeds_random <span class="sc">|&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">Additive =</span> <span class="fu">ETS</span>(random <span class="sc">~</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">trend</span>(<span class="st">"A"</span>, <span class="at">beta =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">error</span>(<span class="st">"A"</span>) <span class="sc">+</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">season</span>(<span class="st">"N"</span>),</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>                       <span class="at">opt_crit =</span> <span class="st">"amse"</span>, <span class="at">nmse =</span> <span class="dv">1</span>))</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">report</span>(ny_speeds_model0)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Series: random 
+Model: ETS(A,A,N) 
+  Smoothing parameters:
+    alpha = 0.6721649 
+    beta  = 0 
+
+  Initial states:
+      l[0]        b[0]
+ -17.96533 0.004809674
+
+  sigma^2:  17.9939
+
+     AIC     AICc      BIC 
+48651.70 48651.71 48677.19 </code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">components</span>(ny_speeds_model0)<span class="sc">$</span>remainder<span class="sc">^</span><span class="dv">2</span>, <span class="at">na.rm =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 77661.59</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 77661.59</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>ny_speeds_random <span class="ot">&lt;-</span> ny_speeds_decompose <span class="sc">|&gt;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">na.omit</span>() <span class="sc">|&gt;</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(index, random)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>ny_speeds_ts</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 4,608 x 8 [5m] &lt;UTC&gt;
+   date                 year month   day  hour   min speed index              
+   &lt;dttm&gt;              &lt;dbl&gt; &lt;dbl&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;dbl&gt; &lt;dttm&gt;             
+ 1 2022-07-02 00:00:00  2022     7     2     0     0  52.2 2022-07-02 00:00:00
+ 2 2022-07-02 00:05:00  2022     7     2     0     5  53.4 2022-07-02 00:05:00
+ 3 2022-07-02 00:10:00  2022     7     2     0    10  55.9 2022-07-02 00:10:00
+ 4 2022-07-02 00:15:00  2022     7     2     0    15  56.5 2022-07-02 00:15:00
+ 5 2022-07-02 00:20:00  2022     7     2     0    20  56.5 2022-07-02 00:20:00
+ 6 2022-07-02 00:25:00  2022     7     2     0    25  53.4 2022-07-02 00:25:00
+ 7 2022-07-02 00:30:00  2022     7     2     0    30  55.9 2022-07-02 00:30:00
+ 8 2022-07-02 00:35:00  2022     7     2     0    35  54.7 2022-07-02 00:35:00
+ 9 2022-07-02 00:40:00  2022     7     2     0    40  53.4 2022-07-02 00:40:00
+10 2022-07-02 00:45:00  2022     7     2     0    45  54.0 2022-07-02 00:45:00
+# ℹ 4,598 more rows</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(ny_speeds_ts) <span class="sc">+</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Time"</span>, <span class="at">y =</span> <span class="st">"Speed"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Plot variable not specified, automatically selected `.vars = year`</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-30-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>ny_speeds_model1 <span class="ot">&lt;-</span> ny_speeds_ts <span class="sc">|&gt;</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">Additive =</span> <span class="fu">ETS</span>(speed <span class="sc">~</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">trend</span>(<span class="st">"A"</span>, <span class="at">alpha =</span> <span class="fl">0.1429622</span>, <span class="at">beta =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">error</span>(<span class="st">"A"</span>) <span class="sc">+</span></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">season</span>(<span class="st">"N"</span>),</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>                       <span class="at">opt_crit =</span> <span class="st">"amse"</span>, <span class="at">nmse =</span> <span class="dv">1</span>))</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a><span class="fu">augment</span>(ny_speeds_model1) <span class="sc">|&gt;</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> speed)) <span class="sc">+</span></span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> .fitted, <span class="at">color =</span> <span class="st">"Fitted"</span>)) <span class="sc">+</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">color =</span> <span class="st">""</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_2_files/figure-html/unnamed-chunk-30-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>ny_speeds_model0 <span class="ot">&lt;-</span> ny_speeds_ts <span class="sc">|&gt;</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">Additive =</span> <span class="fu">ETS</span>(speed <span class="sc">~</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">trend</span>(<span class="st">"A"</span>, <span class="at">alpha =</span> <span class="fl">0.2</span>, <span class="at">beta =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">error</span>(<span class="st">"A"</span>) <span class="sc">+</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>                         <span class="fu">season</span>(<span class="st">"N"</span>),</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>                       <span class="at">opt_crit =</span> <span class="st">"amse"</span>, <span class="at">nmse =</span> <span class="dv">1</span>))</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">components</span>(ny_speeds_model0)<span class="sc">$</span>remainder<span class="sc">^</span><span class="dv">2</span>, <span class="at">na.rm =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 109437.6</code></pre>
 </div>
 </div>
 </section>

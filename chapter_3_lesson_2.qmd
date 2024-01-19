@@ -236,7 +236,7 @@ ny_speeds_tb <- ny_speeds_dat |>
     min = lubridate::minute(date)
   ) |>
   rename(speed = Speed) |>
-  dplyr::select(-Id, -TravelTime, -Status, -DataAsOf, -linkId) |>
+  dplyr::select(date, year, month, day, hour, min, speed) |>
   tibble()
 
 ny_speeds_ts <- ny_speeds_tb |>
@@ -244,7 +244,64 @@ ny_speeds_ts <- ny_speeds_tb |>
   as_tsibble(index = index)
 ```
 
-Next, we compute the decomposition. We expect that that traffic will fluctuate in with daily seasonality. The number of five-minute periods in a day is:
+Here are the first few lines of the tsibble:
+
+```{r}
+#| echo: false
+
+ny_speeds_ts |> head(10)
+```
+
+Here is a time plot of the data:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+autoplot(ny_speeds_ts, .vars = speed) +
+  labs(
+    x = "Date / Time",
+    y = "Traffic Speed (mph)",
+    title = "Bruckner Expressway Traffic Speed"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+#| echo: false
+
+num_days_to_plot <- 2
+
+num_days_in_ts <- ny_speeds_ts |>
+  as.data.frame() |>
+  summarize(diff = round(max(date) - min(date), 1)) |>
+  mutate(diff = as.numeric(diff)) |>
+  dplyr::select(diff) |>
+  pull()
+```
+
+The data set spans `r num_days_in_ts` days. 
+There is a strong daily pattern, which can be seen by the `r num_days_in_ts` pairs of peaks and valleys. It might be easier to see if we look at the observations from the first `r num_days_to_plot` days.
+
+```{r}
+#| echo: false
+
+autoplot(ny_speeds_ts |> head(288 * num_days_to_plot), .vars = speed) +
+  labs(
+    x = "Date / Time",
+    y = "Traffic Speed (mph)",
+    title = paste0("Bruckner Expressway Traffic Speed (First ",num_days_to_plot," Days)")
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   What do you no notice about this time series?
+-   During what parts of the day does the traffic flow tend to be slowest? fastest? What is the reason for this behavior?
+:::
+
+
+Next, we compute the decomposition. We expect that that traffic will fluctuate with daily seasonality. The number of five-minute periods in a day is:
 
 $$
 \underbrace{\frac{60}{5}}_{\substack{\text{Number of} \\ \text{5-minute periods} \\ \text{per hour}}} \cdot \underbrace{24}_{\substack{\text{Number of} \\ \text{hours} \\ \text{per day}}} = ~~ 288~~\text{five-minute periods per day}
@@ -264,8 +321,7 @@ autoplot(ny_speeds_decompose)
 ```
 
 ::: {.callout-tip icon="false" title="Check Your Understanding"}
--   Working with your partner, identify evidence of the daily seasonal trend in the speed data.
--   What do you no notice about this time series?
+-   Working with your partner, identify evidence of the daily seasonal component of the speed data.
 -   How do you explain the sharp downward spikes in the data?
 -   Does there seem to be a trend in the data? Justify your answer.
 -   Why is there no estimate for the trend or the random component for the first half of the first day and the last half of the last day?
@@ -288,15 +344,14 @@ rand_plot <- ny_speeds_decompose |>
 speed_plot / rand_plot
 ```
 
-Here are 48 hours of data, near the beginning of the time series (from noon on July 2, 2022 to noon on July 4, 2022).
+Here is a plot of the decomposition for the first 4 days of the time series (July 2, 2022 at 0:00 to July 6, 2022 at 0:00).
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 
 ny_speeds_decompose |> 
-  filter((index) <= mdy_hm("7/4/2022 12:00")) |> 
-  na.omit() |> 
+  filter((index) <= mdy_hm("7/6/2022 0:00")) |> 
   autoplot()
 ```
 
@@ -304,7 +359,14 @@ ny_speeds_decompose |>
 -   Consider the seasonal variation. Around what time of day are the speeds highest? When are the speeds lowest?
 :::
 
-In order to use EWMA, we need to eliminate any trend and seasonal variation. So, we apply EWMA to the random component and then we can add the trend and seasonal components back in to get the final EWMA estimate for the time series.
+::: {.callout-warning}
+## Applying the EWMA when there is a trend and/or seasonal variation
+
+One assumption for the EWMA is that there is no trend or seasonal variation. If present, we need to eliminate the  trend and seasonal variation before applying the EWMA algorithm. In this case, we decompose the time series and compute the EWMA for the random component. Finally, we add the trend and seasonal components back in to get the EWMA estimate for the time series.
+:::
+
+These data demonstrate distinct seasonal variation. We will need to apply the EWMA algorithm to the random component and later add the seasonal component and trend to our EWMA estimate.
+
 
 ```{r}
 #| include: false
@@ -387,19 +449,6 @@ plot_ewma_head_ts <- function(ts, alpha = 0.2) {
       plot.subtitle = element_text(hjust = 0.5)
     )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 ```
 
 We demonstrate the computation of the EWMA for a few choices of $\alpha$.
@@ -417,7 +466,7 @@ temp_df |>
   print_head_ewma_ts()
 ```
 
-Here is a plot of the EWMA against the random component:
+Here is a plot of the EWMA (in red) and the random component (in black) for a four-hour period:
 
 ```{r}
 #| echo: false
@@ -428,7 +477,7 @@ temp_df |>
 
 ```
 
-Here is a plot showing the EWMA for all the data.
+Here is a plot showing the EWMA (in red) for all the data.
 
 ```{r}
 #| echo: false
@@ -571,15 +620,106 @@ compute_ewma_ts(ny_speeds_decompose, alpha) |>
 
 ## Class Activity: EWMA in R (10 min)
 
-The following code can be used to compute the EWMA in R.
+The following code can be used to compute the EWMA for the random component of the New York highway speed data in R.
+
+We have already decomposed the model, so we have isolated the estimated values for the random component. This is portion of the tsibble `ny_speeds_decompose`:
 
 ```{r}
-ny_speeds_ewma <- ny_speeds_decompose |>
-    model(Additive = ETS(speed ~
-        trend("A", alpha = 0.2, beta = 0) +
-        error("A") + season("N"),
-        opt_crit = "amse", nmse = 1))
-report(ny_speeds_ewma)
+#| echo: false
+
+num_header_footer_rows <- 3
+num_extra_na_rows <- 1
+num_body_rows <- 3
+
+table1 <- ny_speeds_decompose |> convert_df_to_char() |> head(288 / 2 + num_body_rows) |> concat_partial_table(num_header_footer_rows, num_body_rows + num_extra_na_rows) |>
+  convert_df_to_char()
+table2 <- ny_speeds_decompose |> convert_df_to_char() |> row_of_vdots()
+table3 <- ny_speeds_decompose |> convert_df_to_char() |> tail(288 / 2 + num_body_rows) |> concat_partial_table(num_body_rows + num_extra_na_rows, num_header_footer_rows)
+
+bind_rows(table1, table2, table3) |>
+  display_table()
+```
+
+::: {.callout-warning}
+
+When applying EWMA to the random component of the time series, delete the variable `.model` and all `NA` values from the data frame. If you neglect this step, there will be errors in the code below.
+:::
+
+We drop the variable `.model` and omit all NA values. (Remember the first half-day and the last half-day in the time series do not yield estimates for the random component.)
+
+```{r}
+ny_speeds_random <- ny_speeds_decompose |>
+  na.omit() |>                                # Omit all NA values
+  select(-.model)                             # Eliminate the variable .model
+```
+
+We execute the EWMA algorithm on the random component using $\alpha = 0.2$.
+
+```{r}
+ny_speeds_model1 <- ny_speeds_random |>
+  model(Additive = ETS(random ~
+                         trend("A", alpha = 0.2, beta = 0) +
+                         error("A") + season("N"),
+                       opt_crit = "amse", nmse = 1))
+report(ny_speeds_model1)
+sum(components(ny_speeds_model1)$remainder^2, na.rm = T)
+```
+
+```{r}
+augment(ny_speeds_model1) |>
+  ggplot(aes(x = index, y = random)) +
+  geom_line() +
+  geom_line(aes(y = .fitted, color = "Fitted")) +
+  labs(color = "")
+```
+
+
+```{r}
+ny_speeds_model0 <- ny_speeds_random |>
+  model(Additive = ETS(random ~
+                         trend("A", beta = 0) +
+                         error("A") +
+                         season("N"),
+                       opt_crit = "amse", nmse = 1))
+report(ny_speeds_model0)
+```
+
+
+```{r}
+sum(components(ny_speeds_model0)$remainder^2, na.rm = T)
+# 77661.59
+```
+
+```{r}
+ny_speeds_random <- ny_speeds_decompose |>
+  na.omit() |>
+  select(index, random)
+```
+
+
+```{r}
+ny_speeds_ts
+autoplot(ny_speeds_ts) +
+  labs(x = "Time", y = "Speed")
+ny_speeds_model1 <- ny_speeds_ts |>
+  model(Additive = ETS(speed ~
+                         trend("A", alpha = 0.1429622, beta = 0) +
+                         error("A") +
+                         season("N"),
+                       opt_crit = "amse", nmse = 1))
+augment(ny_speeds_model1) |>
+  ggplot(aes(x = index, y = speed)) +
+  geom_line() +
+  geom_line(aes(y = .fitted, color = "Fitted")) +
+  labs(color = "")
+ny_speeds_model0 <- ny_speeds_ts |>
+  model(Additive = ETS(speed ~
+                         trend("A", alpha = 0.2, beta = 0) +
+                         error("A") +
+                         season("N"),
+                       opt_crit = "amse", nmse = 1))
+sum(components(ny_speeds_model0)$remainder^2, na.rm = T)
+
 ```
 
 ## Recap (5 min)
