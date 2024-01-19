@@ -136,3 +136,14 @@ rex_decompose <- rexburg_daily_ts |>
 autoplot(rex_decompose)
 
 
+
+# Convert to monthly & export
+
+rexburg_daily_ts |>
+  as.data.frame() |>
+  mutate(date_text = paste0(month(dates), "/", year(dates))) |>
+  group_by(date_text) |>
+  summarize(avg_daily_high_temp = mean(rexburg_airport_high)) |>
+  group_by() |>
+  arrange(my(date_text)) |>
+  rio::export("data/rexburg_weather_monthly.csv")
