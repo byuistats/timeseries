@@ -147,6 +147,7 @@ ewma_toy_df |>
 ```
 
 
+
 ### One-Step-Ahead Prediction Errors 
 
 #### Definition
@@ -244,7 +245,7 @@ ny_speeds_ts <- ny_speeds_tb |>
   as_tsibble(index = index)
 ```
 
-Next, we compute the decomposition. We expect that that traffic will fluctuate in with daily seasonality. The number of five-minute periods in a day is:
+Next, we compute the decomposition. We expect that that traffic will fluctuate with daily seasonality. The number of five-minute periods in a day is:
 
 $$
 \underbrace{\frac{60}{5}}_{\substack{\text{Number of} \\ \text{5-minute periods} \\ \text{per hour}}} \cdot \underbrace{24}_{\substack{\text{Number of} \\ \text{hours} \\ \text{per day}}} = ~~ 288~~\text{five-minute periods per day}
@@ -253,12 +254,12 @@ $$
 That is, the time series will follow a cycle that repeats every 288 five-minute intervals. Due to the complexity of the time series, we will indicate this to R in our function call. (Try replacing "speed \~ season(288)" in the classical_decomposition command with "speed" and see what happens!)
 
 ```{r}
-#| warning: false
+#| warning: true
 
-ny_speeds_decompose <- ny_speeds_ts |>
-    model(feasts::classical_decomposition(speed ~ season(288),
-        type = "add"))  |>
-    components()
+ny_speeds_decompose <- ny_speeds_ts |> 
+  model(feasts::classical_decomposition(speed ~ season(288),
+      type = "add"))  |>
+  components()
 
 autoplot(ny_speeds_decompose)
 ```
@@ -288,7 +289,7 @@ rand_plot <- ny_speeds_decompose |>
 speed_plot / rand_plot
 ```
 
-Here are 48 hours of data, near the beginning of the time series (from noon on July 2, 2022 to noon on July 4, 2022).
+Here is a plot of 48 hours of data, near the beginning of the time series (from noon on July 2, 2022 to noon on July 4, 2022).
 
 ```{r}
 #| code-fold: true
@@ -339,7 +340,7 @@ compute_ewma_ts <- function(ts, alpha_value = 0.2) {
 print_head_ewma_ts <- function(ts, decimals = 3, num_rows = 6) {
   ts |>
     data.frame() |> 
-    dplyr::select(date_time, random, a_t_work, a_t) |>
+    select(date_time, random, a_t_work, a_t) |>
     rename(
       "Date-Time" = date_time,
       "Random $$ \\hat z_t $$" = random,
@@ -571,15 +572,17 @@ compute_ewma_ts(ny_speeds_decompose, alpha) |>
 
 ## Class Activity: EWMA in R (10 min)
 
-The following code can be used to compute the EWMA in R.
+We will now discuss the code used to compute the EWMA in R.
 
 ```{r}
-ny_speeds_ewma <- ny_speeds_decompose |>
-    model(Additive = ETS(speed ~
+#| eval: false
+
+comp_hw1 <- ny_speeds_decompose 
+    model(Additive = ETS(random ~
         trend("A", alpha = 0.2, beta = 0) +
         error("A") + season("N"),
         opt_crit = "amse", nmse = 1))
-report(ny_speeds_ewma)
+report(comp_hw1)
 ```
 
 ## Recap (5 min)
@@ -615,6 +618,11 @@ ewma_toy_df |>
   dplyr::select(t, x_t, a_t) |>
   mutate(e_t = x_t - lag(a_t)) |>
   blank_out_one_cell_in_df(row_num = 1, col_num = 4, decimals = 3) |>
+  rename(
+    "$$ t $$" = t,
+    "$$ x_t $$" = x_t,
+    "$$ a_t $$" = a_t,
+  ) |>
   display_table()
 ```
 :::

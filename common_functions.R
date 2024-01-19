@@ -93,7 +93,7 @@ round_as_text <- function(x, places) {
 
 # Converts a dataframe to char and rounds the values to a specified number of places
 convert_df_to_char <- function(df, decimals = 3) {
-  out_df <- df %>%
+  out_df <- df |>
     as.data.frame() |>
     mutate_if(is.numeric, round, digits=decimals) |>
     mutate(across(everything(), as.character))
@@ -144,11 +144,11 @@ compute_moving_average <- function(df, variable, periods = 12) {
 # x <- rnorm(100,5,2)
 # df1 <- data.frame(x=x)
 #
-# df1 %>%
-#   compute_moving_average(x, 12) %>%
+# df1 |>
+#   compute_moving_average(x, 12) |>
 # mutate( m_hat2 =
 #           ( 1 / 2 * lag(x,6) + lag(x,5) + lag(x,4) + lag(x,3) + lag(x,2) + lag(x) + x + lead(x,1) + lead(x,2) + lead(x,3) + lead(x,4) + lead(x,5) + 1 / 2 * lead(x,6)) /12
-# ) %>% View
+# ) |> View()
 
 
 ########### String manipulation
