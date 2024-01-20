@@ -90,7 +90,7 @@ rexburg_day <- weather_dat %>%
   mutate(date_seq = ymd(dates)) %>%
   mutate(
     year = lubridate::year(date_seq),
-    month = lubridate::month(date_seq),
+    # month = lubridate::month(date_seq),
     value = rexburg_airport_high
   ) %>%
   # Compute angle of the sun
@@ -103,8 +103,10 @@ rexburg_day <- weather_dat %>%
   dplyr::select(-date_seq, -imputed, -days_since_ref_date, -declination) %>%
   tibble()
 
-rexburg_daily_ts <- rexburg_day |>
+rexburg_daily_ts <- rexburg_day |> 
+  dplyr::select(-rexburg_airport_high) |>
   mutate(index = ymd(dates)) |>
+  as_tibble() |>
   as_tsibble(index = index)
 
 rexburg_annual_ts <- summarise(index_by(rexburg_daily_ts, year), high_temp = mean(high_temp))
@@ -220,11 +222,23 @@ Tyson, please look at line 223. I am not sure why it runs for you and not me.
 ```{r}
 #| eval: false
 
-solar_decompose <- rexburg_daily_ts |> 
-  model(feasts::classical_decomposition(max_solar_angle), type = "add") |>
-  components()
+# solar_decompose <- rexburg_daily_ts |>
+#   model(feasts::classical_decomposition(high_temp,
+#           type = "add"))  |>
+#   components()
+
+#  rexburg_daily_ts |>
+#     model(feasts::classical_decomposition(high_temp,
+#         type = "add"))  |>
+#     components()
+# 
+# solar_decompose <- rexburg_daily_ts |> 
+#   model(feasts::classical_decomposition(max_solar_angle, type = "add")) |>
+#   components()
+
 temp_decompose <- model(rexburg_daily_ts, feasts::classical_decomposition(high_temp)) |>
     components()
+
 solar_random <- ACF(solar_decompose, random) |> autoplot()
 temp_random <- ACF(temp_decompose, random) |> autoplot()
 random_decompose <- select(solar_decompose, quarter, random_app = random) |>
