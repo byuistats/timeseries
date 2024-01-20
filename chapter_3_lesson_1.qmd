@@ -86,59 +86,8 @@ The figure below illustrates the daily high temperature in Rexburg, Idaho (in bl
 # Read and clean rexburg weather data
 weather_dat <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv")
 
-w2 <- weather_dat %>%
-  dplyr::select("NAME", "DAY", "MONTH", "YEAR", "DATE", "TMAX") %>%
-  pivot_wider(names_from = "NAME", values_from = c("TMAX")) %>%
-  rename(
-    "byui" = "REXBURG BYU IDAHO, ID US",
-    "airport" = "REXBURG MADISON CO AIRPORT, ID US",
-    "moody" = "MOODY IDAHO, ID US"
-  )
-
-w3 <- w2 %>%
-  dplyr::select(byui, airport) %>%
-  rename(x = byui, y = airport) %>%
-  filter(abs(x - y)<50)
-# plot(w3$x, w3$y)
-lm_byu <- lm(y~x, data= w3)
-
-w4 <- w2 %>%
-  dplyr::select(moody, airport) %>%
-  rename(x = moody, y = airport) %>%
-  filter(abs(x - y)<50)
-# plot(w4$x, w4$y)
-lm_moody <- lm(y~x, data= w4)
-
-weather_clean <- w2 %>%
-  mutate(byui_pred = predict(lm_byu, data.frame(x=w2$byui))) %>%
-  mutate(moody_pred = predict(lm_moody, data.frame(x=w2$moody))) %>%
-  mutate(rexburg = airport) %>%
-  mutate(rexburg =
-           case_when(
-             airport > 100 ~ byui_pred,
-             !is.na(airport) ~ airport,
-             !is.na(byui_pred) ~ byui_pred,
-             !is.na(moody_pred) ~ moody_pred,
-             TRUE ~ NA
-           )
-        ) %>%
-  mutate(imputed = !(rexburg == round(rexburg, 0))) %>%
-  mutate(rexburg = round(rexburg, 0)) %>%
-  mutate(dates = mdy(DATE)) %>%
-  filter(dates > mdy("08/31/1998")) %>%
-  filter(!is.na(rexburg)) %>%
-  rename(rexburg_airport_high = rexburg) %>%
-  dplyr::select(dates, rexburg_airport_high, imputed) %>%
-  filter(dates > mdy("01/01/1999"))
-
-# weather_clean %>%
-#   mutate(years = year(dates)) %>%
-#   group_by(years) %>%
-#   summarize(average = mean(rexburg_airport_high)) %>%
-#   plot
-
-rexburg_day <- weather_clean %>%
-  mutate(date_seq = dates) %>%
+rexburg_day <- weather_dat %>%
+  mutate(date_seq = ymd(dates)) %>%
   mutate(
     year = lubridate::year(date_seq),
     month = lubridate::month(date_seq),
@@ -155,7 +104,7 @@ rexburg_day <- weather_clean %>%
   tibble()
 
 rexburg_daily_ts <- rexburg_day |>
-  mutate(index = dates) |>
+  mutate(index = ymd(dates)) |>
   as_tsibble(index = index)
 
 rexburg_annual_ts <- summarise(index_by(rexburg_daily_ts, year), high_temp = mean(high_temp))
@@ -265,13 +214,13 @@ Done! I'm not sure which of these needed to run so eval is still set to false on
 :::
 
 ::: callout-warning
-Tyson, please look at line 274. I am not sure why it runs for you and not me.
+Tyson, please look at line 223. I am not sure why it runs for you and not me.
 :::
 
 ```{r}
 #| eval: false
 
-solar_decompose <- rexburg_daily_ts |>
+solar_decompose <- rexburg_daily_ts |> 
   model(feasts::classical_decomposition(max_solar_angle), type = "add") |>
   components()
 temp_decompose <- model(rexburg_daily_ts, feasts::classical_decomposition(high_temp)) |>
