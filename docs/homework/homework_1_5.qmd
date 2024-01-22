@@ -25,16 +25,12 @@ pacman::p_load(tidyverse,
 ## Data
 
 ```{r}
-
-#vessels <- rio::import("https://byuistats.github.io/timeseries/data/Vessels_Trade_US.csv")
-
-vessels <- rio::import("C:/Users/moncayod/Downloads/R Renders/Vessels_Trade_US.csv")
-
+vessels <- rio::import("https://byuistats.github.io/timeseries/data/Vessels_Trade_US.csv")
 ```
 
 ## Questions
 
-### Question 1 - Context and Measurement (10 points)
+### Question 1: Context and Measurement (10 points)
 
 The first part of any time series analysis is context. You cannot properly analyze data without knowing what the data is measuring. Without context, the most simple features of data can be obscure and inscrutable. This homework assignment will center around the series below.
 
@@ -48,103 +44,35 @@ Please research the time series. In the spaces below, give the data collection p
 <!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
 :::
 
-### Question 2 - Key Definitions (10 points)
+### Question 2: Key Definitions (10 points)
 
-Define the terms "sampling interval," "time series trend," "seasonal variation," "cycle," "deterministic trend," and "stochastic trend."
+Define the terms below and include any mathematical expressions or illustrations that may accompany the definition if available.
 
 ::: {.callout-note title="Answer" icon="false"}
--   **Multiplicative Decomposition**: <!-- Delete this and put your answer here. -->
+-   **Multiplicative Decomposition**: 
+<!-- Delete this and put your answer here. -->
 
--   **Estimators of seasonal variation for a multiplicative model**: <!-- Delete this and put your answer here. -->
+-   **Estimators of seasonal variation for a multiplicative model**: 
+<!-- Delete this and put your answer here. -->
+
 :::
 
-### Question 3 Seasonally Adjusted Series - Calculation and Plot (40 points)
+### Question 3: Seasonally Adjusted Series - Calculation and Plot (40 points)
 
 Calculate the seasonally adjusted series for the Vessels Cleared in Foreign Trade series using the multiplicative decomposition model. Illustrate the original and the seasonally adjusted series in the same plot. Use the appropriate axis labels, units, and captions.
 
 ::: {.callout-note title="Answer" icon="false"}
-The original file has a date column that is in text format and imports as character, not as a date. It can't be used for creating a *tsibble*. First, convert the date column to a date object using `lubridate::dmy()` since the format of the text dates is d/m/yyyy. If left as a date object, the *tsibble* functions will incorrectly identify the dates as daily frequency, even though they are clearly monthly observations. This is a well known problem and you can find the solution suggested in [THIS](https://tsibble.tidyverts.org/articles/faq.html) FAQ. The `yearmonth()` function will force the date column into a format that *tsibble* functions will recognize as monthly frequency. Then convert the data frame to a *tsibble* and follow the instructions from the lesson.
+<!-- Delete this and put your answer here. -->
 
-The commented code below contains a couple of functions that are useful when troubleshooting. Try running the code without using the `yearmonth()` function and check the frequency of the tsibble date column using `interval()`. Because the functions assume it's daily frequency, they will mistakenly find a lot of gaps - check it with the function `has_gaps()`. If you try to fix the issue with `fill_gaps()` you will create NA values for all missing daily observations. You will run into a trouble when you try to decompose the data.
-
-```{r, echo=FALSE, message=FALSE}
-
-# Convert the "date" column to Date format using lubridate
-vessels$date <- lubridate::dmy(vessels$date)
-
-# Extract the year and month part from the date and create a year-month variable
-vessels$date <- yearmonth(vessels$date)
-
-# Convert the data frame to a tsibble with specified key and regular time intervals
-vessels_tsbl <- as_tsibble(vessels, key = NULL, index = date, regular = TRUE)
-
-# Troubleshooting tools
-
-interval(vessels_tsbl) # Check the time interval of the tsibble
-has_gaps(vessels_tsbl) # Check if there are any gaps in the time series data
-
-# Perform classical time series decomposition on the tsibble
-vessels_decomp <- vessels_tsbl |>
-  model(feasts::classical_decomposition(vessels, type = "mult")) |>
-  components()
-
-  
-
-```
 :::
 
-```{r}
+### Question 4: Seasonally Adjusted Series - Analysis (20 points)
 
-# To create a professional looking plot I changed the default tick marks on the x-axis. The resulting tibble data frame date column is not a date object. Fix that first.
-
-vessels_decomp$date <- as.Date(vessels_decomp$date)
-
-# Create a ggplot for visualizing the time series decomposition
-vessels_decomp |>
-  ggplot() +
-  
-  # Plot the original time series (vessels) with a black line
-  geom_line(
-    aes(x = date, y = vessels), 
-    color = "black") +
-  
-  # Plot the seasonally adjusted time series with an orange line and increased thickness
-  geom_line(
-    aes(x = date, y = season_adjust), 
-    color = "#D55E00", 
-    linewidth = 1) +
-  
-  # Set labels for axes and the plot title
-  labs(
-    x = "Year",
-    y = "Thousands of Net Tons",
-    title = "Vessels Cleared in Foreign Trade for United States"
-  ) +
-  
-  # Set the breaks and labels for the x-axis (time axis)
-  scale_x_date(
-    # Breaks every 5 year starting in 1900
-    breaks = seq(as.Date("1900-01-01"), max(vessels_decomp$date), by = "5 years"),
-    date_labels = "%Y"  # Display year only in tick labels
-  ) +
-  
-  # Customize the plot title location and x-axis tick labels
-  theme(
-    plot.title = element_text(hjust = 0.5), # Center the plot title
-    axis.text.x = element_text(
-      angle = 90, # Vertical labels
-      vjust = 0.5, # Aligns labels properly vertically
-      hjust = 1) # Aligns labels properly horizontally
-  )
-
-```
-
-### Question 4 Seasonally Adjusted Series - Analysis (20 points)
-
-1.  Justify why we use the multiplicative decomposition model instead of the additive model to seasonally adjust the series.
+Justify why we use the multiplicative decomposition model instead of the additive model to seasonally adjust the series.
 
 ::: {.callout-note title="Answer" icon="false"}
-Additive decomposition is better when the trend is linear and seasonality components are relatively constant over time and the magnitude of the seasonal fluctuations is constant. Multiplicative decomposition is appropriate when the magnitude of the seasonal fluctuations varies with the level of the series or the trend is non-linear. The vessels time series has increasing seasonal variation at 1940 than at 1900, suggesting a multiplicative model application. Although the trend is increasing, it's not likely linear. The two World Wars and the Smoot-Hawley Tariff Act of 1930 had a clear effect on trade affecting the trend of the series.
+<!-- Delete this and put your answer here. -->
+
 :::
 
 ## Rubric
