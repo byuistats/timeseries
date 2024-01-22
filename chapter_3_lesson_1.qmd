@@ -109,7 +109,7 @@ rexburg_daily_ts <- rexburg_day |>
   as_tibble() |>
   as_tsibble(index = index)
 
-rexburg_annual_ts <- summarise(index_by(rexburg_daily_ts, year), high_temp = mean(high_temp))
+rexburg_annual_ts <- summarise(index_by(rexburg_daily_ts, year(index)), high_temp = mean(high_temp))
 
 rexburg_weather_plot <- autoplot(rexburg_daily_ts %>% filter(year > 2016), .vars = high_temp) +
   geom_line(aes(x = index, y = max_solar_angle), color = "#D55E00", linewidth = 2) +
@@ -127,7 +127,7 @@ rexburg_weather_plot
 
 Notice that the red curve "leads" the black time series. The peaks and valleys first occur in the maximum solar angle and then days later in the daily high temperatures.
 
-### Sample Cross-Covariance Function
+### Sample Cross-Covariance Function (ccvf)
 
 In Chapter 2, Lesson 2, we explored the covariance of a time series with itself, shifted by $k$ units of time. Now, we will consider a similar idea, where we compare one time series that has been shifted $k$ units to another time series.
 
@@ -154,7 +154,7 @@ $$
   c_0(x,x) = \frac{1}{n} \sum_{t=1}^{n-k} \left( x_{t} - \bar x \right)^2
 $$
 
-### Sample Cross-Correlation Function
+### Sample Cross-Correlation Function (ccf)
 
 The sample cross-correlation function is defined as:
 
@@ -222,23 +222,11 @@ Tyson, please look at line 223. I am not sure why it runs for you and not me.
 ```{r}
 #| eval: false
 
-# solar_decompose <- rexburg_daily_ts |>
-#   model(feasts::classical_decomposition(high_temp,
-#           type = "add"))  |>
-#   components()
-
-#  rexburg_daily_ts |>
-#     model(feasts::classical_decomposition(high_temp,
-#         type = "add"))  |>
-#     components()
-# 
-# solar_decompose <- rexburg_daily_ts |> 
-#   model(feasts::classical_decomposition(max_solar_angle, type = "add")) |>
-#   components()
-
+solar_decompose <- rexburg_daily_ts |> 
+  model(feasts::classical_decomposition(max_solar_angle), type = "add") |>
+  components()
 temp_decompose <- model(rexburg_daily_ts, feasts::classical_decomposition(high_temp)) |>
     components()
-
 solar_random <- ACF(solar_decompose, random) |> autoplot()
 temp_random <- ACF(temp_decompose, random) |> autoplot()
 random_decompose <- select(solar_decompose, quarter, random_app = random) |>
