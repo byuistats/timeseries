@@ -1,8 +1,4 @@
-::: callout-caution
-Insert Chpt2App.R
-:::
-
-  The following code simulates $(x,y)$-pairs of random variables.
+The following code simulates $(x,y)$-pairs of random variables.
 
 ```{r}
 # Unset random seed
