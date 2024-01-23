@@ -82,7 +82,7 @@ The figure below illustrates the daily high temperature in Rexburg, Idaho (in bl
 # Read and clean rexburg weather data
 rexburg_daily_ts <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") |>
   mutate(year_month_day = ymd(dates)) |>
-  select(-imputed, -dates) |>
+  dplyr::select(-imputed, -dates) |>
   mutate(
     days_since_ref_date = as.integer(year_month_day - mdy("12/31/2010")),
     declination = 23.45 * sin(deg2rad(360 * (284+days_since_ref_date)/365.25)),
@@ -247,8 +247,8 @@ temp_decompose <- model(rexburg_daily_ts, feasts::classical_decomposition(high_t
     components()
 solar_random <- ACF(solar_decompose, random) |> autoplot()
 temp_random <- ACF(temp_decompose, random) |> autoplot()
-random_decompose <- select(solar_decompose, quarter, random_app = random) |>
-    left_join(select(temp_decompose, quarter, random_act = random))
+random_decompose <- dplyr::select(solar_decompose, quarter, random_app = random) |>
+    left_join(dplyr::select(temp_decompose, quarter, random_act = random))
 joint_ccf_random <- random_decompose |>
     CCF(y = random_app, x = random_act) |> autoplot()
 (solar_random + temp_random) / joint_ccf_random
