@@ -72,11 +72,11 @@ ui <- fluidPage(
   withMathJax(),
     titlePanel("Covariance & Correlation Exploration"),
     fluidRow(
-      column(4, sliderInput("n", "Number of Points", min = 1, max = 100, value = 50)),
+      column(4, sliderInput("n", "Number of Points", min = 0, max = 100, value = 50)),
       column(4, sliderInput("mu_x", "Mean (x)", min = -10, max = 10, value = 1.25)),
       column(4, sliderInput("mu_y", "Mean (y)", min = -10, max = 10, value = 2.5)),
-      column(4, sliderInput("sigma_x", "Standard Deviation (x)", min = 0.1, max = 10, value = 1, step =0.05)),
-      column(4, sliderInput("sigma_y", "Standard Deviation (y)", min = 0.1, max = 10, value = 3, step =0.05)),
+      column(4, sliderInput("sigma_x", "Standard Deviation (x)", min = 0, max = 10, value = 1, step =0.05)),
+      column(4, sliderInput("sigma_y", "Standard Deviation (y)", min = 0, max = 10, value = 3, step =0.05)),
       column(4, sliderInput("rho", "Correlation Coefficient", min = -1, max = 1, value = 0.8, step =0.05))
     ),
     fluidRow(
@@ -87,12 +87,14 @@ ui <- fluidPage(
       column(12, uiOutput("formula0.5")),
       column(12, plotOutput("plot")),
       column(12, uiOutput("formula1")),
+      column(12, h3("Table 2: Simulated values and computations involving deviations from the mean")),
       column(12, tableOutput("kable")),
       column(12, uiOutput("formula2")),
       column(12, uiOutput("formula2.5")),
       column(12, uiOutput("formula3")),
       column(12, uiOutput("formula3.5")),
-      column(12, uiOutput("formula3.55"))
+      column(12, uiOutput("formula3.55")),
+      column(12, uiOutput("formula4"))
     )
 )
 
@@ -128,7 +130,7 @@ server <- function(input, output, session) {
 
 
     cov_dat <- mvn_data %>%
-      mutate(i = row_number()) %>%
+      mutate(t = row_number()) %>%
       #select(i, x, y) %>%
       mutate(
         xx = x - mean(x),
@@ -155,57 +157,61 @@ server <- function(input, output, session) {
       round_df(3) %>%
       mutate(across(everything(), as.character)) %>%
       mutate(
-        i = "sum",
+        t = "sum",
         sign = case_when(
           xy > 0 ~ "positive",
           xy < 0 ~ "negative",
           TRUE ~ "zero")
       )
+    ###########################################
+    # I was playing around a bit and this code is now in the output section itself. it works here or there ... just me experimenting in shiny
+    ###########################################
+    # min_row <- cov_dat %>%
+    #   mutate(
+    #     positive = if_else(xy > 0, 1, 0),
+    #     negative = if_else(xy < 0, 1, 0)
+    #   ) %>%
+    #   mutate(
+    #     pos_sum = cumsum(positive),
+    #     neg_sum = cumsum(negative),
+    #     both = pos_sum > 0 & neg_sum > 0,
+    #     sum_both = cumsum(both)
+    #   ) %>%
+    #   filter(sum_both <= 1) %>%
+    #   nrow()
 
-    min_row <- cov_dat %>%
-      mutate(
-        positive = if_else(xy > 0, 1, 0),
-        negative = if_else(xy < 0, 1, 0)
-      ) %>%
-      mutate(
-        pos_sum = cumsum(positive),
-        neg_sum = cumsum(negative),
-        both = pos_sum > 0 & neg_sum > 0,
-        sum_both = cumsum(both)
-      ) %>%
-      filter(sum_both <= 1) %>%
-      nrow()
 
 
-
-    cov_table <- cov_dat |>
-      numeric_2_char_df() |>
-      bind_rows(cov_dat_summary) |>
-      mutate(
-        xy = cell_spec(xy,
-                       color = case_when(
-                         xy > 0 ~ "#56B4E9",
-                         xy == 0 ~ "black",
-                         xy < 0 ~ "#E69F00"
-                       )
-        ),
-        sign = cell_spec(sign,
-                         color = case_when(
-                           sign == "positive" ~ "#56B4E9",
-                           sign == "negative" ~ "#E69F00"
-                         )
-        )
-      ) |>
-      rename(
-        "x_t" = x,
-        "y_t" = y,
-        "$$x_t-mean(x)" = xx,
-        "(x_t-mean(x))^2" = xx2,
-        "y_t-mean(y)" = yy,
-        "(y_t-mean(y))^2" = yy2,
-        "(x_t-mean(x))(y_t-mean(y))" = xy
-      ) |>
-      concat_partial_table(min(25,max(6, min_row)), 6)
+    # cov_table <- cov_dat |>
+    #   numeric_2_char_df() |>
+    #   bind_rows(cov_dat_summary) |>
+    #   mutate(
+    #     xy = cell_spec(xy,
+    #                    color = case_when(
+    #                      xy > 0 ~ "#56B4E9",
+    #                      xy == 0 ~ "black",
+    #                      xy < 0 ~ "#E69F00"
+    #                    )
+    #     ),
+    #     sign = cell_spec(sign,
+    #                      color = case_when(
+    #                        sign == "positive" ~ "#56B4E9",
+    #                        sign == "negative" ~ "#E69F00"
+    #                      )
+    #     )
+    #   ) |>
+    #   rename(
+    #     "x_t" = x,
+    #     "y_t" = y,
+    #     "$$x_t-mean(x)" = xx,
+    #     "(x_t-mean(x))^2" = xx2,
+    #     "y_t-mean(y)" = yy,
+    #     "(y_t-mean(y))^2" = yy2,
+    #     "(x_t-mean(x))(y_t-mean(y))" = xy
+    #   ) |>
+    #   concat_partial_table(min(25,max(6, min_row)), 6)
+    # # move summary to bottom
+    #cov_table <- rbind(cov_table[-1, ], cov_table[1, ])
 
     sim_data <- sim_data
     return(
@@ -240,7 +246,7 @@ server <- function(input, output, session) {
   output$formula1 <- renderUI({
     mvn_data <- sim_data()[[3]]
     tagList(
-      paste0("The resulting table illustrates some of the simulated values. The mean of the $x_t$ values is $\\bar x$ =", round(mean(mvn_data$x), 3),". The mean of the $y_t$ values is $\\bar y =", round(mean(mvn_data$y), 3),"$. We will soon use the values $(x_t-\\bar x)$, $(x_t-\\bar x)^2$, $(y_t-\\bar y)$, $(y_t-\\bar y)^2$, and $(x_t-\\bar x)(y_t-\\bar y)$ For convenience, they are included in the table below. (sorry I couldn't figure out how to get the latex column names to work in the shiny output, maybe next time :sad_face:)"),
+      paste0("The resulting table illustrates some of the simulated values. The mean of the $x_t$ values is $\\bar x$ =", round(mean(mvn_data$x), 3),". The mean of the $y_t$ values is $\\bar y =", round(mean(mvn_data$y), 3),"$. We will soon use the values $(x_t-\\bar x)$, $(x_t-\\bar x)^2$, $(y_t-\\bar y)$, $(y_t-\\bar y)^2$, and $(x_t-\\bar x)(y_t-\\bar y)$ For convenience, they are included in the table below."),
       tags$script('renderMathInElement(document.getElementById("formula1"), {delimiters: [{left: "$", right: "$", display: false}]});')
     )
   })
@@ -340,6 +346,10 @@ server <- function(input, output, session) {
         "(x_t-mean(x))(y_t-mean(y))" = xy
       ) |>
       concat_partial_table(min(25,max(6, min_row)), 6)
+    # move summary to bottom
+    cov_table <- rbind(cov_table[-1, ], cov_table[1, ])
+    cov_table <- cov_table[c(8, 1:7, 9:ncol(cov_table))]
+    rownames(cov_table) <- NULL
 
     knitr::kable(cov_table, format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
     kable_styling(full_width = FALSE, "striped")
