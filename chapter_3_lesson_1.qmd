@@ -11,10 +11,6 @@ sidebar: false
 
 # need to load after mosiac because mosaic overwrites fable::Model()
 source("common_functions.R")
-
-# Need mosaic for deg2rad and rad2deg
-pacman::p_load(mosaic)
-
 ```
 
 ```{=html}
@@ -84,35 +80,41 @@ The figure below illustrates the daily high temperature in Rexburg, Idaho (in bl
 #| echo: false
 
 # Read and clean rexburg weather data
-weather_dat <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv")
-
-rexburg_day <- weather_dat %>%
-  mutate(date_seq = ymd(dates)) %>%
+rexburg_daily_ts <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") |>
+  mutate(year_month_day = ymd(dates)) |>
+  select(-imputed, -dates) |>
   mutate(
-    year = lubridate::year(date_seq),
-    # month = lubridate::month(date_seq),
-    value = rexburg_airport_high
-  ) %>%
-  # Compute angle of the sun
-  mutate(
-    days_since_ref_date = as.integer(date_seq - mdy("12/31/2010")),
+    days_since_ref_date = as.integer(year_month_day - mdy("12/31/2010")),
     declination = 23.45 * sin(deg2rad(360 * (284+days_since_ref_date)/365.25)),
     max_solar_angle = (sin(deg2rad(43.825386)) * sin(deg2rad(declination)) + cos(deg2rad(43.825386)) * cos(deg2rad(declination)) * cos(0)) |> asin() |> rad2deg()
   ) |>
-  rename(high_temp = value) |>
-  dplyr::select(-date_seq, -imputed, -days_since_ref_date, -declination) %>%
-  tibble()
+  rename(high_temp = rexburg_airport_high) |>
+  as_tsibble(index = year_month_day)
 
-rexburg_daily_ts <- rexburg_day |> 
-  dplyr::select(-rexburg_airport_high) |>
-  mutate(index = ymd(dates)) |>
+rexburg_daily_ts %>% head
+
+daily_decompose <- rexburg_daily_ts  |>
+  model(feasts::classical_decomposition(high_temp ~ season(365.25),
+                                        type = "add"))  |>
+  components()
+
+
+daily_decompose |> autoplot()
+```
+
+
+```{r}
+yearly_ts <- rexburg_daily_ts |>
   as_tibble() |>
-  as_tsibble(index = index)
+  mutate(year = year(year_month_day)) |>
+  group_by(year) |>
+  summarise(high_temp = mean(high_temp)) |>
+  ungroup() |>
+  as_tsibble(index = year)
+  
 
-rexburg_annual_ts <- summarise(index_by(rexburg_daily_ts, year(index)), high_temp = mean(high_temp))
-
-rexburg_weather_plot <- autoplot(rexburg_daily_ts %>% filter(year > 2016), .vars = high_temp) +
-  geom_line(aes(x = index, y = max_solar_angle), color = "#D55E00", linewidth = 2) +
+rexburg_weather_plot <- autoplot(rexburg_daily_ts %>% filter(year(year_month_day) > 2016), .vars = high_temp) +
+  geom_line(aes(x = year_month_day, y = max_solar_angle), color = "#D55E00", linewidth = 2) +
   scale_y_continuous(sec.axis = sec_axis(~., name = "Max Solar Angle (in degrees)")) +
   labs(
     x = "Date",
@@ -207,17 +209,33 @@ knitr::kable(
 
 
 
-::: callout-warning
-We need to figure out why this code won't run. Tyson, will you please look at it?
-:::
+<!-- ::: callout-warning -->
+<!-- We need to figure out why this code won't run. Tyson, will you please look at it? -->
+<!-- ::: -->
 
-::: callout-important 
-Done! I'm not sure which of these needed to run so eval is still set to false on everything but the code doesn't throw errors anymore.
-:::
+<!-- ::: callout-important  -->
+<!-- Done! I'm not sure which of these needed to run so eval is still set to false on everything but the code doesn't throw errors anymore. -->
+<!-- ::: -->
 
-::: callout-warning
-Tyson, please look at line 223. I am not sure why it runs for you and not me.
-:::
+<!-- ::: callout-warning -->
+<!-- Tyson, please look at line 223. I am not sure why it runs for you and not me. -->
+<!-- ::: -->
+
+```{r}
+
+
+rexburg_daily_ts |> autoplot(.vars = high_temp)
+```
+
+```{r}
+#| warning: false
+rexburg_daily_ts |>
+  model(feasts::classical_decomposition(high_temp ~ season(365.25),
+                                        type = "add"))  |>
+  components() |>
+  autoplot()
+```
+
 
 ```{r}
 #| eval: false
@@ -293,14 +311,19 @@ ggplot(data = rexburg_daily_ts, aes(x = lag(max_solar_angle, 28), y = high_temp)
 
 ## Small Group Activity: Computing the Sample CCF (25 min)
 
-Using any tool, except pre-defined functions in R, find the ccf for the following data.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Using any tool, except pre-defined functions in R, find the ccf for the following data.
 
 ```{r}
 #| echo: false
 
 set.seed(123)
-a <- 1.6
-b <- 4.1
+a <- 4.1
+b <- 1.6
 
 sim_df <- data.frame(t = 1:16) |>
   mutate(
@@ -309,7 +332,9 @@ sim_df <- data.frame(t = 1:16) |>
   ) |>
   round_df(1)
 
-start_date <- lubridate::ymd("2023-06-01")
+# start_date <- lubridate::ymd("2023-06-01")
+start_date <- lubridate::ymd_hms(now()) - months(16) 
+# start_date <- floor_date(start_date, unit = "month")
 date_seq <- seq(start_date,
                 start_date + months(nrow(sim_df)-1),
                 by = "1 months")
@@ -323,63 +348,71 @@ sim_tibble <- tibble(
 )
 
 sim_ts <- sim_tibble |>
-  mutate(index = tsibble::yearmonth(dates)) |>
-  as_tsibble(index = index) |>
-  dplyr::select(index, dates, year, month, x, y) 
+  mutate(year_month = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = year_month) |>
+  dplyr::select(year_month, dates, year, month, x, y) |>
+  mutate(year_month_text = paste0('"', month(year_month, label = TRUE), " ", year(year_month), '"') )
 
-sim_df |>
-  dplyr::select(x, y) |>
+sim_ts |>
+  dplyr::select(year_month, x, y) |>
+  rename(Month = year_month) |>
+  as_tibble() |>
   display_table()
 ```
 
 
 
 
-You can read these data into R using the following command:
+You can read these values into a data frame in R using the command:
 
 ```{r}
 #| echo: false
 
 # build a string that gives the data
-xy_string <- rep("",4)
-xy_string[1] <- "df <- data.frame("
-xy_string[2] <- paste0(" \t x = c(", paste(sim_df$x, collapse = ", "), ")," )
-xy_string[3] <- paste0(" \t y = c(", paste(sim_df$y, collapse = ", "), ")" )
-xy_string[4] <- ")"
+xy_string <- rep("",10)
+xy_string[1] <- "sample_df <- data.frame("
+xy_string[2] <- paste0(" \t Month = c(", paste(sim_ts$year_month_text |> head(4), collapse = ", "), ", ")
+xy_string[3] <- paste0(" \t  \t       ", paste(sim_ts$year_month_text |> head(8) |> tail(4), collapse = ", "), "," )
+xy_string[4] <- paste0(" \t  \t       ", paste(sim_ts$year_month_text |> head(12) |> tail(4), collapse = ", "), "," )
+xy_string[5] <- paste0(" \t  \t       ", paste(sim_ts$year_month_text |> tail(4), collapse = ", "), ")," )
+xy_string[6] <- paste0(" \t x = c(", paste(sim_ts$x |> head(8), collapse = ", "), ", ")
+xy_string[7] <- paste0(" \t  \t   ", paste(sim_ts$x |> tail(8), collapse = ", "), ")," )
+xy_string[8] <- paste0(" \t y = c(", paste(sim_ts$y |> head(8), collapse = ", "), ", ")
+xy_string[9] <- paste0(" \t  \t   ", paste(sim_ts$y |> tail(8), collapse = ", "), ")" )
+xy_string[10] <- ")"
 xystr <- paste(xy_string, " \n ", collapse="")
+
+#| echo: false
+cat(xystr)
+```
+
+-   Use built-in R functions to compute the ccf.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+sample_ts <- data.frame(  
+  t = c(1:16),
+  x = c(17.6, 20.7, 25.7, 24.9, 25.1, 26.3, 22.2, 17.1,   
+        15.6, 14.6, 16.9, 16.8, 19.1, 21.2, 22.5, 27.4),  
+  y = c(65.1, 1.9, 116.6, 130.6, 163.4, 227.3, 219.1, 217.2,   
+        185.7, 104.6, 129.7, 70.7, 16, 98.5, 108.3, 135.9)
+  ) |>
+  as_tsibble(index = t)
+
+sample_ts |> CCF(y = y, x = x)
 ```
 
 
-::: callout-important 
-Tyson, will you please see if you can make xy_str (or something that replaces it) print so that it looks like this: (on four lines, with the middle two lines indented?)
-
-So with it in an R chunk like this, they can just hover in the top right corner and copy/paste the code in the correct format that way. I did find a function that will print it like needed and that is shown below
 ```{r}
-df <- data.frame(
-  x = c(17.6, 20.7, 25.7, 24.9, 25.1, 26.3, 22.2, 17.1, 15.6, 14.6, 16.9, 16.8, 19.1, 21.2, 22.5, 27.4),
-  y = c(65.1, 1.9, 116.6, 130.6, 163.4, 227.3, 219.1, 217.2, 185.7, 104.6, 129.7, 70.7, 16, 98.5, 108.3, 135.9)
-)
+sim_ts |> CCF(y = y, x = x)
 ```
 
 :::
 
 
-```{r}
-#| echo: false
-cat(xystr)
-```
 
-
-
-
-<!-- ```{r} -->
-<!-- #| echo: false -->
-
-<!-- # simulate correlated normal random data -->
-<!-- x1 <- get_toy_data() -->
-
-<!-- cat("x <- c(",paste(x1, collapse = ", "),")") -->
-<!-- ``` -->
 
 
 ## Recap (5 min)

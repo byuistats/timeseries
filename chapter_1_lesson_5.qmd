@@ -141,7 +141,7 @@ $$
 and the seasonal effect follows the function
 
 $$
-  s_t = \sin \left( \frac{t\pi}{6} \right) + \frac{1}{2}\cos\left(\frac{t \pi}{18} \right) + 5
+  s_t = \sin \left( \frac{t\pi}{6} \right) + \frac{1}{2}\cos\left(\frac{t \pi}{18} \right) 
 $$
 
 Letting $t$ represent the month number across 10 years, we simulate a time series. Click on the tabs below to compare the actual construction of the time series (using the components generated in the code above) to the decomposition in R.
@@ -277,7 +277,7 @@ date_seq <- ymd(paste0(year_seq,"-",month_seq,"-01"))
 # Get data
 for (t in 1:n) {
   trend[t] <- exp(a * t)
-  seasonal[t] <- b * sin(t / 12 * 2 * pi * 1)  + c * cos(t / 12 * 2 * pi * 3) + 5
+  seasonal[t] <- exp( b * sin(t / 12 * 2 * pi * 1)  + c * cos(t / 12 * 2 * pi * 3) + 1 )
   x_t[t] <- trend[t] * seasonal[t] * z[t] # Note R's definition of the mult. model
 }
 
@@ -323,7 +323,7 @@ $$
 and the seasonal effect follows the function
 
 $$
-  s_t = \sin \left( \frac{t\pi}{6} \right) + \frac{1}{2}\cos\left(\frac{t \pi}{18} \right) + 5
+  s_t = \sin \left( \frac{t\pi}{6} \right) + \frac{1}{2}\cos\left(\frac{t \pi}{18} \right) + 1
 $$
 
 Letting $t$ represent the month number across 10 years, we simulate a time series with multiplicative effects. Click on the tabs below to compare the actual construction of the time series (using the components generated in the code above) to the decomposition in R.
@@ -393,7 +393,7 @@ Now, we use R to decompose the time series $\{x_t\}$.
 
 x_decompose <- x_df_ts |>
     model(feasts::classical_decomposition(x_t,
-        type = "add"))  |>
+        type = "mult"))  |>
     components()
 
 autoplot(x_decompose)
@@ -465,60 +465,7 @@ Compare the following two time series.
 #| echo: false
 
 # Read and clean rexburg weather data
-weather_dat <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv")
-
-w2 <- weather_dat |>
-  dplyr::select("NAME", "DAY", "MONTH", "YEAR", "DATE", "TMAX") |>
-  pivot_wider(names_from = "NAME", values_from = c("TMAX")) |>
-  rename(
-    "byui" = "REXBURG BYU IDAHO, ID US",
-    "airport" = "REXBURG MADISON CO AIRPORT, ID US",
-    "moody" = "MOODY IDAHO, ID US"
-  )
-
-w3 <- w2 |>
-  dplyr::select(byui, airport) |>
-  rename(x = byui, y = airport) |>
-  filter(abs(x - y)<50)
-# plot(w3$x, w3$y)
-lm_byu <- lm(y~x, data= w3)
-
-w4 <- w2 |>
-  dplyr::select(moody, airport) |>
-  rename(x = moody, y = airport) |>
-  filter(abs(x - y)<50)
-# plot(w4$x, w4$y)
-lm_moody <- lm(y~x, data= w4)
-
-weather_clean <- w2 |>
-  mutate(byui_pred = predict(lm_byu, data.frame(x=w2$byui))) |>
-  mutate(moody_pred = predict(lm_moody, data.frame(x=w2$moody))) |>
-  mutate(rexburg = airport) |>
-  mutate(rexburg =
-           case_when(
-             airport > 100 ~ byui_pred,
-             !is.na(airport) ~ airport,
-             !is.na(byui_pred) ~ byui_pred,
-             !is.na(moody_pred) ~ moody_pred,
-             TRUE ~ NA
-           )
-        ) |>
-  mutate(imputed = !(rexburg == round(rexburg, 0))) |>
-  mutate(rexburg = round(rexburg, 0)) |>
-  mutate(dates = mdy(DATE)) |>
-  filter(dates > mdy("08/31/1998")) |>
-  filter(!is.na(rexburg)) |>
-  rename(rexburg_airport_high = rexburg) |>
-  dplyr::select(dates, rexburg_airport_high, imputed) |>
-  filter(dates > mdy("01/01/1999"))
-
-# weather_clean |>
-#   mutate(years = year(dates)) |>
-#   group_by(years) |>
-#   summarize(average = mean(rexburg_airport_high)) |>
-#   plot
-
-rexburg_day <- weather_clean |>
+rexburg_day <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") |>
   mutate(date_seq = dates) |>
   mutate(
   dates = date_seq,

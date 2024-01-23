@@ -16,6 +16,7 @@ pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite d
                tidyquant,
                gt # grammar of tables, for LaTeX in tables
 )
+################# WARNING: DO NOT USE mosaic. IT MESSES UP THE DECOMPOSITION.
 
 # Palette ----
 palette("okabeito")
@@ -220,4 +221,12 @@ get_toy_data <- function(n = 10, mu = 0, sigma = 3, rho = 0.99, random_seed = 99
 
 #############################################
 
+deg2rad <- function (x)
+{
+  x/180 * base::pi
+}
 
+rad2deg <- function (x)
+{
+  x/base::pi * 180
+}
