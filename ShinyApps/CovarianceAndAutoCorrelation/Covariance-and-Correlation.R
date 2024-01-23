@@ -361,7 +361,7 @@ server <- function(input, output, session) {
                                     expression((x-bar(x))(y-bar(y))>0))) +
       geom_vline(xintercept = mean(cov_dat$x), color = "#009E73") +
       geom_hline(yintercept = mean(cov_dat$y), color = "#009E73") +
-      labs(x="x", y="y") +
+      labs(x=expression(bar(x)), y="y") +
       theme_bw() +
       ggtitle(paste0("Simulated Data (n = ",n,", ρ = ",rho,")")) +
       theme(plot.title = element_text(hjust = 0.5)) +

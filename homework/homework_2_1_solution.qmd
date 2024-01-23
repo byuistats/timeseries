@@ -1,0 +1,280 @@
+---
+title: "Time Series Homework: Chapter 2 Lesson 1"
+subtitle: "Please_put_your_name_here"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Loading R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, 
+               tsibble, fable,
+               feasts, tsibbledata,
+               fable.prophet,
+               patchwork,
+               lubridate, 
+               rio,
+               ggplot2,
+               kableExtra
+               )
+```
+
+## Data
+
+```{r, message=FALSE}
+
+okuns <- rio::import("https://byuistats.github.io/timeseries/data/outputgap_and_cyclical_unemp.xlsx")
+
+gs_night <- rio::import("https://byuistats.github.io/timeseries/data/nightstand-sweat.csv")
+
+
+```
+
+## Questions
+
+### Question 1 - Context and Measurement (10 points)
+
+The first part of any time series analysis is context. You cannot properly analyze data without knowing what the data is measuring. Without context, the most simple features of data can be obscure and inscrutable. This homework assignment will center around the series below.
+
+Please research the time series. In the spaces below, give the data collection process, unit of analysis, and meaning of each observation for the series.
+
+#### a) **Output Gap**
+
+<https://chat.openai.com/share/122aaad9-2be6-43ec-b58a-e1858305b401>
+
+::: {.callout-note title="Answer" icon="false"}
+<!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
+:::
+
+#### a) **Cyclical Unemployment**
+
+<https://chat.openai.com/share/7d6bf187-41d0-42c3-98bc-d02ea1bd5b80>
+
+::: {.callout-note title="Answer" icon="false"}
+<!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
+:::
+
+### Question 2 - Key Definitions (10 points)
+
+Define the terms below and include any mathematical expressions or illustrations that may accompany the definition if available.
+
+::: {.callout-note title="Answer" icon="false"}
+-   **Sample mean**: <!-- Delete this and put your answer here. -->
+
+-   **Sample variance**: <!-- Delete this and put your answer here. -->
+
+-   **Sample standard deviation**: <!-- Delete this and put your answer here. -->
+
+-   **Sample covariance**: <!-- Delete this and put your answer here. -->
+
+-   **Sample correlation coefficient**: <!-- Delete this and put your answer here. -->
+:::
+
+### Question 2 - Covariance and Correlation: Okun's Law
+
+Okun's Law is an empirical relationship defined as a negative correlation between the Output Gap and Cyclical Unemployment. If the economy is expanding, businesses are producing more, and unemployment tends to decrease. Conversely, during economic contractions or recessions, output shrinks, leading to an increase in unemployment.
+
+Please use the data ***okuns*** to test whether Okun's Law applies to the US from 1960 to 2021.
+
+Please create a scatter plot of the Output Gap in the x-axis and Cyclical Unemployment in the y-axis.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+
+# Load necessary libraries
+library(lubridate)
+library(tsibble)
+library(dplyr)
+library(ggplot2)
+
+# Convert 'Date' column to yearquarter format
+okuns$Date <- lubridate::ymd(okuns$Date)
+okuns$Date <- yearquarter(okuns$Date)
+
+# Convert the data frame to a tsibble
+okuns_tsbl <- as_tsibble(okuns, key = NULL, index = Date, regular = TRUE)
+
+# Rename columns to avoid spaces and for consistency
+okuns_tsbl <- okuns_tsbl |>
+  rename(output_gap = `Output Gap`) |>
+  rename(cycl_unemp = `Cyclical Unemployment`)
+
+# Create a new column 'sq_dev' with calculated square deviations
+okuns_tsbl <- okuns_tsbl |> 
+  mutate(
+    sq_dev = (mean(output_gap) - output_gap) * (mean(cycl_unemp) - cycl_unemp)
+  )
+
+## Troubleshooting - Check the time interval and gaps in the tsibble
+#interval(okuns_tsbl)
+#has_gaps(okuns_tsbl)
+
+# Create ggplot with color based on the sign of 'sq_dev'
+ggplot(
+  data = okuns_tsbl,                   # Data source (tsibble)
+  aes(x = output_gap, y = cycl_unemp,  # Mapping aesthetics: x-axis, y-axis
+      color = factor(sign(sq_dev)))    # Color based on the sign of 'sq_dev'
+) +
+  geom_point(alpha = 0.5, size = 2) +   # Add points with specified transparency and size
+  scale_color_manual(
+    values = c("deepskyblue", "coral"),  # Manual color scale for 'Negative' and 'Positive'
+    labels = c("Negative", "Positive")   # Labels for the color legend
+  ) +
+  labs(
+    x = "Output Gap",                    # x-axis label
+    y = "Cyclical Unemployment",         # y-axis label
+    title = "Okun's Law",                # Plot title
+    color = 'Square Deviations'          # Color legend title
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)) +  # Center the plot title
+  geom_hline(yintercept = mean(okuns_tsbl$cycl_unemp),  # Add horizontal dashed line at mean(cycl_unemp)
+             linetype = "dashed", color = "black") +
+  geom_vline(xintercept = mean(okuns_tsbl$output_gap),  # Add vertical dashed line at mean(output_gap)
+             linetype = "dashed", color = "black") +
+  scale_x_continuous(
+    breaks = c(mean(okuns_tsbl$output_gap)),  # Specify x-axis tick positions
+    labels = expression(bar(x))               # Latex x-axis tick label
+  ) +
+  scale_y_continuous(
+    breaks = c(mean(okuns_tsbl$cycl_unemp)),  # Specify y-axis tick positions
+    labels = expression(bar(y))               # Latex x-axis tick label
+  )
+
+```
+:::
+
+Please calculate the covariance and correlation coefficient between the Output Gap and Cyclical Unemployment.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+# Calculate the covariance and correlation
+covariance <- cov(okuns_tsbl$output_gap, okuns_tsbl$cycl_unemp)
+correlation <- cor(okuns_tsbl$output_gap, okuns_tsbl$cycl_unemp)
+
+# Create a table
+result_table_1 <- data.frame(
+  Statistic = c("Covariance", "Correlation"),
+  Value = c(covariance, correlation)
+)
+
+# Display the table
+result_table_1 %>%
+  kable("html") %>%
+  kable_styling(full_width = FALSE)
+
+
+```
+:::
+
+Evaluate Okun's law. Is there sufficient evidence to suggest an empirical relationship between the Output Gap and Cyclical Unemployment ?
+
+::: {.callout-note title="Answer" icon="false"}
+<!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
+:::
+
+### Question 3 - Correlation vs Causation: Spurious Searches
+
+::: {.border width="5px"}
+*"Every single person who confuses correlation and causation ends up dying."* Hannah Fry
+:::
+
+
+Please use the data ***gs_night*** to evaluate the empirical relationship between the Google search terms for *night sweats* and *nightstand.*
+
+Please create a scatter plot of the night sweat search index in the x-axis and nightstand search index in the y-axis.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+
+gs_night$date <- lubridate::ym(gs_night$date)
+gs_night$date <- yearmonth(gs_night$date)
+
+gs_night_tsbl <- as_tsibble(gs_night, key = NULL, index = date, regular = TRUE)
+
+gs_night_tsbl <- gs_night_tsbl |>
+  rename(night_sweat= `night sweat`)
+
+gs_night_tsbl <- gs_night_tsbl |> 
+  mutate(sq_dev= (mean(nightstand)-nightstand)*(mean(night_sweat)-night_sweat))
+
+
+ggplot(
+  gs_night_tsbl,
+  aes(x = nightstand, y = night_sweat, color = factor(sign(sq_dev)))
+) +
+  geom_point(alpha = 0.5, size = 2) +
+  scale_color_manual(
+    values = c("deepskyblue", "coral"),  # Adjust colors as needed
+    labels = c("Negative", "Positive")
+  )+
+  labs(
+    x = "Nightstand",
+    y = "Night Sweat",
+    title = "Google Search Covariance: Nightstand and Night Sweat",
+    color = 'Square Deviations'
+  )+
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )+
+  geom_hline(yintercept = mean(gs_night_tsbl$night_sweat), linetype = "dashed", color = "black")+
+  geom_vline(xintercept = mean(gs_night_tsbl$nightstand), linetype = "dashed", color = "black")+
+  scale_x_continuous(
+    breaks = c(mean(gs_night_tsbl$nightstand)),
+    labels = expression(bar(x))
+  )+
+  scale_y_continuous(
+    breaks = c(mean(gs_night_tsbl$night_sweat)),
+    labels = expression(bar(y))
+  )
+
+```
+:::
+
+Please calculate the covariance and correlation between the night sweat search index and the nightstand search index.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+covariance <- cov(gs_night_tsbl$nightstand, gs_night_tsbl$night_sweat)
+correlation <- cor(gs_night_tsbl$nightstand, gs_night_tsbl$night_sweat)
+
+# Create a table
+result_table_2 <- data.frame(
+  Statistic = c("Covariance", "Correlation"),
+  Value = c(covariance, correlation)
+)
+
+# Display the table
+result_table_2 %>%
+  kable("html") %>%
+  kable_styling(full_width = FALSE)
+
+```
+:::
+
+Please suggest a scenario where an increase in the frequency of searches for nightstand will cause higher searches for the term night sweats?
+
+::: {.callout-note title="Answer" icon="false"}
+<!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
+:::
+
+Please suggest a scenario where an increase in the frequency of searches for night sweats will cause higher searches for the term nightstand?
+
+::: {.callout-note title="Answer" icon="false"}
+<!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
+:::
+
+Please suggest an event or reason that would result in the correlation between searches for night sweats and searches for the term nightstand?
+
+::: {.callout-note title="Answer" icon="false"}
+<!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
+:::
+
+Are any of your suggestions plausible? What does that teach you about the difference between correlation and causation? Please elaborate.
+
+::: {.callout-note title="Answer" icon="false"}
+<!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
+:::
