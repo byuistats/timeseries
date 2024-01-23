@@ -51,8 +51,33 @@ pacman::p_load(data.table) # for transpose
 -   Sign the Learning Journal review sheet for your peer
 
 
+## Class Activity: Comparing Models in the Textbook Versus R (2 min)
 
-## Class Activity: Exploring Simulated Time Series Data (15 min)
+Both the textbook and R use the same model in the additive case:
+
+$$
+  x_t = m_t + s_t + z_t
+$$
+
+However, there is a discrepancy in the definitions for the mulitplicative models. The textbook defines the multiplicative model as
+
+$$
+  x_t = m_t \cdot s_t + z_t
+$$ but R defines the multiplicative model as
+
+$$
+  x_t = m_t \cdot s_t \cdot z_t
+$$ You can investigate R's definition by executing this command in RStudio.
+
+```{r}
+#| eval: false
+
+?classical_decomposition
+```
+
+
+
+## Class Activity: Exploring Simulated Time Series Data (10 min)
 
 So far, you have learned how to estimate a trend using aggregated data (i.e., an annual average) or a moving average. We will compute the seasonal effect and use this to get the random component. 
 
@@ -430,29 +455,6 @@ ggplot(df, aes(x=i, y=x_t)) +
 
 
 
-### Models in the Textbook Versus R
-
-Both the textbook and R use the same model in the additive case:
-
-$$
-  x_t = m_t + s_t + z_t
-$$
-
-However, there is a discrepancy in the definitions for the mulitplicative models. The textbook defines the multiplicative model as
-
-$$
-  x_t = m_t \cdot s_t + z_t
-$$ but R defines the multiplicative model as
-
-$$
-  x_t = m_t \cdot s_t \cdot z_t
-$$ You can investigate R's definition by executing this command in RStudio.
-
-```{r}
-#| eval: false
-
-?classical_decomposition
-```
 
 
 
@@ -569,10 +571,7 @@ The code below imports and plots the quarterly revenue for Apple Inc. (in billio
 #| code-fold: true
 #| code-summary: "Show the code"
 
-apple_raw <- rio::import("https://byuistats.github.io/timeseries/data/apple_revenue.csv")
-apple_raw <- rio::import("data/apple_revenue.csv")
-
-apple_tibble <- apple_raw |>
+apple_ts <- rio::import("https://byuistats.github.io/timeseries/data/apple_revenue.csv") |>
   mutate(
     dates = mdy(date),
     year = lubridate::year(dates),
@@ -581,10 +580,6 @@ apple_tibble <- apple_raw |>
   ) |>
   dplyr::select(dates, year, quarter, value)  |> 
   arrange(dates) |>
-  tibble()
-
-# Create the index variable and convert to a tsibble
-apple_ts <- apple_tibble |>
   mutate(index = tsibble::yearquarter(dates)) |>
   as_tsibble(index = index) |>
   dplyr::select(index, dates, year, quarter, value) |>
@@ -904,7 +899,7 @@ adjusted_ts |>
 
 
 
-### Visualizing the Seasonally Adjusted Series
+## Class Activity: Computing the Multiplicative Decomposition in R (3 min)
 
 The R code below calculates the decomposition, including the seasonally adjusted time series, beginning with the tsibble `apple_ts`.
 
@@ -968,9 +963,9 @@ apple_decompose |>
 
 
 
-## Recap (5 min)
+## Homework Preview (5 min)
 
--   Review objectives and key concepts
+-   Review upcoming homework assignment
 -   Clarify questions
 
 
