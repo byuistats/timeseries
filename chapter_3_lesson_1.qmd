@@ -67,39 +67,82 @@ source("common_functions.R")
 
 -   Why are we interested in forecasting a time series?
 -   Give an example of a forecast for a time series that you have been interested in lately.
+-   Explain why there can be several suitable models for a given time series.
 
 :::
 
 ## Class Activity: Cross-Correlation (15 min)
 
-When one time series leads another, we can use the one to predict the other--at least in the short term. In this example, we will examine the relationship between the maximum angle the sun makes with the horizon and the daily high temperature in Rexburg, Idaho.
+When one time series leads another, we can use the one to predict the other--at least in the short term. In this example, we will examine the relationship between the maximum angle the sun makes with the horizon (at midday) and the daily high temperature in Rexburg, Idaho. The maximum angle of the sun is related to the amount of heat a given area on the earth is able to absorb. If the angle is higher, we would expect warmer temperatures.
 
-The figure below illustrates the daily high temperature in Rexburg, Idaho (in black) and the angle of the sun with the horizon at solar noon (in red).
+We can compute the maximum angle the sun makes with the horizon (the angle at solar noon) for any given day.
 
 ```{r}
-#| echo: false
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# functions for angle conversions
+deg2rad <- function (x) {x / 180 * base::pi}
+rad2deg <- function (x) {x / base::pi * 180}
 
 # Read and clean rexburg weather data
 rexburg_daily_ts <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") |>
   mutate(year_month_day = ymd(dates)) |>
-  dplyr::select(-imputed, -dates) |>
   mutate(
     days_since_ref_date = as.integer(year_month_day - mdy("12/31/2010")),
     declination = 23.45 * sin(deg2rad(360 * (284+days_since_ref_date)/365.25)),
-    max_solar_angle = (sin(deg2rad(43.825386)) * sin(deg2rad(declination)) + cos(deg2rad(43.825386)) * cos(deg2rad(declination)) * cos(0)) |> asin() |> rad2deg()
+    max_solar_angle = (sin(deg2rad(43.825386)) * sin(deg2rad(declination)) 
+                       + cos(deg2rad(43.825386)) * cos(deg2rad(declination)) * cos(0)) 
+                      |> asin() 
+                      |> rad2deg()
   ) |>
   rename(high_temp = rexburg_airport_high) |>
+  select(year_month_day, max_solar_angle, high_temp) |>
   as_tsibble(index = year_month_day)
 
 rexburg_daily_ts %>% head
+```
+
+The figure below illustrates the daily high temperature in Rexburg, Idaho (in black) and the angle of the sun with the horizon at solar noon (in red) over a 7-year span.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+rexburg_daily_ts |>
+  filter(year(year_month_day) > 2016) |>
+  autoplot(.vars = high_temp) +
+  geom_line(aes(x = year_month_day, y = max_solar_angle), color = "#D55E00", linewidth = 2) +
+  scale_y_continuous(sec.axis = sec_axis(~., name = "Max Solar Angle (in degrees)")) +
+  labs(
+    x = "Date",
+    y = "High Temp (F)",
+    title = "Daily High Temperature in Rexburg, Idaho"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Plot the decomposition of the Rexburg temperature data.
+
+:::
+
+
+
+```{r}
+#| eval: false
+#| include: false
+#| warning: false
 
 daily_decompose <- rexburg_daily_ts  |>
   model(feasts::classical_decomposition(high_temp ~ season(365.25),
                                         type = "add"))  |>
   components()
 
-
-daily_decompose |> autoplot()
+daily_decompose |> 
+  autoplot()
 ```
 
 
@@ -111,20 +154,6 @@ yearly_ts <- rexburg_daily_ts |>
   summarise(high_temp = mean(high_temp)) |>
   ungroup() |>
   as_tsibble(index = year)
-  
-
-rexburg_weather_plot <- autoplot(rexburg_daily_ts %>% filter(year(year_month_day) > 2016), .vars = high_temp) +
-  geom_line(aes(x = year_month_day, y = max_solar_angle), color = "#D55E00", linewidth = 2) +
-  scale_y_continuous(sec.axis = sec_axis(~., name = "Max Solar Angle (in degrees)")) +
-  labs(
-    x = "Date",
-    y = "High Temp (F)",
-    title = "Daily High Temperature in Rexburg, Idaho"
-  ) +
-  theme(plot.title = element_text(hjust = 0.5))
-
-
-rexburg_weather_plot
 ```
 
 Notice that the red curve "leads" the black time series. The peaks and valleys first occur in the maximum solar angle and then days later in the daily high temperatures.
