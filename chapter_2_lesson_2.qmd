@@ -154,6 +154,7 @@ make_blank_row_in_cov_table <- function(df, row_num) {
 compute_summaries <- function(df, digits = 4) {
   df %>% 
     summarize(
+      n = n(),
       mean_x = mean(x),
       mean_y = mean(y, na.rm = TRUE),
       ss_x = sum(xx2),
@@ -262,7 +263,7 @@ compute_summaries <- function(df, digits = 4) {
 <!--     -   Ensemble of a time series -->
 <!-- -   If a time series displays an upward trend, can we conclude that trend will continue in the same direction? Why or why not? -->
 
-## Hands-on Exercise -- Exploring Sample Autocorrelation (45 min)
+## Hands-on Exercise -- Exploring Sample Autocorrelation (40 min)
 
 <!-- Compute sample acvf and acf -->
 
@@ -382,11 +383,13 @@ $$
   c_k = \frac{1}{n} \sum\limits_{t=1}^{n-k}(x_t-\bar x)(x_{t+k}-\bar x)
 $$
 
-We denote the lag by the letter $k$. This is the number of values the data set is shifted to compute the autocovariance.
+We denote the lag by the letter $k$, where $k \ge 0$. This is the number of values the data set is shifted to compute the autocovariance.
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
+-   Explain the equation for $c_k$ to your partner.
 -   What is the equation for $c_0$, the value of the autocovariance function with lag $k=0$?
+    -   This expression is very similar to a definition we have encountered previously. What is it?
 
 :::
 
@@ -458,6 +461,12 @@ $$
 
 Note that $c_0$ is the variance of $x$, but computed by dividing by $n$, instead of $n-1$.
 
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Interpret the components of the numerator and the denominator of the expression for $r_k$ to your partner.
+
+:::
+
 ### Lag $k=1$ Sample Autocorrelation Function, $r_1$
 
 We can compute the **lag 1 autocorrelation** or the **autocorrelation of** $x$ with lag 1 as the quotient $r_1 = \frac{c_1}{c_0}$. We have already determined that 
@@ -472,20 +481,33 @@ $$
 
 We use $c_0$ and $c_1$ to compute $r_1$. Here are two ways we can compute this value:
 
-```{=tex}
-$$
+\begin{align*}
   r_1
-  = \frac{c_1}{c_0} 
-  =
-  \frac{ \frac{1}{n} \sum\limits_{t=1}^{`r n - offset_value`}(x_t-\bar x)(x_{t+1}-\bar x)
+    &= \frac{c_1}{c_0} 
+    =
+    \frac{ \frac{1}{n} \sum\limits_{t=1}^{`r n - offset_value`}(x_t-\bar x)(x_{t+1}-\bar x)
+        }{
+            \frac{1}{n} \sum\limits_{t=1}^{`r n`}(x_t-\bar x)^2
+        }  
+    =
+    \frac{
+        \frac{1}{`r summarized$n`} \cdot `r summarized$ss_xy`
       }{
-          \frac{1}{n} \sum\limits_{t=1}^{`r n`}(x_t-\bar x)^2
-      }  
-  =
-  \frac{`r summarized$c_k`}{`r summarized$c_0`}
-  = `r summarized$r_k %>% round(4)`
-$$
-```
+        \frac{1}{`r summarized$n`} \cdot `r summarized$ss_x`
+      }
+    = \frac{`r summarized$c_k`}{`r summarized$c_0`}
+    = `r summarized$r_k %>% round(4)`
+    \\
+    &=
+    \frac{ \sum\limits_{t=1}^{`r n - offset_value`}(x_t-\bar x)(x_{t+1}-\bar x)
+        }{
+           \sum\limits_{t=1}^{`r n`}(x_t-\bar x)^2
+        }  
+    = \frac{`r summarized$ss_xy`}{`r summarized$ss_x`}
+    = `r summarized$r_k %>% round(4)`
+    
+\end{align*}
+
 -   What does the lag 1 autocorrelation, $c_1$, measure?
 
 ```{r}
@@ -640,7 +662,7 @@ auto_cov_cor_table <- auto_cov_cor_table %>%
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Compute $c_4$ and $r_4$ using R, Excel, or hand calculations.
+-   Compute $c_4$ and $r_4$ using R (but not automated functions), Excel, or hand calculations.
 
 :::
 
@@ -686,6 +708,37 @@ ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
   theme_bw() +  
   ggtitle(paste0("Data pairs with a lag of k=",offset_value)) + 
   theme(plot.title = element_text(hjust = 0.5)) 
+```
+
+## Class Activity: Using R to compute the acvf and acf (5 min)
+
+We will continue to use the following sample data.
+
+```{r}
+#| echo: false
+
+# simulate correlated normal random data
+x1 <- get_toy_data()
+df <- data.frame(x = x1)
+
+cat(" x <- c(",paste(x1, collapse = ", "),") \n df <- data.frame(x = x)")
+```
+
+### acvf
+
+This code gives the values of the acvf.
+
+```{r}
+acf(df$x, plot=FALSE, type = "covariance")
+```
+
+
+### acf
+
+We can obtain the acf by changing the argument for the paramter `type` to `"correlation"`.
+
+```{r}
+acf(df$x, plot=FALSE, type = "correlation")
 ```
 
 
