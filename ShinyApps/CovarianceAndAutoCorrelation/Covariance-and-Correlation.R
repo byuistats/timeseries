@@ -72,9 +72,9 @@ ui <- fluidPage(
   withMathJax(),
     titlePanel("Covariance & Correlation Exploration"),
     fluidRow(
-      column(4, sliderInput("n", "Number of Points", min = 0, max = 100, value = 50)),
-      column(4, sliderInput("mu_x", "Mean (x)", min = -10, max = 10, value = 1.25)),
-      column(4, sliderInput("mu_y", "Mean (y)", min = -10, max = 10, value = 2.5)),
+      column(4, sliderInput("n", "Number of Points", min = 10, max = 100, value = 50, step=5)),
+      column(4, sliderInput("mu_x", "Mean (x)", min = -10, max = 10, value = 1.25, step=0.25)),
+      column(4, sliderInput("mu_y", "Mean (y)", min = -10, max = 10, value = 2.5, step=0.25)),
       column(4, sliderInput("sigma_x", "Standard Deviation (x)", min = 0, max = 10, value = 1, step =0.05)),
       column(4, sliderInput("sigma_y", "Standard Deviation (y)", min = 0, max = 10, value = 3, step =0.05)),
       column(4, sliderInput("rho", "Correlation Coefficient", min = -1, max = 1, value = 0.8, step =0.05))
