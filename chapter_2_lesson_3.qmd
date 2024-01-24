@@ -310,23 +310,30 @@ acf(choc_decompose$random |> na.omit(), plot=TRUE, type = "correlation")
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
 -   What do the spikes in the correlogram tell us about this time series?
--   Is there evidence of autocorrelations in the data after removing the trend and seasonal variation?
+-   Is there evidence of autocorrelation in the data after removing the trend and seasonal variation?
 
 :::
 
 
 ## Small Group Activity: BYU-Idaho On-Campus Enrollment (25 min)
 
-The official number of on-campus BYU-Idaho students each semester is given in the file <a href="data/byui_enrollment.csv" download>byui_enrollment.csv</a>. 
+The official number of on-campus BYU-Idaho students each semester is given in the file <a href="https://byuistats.github.io/timeseries/data/byui_enrollment.csv" download>byui_enrollment.csv</a>. 
+
+
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
 Do the following:
--   Create a tsibble with the BYU-Idaho enrollment data. (Hint: There are three semesters in a year, so treat the enrollments as observations taken every four months.)
+
+-   Create a tsibble with the BYU-Idaho enrollment data. (Hint: There are three semesters in a year, so treat the enrollments as observations taken every four months in January, May, and September.)
 -   Plot the decomposition of this time series.
--   Create the correlogram for these data.
+-   Describe the trend.
+-   Describe the seasonal component.
 -   Is there evidence of seasonal variation? If so, propose an explanation for the seasonal variation.
--   Is there evidence of autocorrelations in the data after removing the trend and seasonal variation?
+-   Create the correlogram for these data. 
+    -   What do you observe?
+    -   Does the correlogram support the statement you made about the seasonal component?
+-   Is there evidence of autocorrelation in the data after removing the trend and seasonal variation?
 
 :::
 
@@ -379,6 +386,8 @@ Solutions to BYU-Idaho Enrollment Activity
 #| warning: false
 
 # read in the data from a csv and make the tsibble
+
+# Method 1:
 enrollment_df <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv")
 start_date <- lubridate::ymd("2019-05-01")
 date_seq <- seq(start_date,
@@ -386,11 +395,19 @@ date_seq <- seq(start_date,
                 by = "4 months")
 enrollment_ts <- tibble(
     dates = tsibble::yearmonth(date_seq),
-    year = lubridate::year(date_seq),
-    month = lubridate::month(date_seq),
+    semester = pull(enrollment_df, semester),
     enrollment = pull(enrollment_df, enrollment)
   ) |>
+  dplyr::select(semester, dates, enrollment) |>
   as_tsibble(index = dates)
+
+# Method 2:
+enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
+  mutate(
+    dates = yearmonth(ym(paste(year, term * 4 - 3)))
+  ) |>
+  dplyr::select(semester, dates, enrollment) |>
+  as_tsibble(index = dates) 
 
 # Compute and plot the decomposition
 enrollment_decompose <- enrollment_ts |>

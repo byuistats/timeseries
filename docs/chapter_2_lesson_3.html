@@ -514,7 +514,7 @@ Check Your Understanding
 <div class="callout-body-container callout-body">
 <ul>
 <li>What do the spikes in the correlogram tell us about this time series?</li>
-<li>Is there evidence of autocorrelations in the data after removing the trend and seasonal variation?</li>
+<li>Is there evidence of autocorrelation in the data after removing the trend and seasonal variation?</li>
 </ul>
 </div>
 </div>
@@ -522,7 +522,7 @@ Check Your Understanding
 </section>
 <section id="small-group-activity-byu-idaho-on-campus-enrollment-25-min" class="level2">
 <h2 class="anchored" data-anchor-id="small-group-activity-byu-idaho-on-campus-enrollment-25-min">Small Group Activity: BYU-Idaho On-Campus Enrollment (25 min)</h2>
-<p>The official number of on-campus BYU-Idaho students each semester is given in the file <a href="data/byui_enrollment.csv" download="">byui_enrollment.csv</a>.</p>
+<p>The official number of on-campus BYU-Idaho students each semester is given in the file <a href="https://byuistats.github.io/timeseries/data/byui_enrollment.csv" download="">byui_enrollment.csv</a>.</p>
 <div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -533,7 +533,20 @@ Check Your Understanding
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>Do the following: - Create a tsibble with the BYU-Idaho enrollment data. (Hint: There are three semesters in a year, so treat the enrollments as observations taken every four months.) - Plot the decomposition of this time series. - Create the correlogram for these data. - Is there evidence of seasonal variation? If so, propose an explanation for the seasonal variation. - Is there evidence of autocorrelations in the data after removing the trend and seasonal variation?</p>
+<p>Do the following:</p>
+<ul>
+<li>Create a tsibble with the BYU-Idaho enrollment data. (Hint: There are three semesters in a year, so treat the enrollments as observations taken every four months in January, May, and September.)</li>
+<li>Plot the decomposition of this time series.</li>
+<li>Describe the trend.</li>
+<li>Describe the seasonal component.</li>
+<li>Is there evidence of seasonal variation? If so, propose an explanation for the seasonal variation.</li>
+<li>Create the correlogram for these data.
+<ul>
+<li>What do you observe?</li>
+<li>Does the correlogram support the statement you made about the seasonal component?</li>
+</ul></li>
+<li>Is there evidence of autocorrelation in the data after removing the trend and seasonal variation?</li>
+</ul>
 </div>
 </div>
 </section>
@@ -583,25 +596,35 @@ Autocorrelations of series 'x', by lag
 <p>Solutions to BYU-Idaho Enrollment Activity</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># read in the data from a csv and make the tsibble</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>enrollment_df <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/byui_enrollment.csv"</span>)</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="st">"2019-05-01"</span>)</span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>                start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(enrollment_df)<span class="sc">-</span><span class="dv">1</span>) <span class="sc">*</span> <span class="dv">4</span>,</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">"4 months"</span>)</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>enrollment_ts <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(date_seq),</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(date_seq),</span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(date_seq),</span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">enrollment =</span> <span class="fu">pull</span>(enrollment_df, enrollment)</span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates)</span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute and plot the decomposition</span></span>
-<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>enrollment_decompose <span class="ot">&lt;-</span> enrollment_ts <span class="sc">|&gt;</span></span>
-<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(enrollment,</span>
-<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
-<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
-<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(enrollment_decompose)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Method 1:</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>enrollment_df <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/byui_enrollment.csv"</span>)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="st">"2019-05-01"</span>)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>                start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(enrollment_df)<span class="sc">-</span><span class="dv">1</span>) <span class="sc">*</span> <span class="dv">4</span>,</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">"4 months"</span>)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>enrollment_ts <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(date_seq),</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">semester =</span> <span class="fu">pull</span>(enrollment_df, semester),</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">enrollment =</span> <span class="fu">pull</span>(enrollment_df, enrollment)</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(semester, dates, enrollment) <span class="sc">|&gt;</span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates)</span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Method 2:</span></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a>enrollment_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/byui_enrollment.csv"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> <span class="fu">yearmonth</span>(<span class="fu">ym</span>(<span class="fu">paste</span>(year, term <span class="sc">*</span> <span class="dv">4</span> <span class="sc">-</span> <span class="dv">3</span>)))</span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(semester, dates, enrollment) <span class="sc">|&gt;</span></span>
+<span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates) </span>
+<span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute and plot the decomposition</span></span>
+<span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>enrollment_decompose <span class="ot">&lt;-</span> enrollment_ts <span class="sc">|&gt;</span></span>
+<span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(enrollment,</span>
+<span id="cb11-28"><a href="#cb11-28" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
+<span id="cb11-29"><a href="#cb11-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
+<span id="cb11-30"><a href="#cb11-30" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(enrollment_decompose)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="chapter_2_lesson_3_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid" width="672"></p>
 </div>
