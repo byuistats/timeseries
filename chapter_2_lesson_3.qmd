@@ -171,10 +171,7 @@ compute_summaries <- function(df, digits = 4) {
 -   Sign the Learning Journal review sheet for your peer
 
 
-## Introduction (10 mins)
-
-
-### Correlograms
+## Correlograms (10 mins)
 
 In the previous lesson, we used the following time series as an example.
 Here are the values in that time series:
@@ -266,20 +263,15 @@ pacman::p_load("tsibble", "fable",
 
 # read in the data from a csv and make the tsibble
 # change the line below to include your file path
-chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv")
-start_date <- lubridate::ymd("2004-01-01")
-date_seq <- seq(start_date,
-                start_date + months(nrow(chocolate_month)-1),
-                by = "1 months")
-chocolate_tibble <- tibble(
-  dates = date_seq,
-  year = lubridate::year(date_seq),
-  month = lubridate::month(date_seq),
-  value = pull(chocolate_month, chocolate)
-)
-chocolate_month_ts <- chocolate_tibble |>
-  mutate(index = tsibble::yearmonth(dates)) |>
-  as_tsibble(index = index)
+chocolate_month_ts <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |>
+  mutate(
+    dates = yearmonth(ym(Month)),
+    month = month(dates),
+    year = year(dates),
+    value = chocolate
+  ) |> 
+  dplyr::select(dates, month, year, value) |>
+  as_tsibble(index = dates)
 
 choc_decompose <- chocolate_month_ts |>
     model(feasts::classical_decomposition(value,
@@ -301,6 +293,14 @@ Here is the associated correlogram:
 acf(chocolate_month_ts$value, plot=TRUE, type = "correlation")
 ```
 
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What does the information displayed in this correlogram suggest?
+
+:::
+
 If we consider only the random component of this time series, the correlogram is:
 
 ```{r}
@@ -309,11 +309,8 @@ acf(choc_decompose$random |> na.omit(), plot=TRUE, type = "correlation")
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Is there a trend in the chocolate search data? If so, speculate about the cause of this trend.
--   Is there evidence of seasonal variation? If so, propose an explanation for the seasonal variation.
 -   What do the spikes in the correlogram tell us about this time series?
 -   Is there evidence of autocorrelations in the data after removing the trend and seasonal variation?
--   There are two exceptionally large spikes in the observed data. Can you identify a cause for these spikes?
 
 :::
 
@@ -382,43 +379,40 @@ Solutions to BYU-Idaho Enrollment Activity
 #| warning: false
 
 # read in the data from a csv and make the tsibble
-# change the line below to include your file path
 enrollment_df <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv")
 start_date <- lubridate::ymd("2019-05-01")
 date_seq <- seq(start_date,
                 start_date + months(nrow(enrollment_df)-1) * 4,
                 by = "4 months")
-enrollment_tibble <- tibble(
-  dates = date_seq,
-  year = lubridate::year(date_seq),
-  month = lubridate::month(date_seq),
-  value = pull(enrollment_df, enrollment)
-)
-enrollment_ts <- enrollment_tibble |>
-  mutate(index = tsibble::yearmonth(dates)) |>
-  as_tsibble(index = index)
+enrollment_ts <- tibble(
+    dates = tsibble::yearmonth(date_seq),
+    year = lubridate::year(date_seq),
+    month = lubridate::month(date_seq),
+    enrollment = pull(enrollment_df, enrollment)
+  ) |>
+  as_tsibble(index = dates)
 
+# Compute and plot the decomposition
 enrollment_decompose <- enrollment_ts |>
-    model(feasts::classical_decomposition(value,
+    model(feasts::classical_decomposition(enrollment,
         type = "add"))  |>
     components()
-
 autoplot(enrollment_decompose)
 ```
 
 
 ```{r}
-acf(enrollment_decompose$value, type = "correlation")
+acf(enrollment_decompose$enrollment, type = "correlation")
 ```
 
 
 ```{r}
-acf(enrollment_decompose$value, plot=FALSE, type = "correlation")
+acf(enrollment_decompose$enrollment, plot=FALSE, type = "correlation")
 ```
 
 
 ```{r}
-acf(enrollment_decompose$value, plot=TRUE, type = "correlation")
+acf(enrollment_decompose$enrollment, plot=TRUE, type = "correlation")
 ```
 
 
