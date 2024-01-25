@@ -8,8 +8,6 @@ sidebar: false
 
 ```{r}
 #| include: false
-
-# need to load after mosiac because mosaic overwrites fable::Model()
 source("common_functions.R")
 ```
 
@@ -71,21 +69,96 @@ source("common_functions.R")
 
 :::
 
-## Class Discussion: Definition of the Sample CCF
+## Class Discussion: Definition of the Sample CCVF and Sample CCF (5)
 
 When one time series leads another, we can sometimes use the one to predict the other--at least in the short term. 
 
-### WORKING HERE.............
-### WORKING HERE.............
-### WORKING HERE.............
-### WORKING HERE.............
-### WORKING HERE.............
-### WORKING HERE.............
-### WORKING HERE.............
-### WORKING HERE.............
-### WORKING HERE.............
+The sample cross-covariance function, sample ccvf, is defined as:
+
+$$
+  c_k(x,y) = \frac{1}{n} \sum\limits_{t=1}^{n-k} \left(x_{t+k} - \bar x \right) \left( y_t - \bar y \right)
+$$
+
+
+We define the sample cross-correlation function to help us identify when one variable leads another and by how many time periods.
+*Note that $r_k$ is given in the book as Equation (3.5), and it is mis-identified as the sample acf.*
+
+$$
+  r_k(x,y) = 
+    \frac{
+        c_k(x,y)
+    }{
+        \sqrt{ c_0(x,x) \cdot c_0(y,y) }
+    }
+$$
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Work with your assigned partner to do the following:
+
+-   Describe the quantity $c_k(x,y)$ to your partner. 
+    -   Explain every component of the expression.
+    -   Discuss how to compute each part.
+    -   In your own words, explain what the result means.
+-   Describe the quantity $r_k(x,y)$ to your partner. 
+    -   Explain every component of the expression.
+    -   Discuss how to compute each part.
+    -   In your own words, explain what the result means.
+    
+:::
 
 ## Small Group Activity: Computing the Sample CCF (25 min)
+
+The U. S. Census Bureau publishes monthly counts of the number of building permits issued for new housing construction, the number of housing units started, and the number of housing units completed. We will examine data for single-family dwellings.
+
+```{r}
+#
+#
+#
+#
+#
+#
+#
+# Replace this with the URL!!!!!
+#
+#
+#
+#
+#
+#
+#
+#
+#
+
+```
+
+```{r}
+#| echo: false
+housing <- rio::import("data/housing.csv") |>
+  rename(
+    permits = permits_single_family,
+    starts = starts_single_family,
+    completions = completions_single_family
+  ) |>
+  mutate(date = my(month)) |>
+  filter(date >= my("Jan 1995")) |>
+  filter(date < my("Jan 2020")) |>
+  mutate(month = yearmonth(date)) |>
+  dplyr::select(month, permits, starts, completions)  |>
+  as_tsibble(index = month)
+
+autoplot(housing, .vars = starts) +
+geom_line(data = housing, aes(x = month, y = completions), color = "#E69F00") +
+  labs(
+    x = "Month",
+    y = "Housing Units (Thousands)",
+    title = "U.S. Single-Family Housing Starts and Completions"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
 
 
 ### WORKING HERE.............
