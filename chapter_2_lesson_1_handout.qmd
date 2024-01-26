@@ -13,7 +13,6 @@ source("common_functions.R")
 
 #### Class Activity: Variance and Standard Deviation 
 
-
 ```{r}
 #| echo: false
 
@@ -112,13 +111,15 @@ ggplot(temp, aes(x = x, y = 0)) +
 #| echo: false
 sim_data |> 
   mutate(
-    "x - mean(x)" = x - mean(x),
+    xx = x - mean(x),
     extra1 = " ",
     extra2 = " ",
     extra3 = " ",
     extra4 = " "
     ) |> 
   rename(
+    "$$x_t$$" = x,
+    "$$x_t-\\bar x$$" = xx,
     " " = extra1,
     "  " = extra2,
     "   " = extra3,
@@ -127,8 +128,6 @@ sim_data |>
   display_table("0.75in")
 ```
 
-<br>
-<br>
 <br>
 <br>
 <br>
@@ -165,16 +164,10 @@ mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) |>
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
-With your assigned partner, compute the following values for the $n=`r n`$ ordered $(x,y)$ pairs given in the table below:
+With your assigned partner, use this table to compute the values given below.
 
--   $\bar x =$
--   $\bar y =$
--   $s_x =$
--   $s_y =$
--   $r =$
--   $cov(x,y) =$
+#### Table 3: Computational Practice
 
-#### Table 3: Computational Practice: Use this table to find the values above
 ```{r}
 #| echo: false
 
@@ -206,28 +199,63 @@ cov_dat_summary <- cov_dat |>
 temp <- cov_dat |> 
   round_df(5) |>
   mutate(across(everything(), as.character)) |> 
-  bind_rows(cov_dat_summary) |> 
+  bind_rows(cov_dat_summary)
+
+
+temp |> 
+  blank_out_cells_in_df(ncols_to_keep = 3, nrows_to_keep = 1) |>
+  bind_rows(temp |> tail(1) |> blank_out_cells_in_df(ncols_to_keep = 0, nrows_to_keep = 0) |> mutate(t = "$$~$$") ) |> 
   rename(
-    "x-mean(x)" = xx, 
-    "(x-mean(x))^2" = xx2, 
-    "y-mean(y)" = yy,
-    "(y-mean(y))^2" = yy2, 
-    "(x-mean(x))(y-mean(y))" = xy
-  )
-
-
-blank_all_but_first_row <- function(df, skip_columns = 3, skip_rows = 1){
-  df_dimension <- dim(df)
-  for (t in (1 + skip_rows):df_dimension[1])
-    for (j in (1 + skip_columns):df_dimension[2]) {
-      df[t,j] <- " "
-    }
-  return(df)
-}
-
-knitr::kable(temp |> blank_all_but_first_row(), format = "html", align='cccccccc', escape = FALSE, width = NA) |>
-  kable_styling(full_width = FALSE)
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$y_t$$" = y,
+    "$$x_t-\\bar x$$" = xx, 
+    "$$(x_t - \\bar x)^2$$" = xx2, 
+    "$$y_t-\\bar y$$" = yy,
+    "$$(y_t-\\bar y)^2$$" = yy2, 
+    "$$(x_t - \\bar x)(y_t-\\bar y)$$" = xy
+  ) |>
+  display_table()
 ```
+
+Use the table above to determine these values:
+
+::: columns
+::: {.column width="30%"}
+
+-   $\bar x =$
+
+-   $\bar y =$
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
+-   $s_x =$
+
+-   $s_y =$
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
+-   $r =$
+
+-   $\\cov(x,y) =$
+
+:::
+:::
+
+
+Here is a scatterplot of the data.
 
 <center>
 
@@ -244,25 +272,11 @@ cov_dat <- cov_dat |>
   ) 
   
 ggplot(cov_dat, aes(x = x, y = y)) +
-  # geom_point(data=cov_dat |> filter(row_number() == 1),
-  #            pch=21,
-  #            size=4,
-  #            colour="black") +
   geom_point(size = 2) +
-  # scale_color_manual(values = c("orange", "blue"),  
-  #                    labels = c(expression((x-bar(x))(y-bar(y))<0),
-  #                               expression((x-bar(x))(y-bar(y))>0))) +
-  # geom_vline(xintercept = mean(cov_dat$x), color = "green") + 
-  # geom_hline(yintercept = mean(cov_dat$y), color = "green") +
   labs(x="x", y="y") +
   theme_bw() +  
   ggtitle(paste0("Data for Computational Practice (n = ",n,")")) + 
   theme(plot.title = element_text(hjust = 0.5)) 
-  # guides(color = guide_legend(title = "Quadrant", reverse = TRUE)) +
-  # annotate("text", x = mean(cov_dat$x), y = min(cov_dat$y), 
-  #           label = expression(bar(x)), hjust = 0, vjust = 0) +
-  # annotate("text", y = mean(cov_dat$y), x = min(cov_dat$x), 
-  #           label = expression(bar(y)), hjust = 0, vjust = 0) 
 ```
 
 </center>

@@ -8,8 +8,6 @@ sidebar: false
 
 ```{r}
 #| include: false
-
-# need to load after mosiac because mosaic overwrites fable::Model()
 source("common_functions.R")
 ```
 
@@ -71,9 +69,242 @@ source("common_functions.R")
 
 :::
 
+## Class Discussion: Definition of the Sample CCVF and Sample CCF (5 min)
+
+When one time series leads another, we can sometimes use the one to predict the other--at least in the short term. 
+
+The sample cross-covariance function, sample ccvf, is defined as:
+
+$$
+  c_k(x,y) = \frac{1}{n} \sum\limits_{t=1}^{n-k} \left(x_{t+k} - \bar x \right) \left( y_t - \bar y \right)
+$$
+
+
+We define the sample cross-correlation function to help us identify when one variable leads another and by how many time periods.
+*Note that $r_k$ is given in the book as Equation (3.5), and it is mis-identified as the sample acf.*
+
+$$
+  r_k(x,y) = 
+    \frac{
+        c_k(x,y)
+    }{
+        \sqrt{ c_0(x,x) \cdot c_0(y,y) }
+    }
+$$
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Work with your assigned partner to do the following:
+
+-   Describe the quantity $c_k(x,y)$ to your partner. 
+    -   Explain every component of the expression.
+    -   Discuss how to compute each part.
+    -   In your own words, explain what the result means.
+-   Describe the quantity $r_k(x,y)$ to your partner. 
+    -   Explain every component of the expression.
+    -   Discuss how to compute each part.
+    -   In your own words, explain what the result means.
+    
+:::
+
+## Small Group Activity: Computing the Sample CCF (25 min)
+
+```{r}
+#| echo: false
+
+# Bounds for housing data
+start_month <- "Jan 1995"
+end_month <- "Dec 2019"
+```
+
+The U. S. Census Bureau publishes monthly counts of the number of building permits issued for new housing construction, the number of housing units started, and the number of housing units completed. We will examine data for single-family dwellings. We will consider data from `r start_month` through `r end_month`.
+
+```{r}
+#
+#
+#
+#
+#
+#
+#
+# Replace this with the URL!!!!!
+#
+#
+#
+#
+#
+#
+#
+#
+#
+
+```
+
+```{r}
+#| echo: false
+housing <- rio::import("https://byuistats.github.io/timeseries/data/housing.csv") |>
+  rename(
+    permits = permits_single_family,
+    starts = starts_single_family,
+    completions = completions_single_family
+  ) |>
+  mutate(date = my(month)) |>
+  filter(date >= my(start_month)) |>
+  filter(date <= my(end_month)) |>
+  mutate(month = yearmonth(date)) |>
+  dplyr::select(month, permits, starts, completions)  |>
+  as_tsibble(index = month)
+
+
+autoplot(housing, .vars = starts) +
+  geom_line(data = housing, aes(x = month, y = completions), color = "#E69F00") +
+  labs(
+    x = "Month",
+    y = "Housing Units (Thousands)",
+    title = "U.S. Single-Family Housing Starts and Completions"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+```{r}
+starts_r_ts <- model(housing, feasts::classical_decomposition(starts)) |>
+  components() |>
+  select(month, random) |>
+  rename(random_starts = random)
+
+completions_r_ts <- model(housing, feasts::classical_decomposition(completions)) |>
+    components() |>
+  select(month, random) |>
+  rename(random_completions = random)
+
+random_joint <- starts_r_ts |>
+  right_join(completions_r_ts, by = join_by(month))
+
+random_joint %>%
+  CCF(y = random_completions, x = random_starts) %>%
+  autoplot() +
+  labs(
+    title = "CCF for Housing Starts and Completions"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+### WORKING HERE.............
+### WORKING HERE.............
+### WORKING HERE.............
+### WORKING HERE.............
+### WORKING HERE.............
+### WORKING HERE.............
+### WORKING HERE.............
+### WORKING HERE.............
+### WORKING HERE.............
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Using any tool, except pre-defined functions in R, find the ccf for the following data.
+
+```{r}
+#| echo: false
+
+set.seed(123)
+a <- 4.1
+b <- 1.6
+
+sim_df <- data.frame(t = 1:16) |>
+  mutate(
+    x = 5 * sin((t-a) / 12 * 2 * pi) + 20 + rnorm(n(),0,1.5),
+    y = 100 * sin((t-b) / 12 * 2 * pi) + 150 + rnorm(n(),0,30)
+  ) |>
+  round_df(1)
+
+# start_date <- lubridate::ymd("2023-06-01")
+start_date <- lubridate::ymd_hms(now()) - months(16) 
+# start_date <- floor_date(start_date, unit = "month")
+date_seq <- seq(start_date,
+                start_date + months(nrow(sim_df)-1),
+                by = "1 months")
+
+sim_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  x = pull(sim_df, x),
+  y = pull(sim_df, y)
+)
+
+sim_ts <- sim_tibble |>
+  mutate(year_month = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = year_month) |>
+  dplyr::select(year_month, dates, year, month, x, y) |>
+  mutate(year_month_text = paste0('"', month(year_month, label = TRUE), " ", year(year_month), '"') )
+
+sim_ts |>
+  dplyr::select(year_month, x, y) |>
+  rename(Month = year_month) |>
+  as_tibble() |>
+  display_table()
+```
+
+
+
+
+You can read these values into a data frame in R using the command:
+
+```{r}
+#| echo: false
+
+# build a string that gives the data
+xy_string <- rep("",10)
+xy_string[1] <- "sample_df <- data.frame("
+xy_string[2] <- paste0(" \t Month = c(", paste(sim_ts$year_month_text |> head(4), collapse = ", "), ", ")
+xy_string[3] <- paste0(" \t  \t       ", paste(sim_ts$year_month_text |> head(8) |> tail(4), collapse = ", "), "," )
+xy_string[4] <- paste0(" \t  \t       ", paste(sim_ts$year_month_text |> head(12) |> tail(4), collapse = ", "), "," )
+xy_string[5] <- paste0(" \t  \t       ", paste(sim_ts$year_month_text |> tail(4), collapse = ", "), ")," )
+xy_string[6] <- paste0(" \t x = c(", paste(sim_ts$x |> head(8), collapse = ", "), ", ")
+xy_string[7] <- paste0(" \t  \t   ", paste(sim_ts$x |> tail(8), collapse = ", "), ")," )
+xy_string[8] <- paste0(" \t y = c(", paste(sim_ts$y |> head(8), collapse = ", "), ", ")
+xy_string[9] <- paste0(" \t  \t   ", paste(sim_ts$y |> tail(8), collapse = ", "), ")" )
+xy_string[10] <- ")"
+xystr <- paste(xy_string, " \n ", collapse="")
+
+#| echo: false
+cat(xystr)
+```
+
+-   Use built-in R functions to compute the ccf.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+sample_ts <- data.frame(  
+  t = c(1:16),
+  x = c(17.6, 20.7, 25.7, 24.9, 25.1, 26.3, 22.2, 17.1,   
+        15.6, 14.6, 16.9, 16.8, 19.1, 21.2, 22.5, 27.4),  
+  y = c(65.1, 1.9, 116.6, 130.6, 163.4, 227.3, 219.1, 217.2,   
+        185.7, 104.6, 129.7, 70.7, 16, 98.5, 108.3, 135.9)
+  ) |>
+  as_tsibble(index = t)
+
+sample_ts |> CCF(y = y, x = x)
+```
+
+
+```{r}
+sim_ts |> CCF(y = y, x = x)
+```
+
+:::
+
+
 ## Class Activity: Cross-Correlation (15 min)
 
-When one time series leads another, we can use the one to predict the other--at least in the short term. In this example, we will examine the relationship between the maximum angle the sun makes with the horizon (at midday) and the daily high temperature in Rexburg, Idaho. The maximum angle of the sun is related to the amount of heat a given area on the earth is able to absorb. If the angle is higher, we would expect warmer temperatures.
+In this example, we will examine the relationship between the maximum angle the sun makes with the horizon (at midday) and the daily high temperature in Rexburg, Idaho. The maximum angle of the sun is related to the amount of heat a given area on the earth is able to absorb. If the angle is higher, we would expect warmer temperatures.
 
 We can compute the maximum angle the sun makes with the horizon (the angle at solar noon) for any given day.
 
@@ -204,7 +435,7 @@ acf_solar <- ACF(rexburg_daily_ts, y = max_solar_angle) |> autoplot() +
 acf_temp <- ACF(rexburg_daily_ts, y = high_temp) |> autoplot() +
     labs(title = "Daily High Temperature")
 joint_ccf_plot <- rexburg_daily_ts |>
-  CCF(y = max_solar_angle, x = high_temp) |> autoplot() +
+  CCF(x = max_solar_angle, y = high_temp) |> autoplot() +   # Note: x lags y; x predicts y
   labs(title = "CCF Plot")
 (acf_solar + acf_temp) / joint_ccf_plot
 ```
@@ -222,7 +453,7 @@ joint_ccf_plot <- rexburg_daily_ts |>
 #| echo: false
 
 temp <- rexburg_daily_ts |>
-  CCF(y = max_solar_angle, x = high_temp) |>
+  CCF(x = max_solar_angle, y = high_temp) |>
   convert_df_to_char(decimals = 4) |>
   mutate(" " = " ") |>
   dplyr::select(" ", lag, ccf)
@@ -338,113 +569,11 @@ ggplot(data = rexburg_daily_ts, aes(x = lag(max_solar_angle, 28), y = high_temp)
 :::
 
 
-## Small Group Activity: Computing the Sample CCF (25 min)
-
-
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   Using any tool, except pre-defined functions in R, find the ccf for the following data.
-
-```{r}
-#| echo: false
-
-set.seed(123)
-a <- 4.1
-b <- 1.6
-
-sim_df <- data.frame(t = 1:16) |>
-  mutate(
-    x = 5 * sin((t-a) / 12 * 2 * pi) + 20 + rnorm(n(),0,1.5),
-    y = 100 * sin((t-b) / 12 * 2 * pi) + 150 + rnorm(n(),0,30)
-  ) |>
-  round_df(1)
-
-# start_date <- lubridate::ymd("2023-06-01")
-start_date <- lubridate::ymd_hms(now()) - months(16) 
-# start_date <- floor_date(start_date, unit = "month")
-date_seq <- seq(start_date,
-                start_date + months(nrow(sim_df)-1),
-                by = "1 months")
-
-sim_tibble <- tibble(
-  dates = date_seq,
-  year = lubridate::year(date_seq),
-  month = lubridate::month(date_seq),
-  x = pull(sim_df, x),
-  y = pull(sim_df, y)
-)
-
-sim_ts <- sim_tibble |>
-  mutate(year_month = tsibble::yearmonth(dates)) |>
-  as_tsibble(index = year_month) |>
-  dplyr::select(year_month, dates, year, month, x, y) |>
-  mutate(year_month_text = paste0('"', month(year_month, label = TRUE), " ", year(year_month), '"') )
-
-sim_ts |>
-  dplyr::select(year_month, x, y) |>
-  rename(Month = year_month) |>
-  as_tibble() |>
-  display_table()
-```
 
 
 
 
-You can read these values into a data frame in R using the command:
-
-```{r}
-#| echo: false
-
-# build a string that gives the data
-xy_string <- rep("",10)
-xy_string[1] <- "sample_df <- data.frame("
-xy_string[2] <- paste0(" \t Month = c(", paste(sim_ts$year_month_text |> head(4), collapse = ", "), ", ")
-xy_string[3] <- paste0(" \t  \t       ", paste(sim_ts$year_month_text |> head(8) |> tail(4), collapse = ", "), "," )
-xy_string[4] <- paste0(" \t  \t       ", paste(sim_ts$year_month_text |> head(12) |> tail(4), collapse = ", "), "," )
-xy_string[5] <- paste0(" \t  \t       ", paste(sim_ts$year_month_text |> tail(4), collapse = ", "), ")," )
-xy_string[6] <- paste0(" \t x = c(", paste(sim_ts$x |> head(8), collapse = ", "), ", ")
-xy_string[7] <- paste0(" \t  \t   ", paste(sim_ts$x |> tail(8), collapse = ", "), ")," )
-xy_string[8] <- paste0(" \t y = c(", paste(sim_ts$y |> head(8), collapse = ", "), ", ")
-xy_string[9] <- paste0(" \t  \t   ", paste(sim_ts$y |> tail(8), collapse = ", "), ")" )
-xy_string[10] <- ")"
-xystr <- paste(xy_string, " \n ", collapse="")
-
-#| echo: false
-cat(xystr)
-```
-
--   Use built-in R functions to compute the ccf.
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-sample_ts <- data.frame(  
-  t = c(1:16),
-  x = c(17.6, 20.7, 25.7, 24.9, 25.1, 26.3, 22.2, 17.1,   
-        15.6, 14.6, 16.9, 16.8, 19.1, 21.2, 22.5, 27.4),  
-  y = c(65.1, 1.9, 116.6, 130.6, 163.4, 227.3, 219.1, 217.2,   
-        185.7, 104.6, 129.7, 70.7, 16, 98.5, 108.3, 135.9)
-  ) |>
-  as_tsibble(index = t)
-
-sample_ts |> CCF(y = y, x = x)
-```
-
-
-```{r}
-sim_ts |> CCF(y = y, x = x)
-```
-
-:::
-
-
-
-
-
-### Summary
+## Summary
 
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
@@ -455,6 +584,7 @@ Working with your partner, prepare to explain the following concepts to the clas
 -   Cross-correlation 
 -   Cross-correlation function
 -   Why do we care about the cross-correlation function? When would it be used?
+-   How is the cross-correlation function related to the autocorrelation function?
 
 :::
 

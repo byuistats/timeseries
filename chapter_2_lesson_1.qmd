@@ -50,7 +50,7 @@ source("common_functions.R")
 -   What would you recommend your partner add to their learning journal?
 -   Sign the Learning Journal review sheet for your peer
 
-## Class Activity: Variance and Standard Deviation (15 min)
+## Class Activity: Variance and Standard Deviation (10 min)
 
 We will explore the variance and standard deviation in this section.
 
@@ -94,7 +94,7 @@ The data simulated by this process are:
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Find the mean of these numbers. <!-- `r mean(sim_data$x)`. -->
+-   Find the sample mean of these numbers. <!-- `r mean(sim_data$x)`. -->
 -   What are some ways to interpret the mean?
 
 :::
@@ -168,21 +168,26 @@ ggplot(temp, aes(x = x, y = 0)) +
 We can summarize this information in a table:
 
 #### Table 1: Deviations from the mean
+
 ```{r}
 #| echo: false
 sim_data |> 
   mutate(
-    "x - mean(x)" = x - mean(x),
+    xx = x - mean(x),
     extra1 = " ",
     extra2 = " ",
-    extra3 = " "
+    extra3 = " ",
+    extra4 = " "
     ) |> 
   rename(
+    "$$x_t$$" = x,
+    "$$x_t-\\bar x$$" = xx,
     " " = extra1,
     "  " = extra2,
-    "   " = extra3
+    "   " = extra3,
+    "    " = extra4
   ) |>
-  display_table("1in")
+  display_table("0.75in")
 ```
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
@@ -260,19 +265,9 @@ mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) |>
   round_df(1)
 ```
 
-::: {.callout-tip icon=false title="Check Your Understanding"}
+#### Table 3: Computational Practice
 
-With your assigned partner, compute the following values for the $n=`r n`$ ordered $(x,y)$ pairs given in the table below:
-
--   $\bar x =$
--   $\bar y =$
--   $s_x =$
--   $s_y =$
--   $r =$
--   $cov(x,y) =$
-
-
-#### Table 3: Computational Practice: Use this table to find the values above
+The table below contains values of two time series $\{x_t\}$ and $\{y_t\}$ observed at times $t = 1, 2, \ldots, 6$. We will use these values to practice finding the means, standard deviations, correlation coefficient, and covariance without using built-in R functions.
 
 ```{r}
 #| echo: false
@@ -305,30 +300,65 @@ cov_dat_summary <- cov_dat |>
 temp <- cov_dat |> 
   round_df(5) |>
   mutate(across(everything(), as.character)) |> 
-  bind_rows(cov_dat_summary) |> 
+  bind_rows(cov_dat_summary)
+
+temp |> 
+  blank_out_cells_in_df(ncols_to_keep = 3, nrows_to_keep = 1) |>
+  bind_rows(temp |> tail(1) |> blank_out_cells_in_df(ncols_to_keep = 0, nrows_to_keep = 0) |> mutate(t = "$$~$$")) |> 
   rename(
-    "x-mean(x)" = xx, 
-    "(x-mean(x))^2" = xx2, 
-    "y-mean(y)" = yy,
-    "(y-mean(y))^2" = yy2, 
-    "(x-mean(x))(y-mean(y))" = xy
-  )
-
-
-blank_all_but_first_row <- function(df, skip_columns = 3, skip_rows = 1){
-  df_dimension <- dim(df)
-  for (t in (1 + skip_rows):df_dimension[1])
-    for (j in (1 + skip_columns):df_dimension[2]) {
-      df[t,j] <- " "
-    }
-  return(df)
-}
-
-knitr::kable(temp |> blank_all_but_first_row(), format = "html", align='cccccccc', escape = FALSE, width = NA) |>
-  kable_styling(full_width = FALSE)
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$y_t$$" = y,
+    "$$x_t-\\bar x$$" = xx, 
+    "$$(x_t - \\bar x)^2$$" = xx2, 
+    "$$y_t-\\bar y$$" = yy,
+    "$$(y_t-\\bar y)^2$$" = yy2, 
+    "$$(x_t - \\bar x)(y_t-\\bar y)$$" = xy
+  ) |>
+  display_table()
 ```
 
-```{r}
+Use the table above to determine these values:
+
+::: columns
+::: {.column width="30%"}
+
+-   $\bar x =$
+
+-   $\bar y =$
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
+-   $s_x =$
+
+-   $s_y =$
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
+-   $r =$
+
+-   $\\cov(x,y) =$
+
+:::
+:::
+
+Here is a scatterplot of the data.
+
+<center>
+
+```{r fig.asp=0.75}
 #| echo: false
 #| warning: false
 
@@ -341,29 +371,14 @@ cov_dat <- cov_dat |>
   ) 
   
 ggplot(cov_dat, aes(x = x, y = y)) +
-  # geom_point(data=cov_dat |> filter(row_number() == 1),
-  #            pch=21,
-  #            size=4,
-  #            colour="black") +
   geom_point(size = 2) +
-  # scale_color_manual(values = c("orange", "blue"),  
-  #                    labels = c(expression((x-bar(x))(y-bar(y))<0),
-  #                               expression((x-bar(x))(y-bar(y))>0))) +
-  # geom_vline(xintercept = mean(cov_dat$x), color = "green") + 
-  # geom_hline(yintercept = mean(cov_dat$y), color = "green") +
   labs(x="x", y="y") +
   theme_bw() +  
   ggtitle(paste0("Data for Computational Practice (n = ",n,")")) + 
   theme(plot.title = element_text(hjust = 0.5)) 
-  # guides(color = guide_legend(title = "Quadrant", reverse = TRUE)) +
-  # annotate("text", x = mean(cov_dat$x), y = min(cov_dat$y), 
-  #           label = expression(bar(x)), hjust = 0, vjust = 0) +
-  # annotate("text", y = mean(cov_dat$y), x = min(cov_dat$x), 
-  #           label = expression(bar(y)), hjust = 0, vjust = 0) 
 ```
 
-:::
-
+</center>
 
 
 
@@ -379,6 +394,50 @@ Working with your partner, prepare to explain the following concepts to the clas
 -   Covariance
 
 :::
+
+## Computations in R (5 min)
+
+Use these commands to load the data from the previous activity into R.
+```{r}
+#| echo: false
+x <- mvn_data_6$x
+y <- mvn_data_6$y
+cat("x <- c(", paste(mvn_data_6$x, collapse = ", "),")")
+cat("y <- c(", paste(mvn_data_6$y, collapse = ", "),")")
+```
+
+We can use R to compute the mean, variance, standard deviation, correlation coefficient, and covariance.
+
+#### Mean, $\bar x$
+```{r}
+mean(x)
+```
+
+
+#### Variance, $s_x^2$
+```{r}
+var(x)
+```
+
+
+#### Standard Deviation, $s_x$
+```{r}
+sd(x)
+```
+
+
+#### Correlation Coefficient, $r$
+```{r}
+cor(x, y)
+```
+
+
+#### Covariance, $\\cov(x,y)$
+```{r}
+cov(x, y)
+```
+
+
 
 
 ## Homework Preview (5 min)
@@ -424,11 +483,20 @@ ssx <- temp2[nrow(temp2), ncol(temp2)]
 
 temp2 |> 
   rename(
-    "x-mean(x)" = xx, 
-    "(x-mean(x))^2" = xx2
+    "$$x_t$$" = x,
+    "$$x_t-\\bar x$$" = xx, 
+    "$$(x_t-\\bar x)^2$$" = xx2
   ) |>
-  knitr::kable(format = "html", align='ccc', escape = FALSE)
+  display_table()
 ```
+```{r}
+
+```
+
+
+The variance of these values is $s^2 = \frac{`r ssx`}{`r nrow(temp)` - 1} = `r var(x)`$.
+
+The standard deviation is $s = \sqrt{s^2} = \sqrt{`r var(x)`} = `r sd(x) |> round(3)`$.
 :::
 
 <a href="javascript:showhide('Solutions2')"
@@ -437,20 +505,92 @@ style="font-size:.8em;">Team Activity: Computational Practice</a>
 ::: {#Solutions2 style="display:none;"}
 Solutions to Team Activity: Computational Practice
 
+#### Table 3: Computational Practice
+
+```{r}
+#| echo: false
+
+cov_dat <- mvn_data_6 |> 
+  mutate(t = row_number()) |> 
+  dplyr::select(t, x, y) |> 
+  mutate(
+    xx = x - mean(x),
+    xx2 = xx^2,
+    yy = y - mean(y),
+    yy2 = yy^2,
+    xy = (x - mean(x)) * (y - mean(y))
+    ) 
+
+cov_dat_summary <- cov_dat |> 
+  summarize(
+    x = sum(x),
+    y = sum(y),
+    xx = sum(xx),
+    xx2 = sum(xx2),
+    yy = sum(yy),
+    yy2 = sum(yy2),
+    xy = sum(xy)
+  ) |> 
+  round_df(5) |>
+  mutate(across(everything(), as.character)) |> 
+  mutate(t = "sum")
+
+temp <- cov_dat |> 
+  round_df(5) |>
+  mutate(across(everything(), as.character)) |> 
+  bind_rows(cov_dat_summary)
+
+temp |> 
+  # blank_out_cells_in_df(ncols_to_keep = 3, nrows_to_keep = 1) |>
+  # bind_rows(temp |> tail(1) |> blank_out_cells_in_df(ncols_to_keep = 0, nrows_to_keep = 0) |> mutate(t = "$$~$$")) |> 
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$y_t$$" = y,
+    "$$x_t-\\bar x$$" = xx, 
+    "$$(x_t - \\bar x)^2$$" = xx2, 
+    "$$y_t-\\bar y$$" = yy,
+    "$$(y_t-\\bar y)^2$$" = yy2, 
+    "$$(x_t - \\bar x)(y_t-\\bar y)$$" = xy
+  ) |>
+  display_table()
+```
+
+
+::: columns
+::: {.column width="30%"}
+
 -   $\bar x = `r mean(mvn_data_6$x)`$
 
 -   $\bar y = `r mean(mvn_data_6$y)`$
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
 
 -   $s_x = `r sd(mvn_data_6$x)`$
 
 -   $s_y = `r sd(mvn_data_6$y)`$
 
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
 -   $r = `r cor(mvn_data_6$x, mvn_data_6$y)`$
 
--   $cov(x,y) = `r cov(mvn_data_6$x, mvn_data_6$y)`$
+-   $\\cov(x,y) = `r cov(mvn_data_6$x, mvn_data_6$y)`$
 
-```{r}
-knitr::kable(temp, format = "html", align='cccccccc', escape = FALSE, width = NA) |>
-  kable_styling(full_width = FALSE)
-```
 :::
+:::
+
+
+:::
+
