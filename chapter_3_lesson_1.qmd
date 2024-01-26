@@ -69,7 +69,7 @@ source("common_functions.R")
 
 :::
 
-## Class Discussion: Definition of the Sample CCVF and Sample CCF (5)
+## Class Discussion: Definition of the Sample CCVF and Sample CCF (5 min)
 
 When one time series leads another, we can sometimes use the one to predict the other--at least in the short term. 
 
@@ -111,7 +111,15 @@ Work with your assigned partner to do the following:
 
 ## Small Group Activity: Computing the Sample CCF (25 min)
 
-The U. S. Census Bureau publishes monthly counts of the number of building permits issued for new housing construction, the number of housing units started, and the number of housing units completed. We will examine data for single-family dwellings.
+```{r}
+#| echo: false
+
+# Bounds for housing data
+start_month <- "Jan 1995"
+end_month <- "Dec 2019"
+```
+
+The U. S. Census Bureau publishes monthly counts of the number of building permits issued for new housing construction, the number of housing units started, and the number of housing units completed. We will examine data for single-family dwellings. We will consider data from `r start_month` through `r end_month`.
 
 ```{r}
 #
@@ -136,25 +144,48 @@ The U. S. Census Bureau publishes monthly counts of the number of building permi
 
 ```{r}
 #| echo: false
-housing <- rio::import("data/housing.csv") |>
+housing <- rio::import("https://byuistats.github.io/timeseries/data/housing.csv") |>
   rename(
     permits = permits_single_family,
     starts = starts_single_family,
     completions = completions_single_family
   ) |>
   mutate(date = my(month)) |>
-  filter(date >= my("Jan 1995")) |>
-  filter(date < my("Jan 2020")) |>
+  filter(date >= my(start_month)) |>
+  filter(date <= my(end_month)) |>
   mutate(month = yearmonth(date)) |>
   dplyr::select(month, permits, starts, completions)  |>
   as_tsibble(index = month)
 
+
 autoplot(housing, .vars = starts) +
-geom_line(data = housing, aes(x = month, y = completions), color = "#E69F00") +
+  geom_line(data = housing, aes(x = month, y = completions), color = "#E69F00") +
   labs(
     x = "Month",
     y = "Housing Units (Thousands)",
     title = "U.S. Single-Family Housing Starts and Completions"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+```{r}
+starts_r_ts <- model(housing, feasts::classical_decomposition(starts)) |>
+  components() |>
+  select(month, random) |>
+  rename(random_starts = random)
+
+completions_r_ts <- model(housing, feasts::classical_decomposition(completions)) |>
+    components() |>
+  select(month, random) |>
+  rename(random_completions = random)
+
+random_joint <- starts_r_ts |>
+  right_join(completions_r_ts, by = join_by(month))
+
+random_joint %>%
+  CCF(y = random_completions, x = random_starts) %>%
+  autoplot() +
+  labs(
+    title = "CCF for Housing Starts and Completions"
   ) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
@@ -404,7 +435,7 @@ acf_solar <- ACF(rexburg_daily_ts, y = max_solar_angle) |> autoplot() +
 acf_temp <- ACF(rexburg_daily_ts, y = high_temp) |> autoplot() +
     labs(title = "Daily High Temperature")
 joint_ccf_plot <- rexburg_daily_ts |>
-  CCF(y = max_solar_angle, x = high_temp) |> autoplot() +
+  CCF(x = max_solar_angle, y = high_temp) |> autoplot() +   # Note: x lags y; x predicts y
   labs(title = "CCF Plot")
 (acf_solar + acf_temp) / joint_ccf_plot
 ```
@@ -422,7 +453,7 @@ joint_ccf_plot <- rexburg_daily_ts |>
 #| echo: false
 
 temp <- rexburg_daily_ts |>
-  CCF(y = max_solar_angle, x = high_temp) |>
+  CCF(x = max_solar_angle, y = high_temp) |>
   convert_df_to_char(decimals = 4) |>
   mutate(" " = " ") |>
   dplyr::select(" ", lag, ccf)
