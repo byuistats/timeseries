@@ -211,8 +211,8 @@ If the mean of a long time series has not changed much, then this will produce a
 
 ::: {.callout-tip icon="false" title="Check Your Understanding"}
 
--   Compute $e_t$ for the 10 values of $x$ given above. Add these values to the table.
--   Compute $SS1PE$ for these data.
+-   Compute $e_t$ for the 10 values of $x$ given in the table above. Add these values to the table.
+-   Compute *SS1PE* for these data.
 
 :::
 
@@ -654,7 +654,7 @@ temp_df |>
 
 :::
 
-Once we have obtained the EWMA for the random component, we can add to it the trend and seasonality to get the EWMA for the original speed data.
+Once we have obtained the EWMA for the random component, we can add to it the trend and seasonality to get the EWMA for the original speed data. The raw data are plotted in black, the trend in blue, the seasonal component in yellow, and the EWMA is plotted in orange. The green curve is the sum of EWMA, the seasonal component, and the trend.
 
 ```{r}
 #| echo: false
@@ -670,7 +670,7 @@ plot_ewma_speed_full_ts <- function(ts, alpha = 0.2) {
     geom_line(data = ts, aes(x = index, y = trend), color = "#56B4E9", linewidth = 1) +
     labs(
       x = "Time",
-      y = "Speed",
+      # y = "Speed",
       title = paste0("EWMA for Speed (α = ", alpha, ")"),
       subtitle = "(All Dates)"
     ) +
@@ -696,7 +696,7 @@ plot_ewma_speed_head_ts <- function(ts, alpha = 0.2) {
     geom_line(data = temp, aes(x = index, y = trend), color = "#56B4E9", linewidth = 1) +
     labs(
       x = "Time",
-      y = "Speed",
+      # y = "Speed",
       title = paste0("EWMA for Speed (α = ", alpha, ")"),
       subtitle = "(7/2/2022 from 12:00-16:00)"
     ) +
@@ -706,10 +706,16 @@ plot_ewma_speed_head_ts <- function(ts, alpha = 0.2) {
     )
 }
 
-
 alpha <- 0.2
 compute_ewma_ts(ny_speeds_decompose, alpha) |>
   plot_ewma_speed_full_ts()
+```
+
+Here is the plot for four hours of data:
+
+```{r}
+#| echo: false
+#| warning: false
 
 compute_ewma_ts(ny_speeds_decompose, alpha) |>
   plot_ewma_speed_head_ts()
@@ -717,9 +723,8 @@ compute_ewma_ts(ny_speeds_decompose, alpha) |>
 
 ## Class Activity: EWMA in R (10 min)
 
-The following code can be used to compute the EWMA for the random component of the New York highway speed data in R.
-
-We have already decomposed the model, so we have isolated the estimated values for the random component. This is portion of the tsibble `ny_speeds_decompose`:
+We will compute the EWMA for the random component of the New York highway speed data in R.
+We have already decomposed the model, so we have isolated the estimated values for the random component. This is a portion of the tsibble `ny_speeds_decompose`:
 
 ```{r}
 #| echo: false
@@ -745,20 +750,14 @@ When applying EWMA to the random component of the time series, delete the variab
 We drop the variable `.model` and omit all NA values. (Remember the first half-day and the last half-day in the time series do not yield estimates for the random component.)
 
 ```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
 ny_speeds_random <- ny_speeds_decompose |>
   na.omit() |>                                # Omit all NA values
   select(-.model)                             # Eliminate the variable .model
 ```
 
-We execute the EWMA algorithm on the random component using $\alpha = 0.2$.
+The following code can be used to execute the EWMA algorithm on the random component using $\alpha = 0.2$.
 
 ```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
 ny_speeds_model1 <- ny_speeds_random |>
   model(Additive = ETS(random ~
                          trend("A", alpha = 0.2, beta = 0) +
@@ -767,14 +766,12 @@ ny_speeds_model1 <- ny_speeds_random |>
 report(ny_speeds_model1)
 ```
 
-Now, we calculate the value of $SS1PE$.
+Now, we calculate the value of *SS1PE*.
 
 ```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
 sum(components(ny_speeds_model1)$remainder^2, na.rm = TRUE)
 ```
+
 Here is a plot of the time series with the EWMA superimposed.
 
 ```{r}
@@ -785,23 +782,17 @@ augment(ny_speeds_model1) |>
   ggplot(aes(x = index, y = random)) +
   geom_line() +
   geom_line(aes(y = .fitted, color = "Fitted")) +
-  labs(color = "")
+  labs(color = "#009E73")
 ```
 
-<!-- Check Your Understanding -->
 
-::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Modify the code analyzing the New York traffic speed data by deleting the argument `alpha = 0.2`. 
-<!-- This will allow R to optimize $\alpha$ by minimizing the $SS1PE$. -->
-    -   What value of $\alpha$ is obtained?
-    -   What is the value of the $SS1PE$?
--   Choose values of $\alpha$ above and below the one you just found. Can you find a value of $\alpha$ that gives you 
 
-:::
+
+<!-- Fit the model with alpha unspecified -->
 
 ```{r}
-#| echo: false
+#| include: false
 
 ny_speeds_model0 <- ny_speeds_random |>
   model(Additive = ETS(random ~
@@ -811,17 +802,24 @@ ny_speeds_model0 <- ny_speeds_random |>
                        opt_crit = "amse", nmse = 1))
 report(ny_speeds_model0)
 
-alpha_est <- ny_speeds_model0[[1]][[1]][["fit"]][["par"]][["estimate"]][1]
+alpha_est <- ny_speeds_model0[[1]][[1]][["fit"]][["par"]][["estimate"]][1] |> round(4)
 
-min_ss1pe <- sum(components(ny_speeds_model0)$remainder^2, na.rm = TRUE)
+min_ss1pe <- sum(components(ny_speeds_model0)$remainder^2, na.rm = TRUE) |> round(4)
 
 options(scipen = 999) # Turn off scientific notation
-# 77661.59
 ```
 
-## WORKING HERE 
+<!-- Check Your Understanding -->
 
-Hello `r sum(components(ny_speeds_model0)$remainder^2, na.rm = TRUE) |> round(2)`
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Modify the code analyzing the New York traffic speed data by deleting the argument `alpha = 0.2`. 
+<!-- This will allow R to optimize $\alpha$ by minimizing the *SS1PE*. -->
+    -   What value of $\alpha$ is obtained?
+    -   What is the value of the *SS1PE* for this value of $\alpha$?
+-   Choose values of $\alpha$ slightly less than and slightly greater than `r alpha_est`. Can you find a value of $\alpha$ that gives you a smaller *SS1PE* than `r min_ss1pe`?
+
+:::
 
 ```{r}
 ny_speeds_random <- ny_speeds_decompose |>
@@ -912,7 +910,7 @@ ewma_toy_df |>
 #   column_spec(3:4, width_min = "2.25in")
 ```
 
-The value of $SS1PE$ is 
+The value of *SS1PE* is 
 $$
   \sum\limits_{t=2}^n e_t^2 
     = (`r round(ewma_toy_df$e_t[2],3)`)^2 + (`r round(ewma_toy_df$e_t[3],3)`)^2 + \cdots + (`r round(ewma_toy_df$e_t[nrow(ewma_toy_df)-1],3)`)^2 + (`r round(ewma_toy_df$e_t[nrow(ewma_toy_df)],3)`)^2 
