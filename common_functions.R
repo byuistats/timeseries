@@ -82,7 +82,7 @@ display_partial_table <- function(df, nrow_head, nrow_tail, decimals = 3, min_co
 
 display_table <- function(df, min_col_width = "0in") {
   df |>
-    knitr::kable(format = "html", align='cccccccccccccc', escape = FALSE, width = NA, row.names = FALSE) |>
+    knitr::kable(format = "html", align='ccccccccccccccccc', escape = FALSE, width = NA, row.names = FALSE) |>
     kable_styling(full_width = FALSE, "striped") |>
     column_spec(1:ncol(df), width_min = min_col_width)
 }
@@ -122,6 +122,51 @@ blank_out_cells_in_df <- function(df, ncols_to_keep = 2, nrows_to_keep = 0, deci
       out_df[i,j] <- ""
     }
   return(out_df)
+}
+
+
+###### Compute sum or mean of numeric variables in a df
+
+append_sum_to_df <- function(df, label = "Sum") {
+  df <- df %>%
+    bind_rows(summarise_all(., ~if(is.numeric(.)) sum(., na.rm = TRUE) else label))
+  return(df)
+}
+
+append_mean_to_df <- function(df, label = "Mean") {
+  df <- df %>%
+    bind_rows(summarise_all(., ~if(is.numeric(.)) mean(., na.rm = TRUE) else label))
+  return(df)
+}
+
+sum_of_columns <- function(df, label = "Sum") {
+  row <- df %>%
+    summarise_all(., ~if(is.numeric(.)) sum(., na.rm = TRUE) else label)
+  return(row)
+}
+
+mean_of_columns <- function(df, label = "Mean") {
+  row <- df %>%
+    summarise_all(., ~if(is.numeric(.)) mean(., na.rm = TRUE) else label)
+  return(row)
+}
+
+sum_of_columns_divided_by_n <- function(df, label, n = nrow(df)) {
+  row <- df %>%
+    summarise_all(., ~if(is.numeric(.)) sum(., na.rm = TRUE)/n else label)
+  return(row)
+}
+
+
+
+insert_blank_last_row <- function(df, label = "sum", value = "", decimals = 3) {
+  temp_df <- df |>
+    bind_rows(df |> tail(1))
+  convert_df_to_char(decimals)
+  num_rows <- nrow(temp_df)
+  temp_df[num_rows, ] <- value
+  temp_df[num_rows, 1] <- label
+  return(temp_df)
 }
 
 

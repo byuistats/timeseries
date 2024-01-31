@@ -33,6 +33,8 @@ source("common_functions.R")
  }    
 </script>
 ```
+
+
 ## Learning Outcomes
 
 {{< include outcomes/chapter_3_lesson_2_outcomes.qmd >}}
@@ -44,6 +46,8 @@ source("common_functions.R")
 
 -   Read Section 3.4.1
 
+
+
 ## Learning Journal Exchange (10 mins)
 
 -   Review another student's journal
@@ -54,6 +58,8 @@ source("common_functions.R")
 
 -   Sign the Learning Journal review sheet for your peer
 
+
+
 ## Class Discussion: Theory Supporting the EWMA
 
 Our objective is to predict a future value given the first $n$ observations of a time series. One example would be to forecast sales of an existing product in a stable market.
@@ -63,6 +69,9 @@ We assume the following about the time series:
 -   There is no systematic trend or seasonal effects (or that these have been removed).
 
 -   The mean is non-stationary (can change), but we have no idea about the direction.
+
+
+
 
 ::: {.callout-tip icon="false" title="Check Your Understanding"}
 Match the following definitions to the appropriate term.
@@ -126,25 +135,43 @@ x1 <- get_toy_data()
 cat("x <- c(",paste(x1, collapse = ", "),")")
 ```
 
-Complete the table below by calculating the values of $a_t$. Record your results in your Learning Journal.
+Start filling in the table below by calculating the values of $a_t$.
 
 ```{r}
 #| echo: false
 
 alpha <- 0.2
 
-ewma_toy_df <- data.frame(t = 1:length(x1), x_t = x1, a_t = x1, space = "") |>
-  rename(" " = space)
+ewma_toy_df <- data.frame(t = 1:length(x1), x_t = x1, a_t = x1) |>
+  mutate(
+    a_t_computation = "",
+    e_t = as.numeric(NA),
+    e_t_computation = ""
+  )
+
+ewma_toy_df$a_t_computation[1] = paste0("$$",ewma_toy_df$x_t[1], "$$")
 
 for (t in 2:length(x1)) {
   ewma_toy_df$a_t[t] <- alpha * ewma_toy_df$x_t[t] + (1 - alpha) * ewma_toy_df$a_t[t-1]
+  ewma_toy_df$a_t_computation[t] <- paste("$$", alpha, "\\cdot", ewma_toy_df$x_t[t], "+", "(1 - ",alpha,") \\cdot", round(ewma_toy_df$a_t[t-1],3), "=", round(ewma_toy_df$a_t[t],3), "$$")
+  ewma_toy_df$e_t[t] <- ewma_toy_df$x_t[t] - ewma_toy_df$a_t[t-1]
+  ewma_toy_df$e_t_computation[t] <- paste("$$", ewma_toy_df$x_t[t], "-", round(ewma_toy_df$a_t[t-1],3), "=", round(ewma_toy_df$e_t[t],3), "$$")
 }
 
 ewma_toy_df |>
+  dplyr::select(t, x_t, a_t, e_t) |>
   blank_out_cells_in_df() |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$e_t$$" = e_t
+  ) |>
   display_table("0.5in") |>
-  column_spec(4, width_min = "3in")
+  column_spec(3:4, width_min = "2.25in")
 ```
+
+
 
 
 ### One-Step-Ahead Prediction Errors 
@@ -184,7 +211,8 @@ If the mean of a long time series has not changed much, then this will produce a
 
 ::: {.callout-tip icon="false" title="Check Your Understanding"}
 
--   Compute $e_t$ for the 10 values of $x$ given above. Add these values to the table in your Learning Journal.
+-   Compute $e_t$ for the 10 values of $x$ given in the table above. Add these values to the table.
+-   Compute *SS1PE* for these data.
 
 :::
 
@@ -454,46 +482,19 @@ plot_ewma_head_ts <- function(ts, alpha = 0.2) {
 We demonstrate the computation of the EWMA for a few choices of $\alpha$.
 
 ::: panel-tabset
-#### EWMA with $\alpha = 0.2$
-
-```{r}
-#| echo: false
-alpha <- 0.2
-
-# ny_speeds_random_ewma_ts |>
-temp_df <- compute_ewma_ts(ny_speeds_decompose, alpha) 
-temp_df |>
-  print_head_ewma_ts()
-```
-
-Here is a plot of the EWMA (in red) and the random component (in black) for a four-hour period:
-
-```{r}
-#| echo: false
-#| warning: false
-
-temp_df |>
-  plot_ewma_head_ts(alpha)
-
-```
-
-Here is a plot showing the EWMA (in red) for all the data.
-
-```{r}
-#| echo: false
-#| warning: false
-
-temp_df |>
-  plot_ewma_full_ts(alpha)
-
-```
-
-#### EWMA with $\alpha = 0.01$
 
 ```{r}
 #| echo: false
 alpha <- 0.01
+```
 
+#### EWMA with $\alpha = `r alpha`$
+
+::: {.callout-note icon=false title="EWMA"}
+
+
+```{r}
+#| echo: false
 # ny_speeds_random_ewma_ts |>
 temp_df <- compute_ewma_ts(ny_speeds_decompose, alpha) 
 temp_df |>
@@ -522,12 +523,105 @@ temp_df |>
 
 ```
 
-#### EWMA with $\alpha = 0.75$
+:::
+
+```{r}
+#| echo: false
+alpha <- 0.05
+```
+
+#### EWMA with $\alpha = `r alpha`$
+
+::: {.callout-note icon=false title="EWMA"}
+
+
+```{r}
+#| echo: false
+# ny_speeds_random_ewma_ts |>
+temp_df <- compute_ewma_ts(ny_speeds_decompose, alpha) 
+temp_df |>
+  print_head_ewma_ts()
+```
+
+Here is a plot of the EWMA against the random component:
+
+```{r}
+#| echo: false
+#| warning: false
+
+temp_df |>
+  plot_ewma_head_ts(alpha)
+
+```
+
+Here is a plot showing the EWMA for all the data.
+
+```{r}
+#| echo: false
+#| warning: false
+
+temp_df |>
+  plot_ewma_full_ts(alpha)
+
+```
+
+:::
+
+```{r}
+#| echo: false
+alpha <- 0.2
+```
+
+#### EWMA with $\alpha = `r alpha`$
+
+::: {.callout-note icon=false title="EWMA"}
+
+
+```{r}
+#| echo: false
+# ny_speeds_random_ewma_ts |>
+temp_df <- compute_ewma_ts(ny_speeds_decompose, alpha) 
+temp_df |>
+  print_head_ewma_ts()
+```
+
+Here is a plot of the EWMA against the random component:
+
+```{r}
+#| echo: false
+#| warning: false
+
+temp_df |>
+  plot_ewma_head_ts(alpha)
+
+```
+
+Here is a plot showing the EWMA for all the data.
+
+```{r}
+#| echo: false
+#| warning: false
+
+temp_df |>
+  plot_ewma_full_ts(alpha)
+
+```
+
+:::
+
 
 ```{r}
 #| echo: false
 alpha <- 0.75
+```
 
+#### EWMA with $\alpha = `r alpha`$
+
+::: {.callout-note icon=false title="EWMA"}
+
+
+```{r}
+#| echo: false
 # ny_speeds_random_ewma_ts |>
 temp_df <- compute_ewma_ts(ny_speeds_decompose, alpha) 
 temp_df |>
@@ -555,9 +649,12 @@ temp_df |>
   plot_ewma_full_ts(alpha)
 
 ```
+
 :::
 
-Once we have obtained the EWMA for the random component, we can add to it the trend and seasonality to get the EWMA for the original speed data.
+:::
+
+Once we have obtained the EWMA for the random component, we can add to it the trend and seasonality to get the EWMA for the original speed data. The raw data are plotted in black, the trend in blue, the seasonal component in yellow, and the EWMA is plotted in orange. The green curve is the sum of EWMA, the seasonal component, and the trend.
 
 ```{r}
 #| echo: false
@@ -573,7 +670,7 @@ plot_ewma_speed_full_ts <- function(ts, alpha = 0.2) {
     geom_line(data = ts, aes(x = index, y = trend), color = "#56B4E9", linewidth = 1) +
     labs(
       x = "Time",
-      y = "Speed",
+      # y = "Speed",
       title = paste0("EWMA for Speed (α = ", alpha, ")"),
       subtitle = "(All Dates)"
     ) +
@@ -599,7 +696,7 @@ plot_ewma_speed_head_ts <- function(ts, alpha = 0.2) {
     geom_line(data = temp, aes(x = index, y = trend), color = "#56B4E9", linewidth = 1) +
     labs(
       x = "Time",
-      y = "Speed",
+      # y = "Speed",
       title = paste0("EWMA for Speed (α = ", alpha, ")"),
       subtitle = "(7/2/2022 from 12:00-16:00)"
     ) +
@@ -609,10 +706,16 @@ plot_ewma_speed_head_ts <- function(ts, alpha = 0.2) {
     )
 }
 
-
 alpha <- 0.2
 compute_ewma_ts(ny_speeds_decompose, alpha) |>
   plot_ewma_speed_full_ts()
+```
+
+Here is the plot for four hours of data:
+
+```{r}
+#| echo: false
+#| warning: false
 
 compute_ewma_ts(ny_speeds_decompose, alpha) |>
   plot_ewma_speed_head_ts()
@@ -620,9 +723,8 @@ compute_ewma_ts(ny_speeds_decompose, alpha) |>
 
 ## Class Activity: EWMA in R (10 min)
 
-The following code can be used to compute the EWMA for the random component of the New York highway speed data in R.
-
-We have already decomposed the model, so we have isolated the estimated values for the random component. This is portion of the tsibble `ny_speeds_decompose`:
+We will compute the EWMA for the random component of the New York highway speed data in R.
+We have already decomposed the model, so we have isolated the estimated values for the random component. This is a portion of the tsibble `ny_speeds_decompose`:
 
 ```{r}
 #| echo: false
@@ -653,7 +755,7 @@ ny_speeds_random <- ny_speeds_decompose |>
   select(-.model)                             # Eliminate the variable .model
 ```
 
-We execute the EWMA algorithm on the random component using $\alpha = 0.2$.
+The following code can be used to execute the EWMA algorithm on the random component using $\alpha = 0.2$.
 
 ```{r}
 ny_speeds_model1 <- ny_speeds_random |>
@@ -662,19 +764,36 @@ ny_speeds_model1 <- ny_speeds_random |>
                          error("A") + season("N"),
                        opt_crit = "amse", nmse = 1))
 report(ny_speeds_model1)
-sum(components(ny_speeds_model1)$remainder^2, na.rm = T)
 ```
 
+Now, we calculate the value of *SS1PE*.
+
 ```{r}
-augment(ny_speeds_model1) |>
-  ggplot(aes(x = index, y = random)) +
-  geom_line() +
-  geom_line(aes(y = .fitted, color = "Fitted")) +
-  labs(color = "")
+sum(components(ny_speeds_model1)$remainder^2, na.rm = TRUE)
 ```
 
+<!-- Here is a plot of the time series with the EWMA superimposed. -->
+
+<!-- ```{r} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: "Show the code" -->
+
+<!-- augment(ny_speeds_model1) |> -->
+<!--   ggplot(aes(x = index, y = random)) + -->
+<!--   geom_line() + -->
+<!--   geom_line(aes(y = .fitted, color = "Fitted")) + -->
+<!--   labs(color = "") -->
+<!-- ``` -->
+
+
+
+
+
+<!-- Fit the model with alpha unspecified -->
 
 ```{r}
+#| include: false
+
 ny_speeds_model0 <- ny_speeds_random |>
   model(Additive = ETS(random ~
                          trend("A", beta = 0) +
@@ -682,15 +801,31 @@ ny_speeds_model0 <- ny_speeds_random |>
                          season("N"),
                        opt_crit = "amse", nmse = 1))
 report(ny_speeds_model0)
+
+alpha_est <- ny_speeds_model0[[1]][[1]][["fit"]][["par"]][["estimate"]][1] |> round(4)
+
+min_ss1pe <- sum(components(ny_speeds_model0)$remainder^2, na.rm = TRUE) |> round(2)
+
+options(scipen = 999) # Turn off scientific notation
 ```
 
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Modify the code analyzing the New York traffic speed data by deleting the argument `alpha = 0.2`. 
+<!-- This will allow R to optimize $\alpha$ by minimizing the *SS1PE*. -->
+    -   What value of $\alpha$ is obtained?
+    -   What is the value of the *SS1PE* for this value of $\alpha$?
+-   Choose values of $\alpha$ slightly less than and slightly greater than `r alpha_est`. 
+    -   Can you find a value of $\alpha$ that gives you a smaller *SS1PE* than `r min_ss1pe`?
+
+:::
 
 ```{r}
-sum(components(ny_speeds_model0)$remainder^2, na.rm = T)
-# 77661.59
-```
+#| echo: false
+#| include: false 
 
-```{r}
 ny_speeds_random <- ny_speeds_decompose |>
   na.omit() |>
   select(index, random)
@@ -698,8 +833,11 @@ ny_speeds_random <- ny_speeds_decompose |>
 
 
 ```{r}
+#| echo: false
+#| include: false 
+
 ny_speeds_ts
-autoplot(ny_speeds_ts) +
+autoplot(ny_speeds_ts, .vars = speed) +
   labs(x = "Time", y = "Speed")
 ny_speeds_model1 <- ny_speeds_ts |>
   model(Additive = ETS(speed ~
@@ -718,7 +856,7 @@ ny_speeds_model0 <- ny_speeds_ts |>
                          error("A") +
                          season("N"),
                        opt_crit = "amse", nmse = 1))
-sum(components(ny_speeds_model0)$remainder^2, na.rm = T)
+sum(components(ny_speeds_model0)$remainder^2, na.rm = TRUE)
 
 ```
 
@@ -758,33 +896,33 @@ style="font-size:.8em;">Class Activity: Practice Applying the EWMA</a>
 alpha <- 0.2
 
 ewma_toy_df |>
-  dplyr::select(t, x_t, a_t) |>
-  mutate(e_t = x_t - lag(a_t)) |>
+  dplyr::select(t, x_t, a_t_computation, e_t_computation) |>
+  mutate(
+    t = paste("$$", t, "$$"),
+    x_t = paste("$$", x_t, "$$")
+  ) |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t_computation,
+    "$$e_t$$" = e_t_computation
+  ) |>
   blank_out_one_cell_in_df(row_num = 1, col_num = 4, decimals = 3) |>
-  display_table()
+  display_table("0.75in")
+
+# ewma_toy_df |>
+#   dplyr::select(t, x_t, a_t, e_t) |>
+#   blank_out_cells_in_df() |>
+#   display_table("0.5in") |>
+#   column_spec(3:4, width_min = "2.25in")
 ```
+
+The value of *SS1PE* is 
+$$
+  \sum\limits_{t=2}^n e_t^2 
+    = (`r round(ewma_toy_df$e_t[2],3)`)^2 + (`r round(ewma_toy_df$e_t[3],3)`)^2 + \cdots + (`r round(ewma_toy_df$e_t[nrow(ewma_toy_df)-1],3)`)^2 + (`r round(ewma_toy_df$e_t[nrow(ewma_toy_df)],3)`)^2 
+    = `r ewma_toy_df |> mutate(e_t2 = e_t^2) |> summarize(sum = sum(e_t2, na.rm = TRUE)) |> dplyr::select(sum) |> pull() |> round(3)`
+$$
+
 :::
 
-<a href="javascript:showhide('Solutions3')"
-style="font-size:.8em;">Class Activity</a>
-
-::: {#Solutions3 style="display:none;"}
-Solutions to Class Activity
-
-Matching Activity:
-
-1 - D
-
-2 - E
-
-3 - B
-
-4 - C
-
-5 - A
-
-```{r}
-#| echo: false
-stuff <- "here"
-```
-:::
