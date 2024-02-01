@@ -1,4 +1,29 @@
-library(readxl)
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite dplyr::select()
+               tidyverse, kableExtra,
+               tsibble, fable,
+               feasts, tsibbledata,
+               fable.prophet,
+               patchwork,
+               ggthemes,
+               see,   # okabeito color scheme
+               ggokabeito, # colorblind palette
+               stringr, # string manipulation
+               lubridate, # date manipulation
+               rio, # for easy i/o
+               tidyquant,
+               gt, # grammar of tables, for LaTeX in tables
+               readxl
+)
+
+# Converts a dataframe to char and rounds the values to a specified number of places
+convert_df_to_char <- function(df, decimals = 3) {
+  out_df <- df |>
+    as.data.frame() |>
+    mutate_if(is.numeric, round, digits=decimals) |>
+    mutate(across(everything(), as.character))
+  return(out_df)
+}
 
 # Read and clean one worksheet from the Excel file
 read_one_sheet <- function(year) {
@@ -56,11 +81,15 @@ decompose_retail_sales <- function(df, naics_value, model_type = "multiplicative
 }
 
 
-# Read in data
-retail <- read_one_sheet(1992)
-for (i in 1993:2022) {
-  retail <- retail |> bind_rows(read_one_sheet(i))
-}
+# # Read in raw data
+# retail <- read_one_sheet(1992)
+# for (i in 1993:2022) {
+#   retail <- retail |> bind_rows(read_one_sheet(i))
+# }
+# retail |> rio::export("data/retail_by_business_type.parquet")
+
+# Read in clean data
+retail <- rio::import("data/retail_by_business_type.parquet")
 
 retail |>
   filter(naics == 4441) |>
@@ -69,9 +98,7 @@ retail |>
   components() |>
   autoplot()
 
-decompose_retail_sales(retail, 4441, "multiplicative")
-
-
+# Time Series Plots
 plot_retail_sales(retail, 441)
 # plot_retail_sales(retail, 4411,4412)
 plot_retail_sales(retail, 4411)
@@ -129,4 +156,23 @@ plot_retail_sales(retail, 722)
 plot_retail_sales(retail, 7224)
 plot_retail_sales(retail, 7225) # Multiplicative - Cut off before covid???
 plot_retail_sales(retail, 722511)
+
+
+# Decomposition plots
+decompose_retail_sales(retail, 447) # Gasoline stations
+decompose_retail_sales(retail, 452, "additive") # General merchandise stores
+decompose_retail_sales(retail, 4422) # Home furnishings stores
+decompose_retail_sales(retail, 4441) # Building mat. and supplies dealers
+decompose_retail_sales(retail, 4482) # Shoe stores
+decompose_retail_sales(retail, 4521) # Department stores
+decompose_retail_sales(retail, 4529) # Other general merchandise stores
+decompose_retail_sales(retail, 4541) # Electronic shopping and mail-order houses
+decompose_retail_sales(retail, 7225) # Restaurants and other eating places
+decompose_retail_sales(retail, 44413) # Hardware stores
+decompose_retail_sales(retail, 44812, "additive") # Women's clothing stores
+decompose_retail_sales(retail, 45111) # Sporting goods stores
+decompose_retail_sales(retail, 45291) # Warehouse clubs and superstores
+decompose_retail_sales(retail, 443141, "additive") # Household appliance stores
+decompose_retail_sales(retail, 451211) # Book stores
+decompose_retail_sales(retail, 452112) # Discount dept. stores
 
