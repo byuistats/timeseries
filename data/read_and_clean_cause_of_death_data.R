@@ -39,3 +39,4 @@ death_ts |> autoplot(.vars = nephritis)
 death_ts |> autoplot(.vars = other)
 death_ts |> autoplot(.vars = heart)
 death_ts |> autoplot(.vars = cerebrovascular)
+
