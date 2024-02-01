@@ -44,14 +44,6 @@ https://data.baltimorecity.gov/Public-Safety/BPD-Part-1-Victim-Based-Crime-Data/
 # Import Packages
 
 ```{r, warning=FALSE}
-library(dplyr)
-library(tidyr)
-library(ggplot2)
-library(tidyverse)
-library(dygraphs)
-library(tidyquant)
-library(forecast)
-
 
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load("tsibble", "fable",
@@ -73,17 +65,13 @@ df <- read.csv("https://byuistats.github.io/timeseries/data/baltimore_crime.csv"
 summary_df <- df %>%
   group_by(CrimeDate) %>%
   summarise(
-    total_incidents = sum(Total.Incidents),
-    average_incidents = mean(Total.Incidents),
-    max_incidents = max(Total.Incidents),
-    min_incidents = min(Total.Incidents)
+    total_incidents = sum(Total.Incidents)
   )
 ```
 
 
 ```{r, warning=FALSE}
 crime_data <- summary_df %>%
-  select(CrimeDate, total_incidents) %>% 
   mutate(CrimeDate = as.Date(CrimeDate, format = "%m/%d/%Y")) %>% 
   arrange(CrimeDate)
 
@@ -187,7 +175,7 @@ holt_winters_forecast_plot <- function(data, alpha = 0.2, beta = 0.2, gamma = 0.
   # Plot 4: Original trendline with 'at + bt + st'
   plot_combined <- ggplot(data, aes(x = CrimeDate)) +
     geom_line(aes(y = total_incidents), color = "black", size = 1) +
-    geom_line(aes(y = estimated_level + estimated_slope + estimated_seasonal, color = "Combined"), size = 1) +
+    geom_line(aes(y = estimated_level + estimated_slope + estimated_seasonal, color = "Combined", alpha=0.5), size = 1) +
     labs(
       x = "Date",
       y = "Total Incidents",
@@ -195,8 +183,7 @@ holt_winters_forecast_plot <- function(data, alpha = 0.2, beta = 0.2, gamma = 0.
       color = "Components"
     ) +
     theme_minimal() +
-    theme(legend.position = "top") +
-    theme(legend.key.size = unit(1, "cm")) 
+    theme(legend.position = "none")
   
   return(list(plot_at, plot_bt, plot_st, plot_combined))
 }
@@ -208,6 +195,10 @@ holt_winters_forecast_plot <- function(data, alpha = 0.2, beta = 0.2, gamma = 0.
 - **Alpha** = 0.9
 - **Beta** = 0.5
 - **Gamma** = 0.9
+```{r}
+dateRange <- c("2011-01-01","2016-11-12")
+data <- filter(crime_tsibble, CrimeDate as.Date(dateRange, format = "%Y-%m-%d"))
+```
 
 
 ```{r}
@@ -306,7 +297,7 @@ holt_winters_multiplicative_plot <- function(data, alpha = 0.2, beta = 0.2, gamm
   # Plot 4: Original trendline with 'at + bt + st'
   plot_combined <- ggplot(data, aes(x = CrimeDate)) +
     geom_line(aes(y = total_incidents), color = "black", size = 1) +
-    geom_line(aes(y = at + bt + st, color = "Combined"), size = 1) +
+    geom_line(aes(y = at + bt + st, color = "Combined", alpha=0.5), size = 1) +
     labs(
       x = "Date",
       y = "Total Incidents",
