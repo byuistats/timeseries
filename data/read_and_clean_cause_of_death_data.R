@@ -22,3 +22,20 @@ death_cause <- rio::import("data/cause_of_death_weekly.parquet") |>
   )
 death_cause %>% View
 death_cause %>% names
+death_ts <- death_cause %>%
+  mutate(date = dmy(date)) |>
+  filter(!is.na(date)) |>
+  as_tsibble(index = date)
+death_ts |> autoplot(.vars = all_causes)
+death_ts |> autoplot(.vars = natural_causes)
+death_ts |> autoplot(.vars = septicemia)
+death_ts |> autoplot(.vars = neoplasms)
+death_ts |> autoplot(.vars = diabetes)
+death_ts |> autoplot(.vars = alzheimer)
+death_ts |> autoplot(.vars = flu)
+death_ts |> autoplot(.vars = respiratory)
+death_ts |> autoplot(.vars = other_respiratory)
+death_ts |> autoplot(.vars = nephritis)
+death_ts |> autoplot(.vars = other)
+death_ts |> autoplot(.vars = heart)
+death_ts |> autoplot(.vars = cerebrovascular)
