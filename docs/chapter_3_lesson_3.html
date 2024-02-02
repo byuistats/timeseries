@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>BYU-Idaho Time Series - Holt-Winters Method</title>
+<title>BYU-Idaho Time Series - Holt-Winters Method (Additive Model)</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -101,6 +101,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/kePrint-0.0.1/kePrint.js"></script>
 <link href="site_libs/lightable-0.0.1/lightable.css" rel="stylesheet">
 
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -232,7 +234,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="dropdown-header">Lesson 3</li>
         <li>
     <a class="dropdown-item" href="./chapter_3_lesson_3.html" rel="" target="">
- <span class="dropdown-text">Holt-Winters Method</span></a>
+ <span class="dropdown-text">Holt-Winters Method (Additive Model)</span></a>
   </li>  
     </ul>
   </li>
@@ -254,16 +256,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
    
   <ul>
   <li><a href="#learning-outcomes" id="toc-learning-outcomes" class="nav-link active" data-scroll-target="#learning-outcomes">Learning Outcomes</a></li>
-  <li><a href="#holt-winters-additive" id="toc-holt-winters-additive" class="nav-link" data-scroll-target="#holt-winters-additive">Holt-Winters (Additive)</a></li>
+  <li><a href="#introduction-to-the-holt-winters-method-additive-model" id="toc-introduction-to-the-holt-winters-method-additive-model" class="nav-link" data-scroll-target="#introduction-to-the-holt-winters-method-additive-model">Introduction to the Holt-Winters Method (Additive Model)</a></li>
+  <li><a href="#forecast-additive" id="toc-forecast-additive" class="nav-link" data-scroll-target="#forecast-additive">Forecast (Additive)</a></li>
+  <li><a href="#small-group-activity-holt-winters-model-for-byu-idaho-enrollment-data-20-min" id="toc-small-group-activity-holt-winters-model-for-byu-idaho-enrollment-data-20-min" class="nav-link" data-scroll-target="#small-group-activity-holt-winters-model-for-byu-idaho-enrollment-data-20-min">Small Group Activity: Holt-Winters Model for BYU-Idaho Enrollment Data (20 min)</a></li>
   <li><a href="#small-group-activity-decomposition-of-baltimore-crime-data-20-min" id="toc-small-group-activity-decomposition-of-baltimore-crime-data-20-min" class="nav-link" data-scroll-target="#small-group-activity-decomposition-of-baltimore-crime-data-20-min">Small Group Activity: Decomposition of Baltimore Crime Data (20 min)</a>
   <ul class="collapse">
   <li><a href="#background" id="toc-background" class="nav-link" data-scroll-target="#background">Background</a></li>
   <li><a href="#monthly-summary" id="toc-monthly-summary" class="nav-link" data-scroll-target="#monthly-summary">Monthly Summary</a></li>
-  <li><a href="#moving-average" id="toc-moving-average" class="nav-link" data-scroll-target="#moving-average">Moving Average</a></li>
-  <li><a href="#estimated-monthly-multiplicative-effect" id="toc-estimated-monthly-multiplicative-effect" class="nav-link" data-scroll-target="#estimated-monthly-multiplicative-effect">Estimated Monthly Multiplicative Effect</a></li>
   </ul></li>
-  <li><a href="#estimating-the-trend-moving-average-5-min" id="toc-estimating-the-trend-moving-average-5-min" class="nav-link" data-scroll-target="#estimating-the-trend-moving-average-5-min">Estimating the Trend: Moving Average (5 min)</a></li>
-  <li><a href="#to-be-continued." id="toc-to-be-continued." class="nav-link" data-scroll-target="#to-be-continued.">TO BE CONTINUED….</a></li>
   <li><a href="#homework-preview-5-min" id="toc-homework-preview-5-min" class="nav-link" data-scroll-target="#homework-preview-5-min">Homework Preview (5 min)</a></li>
   </ul>
 </nav>
@@ -273,7 +273,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Holt-Winters Method</h1>
+<h1 class="title">Holt-Winters Method (Additive Model)</h1>
 <p class="subtitle lead">Chapter 3: Lesson 3</p>
 </div>
 
@@ -332,8 +332,471 @@ Implement the Holt-Winter method to forecast time series
 </ul>
 </details>
 </section>
-<section id="holt-winters-additive" class="level2">
-<h2 class="anchored" data-anchor-id="holt-winters-additive">Holt-Winters (Additive)</h2>
+<section id="introduction-to-the-holt-winters-method-additive-model" class="level2">
+<h2 class="anchored" data-anchor-id="introduction-to-the-holt-winters-method-additive-model">Introduction to the Holt-Winters Method (Additive Model)</h2>
+<p>seasonal component (that may change from time to time,) and the</p>
+<p>The Holt-Winters method provides a way to model a time series in which we consider the time series in layers. first, there is the level (the smoothed <span class="math inline">\(x_t\)</span> values from the time series) at time <span class="math inline">\(t\)</span>. We will denote the <em>level</em> by <span class="math inline">\(a_t\)</span>. The level can change from time to time. We introduce a value <span class="math inline">\(b_n\)</span>, which we call the <em>slope</em>. This is the change in the level of the series from one time period to another. (As the book points out, R and many textbooks call the slope the <em>trend</em>.) Finally, we include a seasonal estimate, <span class="math inline">\(s_t\)</span>, which indicates how much the time series rises or falls above the level and trend values at time <span class="math inline">\(t\)</span>.</p>
+<p>To visualize these terms, it can be helpful to consider the forecasting model. Suppose we have computed that Holt-Winters estimate of a time series with <span class="math inline">\(n\)</span> observations. In other words, we have just fit a curve to the entire time series. We will use a very simple time series for this illustration.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>holt_winters_additive_forecast <span class="ot">&lt;-</span> <span class="cf">function</span>(data, <span class="at">alpha =</span> <span class="fl">0.2</span>, <span class="at">beta =</span> <span class="fl">0.2</span>, <span class="at">gamma =</span> <span class="fl">0.2</span>, <span class="at">p =</span> <span class="dv">12</span>, <span class="at">a1 =</span> <span class="cn">NULL</span>, <span class="at">b1 =</span> <span class="cn">NULL</span>, <span class="at">s1 =</span> <span class="cn">NULL</span>) {</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Assuming 'data' is a tsibble with a column 'value'</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  data <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">month =</span> <span class="fu">month</span>(date))</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  at <span class="ot">&lt;-</span> <span class="fu">numeric</span>(<span class="fu">nrow</span>(data))</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  bt <span class="ot">&lt;-</span> <span class="fu">numeric</span>(<span class="fu">nrow</span>(data))</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  st <span class="ot">&lt;-</span> <span class="fu">numeric</span>(<span class="fu">nrow</span>(data))</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  at[<span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(<span class="sc">!</span><span class="fu">is.null</span>(a1), a1, data<span class="sc">$</span>value[<span class="dv">1</span>]) </span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  bt[<span class="dv">1</span>] <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(<span class="sc">!</span><span class="fu">is.null</span>(b1), b1, (<span class="dv">1</span> <span class="sc">/</span> p) <span class="sc">*</span> <span class="fu">mean</span>( data<span class="sc">$</span>value[(p<span class="sc">+</span><span class="dv">1</span>)<span class="sc">:</span>(<span class="dv">2</span><span class="sc">*</span>p)] <span class="sc">-</span> data<span class="sc">$</span>value[<span class="dv">1</span><span class="sc">:</span>p] )) </span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  st[<span class="dv">1</span><span class="sc">:</span>p] <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(<span class="sc">!</span><span class="fu">is.null</span>(s1), s1, <span class="dv">0</span>)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (t <span class="cf">in</span> <span class="dv">2</span><span class="sc">:</span>p) {</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    at[t] <span class="ot">&lt;-</span> alpha <span class="sc">*</span> (data<span class="sc">$</span>value[t] <span class="sc">-</span> st[t <span class="sc">-</span> <span class="dv">0</span> <span class="sc">*</span> p ]) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">-</span> alpha) <span class="sc">*</span> (at[t <span class="sc">-</span> <span class="dv">1</span>] <span class="sc">+</span> bt[t <span class="sc">-</span> <span class="dv">1</span>])</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    bt[t] <span class="ot">&lt;-</span> beta <span class="sc">*</span> (at[t] <span class="sc">-</span> at[t <span class="sc">-</span> <span class="dv">1</span>]) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">-</span> beta) <span class="sc">*</span> bt[t <span class="sc">-</span> <span class="dv">1</span>]</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (t <span class="cf">in</span> (p <span class="sc">+</span> <span class="dv">1</span>)<span class="sc">:</span><span class="fu">nrow</span>(data)) {</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    at[t] <span class="ot">&lt;-</span> alpha <span class="sc">*</span> (data<span class="sc">$</span>value[t] <span class="sc">-</span> st[t <span class="sc">-</span> p]) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">-</span> alpha) <span class="sc">*</span> (at[t <span class="sc">-</span> <span class="dv">1</span>] <span class="sc">+</span> bt[t <span class="sc">-</span> <span class="dv">1</span>])</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    bt[t] <span class="ot">&lt;-</span> beta <span class="sc">*</span> (at[t] <span class="sc">-</span> at[t <span class="sc">-</span> <span class="dv">1</span>]) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">-</span> beta) <span class="sc">*</span> bt[t <span class="sc">-</span> <span class="dv">1</span>]</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    st[t] <span class="ot">&lt;-</span> gamma <span class="sc">*</span> (data<span class="sc">$</span>value[t] <span class="sc">-</span> at[t]) <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">-</span> gamma) <span class="sc">*</span> st[t <span class="sc">-</span> p]</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  data <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">estimated_level =</span> at, <span class="at">estimated_slope =</span> bt, <span class="at">estimated_seasonal =</span> st)</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>  data <span class="sc">%&gt;%</span> <span class="fu">return</span>()</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>holt_winters_additive_plot <span class="ot">&lt;-</span> <span class="cf">function</span>(data) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot 1: Just 'data$estimated_level'</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  plot_at <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(data, <span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> estimated_level)) <span class="sc">+</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="at">color =</span> <span class="st">"blue"</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Date"</span>,</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Level (at)"</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="cn">NULL</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>()</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Plot 2: Just 'data$estimated_slope'</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  plot_bt <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(data, <span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> estimated_slope)) <span class="sc">+</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="at">color =</span> <span class="st">"red"</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Date"</span>,</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Slope (bt)"</span>,</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="cn">NULL</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>()</span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Plot 3: Just 'data$estimated_seasonal'</span></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  plot_st <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(data, <span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> estimated_seasonal)) <span class="sc">+</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="at">color =</span> <span class="st">"green"</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Date"</span>,</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Seasonal (st)"</span>,</span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="cn">NULL</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>()</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Plot 4: Original trendline with 'data$estimated_level'</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>  plot_combined <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(data, <span class="fu">aes</span>(<span class="at">x =</span> date)) <span class="sc">+</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> value), <span class="at">color =</span> <span class="st">"black"</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> estimated_level, <span class="at">color =</span> <span class="st">"Combined"</span>, <span class="at">alpha=</span><span class="fl">0.5</span>), <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Date"</span>,</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Value"</span>,</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="cn">NULL</span>,</span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>      <span class="at">color =</span> <span class="st">"Components"</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>)</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">list</span>(plot_at, plot_bt, plot_st, plot_combined))</span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># holt_winters_additive_forecast_plot &lt;- function(data, k = 8) {</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">#   </span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">#   # Plot 4: Original trendline with 'data$estimated_level'</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   plot_combined &lt;- ggplot(data, aes(x = date)) +</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">#     geom_line(aes(y = value), color = "black", size = 1) +</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">#     geom_line(aes(y = estimated_level, color = "Combined", alpha=0.5), size = 1) +</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">#     labs(</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">#       x = "Date",</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">#       y = "Value",</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">#       title = NULL,</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">#       color = "Components"</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co">#     ) +</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co">#     theme_minimal() +</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co">#     theme(legend.position = "none")</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="co">#   return(plot_combined)</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="co"># }</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="i-think-this-is-the-wrong-one" class="level4">
+<h4 class="anchored" data-anchor-id="i-think-this-is-the-wrong-one">I THINK THIS IS THE WRONG ONE…</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="cf">function</span>(t) { <span class="dv">100</span> }</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="cf">function</span>(t) { <span class="dv">1</span><span class="sc">/</span><span class="dv">2</span> }</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>s <span class="ot">&lt;-</span> <span class="cf">function</span>(t) { (t <span class="sc">%%</span> <span class="dv">4</span> <span class="sc">==</span> <span class="dv">2</span>) <span class="sc">*</span> <span class="dv">3</span> }</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="cf">function</span>(t) { <span class="fu">a</span>(t) <span class="sc">+</span> t <span class="sc">*</span> <span class="fu">b</span>(t) <span class="sc">+</span> <span class="fu">s</span>(t) }</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>n_months <span class="ot">&lt;-</span> <span class="dv">12</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> <span class="fu">my</span>(<span class="fu">paste</span>(<span class="dv">1</span>, <span class="fu">floor</span>(<span class="fu">year</span>(<span class="fu">now</span>())<span class="sc">-</span>n_months<span class="sc">/</span><span class="dv">12</span>)))</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    start_date <span class="sc">+</span> <span class="fu">months</span>(n_months <span class="sc">-</span> <span class="dv">1</span>),</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="st">"1 months"</span>)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>date_seq</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] "2023-01-01" "2023-02-01" "2023-03-01" "2023-04-01" "2023-05-01"
+ [6] "2023-06-01" "2023-07-01" "2023-08-01" "2023-09-01" "2023-10-01"
+[11] "2023-11-01" "2023-12-01"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>temp_ts <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">date =</span> <span class="fu">yearmonth</span>(date_seq), <span class="at">value =</span> <span class="fu">x</span>(<span class="dv">1</span><span class="sc">:</span>n_months)) <span class="sc">|&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> date)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>temp_ts <span class="sc">|&gt;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> value)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>temp1 <span class="ot">&lt;-</span> <span class="fu">holt_winters_additive_forecast</span>(temp_ts, <span class="at">alpha =</span> <span class="fl">0.2</span>, <span class="at">beta =</span> <span class="fl">0.2</span>, <span class="at">gamma =</span> <span class="fl">0.2</span>, <span class="at">p =</span> <span class="dv">4</span>, <span class="at">b1=</span><span class="cn">NULL</span>, <span class="at">s1 =</span> <span class="dv">0</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>temp1 <span class="sc">%&gt;%</span> <span class="fu">as_tibble</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 12 × 6
+       date value month estimated_level estimated_slope estimated_seasonal
+      &lt;mth&gt; &lt;dbl&gt; &lt;dbl&gt;           &lt;dbl&gt;           &lt;dbl&gt;              &lt;dbl&gt;
+ 1 2023 Jan  100.     1            100.           0.5               0     
+ 2 2023 Feb  104      2            102.           0.620             0     
+ 3 2023 Mar  102.     3            102.           0.591             0     
+ 4 2023 Apr  102      4            103.           0.565             0     
+ 5 2023 May  102.     5            103.           0.541            -0.0957
+ 6 2023 Jun  106      6            104.           0.640             0.397 
+ 7 2023 Jul  104.     7            104.           0.594            -0.185 
+ 8 2023 Aug  104      8            105.           0.553            -0.163 
+ 9 2023 Sep  104.     9            105.           0.522            -0.219 
+10 2023 Oct  108     10            106.           0.597             0.696 
+11 2023 Nov  106.    11            107.           0.556            -0.348 
+12 2023 Dec  106     12            107.           0.520            -0.306 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># holt_winters_additive_forecast_plot(temp1)</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">holt_winters_additive_plot</span>(temp1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+ℹ Please use `linewidth` instead.</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[[1]]</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-5-2.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[2]]</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-5-3.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[3]]</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-5-4.png" class="img-fluid" width="672"></p>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+[[4]]</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-5-5.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="this-is-the-right-one" class="level4">
+<h4 class="anchored" data-anchor-id="this-is-the-right-one">This is the right one</h4>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>a <span class="ot">&lt;-</span> <span class="cf">function</span>(t) { <span class="dv">100</span> }</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>b <span class="ot">&lt;-</span> <span class="cf">function</span>(t) { <span class="dv">1</span><span class="sc">/</span><span class="dv">2</span> }</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>s <span class="ot">&lt;-</span> <span class="cf">function</span>(t) { (t <span class="sc">%%</span> <span class="dv">4</span> <span class="sc">==</span> <span class="dv">2</span>) <span class="sc">*</span> <span class="dv">3</span> }</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>x <span class="ot">&lt;-</span> <span class="cf">function</span>(t) { <span class="fu">a</span>(t) <span class="sc">+</span> (t<span class="dv">-1</span>) <span class="sc">*</span> <span class="fu">b</span>(t) <span class="sc">+</span> <span class="fu">s</span>(t) }</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>n_months <span class="ot">&lt;-</span> <span class="dv">36</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>max_k <span class="ot">&lt;-</span> <span class="dv">16</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> <span class="fu">my</span>(<span class="fu">paste</span>(<span class="dv">1</span>, <span class="fu">floor</span>(<span class="fu">year</span>(<span class="fu">now</span>())<span class="sc">-</span>n_months<span class="sc">/</span><span class="dv">12</span>)))</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>    start_date <span class="sc">+</span> <span class="fu">months</span>(n_months <span class="sc">-</span> <span class="dv">1</span>),</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="st">"1 months"</span>)</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>date_seq</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] "2021-01-01" "2021-02-01" "2021-03-01" "2021-04-01" "2021-05-01"
+ [6] "2021-06-01" "2021-07-01" "2021-08-01" "2021-09-01" "2021-10-01"
+[11] "2021-11-01" "2021-12-01" "2022-01-01" "2022-02-01" "2022-03-01"
+[16] "2022-04-01" "2022-05-01" "2022-06-01" "2022-07-01" "2022-08-01"
+[21] "2022-09-01" "2022-10-01" "2022-11-01" "2022-12-01" "2023-01-01"
+[26] "2023-02-01" "2023-03-01" "2023-04-01" "2023-05-01" "2023-06-01"
+[31] "2023-07-01" "2023-08-01" "2023-09-01" "2023-10-01" "2023-11-01"
+[36] "2023-12-01"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>temp_ts <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="at">date =</span> <span class="fu">yearmonth</span>(date_seq), <span class="at">value =</span> <span class="fu">x</span>(<span class="dv">1</span><span class="sc">:</span>n_months)) <span class="sc">|&gt;</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> date)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>temp_ts <span class="sc">|&gt;</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> value)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>temp1 <span class="ot">&lt;-</span> <span class="fu">holt_winters_additive_forecast</span>(temp_ts, <span class="at">alpha =</span> <span class="fl">0.2</span>, <span class="at">beta =</span> <span class="fl">0.2</span>, <span class="at">gamma =</span> <span class="fl">0.2</span>, <span class="at">p =</span> <span class="dv">4</span>, <span class="at">s1 =</span> <span class="dv">0</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> <span class="fu">ym</span>(<span class="fu">max</span>(temp1<span class="sc">$</span>date)) <span class="sc">+</span> <span class="fu">months</span>(<span class="dv">1</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    start_date <span class="sc">+</span> <span class="fu">months</span>(max_k <span class="sc">-</span> <span class="dv">1</span>),</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">by =</span> <span class="st">"1 months"</span>)</span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>date_seq</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> [1] "2024-01-01" "2024-02-01" "2024-03-01" "2024-04-01" "2024-05-01"
+ [6] "2024-06-01" "2024-07-01" "2024-08-01" "2024-09-01" "2024-10-01"
+[11] "2024-11-01" "2024-12-01" "2025-01-01" "2025-02-01" "2025-03-01"
+[16] "2025-04-01"</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>tail1 <span class="ot">&lt;-</span> temp1 <span class="sc">%&gt;%</span> <span class="fu">mutate</span>(<span class="at">n =</span> <span class="fu">row_number</span>()) <span class="sc">%&gt;%</span> <span class="fu">tail</span>(<span class="dv">1</span>)</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>an <span class="ot">&lt;-</span> tail1<span class="sc">$</span>estimated_level[<span class="dv">1</span>]</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>bn <span class="ot">&lt;-</span> tail1<span class="sc">$</span>estimated_slope[<span class="dv">1</span>]</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>n <span class="ot">&lt;-</span> tail1<span class="sc">$</span>n[<span class="dv">1</span>]</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>temp2 <span class="ot">&lt;-</span> temp1 <span class="sc">%&gt;%</span> </span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_rows</span>(<span class="fu">data.frame</span>(<span class="at">date =</span> date_seq, <span class="at">value =</span> <span class="cn">NA</span>, <span class="at">month =</span> <span class="cn">NA</span>, <span class="at">estimated_level =</span> <span class="cn">NA</span>, <span class="at">estimated_slope =</span> <span class="cn">NA</span>, <span class="at">estimated_seasonal =</span> <span class="cn">NA</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">forecast =</span> <span class="fu">as.numeric</span>(<span class="cn">NA</span>))</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>temp2<span class="sc">$</span>forecast[n] <span class="ot">&lt;-</span> temp2<span class="sc">$</span>estimated_level[n] <span class="sc">+</span> temp2<span class="sc">$</span>estimated_seasonal[n]</span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (k <span class="cf">in</span> (n<span class="sc">+</span><span class="dv">1</span>)<span class="sc">:</span>(n<span class="sc">+</span>max_k)) {</span>
+<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>  temp2<span class="sc">$</span>estimated_seasonal[k] <span class="ot">&lt;-</span> temp2<span class="sc">$</span>estimated_seasonal[k <span class="sc">-</span> <span class="dv">4</span>] <span class="do">######### MAGIC NUMBER: 4 periods per cycle</span></span>
+<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>  temp2<span class="sc">$</span>forecast[k] <span class="ot">&lt;-</span> an <span class="sc">+</span> (k <span class="sc">-</span> n) <span class="sc">*</span> bn <span class="sc">+</span> temp2<span class="sc">$</span>estimated_seasonal[k]</span>
+<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb20-16"><a href="#cb20-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-17"><a href="#cb20-17" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(temp2, <span class="fu">aes</span>(<span class="at">x =</span> date)) <span class="sc">+</span></span>
+<span id="cb20-18"><a href="#cb20-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> value), <span class="at">color =</span> <span class="st">"black"</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb20-19"><a href="#cb20-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> estimated_level <span class="sc">+</span> estimated_seasonal, <span class="at">color =</span> <span class="st">"Combined"</span>, <span class="at">alpha=</span><span class="fl">0.5</span>), <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb20-20"><a href="#cb20-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> forecast, <span class="at">color =</span> <span class="st">"Combined"</span>, <span class="at">alpha=</span><span class="fl">0.5</span>), <span class="at">linetype =</span> <span class="st">"dashed"</span>, <span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb20-21"><a href="#cb20-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb20-22"><a href="#cb20-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Date"</span>,</span>
+<span id="cb20-23"><a href="#cb20-23" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Value"</span>,</span>
+<span id="cb20-24"><a href="#cb20-24" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="cn">NULL</span>,</span>
+<span id="cb20-25"><a href="#cb20-25" aria-hidden="true" tabindex="-1"></a>      <span class="at">color =</span> <span class="st">"Components"</span></span>
+<span id="cb20-26"><a href="#cb20-26" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb20-27"><a href="#cb20-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb20-28"><a href="#cb20-28" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">legend.position =</span> <span class="st">"none"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-6-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Now, suppose we want to use this estimated curve to forecast future values of the time series.</p>
+</section>
+</section>
+<section id="forecast-additive" class="level2">
+<h2 class="anchored" data-anchor-id="forecast-additive">Forecast (Additive)</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"https://byuistats.github.io/timeseries/data/baltimore_crime.csv"</span>, </span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>               <span class="at">header=</span><span class="cn">TRUE</span>,</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>               <span class="at">stringsAsFactors=</span><span class="cn">FALSE</span>)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>summary_df <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(CrimeDate) <span class="sc">%&gt;%</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_incidents =</span> <span class="fu">sum</span>(Total.Incidents)</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>crime_data <span class="ot">&lt;-</span> summary_df <span class="sc">%&gt;%</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">CrimeDate =</span> <span class="fu">as.Date</span>(CrimeDate, <span class="at">format =</span> <span class="st">"%m/%d/%Y"</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(CrimeDate)</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>crime_tsibble <span class="ot">&lt;-</span> <span class="fu">as_tsibble</span>(crime_data, <span class="at">index =</span> CrimeDate)</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>crime_tsibble <span class="co"># Uncomment to see table</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 2,143 x 2 [1D]
+   CrimeDate  total_incidents
+   &lt;date&gt;               &lt;int&gt;
+ 1 2011-01-01             185
+ 2 2011-01-02             102
+ 3 2011-01-03             106
+ 4 2011-01-04             113
+ 5 2011-01-05             131
+ 6 2011-01-06             107
+ 7 2011-01-07             150
+ 8 2011-01-08             106
+ 9 2011-01-09              98
+10 2011-01-10             115
+# ℹ 2,133 more rows</code></pre>
+</div>
+</div>
+<section id="additive-seasonality-model" class="level4">
+<h4 class="anchored" data-anchor-id="additive-seasonality-model">Additive seasonality Model</h4>
+<ul>
+<li><strong>Alpha</strong> = 0.2</li>
+<li><strong>Beta</strong> = 0.2</li>
+<li><strong>Gamma</strong> = 0.2</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co"># holt_winters_additive_forecast_plot(crime_tsibble, alpha = 0.2, beta = 0.2, gamma = .2)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><span class="math display">\[\begin{align*}
+  a_t &amp;= \alpha \left( x_t - s_{t-p} \right) + (1-\alpha) \left( a_{t-1} + b_{t-1} \right) \\
+  b_t &amp;= \beta \left( a_t - a_{t-1} \right) + (1-\beta) b_{t-1} \\
+  s_t &amp;= \gamma \left( x_t - a_t \right) + (1-\gamma) s_{t-p}
+\end{align*}\]</span></p>
+</section>
+</section>
+<section id="small-group-activity-holt-winters-model-for-byu-idaho-enrollment-data-20-min" class="level2">
+<h2 class="anchored" data-anchor-id="small-group-activity-holt-winters-model-for-byu-idaho-enrollment-data-20-min">Small Group Activity: Holt-Winters Model for BYU-Idaho Enrollment Data (20 min)</h2>
+<p>In Chapter 2, Lesson 3, we explored the BYU-Idaho Enrollment data. We will apply the Holt-Winters model to these data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># read in the data from a csv and make the tsibble</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Method 1:</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>enrollment_df <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/byui_enrollment.csv"</span>)</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="st">"2019-05-01"</span>)</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>                start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(enrollment_df)<span class="sc">-</span><span class="dv">1</span>) <span class="sc">*</span> <span class="dv">4</span>,</span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">"4 months"</span>)</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>enrollment_ts <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(date_seq),</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">semester =</span> <span class="fu">pull</span>(enrollment_df, semester),</span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">enrollment =</span> <span class="fu">pull</span>(enrollment_df, enrollment)</span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(semester, dates, enrollment) <span class="sc">|&gt;</span></span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates)</span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Method 2:</span></span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>enrollment_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/byui_enrollment.csv"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-19"><a href="#cb24-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb24-20"><a href="#cb24-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> <span class="fu">yearmonth</span>(<span class="fu">ym</span>(<span class="fu">paste</span>(year, term <span class="sc">*</span> <span class="dv">4</span> <span class="sc">-</span> <span class="dv">3</span>)))</span>
+<span id="cb24-21"><a href="#cb24-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb24-22"><a href="#cb24-22" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(semester, dates, enrollment) <span class="sc">|&gt;</span></span>
+<span id="cb24-23"><a href="#cb24-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates) </span>
+<span id="cb24-24"><a href="#cb24-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-25"><a href="#cb24-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Compute and plot the decomposition</span></span>
+<span id="cb24-26"><a href="#cb24-26" aria-hidden="true" tabindex="-1"></a>enrollment_decompose <span class="ot">&lt;-</span> enrollment_ts <span class="sc">|&gt;</span></span>
+<span id="cb24-27"><a href="#cb24-27" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(enrollment,</span>
+<span id="cb24-28"><a href="#cb24-28" aria-hidden="true" tabindex="-1"></a>        <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
+<span id="cb24-29"><a href="#cb24-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">components</span>()</span>
+<span id="cb24-30"><a href="#cb24-30" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(enrollment_decompose)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<!-- ### Moving Average -->
+<!-- We can use the following function to compute the moving average -->
+<!-- ```{r} -->
+<!-- # compute moving average -->
+<!-- compute_moving_average <- function(df, variable, periods = 12) { -->
+<!--   sum <- 0 -->
+<!--   for (i in 1:(periods / 2)) { -->
+<!--     sum <- sum + lead(eval(substitute(variable), df), i)           # x_{t+i} -->
+<!--     sum <- sum + lag(eval(substitute(variable), df), i)            # x_{t-i} -->
+<!--   } -->
+<!--   sum <- sum + eval(substitute(variable), df) -->
+<!--   sum <- sum - lag(eval(substitute(variable), df), periods / 2) / 2 -->
+<!--   sum <- sum - lead(eval(substitute(variable), df), periods / 2) / 2 -->
+<!--   df$m_hat <- sum / periods -->
+<!--   return(df) -->
+<!-- } -->
+<!-- crime_decomposition <- crime_monthly_ts |> -->
+<!--   compute_moving_average(value) -->
+<!-- ``` -->
+<!-- Here are the first few rows of this new file.  -->
+<!-- ```{r} -->
+<!-- #| echo: false -->
+<!-- crime_decomposition |> -->
+<!--   head(13) |> -->
+
+<!--   display_table() -->
+<!-- ``` -->
+<!-- ### Estimated Monthly Multiplicative Effect -->
+<!-- <!-- Check Your Understanding -->
+<p>–&gt;</p>
+<!-- ::: {.callout-tip icon=false title="Check Your Understanding"} -->
+<!-- -   Use the 12-month centered moving average computed above to calculate the estimated monthly multiplictive effect. -->
+<!-- -   Question1 -->
+<!-- -   Question2 -->
+<!-- ::: -->
+<!-- **Calculate Mean Crime Incidents Monthly by Year** -->
+<!-- ```{r} -->
+<!-- # Calculate mean annual total incidents -->
+<!-- crime_annual_ts <- crime_tsibble |> -->
+<!--   index_by(year = year(dates)) |> -->
+<!--   summarise(value = mean(incidents)) -->
+<!-- # Plot mean annual total incidents using autoplot -->
+<!-- autoplot(crime_annual_ts, .vars = value) + -->
+<!--   labs( -->
+<!--     x = "Year", -->
+<!--     y = "Mean Daily Crime Incidents", -->
+<!--     title = "Mean Daily Crime Incidents" -->
+<!--   ) + -->
+<!--   theme(plot.title = element_text(hjust = 0.5)) -->
+<!-- ``` -->
+<!-- **Monthly Boxplots of Total Crime Incidents** -->
+<!-- ```{r} -->
+<!-- # Create boxplots -->
+<!-- ggplot(crime_tsibble, aes(x = as.factor(month), y = incidents)) + -->
+<!--   geom_boxplot() + -->
+<!--   labs( -->
+<!--     x = "Month", -->
+<!--     y = "Total Crime Incidents", -->
+<!--     title = "Boxplots of Total Crime Incidents by Month" -->
+<!--   ) + -->
+<!--   theme(plot.title = element_text(hjust = 0.5)) -->
+<!-- ``` -->
+<!-- ## Estimating the Trend: Moving Average (5 min) -->
+<!-- ```{r} -->
+<!-- # Create a daily plot -->
+<!-- dp <- autoplot(crime_tsibble, .vars = incidents) + -->
+<!--     labs( -->
+<!--       x = "Month", -->
+<!--       y = "Total Crime Incidents", -->
+<!--       title = "Total Crime Incidents Over Time" -->
+<!--     ) + -->
+<!--     theme(plot.title = element_text(hjust = 0.5)) -->
+<!--   # Calculate mean monthly total incidents -->
+<!--   mean_monthly_incidents <- crime_tsibble |> -->
+<!--     as.data.frame() |> -->
+<!--     group_by(year, month) |> -->
+<!--     summarize(value = mean(incidents)) |> -->
+<!--   mutate(index = tsibble::yearmonth( mdy(paste0(month, "/15/", year)) )) |> -->
+<!--   as_tsibble(index = index) -->
+<!--   # Calculate mean annual total incidents -->
+<!--   mean_annual_incidents <- crime_tsibble |> -->
+<!--     as.data.frame() |> -->
+<!--     group_by(year) |> -->
+<!--     summarize(value = mean(incidents)) |> -->
+<!--   mutate(index = tsibble::yearmonth( mdy(paste0("7/1/",year)) )) |> -->
+<!--   as_tsibble(index = index) -->
+<!-- ``` -->
+<!-- ```{r} -->
+<!-- # Create a yearly plot -->
+<!--   yp <- ggplot(mean_annual_incidents, aes(x = year, y = value)) + -->
+<!--     geom_line() + -->
+<!--     labs( -->
+<!--       x = "Year", -->
+<!--       y = "Mean Total Crime Incidents", -->
+<!--       title = "Annual Mean Total Crime Incidents" -->
+<!--     ) + -->
+<!--     scale_x_continuous(breaks = seq(2004, max(crime_tsibble$year), by = 2)) + -->
+<!--     theme(plot.title = element_text(hjust = 0.5)) -->
+<!-- # Create a monthly plot -->
+<!--   mp <- ggplot(mean_monthly_incidents, aes(x = index, y = value)) + -->
+<!--     geom_line() + -->
+<!--     labs( -->
+<!--       x = "Year", -->
+<!--       y = "Mean Total Crime Incidents", -->
+<!--       title = "Monthly Mean Total Crime Incidents" -->
+<!--     ) + -->
+<!--     # scale_x_continuous(breaks = seq(2004, max(crime_tsibble$year), by = 2)) + -->
+<!--     theme(plot.title = element_text(hjust = 0.5)) -->
+<!--   # Display both simultaneously -->
+<!--   dp / mp -->
+<!--   dp / yp -->
+<!-- ``` -->
 </section>
 <section id="small-group-activity-decomposition-of-baltimore-crime-data-20-min" class="level2">
 <h2 class="anchored" data-anchor-id="small-group-activity-decomposition-of-baltimore-crime-data-20-min">Small Group Activity: Decomposition of Baltimore Crime Data (20 min)</h2>
@@ -354,8 +817,8 @@ Implement the Holt-Winter method to forecast time series
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>crime_df <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/baltimore_crime.csv"</span>)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="co">#crime_df &lt;- rio::import("data/baltimore_crime.parquet")</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>crime_df <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/baltimore_crime.csv"</span>)</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="co">#crime_df &lt;- rio::import("data/baltimore_crime.parquet")</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <p>The data set consists of 285807 rows and 12 columns. There are a few key variables:</p>
@@ -522,28 +985,28 @@ Check Your Understanding
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data Summary and Aggregation</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Group by dates column and summarize from Total.Incidents column</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>daily_summary_df <span class="ot">&lt;-</span> crime_df <span class="sc">|&gt;</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">dates =</span> CrimeDate) <span class="sc">|&gt;</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(dates) <span class="sc">|&gt;</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">incidents =</span> <span class="fu">sum</span>(Total.Incidents))</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Data Transformation and Formatting</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Select relevant columns, format dates, and arrange the data</span></span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>crime_data <span class="ot">&lt;-</span> daily_summary_df <span class="sc">|&gt;</span></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">dates =</span> <span class="fu">mdy</span>(dates)) <span class="sc">|&gt;</span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> <span class="fu">month</span>(dates),</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">day =</span> <span class="fu">day</span>(dates),</span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> <span class="fu">year</span>(dates)</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(dates, month, day, year, incidents) <span class="sc">|&gt;</span></span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(dates)</span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert formatted data to a tsibble with dates as the index</span></span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>crime_tsibble <span class="ot">&lt;-</span> <span class="fu">as_tsibble</span>(crime_data, <span class="at">index =</span> dates)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Data Summary and Aggregation</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Group by dates column and summarize from Total.Incidents column</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>daily_summary_df <span class="ot">&lt;-</span> crime_df <span class="sc">|&gt;</span></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">dates =</span> CrimeDate) <span class="sc">|&gt;</span></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(dates) <span class="sc">|&gt;</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">incidents =</span> <span class="fu">sum</span>(Total.Incidents))</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a><span class="co"># Data Transformation and Formatting</span></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Select relevant columns, format dates, and arrange the data</span></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>crime_data <span class="ot">&lt;-</span> daily_summary_df <span class="sc">|&gt;</span></span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">dates =</span> <span class="fu">mdy</span>(dates)) <span class="sc">|&gt;</span></span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> <span class="fu">month</span>(dates),</span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">day =</span> <span class="fu">day</span>(dates),</span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> <span class="fu">year</span>(dates)</span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb26-18"><a href="#cb26-18" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(dates, month, day, year, incidents) <span class="sc">|&gt;</span></span>
+<span id="cb26-19"><a href="#cb26-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(dates)</span>
+<span id="cb26-20"><a href="#cb26-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-21"><a href="#cb26-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert formatted data to a tsibble with dates as the index</span></span>
+<span id="cb26-22"><a href="#cb26-22" aria-hidden="true" tabindex="-1"></a>crime_tsibble <span class="ot">&lt;-</span> <span class="fu">as_tsibble</span>(crime_data, <span class="at">index =</span> dates)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <p>Here are a few rows of the summarized data.</p>
@@ -607,16 +1070,16 @@ Check Your Understanding
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>crime_data <span class="sc">|&gt;</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">month_char =</span> <span class="fu">format</span>(<span class="fu">as.Date</span>(dates), <span class="st">'%b'</span>) ) <span class="sc">|&gt;</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(month, month_char, year) <span class="sc">|&gt;</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">n =</span> <span class="fu">n</span>(), <span class="at">.groups =</span> <span class="st">"keep"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>() <span class="sc">|&gt;</span></span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(year, month) <span class="sc">|&gt;</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>month) <span class="sc">|&gt;</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Year =</span> year) <span class="sc">|&gt;</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> month_char, <span class="at">values_from =</span> n) <span class="sc">|&gt;</span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>crime_data <span class="sc">|&gt;</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">month_char =</span> <span class="fu">format</span>(<span class="fu">as.Date</span>(dates), <span class="st">'%b'</span>) ) <span class="sc">|&gt;</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(month, month_char, year) <span class="sc">|&gt;</span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">n =</span> <span class="fu">n</span>(), <span class="at">.groups =</span> <span class="st">"keep"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>() <span class="sc">|&gt;</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(year, month) <span class="sc">|&gt;</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>month) <span class="sc">|&gt;</span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">Year =</span> year) <span class="sc">|&gt;</span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> month_char, <span class="at">values_from =</span> n) <span class="sc">|&gt;</span></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <table class="table table-striped table-sm small" data-quarto-postprocess="true">
@@ -756,20 +1219,20 @@ Check Your Understanding
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Time series plot of total incidents over time</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>crime_plot <span class="ot">&lt;-</span> <span class="fu">autoplot</span>(crime_tsibble, <span class="at">.vars =</span> incidents) <span class="sc">+</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Time"</span>,</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Total Crime Incidents"</span>,</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Total Crime Incidents Over Time"</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the plot</span></span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>crime_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Time series plot of total incidents over time</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>crime_plot <span class="ot">&lt;-</span> <span class="fu">autoplot</span>(crime_tsibble, <span class="at">.vars =</span> incidents) <span class="sc">+</span></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Time"</span>,</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Total Crime Incidents"</span>,</span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Total Crime Incidents Over Time"</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the plot</span></span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a>crime_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <!-- Check Your Understanding -->
@@ -801,263 +1264,32 @@ Check Your Understanding
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>crime_monthly_ts <span class="ot">&lt;-</span> crime_tsibble <span class="sc">|&gt;</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">index_by</span>(<span class="at">month_year =</span> <span class="fu">floor_date</span>(<span class="fu">as_date</span>(dates), <span class="st">"month"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">value =</span> <span class="fu">sum</span>(incidents))</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot mean annual total incidents using autoplot</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(crime_monthly_ts, <span class="at">.vars =</span> value) <span class="sc">+</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Year"</span>,</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Total Monthly Crime Incidents"</span>,</span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>crime_monthly_ts <span class="ot">&lt;-</span> crime_tsibble <span class="sc">|&gt;</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">index_by</span>(<span class="at">month_year =</span> <span class="fu">floor_date</span>(<span class="fu">as_date</span>(dates), <span class="st">"month"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">value =</span> <span class="fu">sum</span>(incidents))</span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot mean annual total incidents using autoplot</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(crime_monthly_ts, <span class="at">.vars =</span> value) <span class="sc">+</span></span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Year"</span>,</span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Total Monthly Crime Incidents"</span>,</span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>There is incomplete data for 2016, as data were not provided after 11/12/2016. We will only consider data through January 2016. <!-- ~ --> <!-- This is hard-coded.. --> We will omit any data after October 2016.</p>
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>crime_monthly_ts <span class="ot">&lt;-</span> crime_monthly_ts <span class="sc">|&gt;</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(month_year <span class="sc">&lt;</span> <span class="fu">mdy</span>(<span class="st">"10/31/2016"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>crime_monthly_ts <span class="ot">&lt;-</span> crime_monthly_ts <span class="sc">|&gt;</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(month_year <span class="sc">&lt;</span> <span class="fu">mdy</span>(<span class="st">"10/31/2016"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
+<!-- ## TO BE CONTINUED.... -->
 </section>
-<section id="moving-average" class="level3">
-<h3 class="anchored" data-anchor-id="moving-average">Moving Average</h3>
-<p>We can use the following function to compute the moving average</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># compute moving average</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>compute_moving_average <span class="ot">&lt;-</span> <span class="cf">function</span>(df, variable, <span class="at">periods =</span> <span class="dv">12</span>) {</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  sum <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>(periods <span class="sc">/</span> <span class="dv">2</span>)) {</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    sum <span class="ot">&lt;-</span> sum <span class="sc">+</span> <span class="fu">lead</span>(<span class="fu">eval</span>(<span class="fu">substitute</span>(variable), df), i)           <span class="co"># x_{t+i}</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    sum <span class="ot">&lt;-</span> sum <span class="sc">+</span> <span class="fu">lag</span>(<span class="fu">eval</span>(<span class="fu">substitute</span>(variable), df), i)            <span class="co"># x_{t-i}</span></span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  sum <span class="ot">&lt;-</span> sum <span class="sc">+</span> <span class="fu">eval</span>(<span class="fu">substitute</span>(variable), df)</span>
-<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  sum <span class="ot">&lt;-</span> sum <span class="sc">-</span> <span class="fu">lag</span>(<span class="fu">eval</span>(<span class="fu">substitute</span>(variable), df), periods <span class="sc">/</span> <span class="dv">2</span>) <span class="sc">/</span> <span class="dv">2</span></span>
-<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  sum <span class="ot">&lt;-</span> sum <span class="sc">-</span> <span class="fu">lead</span>(<span class="fu">eval</span>(<span class="fu">substitute</span>(variable), df), periods <span class="sc">/</span> <span class="dv">2</span>) <span class="sc">/</span> <span class="dv">2</span></span>
-<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>  df<span class="sc">$</span>m_hat <span class="ot">&lt;-</span> sum <span class="sc">/</span> periods</span>
-<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(df)</span>
-<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>crime_decomposition <span class="ot">&lt;-</span> crime_monthly_ts <span class="sc">|&gt;</span></span>
-<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">compute_moving_average</span>(value)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Here are the first few rows of this new file.</p>
-<div class="cell">
-<div class="cell-output-display">
-<table class="table table-striped table-sm small" data-quarto-postprocess="true">
-<thead>
-<tr class="header">
-<th style="text-align: center;" data-quarto-table-cell-role="th">month_year</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">value</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">m_hat</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">2011-01-01</td>
-<td style="text-align: center; min-width: 0in;">3440</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
-</tr>
-<tr class="even">
-<td style="text-align: center; min-width: 0in;">2011-02-01</td>
-<td style="text-align: center; min-width: 0in;">3108</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
-</tr>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">2011-03-01</td>
-<td style="text-align: center; min-width: 0in;">4269</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
-</tr>
-<tr class="even">
-<td style="text-align: center; min-width: 0in;">2011-04-01</td>
-<td style="text-align: center; min-width: 0in;">4149</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
-</tr>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">2011-05-01</td>
-<td style="text-align: center; min-width: 0in;">4516</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
-</tr>
-<tr class="even">
-<td style="text-align: center; min-width: 0in;">2011-06-01</td>
-<td style="text-align: center; min-width: 0in;">4427</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
-</tr>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">2011-07-01</td>
-<td style="text-align: center; min-width: 0in;">4669</td>
-<td style="text-align: center; min-width: 0in;">4237.500</td>
-</tr>
-<tr class="even">
-<td style="text-align: center; min-width: 0in;">2011-08-01</td>
-<td style="text-align: center; min-width: 0in;">4574</td>
-<td style="text-align: center; min-width: 0in;">4264.500</td>
-</tr>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">2011-09-01</td>
-<td style="text-align: center; min-width: 0in;">4377</td>
-<td style="text-align: center; min-width: 0in;">4276.292</td>
-</tr>
-<tr class="even">
-<td style="text-align: center; min-width: 0in;">2011-10-01</td>
-<td style="text-align: center; min-width: 0in;">4644</td>
-<td style="text-align: center; min-width: 0in;">4270.583</td>
-</tr>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">2011-11-01</td>
-<td style="text-align: center; min-width: 0in;">4411</td>
-<td style="text-align: center; min-width: 0in;">4269.000</td>
-</tr>
-<tr class="even">
-<td style="text-align: center; min-width: 0in;">2011-12-01</td>
-<td style="text-align: center; min-width: 0in;">4067</td>
-<td style="text-align: center; min-width: 0in;">4269.042</td>
-</tr>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">2012-01-01</td>
-<td style="text-align: center; min-width: 0in;">3838</td>
-<td style="text-align: center; min-width: 0in;">4252.875</td>
-</tr>
-</tbody>
-</table>
-
-
-</div>
-</div>
-</section>
-<section id="estimated-monthly-multiplicative-effect" class="level3">
-<h3 class="anchored" data-anchor-id="estimated-monthly-multiplicative-effect">Estimated Monthly Multiplicative Effect</h3>
-<!-- Check Your Understanding -->
-<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon no-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Check Your Understanding
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<ul>
-<li>Use the 12-month centered moving average computed above to calculate the estimated monthly multiplictive effect.</li>
-<li>Question1</li>
-<li>Question2</li>
-</ul>
-</div>
-</div>
-<p><strong>Calculate Mean Crime Incidents Monthly by Year</strong></p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate mean annual total incidents</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>crime_annual_ts <span class="ot">&lt;-</span> crime_tsibble <span class="sc">|&gt;</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">index_by</span>(<span class="at">year =</span> <span class="fu">year</span>(dates)) <span class="sc">|&gt;</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">value =</span> <span class="fu">mean</span>(incidents))</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot mean annual total incidents using autoplot</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(crime_annual_ts, <span class="at">.vars =</span> value) <span class="sc">+</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Year"</span>,</span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Mean Daily Crime Incidents"</span>,</span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Mean Daily Crime Incidents"</span></span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-<p><strong>Monthly Boxplots of Total Crime Incidents</strong></p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create boxplots</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(crime_tsibble, <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">as.factor</span>(month), <span class="at">y =</span> incidents)) <span class="sc">+</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_boxplot</span>() <span class="sc">+</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Month"</span>,</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Total Crime Incidents"</span>,</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Boxplots of Total Crime Incidents by Month"</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-14-1.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-</section>
-</section>
-<section id="estimating-the-trend-moving-average-5-min" class="level2">
-<h2 class="anchored" data-anchor-id="estimating-the-trend-moving-average-5-min">Estimating the Trend: Moving Average (5 min)</h2>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a daily plot</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>dp <span class="ot">&lt;-</span> <span class="fu">autoplot</span>(crime_tsibble, <span class="at">.vars =</span> incidents) <span class="sc">+</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Total Crime Incidents"</span>,</span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Total Crime Incidents Over Time"</span></span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate mean monthly total incidents</span></span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  mean_monthly_incidents <span class="ot">&lt;-</span> crime_tsibble <span class="sc">|&gt;</span></span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as.data.frame</span>() <span class="sc">|&gt;</span></span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(year, month) <span class="sc">|&gt;</span></span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarize</span>(<span class="at">value =</span> <span class="fu">mean</span>(incidents)) <span class="sc">|&gt;</span></span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>( <span class="fu">mdy</span>(<span class="fu">paste0</span>(month, <span class="st">"/15/"</span>, year)) )) <span class="sc">|&gt;</span></span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>`summarise()` has grouped output by 'year'. You can override using the
-`.groups` argument.</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate mean annual total incidents</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  mean_annual_incidents <span class="ot">&lt;-</span> crime_tsibble <span class="sc">|&gt;</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as.data.frame</span>() <span class="sc">|&gt;</span></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>(year) <span class="sc">|&gt;</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarize</span>(<span class="at">value =</span> <span class="fu">mean</span>(incidents)) <span class="sc">|&gt;</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>( <span class="fu">mdy</span>(<span class="fu">paste0</span>(<span class="st">"7/1/"</span>,year)) )) <span class="sc">|&gt;</span></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a yearly plot</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  yp <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(mean_annual_incidents, <span class="fu">aes</span>(<span class="at">x =</span> year, <span class="at">y =</span> value)) <span class="sc">+</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>() <span class="sc">+</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Year"</span>,</span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Mean Total Crime Incidents"</span>,</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Annual Mean Total Crime Incidents"</span></span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(<span class="dv">2004</span>, <span class="fu">max</span>(crime_tsibble<span class="sc">$</span>year), <span class="at">by =</span> <span class="dv">2</span>)) <span class="sc">+</span></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a monthly plot</span></span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>  mp <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(mean_monthly_incidents, <span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> value)) <span class="sc">+</span></span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>() <span class="sc">+</span></span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Year"</span>,</span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Mean Total Crime Incidents"</span>,</span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Monthly Mean Total Crime Incidents"</span></span>
-<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
-<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>    <span class="co"># scale_x_continuous(breaks = seq(2004, max(crime_tsibble$year), by = 2)) +</span></span>
-<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
-<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Display both simultaneously</span></span>
-<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>  dp <span class="sc">/</span> mp</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid" width="672"></p>
-</div>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>  dp <span class="sc">/</span> yp</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="chapter_3_lesson_3_files/figure-html/unnamed-chunk-16-2.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-</section>
-<section id="to-be-continued." class="level2">
-<h2 class="anchored" data-anchor-id="to-be-continued.">TO BE CONTINUED….</h2>
 </section>
 <section id="homework-preview-5-min" class="level2">
 <h2 class="anchored" data-anchor-id="homework-preview-5-min">Homework Preview (5 min)</h2>
@@ -1068,8 +1300,8 @@ Check Your Understanding
 <p><a href="javascript:showhide('Solutions0')" style="font-size:.8em;">Balitmore Crime Time Plot</a></p>
 <div id="Solutions0" style="display:none;">
 <div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Dates with high criminal activity</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>crime_data <span class="sc">|&gt;</span> <span class="fu">arrange</span>(<span class="fu">desc</span>(incidents)) <span class="sc">|&gt;</span> <span class="fu">head</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Dates with high criminal activity</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>crime_data <span class="sc">|&gt;</span> <span class="fu">arrange</span>(<span class="fu">desc</span>(incidents)) <span class="sc">|&gt;</span> <span class="fu">head</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 6 × 5
   dates      month   day  year incidents
