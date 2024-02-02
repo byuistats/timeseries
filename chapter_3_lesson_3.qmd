@@ -44,7 +44,91 @@ source("common_functions.R")
 
 ## Introduction to the Holt-Winters Method (Additive Model)
 
-seasonal component (that may change from time to time,) and the
+### From EWMA to Holt-Winters
+
+#### Simple Exponential Smoothing (EWMA)
+
+The exponential weighted moving average (EWMA) is a simple method for smoothing (or filtering) a time series. We update the estimate of the level of the time series as:
+
+$$
+  a_t = \alpha x_t + (1-\alpha) a_{t-1}
+$$
+
+where $a_t$ is the estimate of the level of the time series at time $t$ and $0 \le \alpha \le 1$ is the smoothing paramter.
+
+This is known as the *level update equation*, because at each time step, we can update our estimate of the level (or the center) of the time series. 
+It is called exponential smoothing, because at each preceding value has exponentially decreasing influence on the estimate.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Explain the level update equation to your partner.
+
+:::
+
+These computations are based on previous values and $a_1 = x_1$. The number $0 \le \alpha \le 1$ is a smoothing parameter. This determines how much weight is given to previous values when creating the updated level estimate.
+
+If you were to use this model for forecasting, you would not be able to consider any trend or seasonality in the forecast. Hence, the future values would all be forecasted as the last value of $a_n$:
+
+$$
+  \hat x_{n+k|n} = a_n
+$$
+where $\hat x_{n+k \mid n}$ is the estimate of the time series $k$ time units in the future past time $t=n$.
+Frankly, this is not very useful, because many time series have trends or seasonality.
+
+#### Holt's Exponential Smoothing
+
+In 1957, Charles Holt published a new procedure that introduced a trend into this model. The forecasted values were:
+
+$$
+  \hat x_{n+k|n} = a_n + k b_n
+$$
+
+where $b_n$ is the slope indicating how much the time series changes on average from one time point to another and $k$ is the number of time periods past $t=n$ you are forecasting.
+
+The slope update equation is:
+
+$$
+  b_t = \beta \left( a_t - a_{t-1} \right) + (1-\beta) b_{n-1}
+$$
+
+where $0 \le \beta \le 1$ is a smoothing parameter, $b_t$ is the slope estimate at time $t$, and $a_t$ is the estimate of the level of the time series at time $t$.
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Explain the slope update equation to your partner.
+
+:::
+
+#### Winter's Exponential Smoothing (Holt-Winters Filtering)
+
+Peter Winters was a colleague of Holt's at the Carnagie Institute of Technology. In 1960, he publised a revision of Winters' technique that allowed for seasonal variation. This is known as the *Holt-Winters Method* or *Holt-Winters Filtering*. The forecasting equation is:
+
+$$
+  \hat x_{n+k|n} = a_n + k b_n + s_{n+k-p}
+$$
+
+where $\hat x_{n+k|n}$ is the forecasted value of the time series $k$ units in the future after time $t=n$, and the time series is assumed to have seasonality with a period of $p$ time units; $a_n$ is the level of the time series at time $t=n$; $b_n$ is the slope of the time series at time $t=n$; and $s_{n+k-p}$ is the estimated seasonal component at time $t=n+k$. Note that we must look back one full period to get the estimated seasonal component.
+
+We will practice forecasting, before we discuss how to get the values of $a_t$, $b_t$, and $s_t$.
+
+The Holt-Winters method was applied to the chocolate search data. This table summarizes the results for the end of the time series.
+
+```{r}
+
+```
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+
+-   Explain the slope update equation to your partner.
+
+:::
 
 The Holt-Winters method provides a way to model a time series in which we consider the time series in layers. first, there is the level (the smoothed $x_t$ values from the time series) at time $t$. We will denote the *level* by $a_t$. The level can change from time to time.
 We introduce a value $b_n$, which we call the *slope*. This is the change in the level of the series from one time period to another. (As the book points out, R and many textbooks call the slope the *trend*.) 
@@ -69,6 +153,7 @@ holt_winters_additive_forecast <- function(data, alpha = 0.2, beta = 0.2, gamma 
   bt[1] <- ifelse(!is.null(b1), b1, (1 / p) * mean( data$value[(p+1):(2*p)] - data$value[1:p] )) 
   st[1:p] <- ifelse(!is.null(s1), s1, 0)
   
+  # First cycle
   for (t in 2:p) {
     at[t] <- alpha * (data$value[t] - st[t - 0 * p ]) + (1 - alpha) * (at[t - 1] + bt[t - 1])
     bt[t] <- beta * (at[t] - at[t - 1]) + (1 - beta) * bt[t - 1]
@@ -159,30 +244,30 @@ holt_winters_additive_plot <- function(data) {
 # }
 ```
 
-#### I THINK THIS IS THE WRONG ONE...
+<!-- #### I THINK THIS IS THE WRONG ONE... -->
 
-```{r}
-a <- function(t) { 100 }
-b <- function(t) { 1/2 }
-s <- function(t) { (t %% 4 == 2) * 3 }
-x <- function(t) { a(t) + t * b(t) + s(t) }
-n_months <- 12
+<!-- ```{r} -->
+<!-- a <- function(t) { 100 } -->
+<!-- b <- function(t) { 1/2 } -->
+<!-- s <- function(t) { (t %% 4 == 2) * 3 } -->
+<!-- x <- function(t) { a(t) + t * b(t) + s(t) } -->
+<!-- n_months <- 12 -->
 
-start_date <- my(paste(1, floor(year(now())-n_months/12)))
-date_seq <- seq(start_date,
-    start_date + months(n_months - 1),
-    by = "1 months")
-date_seq
+<!-- start_date <- my(paste(1, floor(year(now())-n_months/12))) -->
+<!-- date_seq <- seq(start_date, -->
+<!--     start_date + months(n_months - 1), -->
+<!--     by = "1 months") -->
+<!-- date_seq -->
 
-temp_ts <- data.frame(date = yearmonth(date_seq), value = x(1:n_months)) |>
-  as_tsibble(index = date)
-temp_ts |>
-  autoplot(.vars = value)
-temp1 <- holt_winters_additive_forecast(temp_ts, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 4, b1=NULL, s1 = 0)
-temp1 %>% as_tibble()
-# holt_winters_additive_forecast_plot(temp1)
-holt_winters_additive_plot(temp1)
-```
+<!-- temp_ts <- data.frame(date = yearmonth(date_seq), value = x(1:n_months)) |> -->
+<!--   as_tsibble(index = date) -->
+<!-- temp_ts |> -->
+<!--   autoplot(.vars = value) -->
+<!-- temp1 <- holt_winters_additive_forecast(temp_ts, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 4, b1=NULL, s1 = 0) -->
+<!-- temp1 %>% as_tibble() -->
+<!-- # holt_winters_additive_forecast_plot(temp1) -->
+<!-- holt_winters_additive_plot(temp1) -->
+<!-- ``` -->
 
 #### This is the right one
 
@@ -246,6 +331,12 @@ ggplot(temp2, aes(x = date)) +
 
 ```
 
+
+# TEMP 1
+
+```{r}
+temp1
+```
 
 
 Now, suppose we want to use this estimated curve to forecast future values of the time series.
@@ -803,3 +894,9 @@ stuff <- "here"
 
 :::
 
+
+
+## References
+
+-   C. C. Holt (1957) Forecasting seasonals and trends by exponentially weighted moving averages, ONR Research Memorandum, Carnegie Institute of Technology 52. (reprint at https://doi.org/10.1016/j.ijforecast.2003.09.015).
+-   P. R. Winters (1960). Forecasting sales by exponentially weighted moving averages. Management Science, 6, 324--342. 10.1287/mnsc.6.3.324.
