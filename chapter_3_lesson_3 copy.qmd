@@ -1,0 +1,393 @@
+---
+title: "Holt-Winters Method (Additive Model)"
+subtitle: "Chapter 3: Lesson 3"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+
+## Data  Months
+
+GROUPED BY Months total incidents
+
+```{r, warning=FALSE}
+df <- read.csv("https://byuistats.github.io/timeseries/data/baltimore_crime.csv", 
+               header=TRUE,
+               stringsAsFactors=FALSE)
+
+summary_df <- df %>%
+  group_by(CrimeDate) %>%
+  summarise(
+    total_incidents = sum(Total.Incidents)
+  )
+
+crime_data <- summary_df %>%
+  mutate(date = as.yearmon(as.Date(CrimeDate, format = "%m/%d/%Y"))) %>%
+  group_by(date) %>% 
+  summarise(
+    monthly_incidents = sum(total_incidents)
+  ) %>%
+  arrange(date)
+
+# Getting rid of the last row
+crime_data <- crime_data[-nrow(crime_data), ]
+
+crime_data$date <- yearmonth(crime_data$date)
+
+crime_tsibble <- as_tsibble(crime_data, index = date)
+
+```
+
+## Total Daily Average
+
+```{r}
+df1 <- read.csv("https://byuistats.github.io/timeseries/data/baltimore_crime.csv", 
+               header=TRUE,
+               stringsAsFactors=FALSE)
+
+summary_df <- df1 %>%
+  group_by(CrimeDate) %>%
+  summarise(
+    total_incidents = sum(Total.Incidents)
+  )
+
+crime_data <- summary_df %>%
+  mutate(date = as.Date(CrimeDate, format = "%m/%d/%Y")) %>%
+  group_by(date) %>% 
+  summarise(
+    total_incidents = sum(total_incidents),
+    days_in_month = max(day(date))  # Number of days in the month
+  ) %>%
+  arrange(date)
+
+# Calculate the total daily average
+crime_data <- crime_data %>%
+  mutate(total_daily_average = total_incidents / days_in_month)
+
+crime_data$date <- yearmonth(crime_data$date)
+
+crime_data
+
+```
+
+
+
+
+## Holt Winter's Additive Model
+
+```{r, warning=FALSE}
+holt_winters_smoothing <- function(data, value_column, date_column, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 12, a1 = NULL, b1 = NULL, s1 = NULL) {
+  
+  at <- numeric(nrow(data))
+  bt <- numeric(nrow(data))
+  st <- numeric(nrow(data))
+
+  at[1] <- ifelse(!is.null(a1), a1, data[[value_column]][1])
+  bt[1] <- ifelse(!is.null(b1), b1, (1 / p) * mean(data[[value_column]][(p + 1):(2 * p)] - data[[value_column]][1:p]))
+  st[1:p] <- ifelse(!is.null(s1), s1, 0)
+
+  # First cycle
+  for (t in 2:p) {
+    at[t] <- alpha * (data[[value_column]][t] - st[t - 0 * p]) + (1 - alpha) * (at[t - 1] + bt[t - 1])
+    bt[t] <- beta * (at[t] - at[t - 1]) + (1 - beta) * bt[t - 1]
+  }
+
+  for (t in (p + 1):nrow(data)) {
+    at[t] <- alpha * (data[[value_column]][t] - st[t - p]) + (1 - alpha) * (at[t - 1] + bt[t - 1])
+    bt[t] <- beta * (at[t] - at[t - 1]) + (1 - beta) * bt[t - 1]
+    st[t] <- gamma * (data[[value_column]][t] - at[t]) + (1 - gamma) * st[t - p]
+  }
+
+  data <- data %>%
+    mutate(estimated_level = at, estimated_slope = bt, estimated_seasonal = st)
+
+  data %>% return()
+}
+```
+
+
+
+
+## Forecasting Model 
+
+```{r}
+forecast_model <- function(data, incidents, p, k) {
+  start_date <- ym(max(data$date)) + months(1)
+  date_seq <- seq(start_date, start_date + months(16 - 1), by = "1 months")
+  
+  tail1 <- data %>%
+    mutate(n = row_number()) %>% 
+    tail(1)
+  
+  an <- tail1$estimated_level[1]
+  bn <- tail1$estimated_slope[1]
+  n <- tail1$n[1]
+  
+  temp2 <- data %>% 
+    bind_rows(data.frame(date = date_seq, monthly_incidents = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA)) %>% 
+    mutate(forecast = as.numeric(NA))
+  
+  temp2$forecast[n] <- temp2$estimated_level[n] + temp2$estimated_seasonal[n]
+
+  for (k in (n+1):(n+16)) {
+    temp2$estimated_seasonal[k] <- temp2$estimated_seasonal[k - 4]
+    temp2$forecast[k] <- an + (k - n) * bn + temp2$estimated_seasonal[k]
+  }
+
+  return(temp2)
+}
+
+
+```
+
+
+
+## Plot Estimated Values
+
+```{r, warning=FALSE}
+holt_winters_additive_plot <- function(data, value_column = "monthly_incidents") {
+  # Plot 1: Just 'data$estimated_level'
+  plot_at <- ggplot(data, aes(x = date, y = estimated_level)) +
+    geom_line(color = "blue", size = 1) +
+    labs(
+      x = "Date",
+      y = "Level (at)",
+      title = NULL
+    ) +
+    theme_minimal()
+
+  # Plot 2: Just 'data$estimated_slope'
+  plot_bt <- ggplot(data, aes(x = date, y = estimated_slope)) +
+    geom_line(color = "red", size = 1) +
+    labs(
+      x = "Date",
+      y = "Slope (bt)",
+      title = NULL
+    ) +
+    theme_minimal()
+
+  # Plot 3: Just 'data$estimated_seasonal'
+  plot_st <- ggplot(data, aes(x = date, y = estimated_seasonal)) +
+    geom_line(color = "green", size = 1) +
+    labs(
+      x = "Date",
+      y = "Seasonal (st)",
+      title = NULL
+    ) +
+    theme_minimal()
+
+  # Plot 4: Original trendline with 'data$estimated_level'
+  plot_combined <- ggplot(data, aes(x = date)) +
+    geom_line(aes(y = !!sym(value_column)), color = "black", size = 1) +
+    geom_line(aes(y = estimated_level, color = "Combined", alpha=0.5), size = 1) +
+    labs(
+      x = "Date",
+      y = "Value",
+      title = NULL,
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none")
+
+  return(list(plot_at, plot_bt, plot_st, plot_combined))
+}
+
+```
+
+
+## Forcasting Future Plot
+```{r}
+
+plot_with_forecast <- function(temp2, value, forecast = FALSE) {
+  if (forecast) {
+    ggplot(temp2, aes(x = date)) +
+      geom_line(aes(y = .data[[value]]), color = "black", size = 1, na.rm = TRUE) +
+      geom_line(aes(y = estimated_level + estimated_seasonal, color = "Combined", alpha = 0.5), size = 1, na.rm = TRUE) +
+      geom_line(aes(y = forecast), color = "#E69F00", linetype = "dashed", size = 1, alpha = 0.5, na.rm = TRUE) +
+      labs(
+        x = "Date",
+        y = "Value",
+        title = NULL,
+        color = "#E69F00"
+      ) +
+      theme_minimal() +
+      theme(legend.position = "none")
+  } else {
+    ggplot(temp2, aes(x = date)) +
+      geom_line(aes(y = .data[[value]]), color = "black", size = 1, na.rm = TRUE) +
+      labs(
+        x = "Date",
+        y = "Value",
+        title = NULL
+      ) +
+      theme_minimal()
+  }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###THIS IS THE RIGHT ONE
+ 
+# David Code to Make Function of each part :) 
+```{r}
+generate_data <- function(n_months = 36, start_month = now()) {
+  a <- function(t) { 100 }
+  b <- function(t) { 1/2 }
+  s <- function(t) { (t %% 4 == 2) * 3 }
+  x <- function(t) { a(t) + (t-1) * b(t) + s(t) }
+
+  start_date <- my(paste(1, floor(year(start_month)-n_months/12)))
+  date_seq <- seq(start_date, start_date + months(n_months - 1), by = "1 months")
+
+  temp_ts <- data.frame(date = yearmonth(date_seq), value = x(1:n_months)) |>
+    as_tsibble(index = date)
+
+  return(temp_ts)
+}
+```
+
+
+```{r}
+plot_with_forecast <- function(temp_ts, forecast = FALSE, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 4, s1 = 0) {
+  temp1 <- holt_winters_additive_forecast(temp_ts, alpha = alpha, beta = beta, gamma = gamma, p = p, s1 = s1)
+
+  start_date <- ym(max(temp1$date)) + months(1)
+  date_seq <- seq(start_date, start_date + months(16 - 1), by = "1 months")
+
+  tail1 <- temp1 %>% mutate(n = row_number()) %>% tail(1)
+  an <- tail1$estimated_level[1]
+  bn <- tail1$estimated_slope[1]
+  n <- tail1$n[1]
+
+  temp2 <- temp1 %>% 
+    bind_rows(data.frame(date = date_seq, value = NA, month = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA)) %>% 
+    mutate(forecast = as.numeric(NA))
+
+  temp2$forecast[n] <- temp2$estimated_level[n] + temp2$estimated_seasonal[n]
+
+  for (k in (n+1):(n+16)) {
+    temp2$estimated_seasonal[k] <- temp2$estimated_seasonal[k - 4]
+    temp2$forecast[k] <- an + (k - n) * bn + temp2$estimated_seasonal[k]
+  }
+
+  if (forecast) {
+    ggplot(temp2, aes(x = date)) +
+    geom_line(aes(y = value), color = "black", size = 1, na.rm = TRUE) +
+    geom_line(aes(y = estimated_level + estimated_seasonal, color = "Combined", alpha=0.5), size = 1, na.rm = TRUE) +
+    geom_line(aes(y = forecast), color = "#E69F00", linetype = "dashed", size = 1, alpha=0.5, na.rm = TRUE) +
+    labs(
+      x = "Date",
+      y = "Value",
+      title = NULL,
+      color = "#E69F00"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none")
+}
+ else {
+    ggplot(temp2, aes(x = date)) +
+      geom_line(aes(y = value), color = "black", size = 1, na.rm = TRUE) +
+      labs(
+        x = "Date",
+        y = "Value",
+        title = NULL
+      ) +
+      theme_minimal()
+  }
+}
+
+```
+
+
+
+```{r}
+plot_with_forecast(generate_data(), forecast = FALSE)
+```
+
+```{r}
+plot_with_forecast(generate_data(), forecast = TRUE, alpha = .9, beta = .2, gamma = .2)
+```
+
+
+
+
+
+
+## Forecast (Additive) 
+
+
+#### Additive seasonality Model
+- **Alpha** = 0.9
+- **Beta** = 0.2
+- **Gamma** = 0.2
+
+```{r}
+smooth_data <- holt_winters_smoothing(crime_tsibble, value_column = "monthly_incidents", date_column = date, alpha = .9, beta = .2, gamma = .2)
+smooth_data
+```
+
+#### Plot Estimated Values
+```{r}
+plots <- holt_winters_additive_plot(smooth_data, value_column =  "monthly_incidents")
+```
+
+#### Forecast Model
+
+```{r}
+forc_data <- forecast_model(smooth_data)
+forc_data
+```
+
+
+#### Additive seasonality Model Plot
+
+* Parameter set to True to show, False to not show
+
+```{r}
+plot_with_forecast(forc_data, value = "monthly_incidents", forecast = TRUE) # CHANGE THIS TO TRUE OR FALSE
+```
+
+
+
