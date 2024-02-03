@@ -93,7 +93,6 @@ $$
 
 where $0 \le \beta \le 1$ is a smoothing parameter, $b_t$ is the slope estimate at time $t$, and $a_t$ is the estimate of the level of the time series at time $t$.
 
-
 <!-- Check Your Understanding -->
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
@@ -102,15 +101,247 @@ where $0 \le \beta \le 1$ is a smoothing parameter, $b_t$ is the slope estimate 
 
 :::
 
-### Holt-Winters Filtering (Winter's Exponential Smoothing)
+### Holt-Winters Filtering (Winters' Exponential Smoothing)
 
-Peter Winters was a colleague of Holt's at the Carnagie Institute of Technology. In 1960, he published an enhancement of Winters' technique that allowed for seasonal variation. This is known as the **Holt-Winters Method** or **Holt-Winters Filtering**. The forecasting equation is:
+Peter Winters was a colleague of Holt's at the Carnagie Institute of Technology. In 1960, he published an enhancement of Winters' technique that allowed for seasonal variation. This is known as the **Holt-Winters Method** or **Holt-Winters Filtering**. 
+
+#### Forecast Equation
+
+The forecast equation is:
 
 $$
   \hat x_{n+k|n} = a_n + k b_n + s_{n+k-p}
 $$
 
 where $\hat x_{n+k|n}$ is the forecasted value of the time series $k$ units in the future after time $t=n$, and the time series is assumed to have seasonality with a period of $p$ time units; $a_n$ is the level of the time series at time $t=n$; $b_n$ is the slope of the time series at time $t=n$; and $s_{n+k-p}$ is the estimated seasonal component at time $t=n+k$. Note that we must look back one full period to get the estimated seasonal component.
+
+#### Update Equations
+
+There are three update equations, one each for $a_t$ (level), $b_t$ (slope), and $s_t$ (seasonal component).
+
+\begin{align*}
+  a_t &= \alpha \left( x_t - s_{t-p} \right) + (1-\alpha) \left( a_{t-1} + b_{t-1} \right) \\
+  b_t &= \beta \left( a_t - a_{t-1} \right) + (1-\beta) b_{t-1} \\
+  s_t &= \gamma \left( x_t - a_t \right) + (1-\gamma) s_{t-p}
+\end{align*}
+
+where $\{x_t\}$ is a time series from $t=1$ to $t=n$ that has seasonality with a period of $p$ time units; at time $t$, $a_t$ is the estimated level of the time series, $b_t$ is the estimated slope, and $s_t$ is the estimated seasonal component; and $\alpha$, $\beta$, and $\gamma$ are parameters (all between 0 and 1).
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Consider the following update equations and answer the questions associated with each.
+
+$$
+a_t = \alpha \cdot \underbrace{ \left( x_t - s_{t-p} \right) }_{A} + (1-\alpha) \cdot  \underbrace{ \left( a_{t-1} + b_{t-1} \right) }_{B} 
+$$
+
+-   Interpret the term $A = x_t - s_{t-p}$.
+-   Interpret the term $B = a_{t-1} - b_{t-1}$.
+-   Explain why this expression for $a_t$ estimates the level of the time series at time $t$.
+
+$$
+b_t = \beta \cdot \underbrace{ \left( a_t - a_{t-1} \right) }_{C} + (1-\beta) \cdot \underbrace{ b_{t-1} }_{D}
+$$
+
+-   Interpret the term $C = a_t - a_{t-1}$.
+-   Interpret the term $D = b_{t-1}$.
+-   Explain why this expression for $b_t$ estimates the slope of the time series at time $t$.
+
+$$
+s_t = \gamma \cdot \underbrace{ \left( x_t - a_t \right) }_{E} + (1-\gamma) \cdot \underbrace{ s_{t-p} }_{F}
+$$
+
+-   Interpret the term $E = x_t - a_t$.
+-   Interpret the term $F = s_{t-p}$.
+-   Explain why this expression for $s_t$ estimates the seasonal component of the time series at time $t$.
+-   When the seasonal component appears on the right-hand side of the update equations, it always given as $s_{t-p}$. Why do we use the estimate of the seasonal effect $p$ periods ago? Why not apply a more recent value?
+
+:::
+
+#### Initial Estimates of $a_t$, $b_t$, and $s_t$
+
+We can use the update equations to compute the next value of $a_t$, $b_t$, and $s_t$, once we get going. How do we get started? What are the initial values of these estimates?
+
+##### Estimating $a_1$:
+
+It is reasonable to let $a_1 = x_t$. We simply start our estimate of the level of the time series at the initial data value.
+
+##### Estimating $b_1$:
+
+For the value of $b_1$, the Cowpertwait textbook vaguely suggests estimating this from the data or setting it to zero. Setting $b_1$ to zero is problematic, because it adversely affects the level and slope estimates at the beginning of the time series. A better choice is to approximate $b_1$ by averaging the slope between pairs of points one period apart. Recall that $p$ is the number of observations per period. (Monthly data which have an annual cycle would have $p=12$. Daily data with a weekly cycle have $p=7$.) Note that 
+$
+  \dfrac{x_{p+1} - x_{1}}{p}
+$
+is an estimate of the slope of the time series as it moves from time $1$ to time $p+1$. These are the first observations in the first two cycles. We compute these estimated slopes for all the paired observations in the first two cycles, then we compute the mean of these slopes. This is reflected in the expression for $b_1$:
+
+$$
+  b_1 = 
+    \frac{ 
+      \left(
+        \dfrac{x_{p+1} - x_{1}}{p} +
+        \dfrac{x_{p+2} - x_{2}}{p} +
+        \dfrac{x_{p+3} - x_{3}}{p} +
+        \cdots +
+        \dfrac{x_{2p-1} - x_{p-1}}{p} +
+        \dfrac{x_{2p} - x_{p}}{p} 
+      \right)
+    }{p}
+$$
+
+##### Estimating $s_1, s_2, \ldots s_p$:"
+
+The initial $p$ values of the seasonal effects, $s_1, s_2, \ldots s_p$, can be determined either by estimating based on the data or your prior experience; alternatively, they could be set to 0. 
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Explain why it is reasonable to let $a_1 = x_1$.
+-   Why does the average of the values 
+    $$
+      \left\{ 
+          \dfrac{x_{p+1} - x_{1}}{p}, ~
+          \dfrac{x_{p+2} - x_{2}}{p}, ~
+          \dfrac{x_{p+3} - x_{3}}{p}, ~
+          \cdots, ~
+          \dfrac{x_{2p-1} - x_{p-1}}{p}, ~
+          \dfrac{x_{2p} - x_{p}}{p}  
+      \right\}
+    $$
+    give a good estimate of the slope at the beginning of the time series?
+-   Suppose you needed to estimate $s_1, s_2, \ldots, s_p$ for monthly sales data, where sales are highest in the summer months and lowest in the winter months. If January corresponds to month 1, which values of $s_t$ would you set to be positive? negative? near zero?
+
+:::
+
+
+
+
+### Small Group Activity: Holt-Winters Model for BYU-Idaho Enrollment Data (20 min)
+
+In Chapter 2, Lesson 3, we explored the BYU-Idaho Enrollment data. We will apply the Holt-Winters model to these data with $\alpha = \beta = \gamma = 0.2$.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+# read in the data from a csv and make the tsibble
+
+enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
+  mutate(dates = yearmonth( ym( paste(year, term * 4 - 3) ) ) ) |>
+  dplyr::select(semester, dates, enrollment) |>
+  as_tsibble(index = dates) 
+
+enrollment_ts |>
+  autoplot(.vars = enrollment / 1000)
+
+# # Compute and plot the decomposition
+# enrollment_decompose <- enrollment_ts |>
+#     model(feasts::classical_decomposition(enrollment,
+#         type = "add"))  |>
+#     components()
+# autoplot(enrollment_decompose)
+```
+
+```{r}
+#| warning: false
+
+# Set parameters
+p <- 3
+alpha <- 0.2
+beta <- 0.2
+gamma <- 0.2
+
+enroll <- enrollment_ts |>
+  as_tibble() |>
+  mutate(
+    t = row_number(),
+    x_t = round(enrollment / 1000, 1),
+    a_t = 0,
+    b_t = 0,
+    s_t = 0,
+  ) |>
+  dplyr::select(-enrollment, -dates) 
+
+# initialize a1
+enroll$a_t[1] = enroll$x_t[1]
+  
+# initialize b1
+enroll$b_t[1] <- 
+  (1 / p) * mean( enroll$x_t[(p+1):(2*p)] - enroll$x_t[1:p] )
+  
+# First cycle
+for (t in 2:p) {
+  enroll$a_t[t] <- 
+    alpha * (enroll$x_t[t] - enroll$s_t[t - 0 * p ]) + 
+    (1 - alpha) * (enroll$a_t[t - 1] + enroll$b_t[t - 1])
+  enroll$b_t[t] <- 
+    beta * (enroll$a_t[t] - enroll$a_t[t - 1]) + 
+    (1 - beta) * enroll$b_t[t - 1]
+}
+enroll$s_t[1] <- enroll$s_t[2] <- enroll$s_t[3] <- 0
+
+for (t in (p + 1):nrow(enroll)) {
+  enroll$a_t[t] <- 
+    alpha * (enroll$x_t[t] - enroll$s_t[t - p]) + 
+    (1 - alpha) * (enroll$a_t[t - 1] + enroll$b_t[t - 1])
+  enroll$b_t[t] <- 
+    beta * (enroll$a_t[t] - enroll$a_t[t - 1]) + 
+    (1 - beta) * enroll$b_t[t - 1]
+  enroll$s_t[t] <- 
+    gamma * (enroll$x_t[t] - enroll$a_t[t]) + 
+    (1 - gamma) * enroll$s_t[t - p]
+}
+
+final_season <- c(
+  enroll$s_t |> tail(3),
+  enroll$s_t |> tail(3)
+)
+
+enroll_extension <- enroll |>
+  tail(6) |>
+  mutate(
+    semester = paste0(
+      left(semester, 2),
+      as.integer(right(semester, 2)) + 2
+      ),
+    t = t + 6,
+    x_t = NA,
+    a_t = NA,
+    b_t = NA,
+    s_t = NA,
+    est = 
+      enroll$a_t[nrow(enroll)] +
+      row_number() * enroll$b_t[nrow(enroll)] +
+      final_season[row_number()]
+  )
+
+enroll |>
+  bind_rows(enroll_extension) |>
+  mutate(
+    est = case_when(
+      row_number() == 1 ~ x_t,
+      row_number() <= nrow(enroll) ~ a_t + s_t,
+      TRUE ~ est
+    )  
+  ) |>
+  rename(
+    "$$Semester$$" = semester,
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$b_t$$" = b_t,
+    "$$s_t$$" = s_t,
+    "$$\\hat x_t = a_t+s_t$$" = est
+  ) |>
+  display_table("0.75in")
+```
+
+### Working above here
 
 We will practice forecasting, before we discuss how to get the values of $a_t$, $b_t$, and $s_t$.
 
@@ -396,221 +627,6 @@ crime_tsibble # Uncomment to see table
 ```{r}
 # holt_winters_additive_forecast_plot(crime_tsibble, alpha = 0.2, beta = 0.2, gamma = .2)
 ```
-
-
-\begin{align*}
-  a_t &= \alpha \left( x_t - s_{t-p} \right) + (1-\alpha) \left( a_{t-1} + b_{t-1} \right) \\
-  b_t &= \beta \left( a_t - a_{t-1} \right) + (1-\beta) b_{t-1} \\
-  s_t &= \gamma \left( x_t - a_t \right) + (1-\gamma) s_{t-p}
-\end{align*}
-
-
-## Small Group Activity: Holt-Winters Model for BYU-Idaho Enrollment Data (20 min)
-
-In Chapter 2, Lesson 3, we explored the BYU-Idaho Enrollment data. We will apply the Holt-Winters model to these data.
-
-```{r}
-#| warning: false
-
-# read in the data from a csv and make the tsibble
-
-# Method 1:
-enrollment_df <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv")
-start_date <- lubridate::ymd("2019-05-01")
-date_seq <- seq(start_date,
-                start_date + months(nrow(enrollment_df)-1) * 4,
-                by = "4 months")
-enrollment_ts <- tibble(
-    dates = tsibble::yearmonth(date_seq),
-    semester = pull(enrollment_df, semester),
-    enrollment = pull(enrollment_df, enrollment)
-  ) |>
-  dplyr::select(semester, dates, enrollment) |>
-  as_tsibble(index = dates)
-
-# Method 2:
-enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
-  mutate(
-    dates = yearmonth(ym(paste(year, term * 4 - 3)))
-  ) |>
-  dplyr::select(semester, dates, enrollment) |>
-  as_tsibble(index = dates) 
-
-# Compute and plot the decomposition
-enrollment_decompose <- enrollment_ts |>
-    model(feasts::classical_decomposition(enrollment,
-        type = "add"))  |>
-    components()
-autoplot(enrollment_decompose)
-```
-
-
-<!-- ### Moving Average -->
-
-<!-- We can use the following function to compute the moving average -->
-
-<!-- ```{r} -->
-<!-- # compute moving average -->
-<!-- compute_moving_average <- function(df, variable, periods = 12) { -->
-<!--   sum <- 0 -->
-
-<!--   for (i in 1:(periods / 2)) { -->
-<!--     sum <- sum + lead(eval(substitute(variable), df), i)           # x_{t+i} -->
-<!--     sum <- sum + lag(eval(substitute(variable), df), i)            # x_{t-i} -->
-<!--   } -->
-
-<!--   sum <- sum + eval(substitute(variable), df) -->
-<!--   sum <- sum - lag(eval(substitute(variable), df), periods / 2) / 2 -->
-<!--   sum <- sum - lead(eval(substitute(variable), df), periods / 2) / 2 -->
-
-<!--   df$m_hat <- sum / periods -->
-
-<!--   return(df) -->
-<!-- } -->
-
-<!-- crime_decomposition <- crime_monthly_ts |> -->
-<!--   compute_moving_average(value) -->
-<!-- ``` -->
-
-<!-- Here are the first few rows of this new file.  -->
-<!-- ```{r} -->
-<!-- #| echo: false -->
-
-<!-- crime_decomposition |> -->
-<!--   head(13) |> -->
-<!--   display_table() -->
-<!-- ``` -->
-
-<!-- ### Estimated Monthly Multiplicative Effect -->
-
-<!-- <!-- Check Your Understanding --> -->
-
-<!-- ::: {.callout-tip icon=false title="Check Your Understanding"} -->
-
-<!-- -   Use the 12-month centered moving average computed above to calculate the estimated monthly multiplictive effect. -->
-<!-- -   Question1 -->
-<!-- -   Question2 -->
-
-<!-- ::: -->
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- **Calculate Mean Crime Incidents Monthly by Year** -->
-
-<!-- ```{r} -->
-<!-- # Calculate mean annual total incidents -->
-<!-- crime_annual_ts <- crime_tsibble |> -->
-<!--   index_by(year = year(dates)) |> -->
-<!--   summarise(value = mean(incidents)) -->
-
-<!-- # Plot mean annual total incidents using autoplot -->
-<!-- autoplot(crime_annual_ts, .vars = value) + -->
-<!--   labs( -->
-<!--     x = "Year", -->
-<!--     y = "Mean Daily Crime Incidents", -->
-<!--     title = "Mean Daily Crime Incidents" -->
-<!--   ) + -->
-<!--   theme(plot.title = element_text(hjust = 0.5)) -->
-<!-- ``` -->
-
-
-<!-- **Monthly Boxplots of Total Crime Incidents** -->
-
-<!-- ```{r} -->
-<!-- # Create boxplots -->
-<!-- ggplot(crime_tsibble, aes(x = as.factor(month), y = incidents)) + -->
-<!--   geom_boxplot() + -->
-<!--   labs( -->
-<!--     x = "Month", -->
-<!--     y = "Total Crime Incidents", -->
-<!--     title = "Boxplots of Total Crime Incidents by Month" -->
-<!--   ) + -->
-<!--   theme(plot.title = element_text(hjust = 0.5)) -->
-<!-- ``` -->
-
-
-
-<!-- ## Estimating the Trend: Moving Average (5 min) -->
-
-<!-- ```{r} -->
-<!-- # Create a daily plot -->
-<!-- dp <- autoplot(crime_tsibble, .vars = incidents) + -->
-<!--     labs( -->
-<!--       x = "Month", -->
-<!--       y = "Total Crime Incidents", -->
-<!--       title = "Total Crime Incidents Over Time" -->
-<!--     ) + -->
-<!--     theme(plot.title = element_text(hjust = 0.5)) -->
-
-<!--   # Calculate mean monthly total incidents -->
-<!--   mean_monthly_incidents <- crime_tsibble |> -->
-<!--     as.data.frame() |> -->
-<!--     group_by(year, month) |> -->
-<!--     summarize(value = mean(incidents)) |> -->
-<!--   mutate(index = tsibble::yearmonth( mdy(paste0(month, "/15/", year)) )) |> -->
-<!--   as_tsibble(index = index) -->
-
-<!--   # Calculate mean annual total incidents -->
-<!--   mean_annual_incidents <- crime_tsibble |> -->
-<!--     as.data.frame() |> -->
-<!--     group_by(year) |> -->
-<!--     summarize(value = mean(incidents)) |> -->
-<!--   mutate(index = tsibble::yearmonth( mdy(paste0("7/1/",year)) )) |> -->
-<!--   as_tsibble(index = index) -->
-<!-- ``` -->
-
-
-<!-- ```{r} -->
-<!-- # Create a yearly plot -->
-<!--   yp <- ggplot(mean_annual_incidents, aes(x = year, y = value)) + -->
-<!--     geom_line() + -->
-<!--     labs( -->
-<!--       x = "Year", -->
-<!--       y = "Mean Total Crime Incidents", -->
-<!--       title = "Annual Mean Total Crime Incidents" -->
-<!--     ) + -->
-<!--     scale_x_continuous(breaks = seq(2004, max(crime_tsibble$year), by = 2)) + -->
-<!--     theme(plot.title = element_text(hjust = 0.5)) -->
-
-<!-- # Create a monthly plot -->
-<!--   mp <- ggplot(mean_monthly_incidents, aes(x = index, y = value)) + -->
-<!--     geom_line() + -->
-<!--     labs( -->
-<!--       x = "Year", -->
-<!--       y = "Mean Total Crime Incidents", -->
-<!--       title = "Monthly Mean Total Crime Incidents" -->
-<!--     ) + -->
-<!--     # scale_x_continuous(breaks = seq(2004, max(crime_tsibble$year), by = 2)) + -->
-<!--     theme(plot.title = element_text(hjust = 0.5)) -->
-
-<!--   # Display both simultaneously -->
-<!--   dp / mp -->
-<!--   dp / yp -->
-
-<!-- ``` -->
 
 
 
