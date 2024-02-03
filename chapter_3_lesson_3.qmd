@@ -56,7 +56,7 @@ $$
 
 where $a_t$ is the estimate of the level of the time series at time $t$ and $0 \le \alpha \le 1$ is the smoothing paramter.
 
-This is known as the *level update equation*, because at each time step, we can update our estimate of the level (or the center) of the time series. 
+This is known as the **level update equation**, because at each time step, we can update our estimate of the level (or the center) of the time series. 
 It is called exponential smoothing, because at each preceding value has exponentially decreasing influence on the estimate.
 
 <!-- Check Your Understanding -->
@@ -104,9 +104,9 @@ where $0 \le \beta \le 1$ is a smoothing parameter, $b_t$ is the slope estimate 
 
 :::
 
-#### Winter's Exponential Smoothing (Holt-Winters Filtering)
+#### Holt-Winters Filtering (Winter's Exponential Smoothing)
 
-Peter Winters was a colleague of Holt's at the Carnagie Institute of Technology. In 1960, he publised a revision of Winters' technique that allowed for seasonal variation. This is known as the *Holt-Winters Method* or *Holt-Winters Filtering*. The forecasting equation is:
+Peter Winters was a colleague of Holt's at the Carnagie Institute of Technology. In 1960, he published an enhancement of Winters' technique that allowed for seasonal variation. This is known as the **Holt-Winters Method** or **Holt-Winters Filtering**. The forecasting equation is:
 
 $$
   \hat x_{n+k|n} = a_n + k b_n + s_{n+k-p}
@@ -116,35 +116,15 @@ where $\hat x_{n+k|n}$ is the forecasted value of the time series $k$ units in t
 
 We will practice forecasting, before we discuss how to get the values of $a_t$, $b_t$, and $s_t$.
 
-The Holt-Winters method was applied to the chocolate search data. This table summarizes the results for the last few values of the time series.
+The Holt-Winters method was applied to the chocolate search data. @tbl-hw-choc-search summarizes the results for the last few values of the time series. The variable $\hat x_t$ represents the Holt-Winters estimate. (*Note that we have not yet learned how to get these values.*)
 
 ```{r}
-
-```
-
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
+#| echo: false
+#| warning: false
 
 
--   Explain the slope update equation to your partner.
-
-:::
-
-The Holt-Winters method provides a way to model a time series in which we consider the time series in layers. first, there is the level (the smoothed $x_t$ values from the time series) at time $t$. We will denote the *level* by $a_t$. The level can change from time to time.
-We introduce a value $b_n$, which we call the *slope*. This is the change in the level of the series from one time period to another. (As the book points out, R and many textbooks call the slope the *trend*.) 
-Finally, we include a seasonal estimate, $s_t$, which indicates how much the time series rises or falls above the level and trend values at time $t$.
-
-To visualize these terms, it can be helpful to consider the forecasting model. Suppose we have computed that Holt-Winters estimate of a time series with $n$ observations. In other words, we have just fit a curve to the entire time series. 
-We will use a very simple time series for this illustration. 
-
-
-
-```{r, warning=FALSE}
 holt_winters_additive_forecast <- function(data, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 12, a1 = NULL, b1 = NULL, s1 = NULL) {
   # Assuming 'data' is a tsibble with a column 'value'
-  data <- data %>%
-    mutate(month = month(date))
-  
   at <- numeric(nrow(data))
   bt <- numeric(nrow(data))
   st <- numeric(nrow(data))
@@ -170,10 +150,7 @@ holt_winters_additive_forecast <- function(data, alpha = 0.2, beta = 0.2, gamma 
   
   data %>% return()
 }
-```
 
-
-```{r, warning=FALSE}
 holt_winters_additive_plot <- function(data) {
 # Plot 1: Just 'data$estimated_level'
   plot_at <- ggplot(data, aes(x = date, y = estimated_level)) +
@@ -223,51 +200,95 @@ holt_winters_additive_plot <- function(data) {
 ```
 
 
-```{r, warning=FALSE}
-# holt_winters_additive_forecast_plot <- function(data, k = 8) {
-# 
-#   
-#   # Plot 4: Original trendline with 'data$estimated_level'
-#   plot_combined <- ggplot(data, aes(x = date)) +
-#     geom_line(aes(y = value), color = "black", size = 1) +
-#     geom_line(aes(y = estimated_level, color = "Combined", alpha=0.5), size = 1) +
-#     labs(
-#       x = "Date",
-#       y = "Value",
-#       title = NULL,
-#       color = "Components"
-#     ) +
-#     theme_minimal() +
-#     theme(legend.position = "none")
-# 
-#   return(plot_combined)
-# }
+```{r}
+#| label: tbl-hw-choc-search
+#| tbl-cap: "Holt-Winters estimate for the chocolate search data"
+#| echo: false
+
+# read in the data from a csv and make the tsibble
+# change the line below to include your file path
+chocolate_month_ts <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |>
+  mutate(
+    dates = yearmonth(ym(Month)),
+    month = month(dates),
+    year = year(dates),
+    value = chocolate
+  ) |> 
+  dplyr::select(dates, month, year, value) |>
+  as_tsibble(index = dates)
+
+choc_hw_additive <- holt_winters_additive_forecast(chocolate_month_ts, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 12, a1 = NULL, b1 = NULL, s1 = NULL) |>
+  dplyr::select(-month, -year)
+
+p <- 12
+num_row_of_choc_data_to_keep <- 18
+max_k <- p + 2
+
+start_date <- ym(max(choc_hw_additive$dates)) + months(1)
+date_seq <- seq(start_date,
+    start_date + months(max_k - 1),
+    by = "1 months")
+
+tail1 <- choc_hw_additive %>% mutate(n = row_number()) %>% tail(1)
+an <- tail1$estimated_level[1]
+bn <- tail1$estimated_slope[1]
+n <- tail1$n[1]
+
+choc_hw_ts <- choc_hw_additive %>% 
+  bind_rows(data.frame(dates = yearmonth(ymd(date_seq)), value = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA))
+
+choc_hw_ts2 <- choc_hw_ts |>
+  mutate(hw_estimate = estimated_level + estimated_seasonal)
+
+for (k in (n+1):(n+max_k)) {
+  choc_hw_ts2$estimated_seasonal[k] <- choc_hw_ts2$estimated_seasonal[k - 12] ######### MAGIC NUMBER: 12 periods per cycle
+  choc_hw_ts2$hw_estimate[k] <- an + (k - n) * bn + choc_hw_ts2$estimated_seasonal[k]
+}
+
+choc_hw_ts3 <- choc_hw_ts2 |>
+  tail(num_row_of_choc_data_to_keep + max_k) |>
+  convert_df_to_char(3)
+
+for (row_num in (num_row_of_choc_data_to_keep + 1):nrow(choc_hw_ts3)) {
+  for(col_num in 2:5) {
+    choc_hw_ts3[row_num, col_num] <- "—"
+  }
+}
+
+choc_hw_ts3 |>
+  blank_out_cells_in_df(ncols_to_keep = 5, nrows_to_keep = num_row_of_choc_data_to_keep - 1) |>
+  rename(
+    "$$Dates$$" = dates, "$$x_t$$" = value, "$$a_t$$" = estimated_level, "$$b_t$$" = estimated_slope, "$$s_t$$" = estimated_seasonal, "$$\\hat x_t$$" = hw_estimate
+  ) |> 
+  display_partial_table(0,num_row_of_choc_data_to_keep + max_k,"0.75in")
 ```
 
-<!-- #### I THINK THIS IS THE WRONG ONE... -->
 
-<!-- ```{r} -->
-<!-- a <- function(t) { 100 } -->
-<!-- b <- function(t) { 1/2 } -->
-<!-- s <- function(t) { (t %% 4 == 2) * 3 } -->
-<!-- x <- function(t) { a(t) + t * b(t) + s(t) } -->
-<!-- n_months <- 12 -->
 
-<!-- start_date <- my(paste(1, floor(year(now())-n_months/12))) -->
-<!-- date_seq <- seq(start_date, -->
-<!--     start_date + months(n_months - 1), -->
-<!--     by = "1 months") -->
-<!-- date_seq -->
 
-<!-- temp_ts <- data.frame(date = yearmonth(date_seq), value = x(1:n_months)) |> -->
-<!--   as_tsibble(index = date) -->
-<!-- temp_ts |> -->
-<!--   autoplot(.vars = value) -->
-<!-- temp1 <- holt_winters_additive_forecast(temp_ts, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 4, b1=NULL, s1 = 0) -->
-<!-- temp1 %>% as_tibble() -->
-<!-- # holt_winters_additive_forecast_plot(temp1) -->
-<!-- holt_winters_additive_plot(temp1) -->
-<!-- ``` -->
+
+
+
+
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+
+-   Explain the slope update equation to your partner.
+
+:::
+
+The Holt-Winters method provides a way to model a time series in which we consider the time series in layers. first, there is the level (the smoothed $x_t$ values from the time series) at time $t$. We will denote the *level* by $a_t$. The level can change from time to time.
+We introduce a value $b_n$, which we call the *slope*. This is the change in the level of the series from one time period to another. (As the book points out, R and many textbooks call the slope the *trend*.) 
+Finally, we include a seasonal estimate, $s_t$, which indicates how much the time series rises or falls above the level and trend values at time $t$.
+
+To visualize these terms, it can be helpful to consider the forecasting model. Suppose we have computed that Holt-Winters estimate of a time series with $n$ observations. In other words, we have just fit a curve to the entire time series. 
+We will use a very simple time series for this illustration. 
+
+
+
+
 
 #### This is the right one
 
@@ -893,11 +914,80 @@ style="font-size:.8em;">Class Activity</a>
 
 ::: {#Solutions style="display:none;"}
 
-Solutions to Class Activity
+Solutions to Class Activity on Forecasting
 
 ```{r}
 #| echo: false
-stuff <- "here"
+
+choc_hw_ts3 <- choc_hw_ts2 |>
+  tail(num_row_of_choc_data_to_keep + max_k) |>
+  convert_df_to_char(3)
+
+for (row_num in (num_row_of_choc_data_to_keep + 1):nrow(choc_hw_ts3)) {
+  for(col_num in 2:4) {
+    choc_hw_ts3[row_num, col_num] <- "—"
+  }
+}
+
+choc_hw_ts3 |>
+  rename(
+    "$$Dates$$" = dates, "$$x_t$$" = value, "$$a_t$$" = estimated_level, "$$b_t$$" = estimated_slope, "$$s_t$$" = estimated_seasonal, "$$\\hat x_t$$" = hw_estimate
+  ) |> 
+  display_partial_table(0,18)
+```
+
+
+```{r}
+#| echo: false
+#| warning: false
+
+p <- 12
+num_row_of_choc_data_to_keep <- 9 * 12 # (9 years)
+max_k <- 6 * p 
+
+start_date <- ym(max(choc_hw_additive$dates)) + months(1)
+date_seq <- seq(start_date,
+    start_date + months(max_k - 1),
+    by = "1 months")
+
+tail1 <- choc_hw_additive %>% mutate(n = row_number()) %>% tail(1)
+an <- tail1$estimated_level[1]
+bn <- tail1$estimated_slope[1]
+n <- tail1$n[1]
+
+choc_hw_ts <- choc_hw_additive %>% 
+  bind_rows(data.frame(dates = yearmonth(ymd(date_seq)), value = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA))
+
+choc_hw_ts2 <- choc_hw_ts |>
+  mutate(hw_estimate = estimated_level + estimated_seasonal)
+
+for (k in (n+1):(n+max_k)) {
+  choc_hw_ts2$estimated_seasonal[k] <- choc_hw_ts2$estimated_seasonal[k - 12] ######### MAGIC NUMBER: 12 periods per cycle
+  choc_hw_ts2$hw_estimate[k] <- an + (k - n) * bn + choc_hw_ts2$estimated_seasonal[k]
+}
+
+choc_hw_ts2 |> 
+  mutate(dates = yearmonth(ym(dates))) |>
+  mutate(value = as.numeric(value)) |>
+  mutate(hw_estimate = as.numeric(hw_estimate)) |> 
+  filter(dates >= yearmonth(ym("2015 Jan"))) |>
+  as_tsibble(index = dates) |>
+  autoplot(.vars = value) +
+  geom_line(data = choc_hw_ts2 |> tail(num_row_of_choc_data_to_keep + max_k) |> head(num_row_of_choc_data_to_keep), aes(x=dates, y=hw_estimate), linetype = "solid", color = "#E69F00") +
+  geom_line(data = choc_hw_ts2 |> tail(max_k + 1), aes(x=dates, y=hw_estimate), linetype = "dashed", color = "#E69F00") +
+    labs(
+      x = "Time",
+      y = "Chocolate Searches",
+      title = "Holt-Winters Filter Applied to Chocolate Google Search Data",
+      subtitle = "alpha = 0.2, beta = 0.2, gamma = 0.2"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+    )
 ```
 
 :::
@@ -906,5 +996,5 @@ stuff <- "here"
 
 ## References
 
--   C. C. Holt (1957) Forecasting seasonals and trends by exponentially weighted moving averages, ONR Research Memorandum, Carnegie Institute of Technology 52. (reprint at https://doi.org/10.1016/j.ijforecast.2003.09.015).
--   P. R. Winters (1960). Forecasting sales by exponentially weighted moving averages. Management Science, 6, 324--342. 10.1287/mnsc.6.3.324.
+-   C. C. Holt (1957) Forecasting seasonals and trends by exponentially weighted moving averages, ONR Research Memorandum, Carnegie Institute of Technology 52. (Reprint at [https://doi.org/10.1016/j.ijforecast.2003.09.015](https://doi.org/10.1016/j.ijforecast.2003.09.015)).
+-   P. R. Winters (1960). Forecasting sales by exponentially weighted moving averages. Management Science, 6, 324--342. (Reprint at [https://doi.org/10.1287/mnsc.6.3.324](https://doi.org/10.1287/mnsc.6.3.324).)
