@@ -1,0 +1,76 @@
+---
+title: "Exponential Smoothing (EWMA)"
+subtitle: "Chapter 3: Lesson 2"
+format: html
+editor: source
+sidebar: true
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+
+#### Table 1: Calculation of $a_t$ and $e_t$ for a sample time series
+
+```{r}
+#| echo: false
+
+x1 <- get_toy_data()
+
+alpha <- 0.2
+
+ewma_toy_df <- data.frame(t = 1:length(x1), x_t = x1, a_t = x1) |>
+  mutate(
+    a_t_computation = "",
+    e_t = as.numeric(NA),
+    e_t_computation = ""
+  )
+
+ewma_toy_df$a_t_computation[1] = paste0("$$",ewma_toy_df$x_t[1], "$$")
+
+for (t in 2:length(x1)) {
+  ewma_toy_df$a_t[t] <- alpha * ewma_toy_df$x_t[t] + (1 - alpha) * ewma_toy_df$a_t[t-1]
+  ewma_toy_df$a_t_computation[t] <- paste("$$", alpha, "\\cdot", ewma_toy_df$x_t[t], "+", "(1 - ",alpha,") \\cdot", round(ewma_toy_df$a_t[t-1],3), "=", round(ewma_toy_df$a_t[t],3), "$$")
+  ewma_toy_df$e_t[t] <- ewma_toy_df$x_t[t] - ewma_toy_df$a_t[t-1]
+  ewma_toy_df$e_t_computation[t] <- paste("$$", ewma_toy_df$x_t[t], "-", round(ewma_toy_df$a_t[t-1],3), "=", round(ewma_toy_df$e_t[t],3), "$$")
+}
+
+ewma_toy_df |>
+  dplyr::select(t, x_t, a_t, e_t) |>
+  blank_out_cells_in_df() |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$e_t$$" = e_t
+  ) |>
+  display_table("0.5in") |>
+  column_spec(3:4, width_min = "2.25in")
+```
+
