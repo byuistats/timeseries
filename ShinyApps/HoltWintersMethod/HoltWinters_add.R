@@ -2,6 +2,9 @@
 if (!require("shiny")) install.packages("shiny")
 if (!require("MASS")) install.packages("MASS")
 
+# remove bt from combined graph
+# drop down for dataset selection
+
 # Load required libraries
 library(shiny)
 library(dplyr)
@@ -9,6 +12,8 @@ library(ggplot2)
 library(kableExtra)
 library(tidyverse)
 library(rio)
+library(shinyjs)
+library(shinyWidgets)
 
 # functions
 
@@ -36,33 +41,33 @@ holt_winters_forecast_plot <- function(data, alpha = 0.2, beta = 0.2, gamma = 0.
 
   # Plot 1: Just 'at'
   plot_at <- ggplot(data, aes(x = CrimeDate, y = at)) +
-    geom_line(color = "blue", size = 1) +
+    geom_line(color = "#E69F00", size = 1) +
     labs(
       x = "Date",
       y = "Level (at)",
-      title = "a_t"
+      title = NULL
     ) +
     theme_minimal()+
     theme(legend.position = "none")
 
   # Plot 2: Just 'bt'
   plot_bt <- ggplot(data, aes(x = CrimeDate, y = bt)) +
-    geom_line(color = "red", size = 1) +
+    geom_line(color = "#D55E00", size = 1) +
     labs(
       x = "Date",
       y = "Slope (bt)",
-      title = "b_t"
+      title = NULL
     ) +
     theme_minimal()+
     theme(legend.position = "none")
 
   # Plot 3: Just 'st'
   plot_st <- ggplot(data, aes(x = CrimeDate, y = st)) +
-    geom_line(color = "green", size = 1) +
+    geom_line(color = "#009E73", size = 1) +
     labs(
       x = "Date",
       y = "Seasonal (st)",
-      title = "s_t"
+      title = NULL
     ) +
     theme_minimal()+
     theme(legend.position = "none")
@@ -70,16 +75,17 @@ holt_winters_forecast_plot <- function(data, alpha = 0.2, beta = 0.2, gamma = 0.
   # Plot 4: Original trendline with 'at + bt + st'
   plot_combined <- ggplot(data, aes(x = CrimeDate)) +
     geom_line(aes(y = total_incidents, color = "Base"),linetype=3, size = 1) +
-    geom_line(aes(y = estimated_level + estimated_slope + estimated_seasonal, color = "Components", alpha=0.5), size = 1) +
+    geom_line(aes(y = estimated_level + estimated_seasonal, color = "Components", alpha=0.5), size = 1) +
     labs(
       x = "Date",
       y = "Total Incidents",
-      title = "Original & 'a_t + b_t + s_t'",
+      title = NULL,
       color = "Series"
     ) +
     theme_minimal() +
     theme(legend.position = "top")+
-    scale_color_manual(values = c("black", "red"))
+    scale_color_manual(values = c("black", "#56B4E9"))+
+    guides(alpha = FALSE)
 
   return(list(plot_at, plot_bt, plot_st, plot_combined, data))
 }
@@ -88,30 +94,58 @@ holt_winters_forecast_plot <- function(data, alpha = 0.2, beta = 0.2, gamma = 0.
 
 # Define the UI
 ui <- fluidPage(
+  useShinyjs(),
     titlePanel("Exploration: Holt-Winters Additive Model"),
     fluidRow(
       column(4, sliderInput("a", "Alpha", min = 0, max = 1, value = 0.2, step=0.1)),
       column(4, sliderInput("b", "Beta", min = 0, max = 1, value = 0.2, step=0.1)),
-      column(4, sliderInput("g", "Gamma", min = 0, max = 1, value = 0.2, step=0.1)),
-      column(4, dateRangeInput("dateRange", "Select date range:",
+      column(4, sliderInput("g", "Gamma", min = 0, max = 1, value = 0.2, step=0.1))
+    ),
+    fluidRow(
+      column(6, dateRangeInput("dateRange", "Select date range:",
                      start = "2011-01-01",  # Default start date
                      end = "2016-11-12",         # Default end date
                      min = "2011-01-01",       # Earliest date selectable
-                     max = "2016-11-12"))         # Latest date selectable
+                     max = "2016-11-12")),
+      column(6, materialSwitch(inputId = "toggle", value = FALSE, label = "Advanced Inputs")),
+    ),
+  div(id = "AdvInputs",
+    fluidRow(
+      column(2, numericInput("s1", "s1",0)),
+      column(2, numericInput("s2", "s2",0)),
+      column(2, numericInput("s3", "s3",0)),
+      column(2, numericInput("s4", "s4",0)),
+      column(2, numericInput("s5", "s5",0)),
+      column(2, numericInput("s6", "s6",0))
+      ),
+    fluidRow(
+      column(2, numericInput("s7", "s7",0)),
+      column(2, numericInput("s8", "s8",0)),
+      column(2, numericInput("s9", "s9",0)),
+      column(2, numericInput("s10", "s10",0)),
+      column(2, numericInput("s11", "s11",0)),
+      column(2, numericInput("s12", "s12",0))
+      ),
     ),
     fluidRow(
       column(4, offset = 5,actionButton("go", "Run!")),
     ),
+  div(id = "outputs",
     fluidRow(
       #column(12, uiOutput("formula0")),
+      column(12, h4("Original & 'a_t + b_t + s_t'")),
       column(12, plotOutput("plot_fin")),
       column(12, h4("Components:")),
+      column(12, h4("'a_t'")),
       column(12, plotOutput("plot_at")),
+      column(12, h4("'b_t'")),
       column(12, plotOutput("plot_bt")),
+      column(12, h4("'s_t'")),
       column(12, plotOutput("plot_st")),
       #column(12, uiOutput("formula1")),
       column(12, h3("Table: Title???"))
     )
+  )
 )
 
 
@@ -119,6 +153,22 @@ ui <- fluidPage(
 
 # Define the server logic
 server <- function(input, output, session) {
+  observe({
+    if(input$toggle) {
+      show("AdvInputs")
+    } else {
+      hide("AdvInputs")
+    }
+  })
+
+  observe({
+    if(input$go) {
+      show("outputs")
+    } else {
+      hide("outputs")
+    }
+  })
+
   #import data
   df <- rio::import("https://byuistats.github.io/timeseries/data/baltimore_crime.csv", header=TRUE, stringsAsFactors=FALSE)
 
