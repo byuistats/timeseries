@@ -41,12 +41,33 @@ source("common_functions.R")
 
 
 
+## Preparation
+
+-   Read Section 3.4.2
+
+
+
+## Learning Journal Exchange (10 mins)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+## Class Discussion: Theory Supporting the EWMA
+
+
 
 ## Introduction to the Holt-Winters Method (Additive Model)
 
-### Exponentially Weighted Moving Average (EWMA) or Simple Exponential Smoothing
+### Review: Exponentially Weighted Moving Average (EWMA) or Simple Exponential Smoothing
 
-The exponential weighted moving average (EWMA) is a simple method for smoothing (or filtering) a time series. We update the estimate of the level of the time series as:
+The exponential weighted moving average (EWMA) is a simple method for smoothing (or filtering) a time series. The  update equation for the estimate of the level of the time series is
 
 $$
   a_t = \alpha x_t + (1-\alpha) a_{t-1}
@@ -54,7 +75,7 @@ $$
 
 where $a_t$ is the estimate of the level of the time series at time $t$ and $0 \le \alpha \le 1$ is the smoothing paramter.
 
-This is known as the **level update equation**, because at each time step, we can update our estimate of the level (or the center) of the time series. 
+This is known as the **level update equation**, because at each time step, we can update our estimate of the level (or the center) of the time series.
 It is called exponential smoothing, because at each preceding value has exponentially decreasing influence on the estimate.
 
 <!-- Check Your Understanding -->
@@ -75,7 +96,7 @@ $$
 where $\hat x_{n+k \mid n}$ is the estimate of the time series $k$ time units in the future past time $t=n$.
 Frankly, this is not very useful, because many time series have trends or seasonality.
 
-### Holt's Exponential Smoothing
+### Holt's Exponential Smoothingcrime_monthly_ts1
 
 In 1957, Charles Holt published a new procedure that introduced a trend into this model. The forecasted values were:
 
@@ -85,6 +106,7 @@ $$
 
 where $b_n$ is the slope indicating how much the time series changes on average from one time point to another and $k$ is the number of time periods past $t=n$ you are forecasting.
 
+This method uses the same level update equation as EMWA.
 The slope update equation is:
 
 $$
@@ -103,7 +125,7 @@ where $0 \le \beta \le 1$ is a smoothing parameter, $b_t$ is the slope estimate 
 
 ### Holt-Winters Filtering (Winters' Exponential Smoothing)
 
-Peter Winters was a colleague of Holt's at the Carnagie Institute of Technology. In 1960, he published an enhancement of Winters' technique that allowed for seasonal variation. This is known as the **Holt-Winters Method** or **Holt-Winters Filtering**. 
+Peter Winters was a colleague of Holt's at the Carnagie Institute of Technology. In 1960, he published an enhancement of Winters' technique that allowed for seasonal variation. This is known as the **Holt-Winters Method** or **Holt-Winters Filtering**.
 
 #### Forecast Equation
 
@@ -120,9 +142,9 @@ where $\hat x_{n+k|n}$ is the forecasted value of the time series $k$ units in t
 There are three update equations, one each for $a_t$ (level), $b_t$ (slope), and $s_t$ (seasonal component).
 
 \begin{align*}
-  a_t &= \alpha \left( x_t - s_{t-p} \right) + (1-\alpha) \left( a_{t-1} + b_{t-1} \right) \\
-  b_t &= \beta \left( a_t - a_{t-1} \right) + (1-\beta) b_{t-1} \\
-  s_t &= \gamma \left( x_t - a_t \right) + (1-\gamma) s_{t-p}
+  a_t &= \alpha \left( x_t - s_{t-p} \right) + (1-\alpha) \left( a_{t-1} + b_{t-1} \right) && \text{Level} \\
+  b_t &= \beta \left( a_t - a_{t-1} \right) + (1-\beta) b_{t-1} && \text{Slope} \\
+  s_t &= \gamma \left( x_t - a_t \right) + (1-\gamma) s_{t-p} && \text{Seasonal}
 \end{align*}
 
 where $\{x_t\}$ is a time series from $t=1$ to $t=n$ that has seasonality with a period of $p$ time units; at time $t$, $a_t$ is the estimated level of the time series, $b_t$ is the estimated slope, and $s_t$ is the estimated seasonal component; and $\alpha$, $\beta$, and $\gamma$ are parameters (all between 0 and 1).
@@ -135,8 +157,10 @@ where $\{x_t\}$ is a time series from $t=1$ to $t=n$ that has seasonality with a
 Consider the following update equations and answer the questions associated with each.
 
 $$
-a_t = \alpha \cdot \underbrace{ \left( x_t - s_{t-p} \right) }_{A} + (1-\alpha) \cdot  \underbrace{ \left( a_{t-1} + b_{t-1} \right) }_{B} 
+a_t = \alpha \cdot \underbrace{ \left( x_t - s_{t-p} \right) }_{A} + (1-\alpha) \cdot  \underbrace{ \left( a_{t-1} + b_{t-1} \right) }_{B}
+~~~~~~~~~~~~~~~~~~~~ \text{Level}
 $$
+
 
 -   Interpret the term $A = x_t - s_{t-p}$.
 -   Interpret the term $B = a_{t-1} - b_{t-1}$.
@@ -144,6 +168,7 @@ $$
 
 $$
 b_t = \beta \cdot \underbrace{ \left( a_t - a_{t-1} \right) }_{C} + (1-\beta) \cdot \underbrace{ b_{t-1} }_{D}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \text{Slope}
 $$
 
 -   Interpret the term $C = a_t - a_{t-1}$.
@@ -152,18 +177,23 @@ $$
 
 $$
 s_t = \gamma \cdot \underbrace{ \left( x_t - a_t \right) }_{E} + (1-\gamma) \cdot \underbrace{ s_{t-p} }_{F}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \text{Seasonal}
 $$
 
 -   Interpret the term $E = x_t - a_t$.
 -   Interpret the term $F = s_{t-p}$.
 -   Explain why this expression for $s_t$ estimates the seasonal component of the time series at time $t$.
 -   When the seasonal component appears on the right-hand side of the update equations, it always given as $s_{t-p}$. Why do we use the estimate of the seasonal effect $p$ periods ago? Why not apply a more recent value?
+-   What do the following sets of terms have in common?
+    -   $\{A, C, E \}$
+    -   $\{B, D, F \}$
+-   Explain why the Holt-Winters method works.
 
 :::
 
 #### Initial Estimates of $a_t$, $b_t$, and $s_t$
 
-We can use the update equations to compute the next value of $a_t$, $b_t$, and $s_t$, once we get going. How do we get started? What are the initial values of these estimates?
+We can use the update equations to compute the next value of $a_t$, $b_t$, and $s_t$, once we get going. Yet, how do we get started? What are the initial values of these estimates?
 
 ##### Estimating $a_1$:
 
@@ -171,29 +201,32 @@ It is reasonable to let $a_1 = x_t$. We simply start our estimate of the level o
 
 ##### Estimating $b_1$:
 
-For the value of $b_1$, the Cowpertwait textbook vaguely suggests estimating this from the data or setting it to zero. Setting $b_1$ to zero is problematic, because it adversely affects the level and slope estimates at the beginning of the time series. A better choice is to approximate $b_1$ by averaging the slope between pairs of points one period apart. Recall that $p$ is the number of observations per period. (Monthly data which have an annual cycle would have $p=12$. Daily data with a weekly cycle have $p=7$.) Note that 
+For the value of $b_1$, the Cowpertwait textbook vaguely suggests estimating this from the data or setting it to zero. Setting $b_1$ to zero is problematic, because it adversely affects the level and slope estimates at the beginning of the time series.
+
+A better choice is to approximate $b_1$ by averaging the slope between pairs of points one period apart. Recall that $p$ is the number of observations per period. (Monthly data which have an annual cycle would have $p=12$. Daily data with a weekly cycle have $p=7$.) Note that
 $
   \dfrac{x_{p+1} - x_{1}}{p}
 $
 is an estimate of the slope of the time series as it moves from time $1$ to time $p+1$. These are the first observations in the first two cycles. We compute these estimated slopes for all the paired observations in the first two cycles, then we compute the mean of these slopes. This is reflected in the expression for $b_1$:
 
 $$
-  b_1 = 
-    \frac{ 
+  b_1 =
+    \frac{
       \left(
         \dfrac{x_{p+1} - x_{1}}{p} +
         \dfrac{x_{p+2} - x_{2}}{p} +
         \dfrac{x_{p+3} - x_{3}}{p} +
         \cdots +
         \dfrac{x_{2p-1} - x_{p-1}}{p} +
-        \dfrac{x_{2p} - x_{p}}{p} 
+        \dfrac{x_{2p} - x_{p}}{p}
       \right)
     }{p}
 $$
 
-##### Estimating $s_1, s_2, \ldots s_p$:"
+##### Estimating $s_1, s_2, \ldots s_p$:
 
-The initial $p$ values of the seasonal effects, $s_1, s_2, \ldots s_p$, can be determined either by estimating based on the data or your prior experience; alternatively, they could be set to 0. 
+The initial $p$ values of the seasonal effects, $s_1, s_2, \ldots s_p$, can be determined either by estimating based on the data or your prior experience; alternatively, they could be set to 0.
+For $t=1, 2, 3, \ldots, p$ iterations, use your estimate for $s_t$ when the formulas call for $s_{t-p}$.
 
 
 <!-- Check Your Understanding -->
@@ -201,15 +234,20 @@ The initial $p$ values of the seasonal effects, $s_1, s_2, \ldots s_p$, can be d
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
 -   Explain why it is reasonable to let $a_1 = x_1$.
--   Why does the average of the values 
+-   What does the term
     $$
-      \left\{ 
+      \dfrac{x_{p+1} - x_{1}}{p}
+    $
+    estimate?
+-   Why does the average of the values
+    $$
+      \left\{
           \dfrac{x_{p+1} - x_{1}}{p}, ~
           \dfrac{x_{p+2} - x_{2}}{p}, ~
           \dfrac{x_{p+3} - x_{3}}{p}, ~
           \cdots, ~
           \dfrac{x_{2p-1} - x_{p-1}}{p}, ~
-          \dfrac{x_{2p} - x_{p}}{p}  
+          \dfrac{x_{2p} - x_{p}}{p}
       \right\}
     $$
     give a good estimate of the slope at the beginning of the time series?
@@ -217,38 +255,200 @@ The initial $p$ values of the seasonal effects, $s_1, s_2, \ldots s_p$, can be d
 
 :::
 
+### Illustration of the Holt-Winters Method for a Sample Time Series
 
+The Holt-Winters method provides a way to model a time series in which we consider the time series in layers. first, there is the level (the smoothed $x_t$ values from the time series) at time $t$. We will denote the *level* by $a_t$. The level can change from time to time.
+We introduce a value $b_n$, which we call the *slope*. This is the change in the level of the series from one time period to another. (As the book points out, R and many textbooks call the slope the *trend*.)
+Finally, we include a seasonal estimate, $s_t$, which indicates how much the time series rises or falls above the level and trend values at time $t$.
 
+To visualize these terms, it can be helpful to consider the forecasting model. Suppose we have computed that Holt-Winters estimate of a time series with $n$ observations. In other words, we have just fit a curve to the entire time series.
+We will use a very simple time series for this illustration.
 
-### Small Group Activity: Holt-Winters Model for BYU-Idaho Enrollment Data (20 min)
-
-In Chapter 2, Lesson 3, we explored the BYU-Idaho Enrollment data. We will apply the Holt-Winters model to these data with $\alpha = \beta = \gamma = 0.2$.
+First, consider a time series that has a seasonal pattern of (100, 104, 100, 100) with zero trend and random components. This is illustrated in @fig-flat-example-ts.
 
 ```{r}
+#| label: fig-flat-example-ts
+#| fig-cap: "Sample time series with zero trend and random components"
+#| warning: false
+#| echo: false
+
+a <- function(t) { 100 }
+b <- function(t) { 0 }
+s <- function(t) { (t %% 4 == 2) * 3 }
+x <- function(t) { a(t) + (t-1) * b(t) + s(t) }
+n_months <- 36
+max_k <- 16
+
+start_date <- my(paste(1, floor(year(now())-n_months/12)))
+date_seq <- seq(start_date,
+    start_date + months(n_months - 1),
+    by = "1 months")
+
+temp_ts <- data.frame(date = yearmonth(date_seq), value = x(1:n_months)) |>
+  as_tsibble(index = date)
+temp_ts |>
+  autoplot(.vars = value) +
+  coord_cartesian(ylim = c(95,130)) +
+    labs(
+      x = "Date",
+      y = "Value",
+      title = "Sample Time Series with Zero Slope",
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+Now, we add a slope of $\frac{1}{2}$ to this time series. In @fig-sloped-example-ts, we observe the same sample time series, but with the added component of a slope.
+
+```{r}
+#| label: fig-sloped-example-ts
+#| fig-cap: "Sample time series with a trend"
+#| warning: false
+#| echo: false
+
+a <- function(t) { 100 }
+b <- function(t) { 1/2 }
+s <- function(t) { (t %% 4 == 2) * 3 }
+x <- function(t) { a(t) + (t-1) * b(t) + s(t) }
+n_months <- 36
+max_k <- 16
+
+start_date <- my(paste(1, floor(year(now())-n_months/12)))
+date_seq <- seq(start_date,
+    start_date + months(n_months - 1),
+    by = "1 months")
+
+temp_ts <- data.frame(date = yearmonth(date_seq), value = x(1:n_months)) |>
+  as_tsibble(index = date)
+temp_ts |>
+  autoplot(.vars = value) +
+    coord_cartesian(ylim = c(95,130)) +
+    labs(
+      x = "Date",
+      y = "Value",
+      title = "Sample Time Series with Positive Slope",
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+Next, we apply the Holt-Winters method to these data. @fig-hw-example-ts illustrates the Holt-Winters filter plotted against the data.
+
+```{r}
+#| label: fig-hw-example-ts
+#| fig-cap: "Sample time series illustrating the Holt-Winters filter"
+#| echo: false
+#| warning: false
+
+temp1 <- holt_winters_additive_forecast(temp_ts, "value", alpha = 0.2, beta = 0.2, gamma = 0.2, p = 4, s1 = 0)
+
+start_date <- ym(max(temp1$date)) + months(1)
+date_seq <- seq(start_date,
+    start_date + months(max_k - 1),
+    by = "1 months")
+
+tail1 <- temp1 %>% mutate(n = row_number()) %>% tail(1)
+an <- tail1$estimated_level[1]
+bn <- tail1$estimated_slope[1]
+n <- tail1$n[1]
+
+temp2 <- temp1 %>%
+  bind_rows(data.frame(date = date_seq, value = NA, month = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA)) %>%
+  mutate(forecast = as.numeric(NA))
+
+temp2$forecast[n] <- temp2$estimated_level[n] + temp2$estimated_seasonal[n]
+
+for (k in (n+1):(n+max_k)) {
+  temp2$estimated_seasonal[k] <- temp2$estimated_seasonal[k - 4] ######### MAGIC NUMBER: 4 periods per cycle
+  temp2$forecast[k] <- an + (k - n) * bn + temp2$estimated_seasonal[k]
+}
+
+ggplot(temp2, aes(x = date)) +
+    geom_line(aes(y = value), color = "black", size = 1) +
+    geom_line(aes(y = estimated_level + estimated_seasonal, color = "Combined", alpha=0.5), size = 1) +
+    geom_line(aes(y = forecast, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
+    coord_cartesian(ylim = c(95,130)) +
+    labs(
+      x = "Date",
+      y = "Value",
+      title = "Sample Time Series with Holt-Winters Forecast",
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+
+-   What do you observe?
+
+:::
+
+
+
+
+## Small Group Activity: Holt-Winters Model for BYU-Idaho Enrollment Data (25 min)
+
+In Chapter 2, Lesson 3, we explored the BYU-Idaho Enrollment data. We will apply the Holt-Winters model to these data with $\alpha = \beta = \gamma = 0.2$. @fig-enrollment-ts illustrates these data.
+
+```{r}
+#| label: fig-enrollment-ts
+#| fig-cap: "Time Series Plot of BYU-Idaho Campus Enrollments"
 #| code-fold: true
 #| code-summary: "Show the code"
 #| warning: false
-
 # read in the data from a csv and make the tsibble
 
 enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
   mutate(dates = yearmonth( ym( paste(year, term * 4 - 3) ) ) ) |>
   dplyr::select(semester, dates, enrollment) |>
-  as_tsibble(index = dates) 
+  as_tsibble(index = dates)
+
+extra_terms <- enrollment_ts |>
+  tail(6) |>
+  mutate(dates = yearmonth(ym(dates) + years(2))) |>
+  mutate(
+    semester = paste0(
+      left(semester, 2),
+      as.integer(right(semester, 2)) + 2
+      )
+  ) |>
+  mutate(enrollment = NA, enroll_thousand = NA)
 
 enrollment_ts |>
-  autoplot(.vars = enrollment / 1000)
-
-# # Compute and plot the decomposition
-# enrollment_decompose <- enrollment_ts |>
-#     model(feasts::classical_decomposition(enrollment,
-#         type = "add"))  |>
-#     components()
-# autoplot(enrollment_decompose)
+  bind_rows(extra_terms) |>
+  autoplot(.vars = enrollment) +
+    labs(
+      x = "Time",
+      y = "Enrollment",
+      title = paste0("BYU-Idaho On-Campus Enrollment Counts")
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
 ```
 
+
+@tbl-enrollment-table summarizes the intermediate values for Holt-Winters filtering.
+
 ```{r}
+#| label: tbl-enrollment-table
+#| tbl-cap: "Holt-Winters Smoothing for BYU-Idaho campus enrollments"
 #| warning: false
+#| echo: false
 
 # Set parameters
 p <- 3
@@ -258,42 +458,42 @@ gamma <- 0.2
 
 enroll <- enrollment_ts |>
   as_tibble() |>
+  rename(x_t = enrollment) |>
   mutate(
     t = row_number(),
-    x_t = round(enrollment / 1000, 1),
     a_t = 0,
     b_t = 0,
     s_t = 0,
   ) |>
-  dplyr::select(-enrollment, -dates) 
+  dplyr::select(semester, t, x_t, a_t, b_t, s_t)
 
 # initialize a1
 enroll$a_t[1] = enroll$x_t[1]
-  
+
 # initialize b1
-enroll$b_t[1] <- 
+enroll$b_t[1] <-
   (1 / p) * mean( enroll$x_t[(p+1):(2*p)] - enroll$x_t[1:p] )
-  
+
 # First cycle
 for (t in 2:p) {
-  enroll$a_t[t] <- 
-    alpha * (enroll$x_t[t] - enroll$s_t[t - 0 * p ]) + 
+  enroll$a_t[t] <-
+    alpha * (enroll$x_t[t] - enroll$s_t[t - 0 * p ]) +
     (1 - alpha) * (enroll$a_t[t - 1] + enroll$b_t[t - 1])
-  enroll$b_t[t] <- 
-    beta * (enroll$a_t[t] - enroll$a_t[t - 1]) + 
+  enroll$b_t[t] <-
+    beta * (enroll$a_t[t] - enroll$a_t[t - 1]) +
     (1 - beta) * enroll$b_t[t - 1]
 }
 enroll$s_t[1] <- enroll$s_t[2] <- enroll$s_t[3] <- 0
 
 for (t in (p + 1):nrow(enroll)) {
-  enroll$a_t[t] <- 
-    alpha * (enroll$x_t[t] - enroll$s_t[t - p]) + 
+  enroll$a_t[t] <-
+    alpha * (enroll$x_t[t] - enroll$s_t[t - p]) +
     (1 - alpha) * (enroll$a_t[t - 1] + enroll$b_t[t - 1])
-  enroll$b_t[t] <- 
-    beta * (enroll$a_t[t] - enroll$a_t[t - 1]) + 
+  enroll$b_t[t] <-
+    beta * (enroll$a_t[t] - enroll$a_t[t - 1]) +
     (1 - beta) * enroll$b_t[t - 1]
-  enroll$s_t[t] <- 
-    gamma * (enroll$x_t[t] - enroll$a_t[t]) + 
+  enroll$s_t[t] <-
+    gamma * (enroll$x_t[t] - enroll$a_t[t]) +
     (1 - gamma) * enroll$s_t[t - p]
 }
 
@@ -314,7 +514,7 @@ enroll_extension <- enroll |>
     a_t = NA,
     b_t = NA,
     s_t = NA,
-    est = 
+    est =
       enroll$a_t[nrow(enroll)] +
       row_number() * enroll$b_t[nrow(enroll)] +
       final_season[row_number()]
@@ -327,7 +527,7 @@ enroll |>
       row_number() == 1 ~ x_t,
       row_number() <= nrow(enroll) ~ a_t + s_t,
       TRUE ~ est
-    )  
+    )
   ) |>
   rename(
     "$$Semester$$" = semester,
@@ -336,297 +536,124 @@ enroll |>
     "$$a_t$$" = a_t,
     "$$b_t$$" = b_t,
     "$$s_t$$" = s_t,
-    "$$\\hat x_t = a_t+s_t$$" = est
+    "$$\\hat x_t$$" = est
+  ) |>
+  round_df(0) |>
+  blank_out_cells_in_df(ncols_to_keep = 6, nrows_to_keep = 0) |>
+  blank_out_partial_row(row_number = 1, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 2, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 3, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 4, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 5, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 6, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 13, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 14, first_column_number = 4) |>
+  mutate(
+    across(everything(), ~replace_na(.x, ""))
   ) |>
   display_table("0.75in")
 ```
 
-### Working above here
-
-We will practice forecasting, before we discuss how to get the values of $a_t$, $b_t$, and $s_t$.
-
-The Holt-Winters method was applied to the chocolate search data. @tbl-hw-choc-search summarizes the results for the last few values of the time series. The variable $\hat x_t$ represents the Holt-Winters estimate. (*Note that we have not yet learned how to get these values.*)
-
-```{r}
-#| echo: false
-#| warning: false
-
-
-holt_winters_additive_forecast <- function(data, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 12, a1 = NULL, b1 = NULL, s1 = NULL) {
-  # Assuming 'data' is a tsibble with a column 'value'
-  at <- numeric(nrow(data))
-  bt <- numeric(nrow(data))
-  st <- numeric(nrow(data))
-  
-  at[1] <- ifelse(!is.null(a1), a1, data$value[1]) 
-  bt[1] <- ifelse(!is.null(b1), b1, (1 / p) * mean( data$value[(p+1):(2*p)] - data$value[1:p] )) 
-  st[1:p] <- ifelse(!is.null(s1), s1, 0)
-  
-  # First cycle
-  for (t in 2:p) {
-    at[t] <- alpha * (data$value[t] - st[t - 0 * p ]) + (1 - alpha) * (at[t - 1] + bt[t - 1])
-    bt[t] <- beta * (at[t] - at[t - 1]) + (1 - beta) * bt[t - 1]
-  }
-  
-  for (t in (p + 1):nrow(data)) {
-    at[t] <- alpha * (data$value[t] - st[t - p]) + (1 - alpha) * (at[t - 1] + bt[t - 1])
-    bt[t] <- beta * (at[t] - at[t - 1]) + (1 - beta) * bt[t - 1]
-    st[t] <- gamma * (data$value[t] - at[t]) + (1 - gamma) * st[t - p]
-  }
-  
-  data <- data %>%
-    mutate(estimated_level = at, estimated_slope = bt, estimated_seasonal = st)
-  
-  data %>% return()
-}
-
-holt_winters_additive_plot <- function(data) {
-# Plot 1: Just 'data$estimated_level'
-  plot_at <- ggplot(data, aes(x = date, y = estimated_level)) +
-    geom_line(color = "blue", size = 1) +
-    labs(
-      x = "Date",
-      y = "Level (at)",
-      title = NULL
-    ) +
-    theme_minimal()
-
-  # Plot 2: Just 'data$estimated_slope'
-  plot_bt <- ggplot(data, aes(x = date, y = estimated_slope)) +
-    geom_line(color = "red", size = 1) +
-    labs(
-      x = "Date",
-      y = "Slope (bt)",
-      title = NULL
-    ) +
-    theme_minimal()
-
-  # Plot 3: Just 'data$estimated_seasonal'
-  plot_st <- ggplot(data, aes(x = date, y = estimated_seasonal)) +
-    geom_line(color = "green", size = 1) +
-    labs(
-      x = "Date",
-      y = "Seasonal (st)",
-      title = NULL
-    ) +
-    theme_minimal()
-
-  # Plot 4: Original trendline with 'data$estimated_level'
-  plot_combined <- ggplot(data, aes(x = date)) +
-    geom_line(aes(y = value), color = "black", size = 1) +
-    geom_line(aes(y = estimated_level, color = "Combined", alpha=0.5), size = 1) +
-    labs(
-      x = "Date",
-      y = "Value",
-      title = NULL,
-      color = "Components"
-    ) +
-    theme_minimal() +
-    theme(legend.position = "none")
-
-  return(list(plot_at, plot_bt, plot_st, plot_combined))
-}
-```
-
-
-```{r}
-#| label: tbl-hw-choc-search
-#| tbl-cap: "Holt-Winters estimate for the chocolate search data"
-#| echo: false
-
-# read in the data from a csv and make the tsibble
-# change the line below to include your file path
-chocolate_month_ts <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |>
-  mutate(
-    dates = yearmonth(ym(Month)),
-    month = month(dates),
-    year = year(dates),
-    value = chocolate
-  ) |> 
-  dplyr::select(dates, month, year, value) |>
-  as_tsibble(index = dates)
-
-choc_hw_additive <- holt_winters_additive_forecast(chocolate_month_ts, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 12, a1 = NULL, b1 = NULL, s1 = NULL) |>
-  dplyr::select(-month, -year)
-
-p <- 12
-num_row_of_choc_data_to_keep <- 18
-max_k <- p + 2
-
-start_date <- ym(max(choc_hw_additive$dates)) + months(1)
-date_seq <- seq(start_date,
-    start_date + months(max_k - 1),
-    by = "1 months")
-
-tail1 <- choc_hw_additive %>% mutate(n = row_number()) %>% tail(1)
-an <- tail1$estimated_level[1]
-bn <- tail1$estimated_slope[1]
-n <- tail1$n[1]
-
-choc_hw_ts <- choc_hw_additive %>% 
-  bind_rows(data.frame(dates = yearmonth(ymd(date_seq)), value = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA))
-
-choc_hw_ts2 <- choc_hw_ts |>
-  mutate(hw_estimate = estimated_level + estimated_seasonal)
-
-for (k in (n+1):(n+max_k)) {
-  choc_hw_ts2$estimated_seasonal[k] <- choc_hw_ts2$estimated_seasonal[k - 12] ######### MAGIC NUMBER: 12 periods per cycle
-  choc_hw_ts2$hw_estimate[k] <- an + (k - n) * bn + choc_hw_ts2$estimated_seasonal[k]
-}
-
-choc_hw_ts3 <- choc_hw_ts2 |>
-  tail(num_row_of_choc_data_to_keep + max_k) |>
-  convert_df_to_char(3)
-
-for (row_num in (num_row_of_choc_data_to_keep + 1):nrow(choc_hw_ts3)) {
-  for(col_num in 2:5) {
-    choc_hw_ts3[row_num, col_num] <- "—"
-  }
-}
-
-choc_hw_ts3 |>
-  blank_out_cells_in_df(ncols_to_keep = 5, nrows_to_keep = num_row_of_choc_data_to_keep - 1) |>
-  rename(
-    "$$Dates$$" = dates, "$$x_t$$" = value, "$$a_t$$" = estimated_level, "$$b_t$$" = estimated_slope, "$$s_t$$" = estimated_seasonal, "$$\\hat x_t$$" = hw_estimate
-  ) |> 
-  display_partial_table(0,num_row_of_choc_data_to_keep + max_k,"0.75in")
-```
-
-
-
-
-
-
-
-
-
+<!-- Check Your Understanding -->
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
-
--   Explain the slope update equation to your partner.
+You will apply Holt-Winters filtering to these data.
+-   Find $a_1$
+-   Find $b_1$
+-   Letting $s_1 = s_2 = s_3 = 0$, compute the values of $a_t$, $b_t$, and $s_t$ for all semesters for which the enrollment counts have been reported.
+-   Find $\hat x_t$ for all rows. Note that the expression to compute $\hat x_t$ is different for the rows with data versus the rows where forecasting is required.
+-   Superimpose a sketch of your Holt-Winters filter and the associated forecast on @fig-enrollment-ts.
 
 :::
 
-The Holt-Winters method provides a way to model a time series in which we consider the time series in layers. first, there is the level (the smoothed $x_t$ values from the time series) at time $t$. We will denote the *level* by $a_t$. The level can change from time to time.
-We introduce a value $b_n$, which we call the *slope*. This is the change in the level of the series from one time period to another. (As the book points out, R and many textbooks call the slope the *trend*.) 
-Finally, we include a seasonal estimate, $s_t$, which indicates how much the time series rises or falls above the level and trend values at time $t$.
-
-To visualize these terms, it can be helpful to consider the forecasting model. Suppose we have computed that Holt-Winters estimate of a time series with $n$ observations. In other words, we have just fit a curve to the entire time series. 
-We will use a very simple time series for this illustration. 
-
-
-
-
-
-#### This is the right one
-
-```{r}
-#| warning: false
-
-a <- function(t) { 100 }
-b <- function(t) { 1/2 }
-s <- function(t) { (t %% 4 == 2) * 3 }
-x <- function(t) { a(t) + (t-1) * b(t) + s(t) }
-n_months <- 36
-max_k <- 16
-
-start_date <- my(paste(1, floor(year(now())-n_months/12)))
-date_seq <- seq(start_date,
-    start_date + months(n_months - 1),
-    by = "1 months")
-date_seq
-
-temp_ts <- data.frame(date = yearmonth(date_seq), value = x(1:n_months)) |>
-  as_tsibble(index = date)
-temp_ts |>
-  autoplot(.vars = value)
-temp1 <- holt_winters_additive_forecast(temp_ts, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 4, s1 = 0)
-
-
-start_date <- ym(max(temp1$date)) + months(1)
-date_seq <- seq(start_date,
-    start_date + months(max_k - 1),
-    by = "1 months")
-date_seq
-
-tail1 <- temp1 %>% mutate(n = row_number()) %>% tail(1)
-an <- tail1$estimated_level[1]
-bn <- tail1$estimated_slope[1]
-n <- tail1$n[1]
-
-temp2 <- temp1 %>% 
-  bind_rows(data.frame(date = date_seq, value = NA, month = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA)) %>% 
-  mutate(forecast = as.numeric(NA))
-
-temp2$forecast[n] <- temp2$estimated_level[n] + temp2$estimated_seasonal[n]
-
-for (k in (n+1):(n+max_k)) {
-  temp2$estimated_seasonal[k] <- temp2$estimated_seasonal[k - 4] ######### MAGIC NUMBER: 4 periods per cycle
-  temp2$forecast[k] <- an + (k - n) * bn + temp2$estimated_seasonal[k]
-}
-
-ggplot(temp2, aes(x = date)) +
-    geom_line(aes(y = value), color = "black", size = 1) +
-    geom_line(aes(y = estimated_level + estimated_seasonal, color = "Combined", alpha=0.5), size = 1) +
-    geom_line(aes(y = forecast, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
-    labs(
-      x = "Date",
-      y = "Value",
-      title = NULL,
-      color = "Components"
-    ) +
-    theme_minimal() +
-    theme(legend.position = "none")
-
-```
 
 
 
 
 ```{r}
-temp1
-temp2
-```
+#| include: false
+#| eval: false
 
+# THIS IS A SUCCESSFUL TEST OF THIS FUNCTION.
+# THE FUNCTION IS IN THE common_functions FILE
 
-Now, suppose we want to use this estimated curve to forecast future values of the time series.
-
-## Forecast (Additive) 
-
-
-
-
-
-
-```{r, warning=FALSE}
-df <- read.csv("https://byuistats.github.io/timeseries/data/baltimore_crime.csv", 
-               header=TRUE,
-               stringsAsFactors=FALSE)
-summary_df <- df %>%
-  group_by(CrimeDate) %>%
-  summarise(
-    total_incidents = sum(Total.Incidents)
-  )
-crime_data <- summary_df %>%
-  mutate(CrimeDate = as.Date(CrimeDate, format = "%m/%d/%Y")) %>% 
-  arrange(CrimeDate)
-crime_tsibble <- as_tsibble(crime_data, index = CrimeDate)
-crime_tsibble # Uncomment to see table
+holt_winters_additive_forecast(enrollment_ts, "enrollment", alpha = 0.2, beta = 0.2, gamma = 0.2, p = 3, a1 = NULL, b1 = NULL, s1 = NULL) |>
+  display_table()
 ```
 
 
 
+<!-- ### Working above here -->
+
+<!-- We will practice forecasting, before we discuss how to get the values of $a_t$, $b_t$, and $s_t$. -->
+
+<!-- The Holt-Winters method was applied to the chocolate search data. @tbl-hw-choc-search summarizes the results for the last few values of the time series. The variable $\hat x_t$ represents the Holt-Winters estimate. (*Note that we have not yet learned how to get these values.*) -->
+
+<!-- ```{r} -->
+<!-- #| label: tbl-hw-choc-search -->
+<!-- #| tbl-cap: "Holt-Winters estimate for the chocolate search data" -->
+<!-- #| echo: false -->
+
+<!-- # read in the data from a csv and make the tsibble -->
+<!-- # change the line below to include your file path -->
+<!-- chocolate_month_ts <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |> -->
+<!--   mutate( -->
+<!--     dates = yearmonth(ym(Month)), -->
+<!--     month = month(dates), -->
+<!--     year = year(dates), -->
+<!--     value = chocolate -->
+<!--   ) |> -->
+<!--   dplyr::select(dates, month, year, value) |> -->
+<!--   as_tsibble(index = dates) -->
+
+<!-- choc_hw_additive <- holt_winters_additive_forecast(chocolate_month_ts, "value", alpha = 0.2, beta = 0.2, gamma = 0.2, p = 12, a1 = NULL, b1 = NULL, s1 = NULL) |> -->
+<!--   dplyr::select(-month, -year) -->
+
+<!-- p <- 12 -->
+<!-- num_row_of_choc_data_to_keep <- 18 -->
+<!-- max_k <- p + 2 -->
+
+<!-- start_date <- ym(max(choc_hw_additive$dates)) + months(1) -->
+<!-- date_seq <- seq(start_date, -->
+<!--     start_date + months(max_k - 1), -->
+<!--     by = "1 months") -->
+
+<!-- tail1 <- choc_hw_additive %>% mutate(n = row_number()) %>% tail(1) -->
+<!-- an <- tail1$estimated_level[1] -->
+<!-- bn <- tail1$estimated_slope[1] -->
+<!-- n <- tail1$n[1] -->
+
+<!-- choc_hw_ts <- choc_hw_additive %>% -->
+<!--   bind_rows(data.frame(dates = yearmonth(ymd(date_seq)), value = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA)) -->
+
+<!-- choc_hw_ts2 <- choc_hw_ts |> -->
+<!--   mutate(hw_estimate = estimated_level + estimated_seasonal) -->
+
+<!-- for (k in (n+1):(n+max_k)) { -->
+<!--   choc_hw_ts2$estimated_seasonal[k] <- choc_hw_ts2$estimated_seasonal[k - 12] ######### MAGIC NUMBER: 12 periods per cycle -->
+<!--   choc_hw_ts2$hw_estimate[k] <- an + (k - n) * bn + choc_hw_ts2$estimated_seasonal[k] -->
+<!-- } -->
+
+<!-- choc_hw_ts3 <- choc_hw_ts2 |> -->
+<!--   tail(num_row_of_choc_data_to_keep + max_k) |> -->
+<!--   convert_df_to_char(3) -->
+
+<!-- for (row_num in (num_row_of_choc_data_to_keep + 1):nrow(choc_hw_ts3)) { -->
+<!--   for(col_num in 2:5) { -->
+<!--     choc_hw_ts3[row_num, col_num] <- "—" -->
+<!--   } -->
+<!-- } -->
+
+<!-- choc_hw_ts3 |> -->
+<!--   blank_out_cells_in_df(ncols_to_keep = 5, nrows_to_keep = num_row_of_choc_data_to_keep - 1) |> -->
+<!--   rename( -->
+<!--     "$$Dates$$" = dates, "$$x_t$$" = value, "$$a_t$$" = estimated_level, "$$b_t$$" = estimated_slope, "$$s_t$$" = estimated_seasonal, "$$\\hat x_t$$" = hw_estimate -->
+<!--   ) |> -->
+<!--   display_partial_table(0,num_row_of_choc_data_to_keep + max_k,"0.75in") -->
+<!-- ``` -->
 
 
-#### Additive seasonality Model
-- **Alpha** = 0.2
-- **Beta** = 0.2
-- **Gamma** = 0.2
-
-```{r}
-# holt_winters_additive_forecast_plot(crime_tsibble, alpha = 0.2, beta = 0.2, gamma = .2)
-```
 
 
 
@@ -647,12 +674,15 @@ crime_tsibble # Uncomment to see table
 
 
 
-## Small Group Activity: Decomposition of Baltimore Crime Data (20 min)
+
+
+
+## Small Group Activity: Application of Holt-Winters in R using the Baltimore Crime Data (20 min)
 
 ### Background 
 
 The City of Baltimore publishes crime data, which can be accessed through a query. 
-This dataset is sourced from the City of Baltimore Open Data and is updated monthly. 
+This dataset is sourced from the City of Baltimore Open Data. 
 You can explore the data on [data.world](https://data.world/data-society/city-of-baltimore-crime-data).
 
 Use the following code to import the data:
@@ -675,18 +705,10 @@ Use the following code to import the data:
 #| code-fold: true
 #| code-summary: "Show the code"
 
-crime_df <- rio::import("https://byuistats.github.io/timeseries/data/baltimore_crime.csv")
-#crime_df <- rio::import("data/baltimore_crime.parquet")
+crime_df <- rio::import("https://byuistats.github.io/timeseries/data/baltimore_crime.parquet")
 
 ```
 
-
-```{r}
-#| include: false
-#| eval: false
-# # Store the data, in case the query stops working
-# rio::export(crime_df, "data/baltimore_crime.csv")
-```
 
 
 The data set consists of `r nrow(crime_df)` rows and `r ncol(crime_df)` columns. 
@@ -696,14 +718,14 @@ There are a few key variables:
 - **Location:** Detailed coordinates of each incident.
 - **Crime Type:** Description of the type of crime.
 
-When exploring a new time series, it is crucial to carefully examine the data. Here are a few rows of the original data set. 
+When exploring a new time series, it is crucial to carefully examine the data. Here are a few rows of the original data set. Note that the data are not sorted in time order.
 
 ```{r}
 #| echo: false
 
 # View data
 crime_df |> 
-  display_partial_table(6,1)
+  display_partial_table(6,3)
 ```
 
 
@@ -714,6 +736,8 @@ crime_df |>
 -   Using the command `crime_df |> summary()`, we learn that the `Total.Incidents` always equals 1. What does each row in the data frame represent?
 
 :::
+
+We now summarize the data into a daily tsibble.
 
 ```{r}
 #| code-fold: true
@@ -726,7 +750,6 @@ daily_summary_df <- crime_df |>
   group_by(dates) |>
   summarise(incidents = sum(Total.Incidents))
 
-
 # Data Transformation and Formatting
 # Select relevant columns, format dates, and arrange the data
 crime_data <- daily_summary_df |>
@@ -736,11 +759,11 @@ crime_data <- daily_summary_df |>
     day = day(dates),
     year = year(dates)
   ) |>
-  dplyr::select(dates, month, day, year, incidents) |>
-  arrange(dates)
-
+  arrange(dates) |>
+  dplyr::select(dates, month, day, year, incidents)
+  
 # Convert formatted data to a tsibble with dates as the index
-crime_tsibble <- as_tsibble(crime_data, index = dates)
+crime_tsibble <- as_tsibble(crime_data, index = dates) 
 ```
 
 Here are a few rows of the summarized data.
@@ -749,38 +772,9 @@ Here are a few rows of the summarized data.
 #| echo: false
 
 # View data
-daily_summary_df |>
+crime_tsibble |>
   display_partial_table(6,3) 
 ```
-
-The following table summarizes the number of days in each month for which crime data were reported.
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-crime_data |>
-  mutate(month_char = format(as.Date(dates), '%b') ) |>
-  group_by(month, month_char, year) |>
-  summarise(n = n(), .groups = "keep") |>
-  group_by() |>
-  arrange(year, month) |>
-  dplyr::select(-month) |>
-  rename(Year = year) |>
-  pivot_wider(names_from = month_char, values_from = n) |>
-  display_table()
-```
-
-
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   What do you observe about the data?
--   What are some problems that could arise from incomplete data?
--   How do you recommend we address the missing data?
-
-:::
 
 Here is a time plot of the number of crimes reported in Baltimore daily.
 
@@ -813,6 +807,37 @@ crime_plot
 
 :::
 
+
+The following table summarizes the number of days in each month for which crime data were reported.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_data |>
+  mutate(month_char = format(as.Date(dates), '%b') ) |>
+  group_by(month, month_char, year) |>
+  summarise(n = n(), .groups = "keep") |>
+  group_by() |>
+  arrange(year, month) |>
+  dplyr::select(-month) |>
+  rename(Year = year) |>
+  pivot_wider(names_from = month_char, values_from = n) |>
+  display_table()
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you observe about the data?
+-   What are some problems that could arise from incomplete data?
+-   How do you recommend we address the missing data?
+
+:::
+
+
 ### Monthly Summary
 
 We could analyze the data at the daily level, but for simplicity we will model the monthly totals.
@@ -822,8 +847,11 @@ We could analyze the data at the daily level, but for simplicity we will model t
 #| code-summary: "Show the code"
 
 crime_monthly_ts <- crime_tsibble |>
-  index_by(month_year = floor_date(as_date(dates), "month")) |>
-  summarise(value = sum(incidents))
+  as_tibble() |>
+  mutate(months = yearmonth(dates)) |>
+  group_by(months) |>
+  summarize(value = sum(incidents)) |>
+  as_tsibble(index = months) 
 
 # Plot mean annual total incidents using autoplot
 autoplot(crime_monthly_ts, .vars = value) +
@@ -834,8 +862,7 @@ autoplot(crime_monthly_ts, .vars = value) +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
-There is incomplete data for `r temp <- crime_tsibble |> arrange(dates) |> as.data.frame() |> tail(1); temp |> dplyr::select(year) |> pull()`, as data were not provided after `r last_date <- temp |> dplyr::select(dates) |> pull(); paste0(month(last_date), "/", day(last_date), "/", year(last_date))`. We will only consider data through `r month(paste0(month(last_date)-1, "/1/", year(last_date)), label = TRUE, abbr = FALSE)` `r ifelse(month(last_date) == 1, year(last_date)-1, year(last_date))`.
-<!-- ~ -->
+There is incomplete data for `r temp <- crime_tsibble |> arrange(dates) |> as.data.frame() |> tail(1); temp |> dplyr::select(year) |> pull()`, as data were not provided after `r last_date <- temp |> dplyr::select(dates) |> pull(); paste0(month(last_date), "/", day(last_date), "/", year(last_date))`. 
 <!-- This is hard-coded.. -->
 We will omit any data after October 2016.
 
@@ -843,32 +870,119 @@ We will omit any data after October 2016.
 #| code-fold: true
 #| code-summary: "Show the code"
 
-crime_monthly_ts <- crime_monthly_ts |>
-  filter(month_year < mdy("10/31/2016"))
+crime_monthly_ts1 <- crime_monthly_ts |>
+  filter(months < yearmonth(mdy("11/1/2016")))
+```
+
+We apply Holt-Winters filtering on the monthly Baltimore crimes data with an additive model:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_hw <- crime_monthly_ts1 |>
+  tsibble::fill_gaps() |>
+  model(Additive = ETS(value ~
+        trend("A") +
+        error("A") +
+        season("A"),
+        opt_crit = "amse", nmse = 1))
+report(crime_hw)
+```
+
+We can compute some values to assess the fit of the model:
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| eval: false
+
+# SS of random terms
+sum(components(crime_hw)$remainder^2, na.rm = T)
+
+# RMSE
+accuracy(crime_hw)$RMSE
+
+# Standard devation of number of incidents each month
+sd(crime_monthly_ts1$value)
+```
+-   The sum of the square of the random terms is: `r sum(components(crime_hw)$remainder^2, na.rm = T)`.
+-   The root mean square error (RMSE) is: `r accuracy(crime_hw)$RMSE`.
+-   The standard deviation of the number of incidents each month is `r sd(daily_summary_df$incidents)`.
+
+@fig-crime-decomp illustrates the Holt-Winters decomposition of the Baltimore crime data.
+
+```{r}
+#| label: fig-crime-decomp
+#| fig-cap: "Monthly Total Number of Crime Reported in Baltimore"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+autoplot(components(crime_hw))
+```
+
+In @fig-crime-hw, we can observe the relationship between the Holt-Winters filter and the time series of the number of crimes each month.
+
+```{r}
+#| label: fig-crime-hw
+#| fig-cap: "Superimposed plots of the number of crimes each month and the Holt-Winters filter"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+augment(crime_hw) |>
+  ggplot(aes(x = months, y = value)) +
+    coord_cartesian(ylim = c(0,5500)) +
+    geom_line() +
+    geom_line(aes(y = .fitted, color = "Fitted")) +
+    labs(color = "")
+```
+
+@fig-crime-hw-forecast contains the information from @fig-crime-hw, with the addition of an additional four years of forecasted values. The light blue bands give a 95% prediction bands for the forecast.
+
+```{r}
+#| label: fig-crime-hw-forecast
+#| fig-cap: "Superimposed plots of the number of crimes each month and the Holt-Winters filter, with four additional years forecasted"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+crime_forecast <- crime_hw |>
+  forecast(h = "4 years") 
+crime_forecast |>
+  autoplot(crime_monthly_ts1, level = 95) +
+  coord_cartesian(ylim = c(0,5500)) +
+  geom_line(aes(y = .fitted, color = "Fitted"),
+    data = augment(crime_hw)) +
+  scale_color_discrete(name = "")
+```
+
+### Rethinking Baltimore
+
+The monthly crime data shows a distinct pattern arcing through the annual cycle. 
+Consider the data for 2011
+```{r}
+#| label: tbl-monthly-crimes-2011
+#| tbl-cap: "Total count of crimes reported in Baltimore in 2011 by month"
+#| echo: false
+
+crime_monthly_ts1 |>
+  as_tibble() |>
+  filter(year(months) == 2011) |>
+  mutate(months = month(months, label = TRUE)) |>
+  pivot_wider(names_from = "months", values_from = "value") |>
+  display_table()
 ```
 
 
+<!-- Check Your Understanding -->
 
+::: {.callout-tip icon=false title="Check Your Understanding"}
 
+-   Starting with January, determine whether the number of crimes goes up or down as you move from one month to the next.
+-   What might explain this pattern?
+-   Use the function `days_in_month()` to adjust the time series and re-run the analysis. What do you notice?
 
+:::
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- ## TO BE CONTINUED.... -->
 
 
 
@@ -902,10 +1016,75 @@ crime_monthly_ts <- crime_monthly_ts |>
 
 
 
-<a href="javascript:showhide('Solutions0')"
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">BYU-Idaho Enrollment</a>
+
+::: {#Solutions1 style="display:none;"}
+
+
+@fig-enrollment-ts:
+
+```{r}
+#| warning: false
+#| echo: false
+
+enrollment_ts |>
+  bind_rows(extra_terms) |>
+  autoplot(.vars = enrollment) +
+    labs(
+      x = "Time",
+      y = "Enrollment",
+      title = paste0("BYU-Idaho On-Campus Enrollment Counts")
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+
+@tbl-enrollment-table:
+
+```{r}
+#| warning: false
+#| echo: false
+
+enroll |>
+  bind_rows(enroll_extension) |>
+  mutate(
+    est = case_when(
+      row_number() == 1 ~ x_t,
+      row_number() <= nrow(enroll) ~ a_t + s_t,
+      TRUE ~ est
+    )
+  ) |>
+  rename(
+    "$$Semester$$" = semester,
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$b_t$$" = b_t,
+    "$$s_t$$" = s_t,
+    "$$\\hat x_t$$" = est
+  ) |>
+  convert_df_to_char(0) |>
+  mutate(
+    across(everything(), ~replace_na(.x, ""))
+  ) |>
+  display_table("0.75in")
+```
+
+
+
+
+
+:::
+
+<a href="javascript:showhide('Solutions2')"
 style="font-size:.8em;">Balitmore Crime Time Plot</a>
 
-::: {#Solutions0 style="display:none;"}
+::: {#Solutions2 style="display:none;"}
 
 ```{r}
 # Dates with high criminal activity
@@ -913,98 +1092,12 @@ crime_data |> arrange(desc(incidents)) |> head()
 ```
 
 On April 27, 2015, 419 crimes were recorded. These are associated with protests over arrest of Freddie Gray.
+
+
 :::
 
 
 
-
-
-
-
-
-
-<a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Class Activity</a>
-
-::: {#Solutions style="display:none;"}
-
-Solutions to Class Activity on Forecasting
-
-```{r}
-#| echo: false
-
-choc_hw_ts3 <- choc_hw_ts2 |>
-  tail(num_row_of_choc_data_to_keep + max_k) |>
-  convert_df_to_char(3)
-
-for (row_num in (num_row_of_choc_data_to_keep + 1):nrow(choc_hw_ts3)) {
-  for(col_num in 2:4) {
-    choc_hw_ts3[row_num, col_num] <- "—"
-  }
-}
-
-choc_hw_ts3 |>
-  rename(
-    "$$Dates$$" = dates, "$$x_t$$" = value, "$$a_t$$" = estimated_level, "$$b_t$$" = estimated_slope, "$$s_t$$" = estimated_seasonal, "$$\\hat x_t$$" = hw_estimate
-  ) |> 
-  display_partial_table(0,18)
-```
-
-
-```{r}
-#| echo: false
-#| warning: false
-
-p <- 12
-num_row_of_choc_data_to_keep <- 9 * 12 # (9 years)
-max_k <- 6 * p 
-
-start_date <- ym(max(choc_hw_additive$dates)) + months(1)
-date_seq <- seq(start_date,
-    start_date + months(max_k - 1),
-    by = "1 months")
-
-tail1 <- choc_hw_additive %>% mutate(n = row_number()) %>% tail(1)
-an <- tail1$estimated_level[1]
-bn <- tail1$estimated_slope[1]
-n <- tail1$n[1]
-
-choc_hw_ts <- choc_hw_additive %>% 
-  bind_rows(data.frame(dates = yearmonth(ymd(date_seq)), value = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA))
-
-choc_hw_ts2 <- choc_hw_ts |>
-  mutate(hw_estimate = estimated_level + estimated_seasonal)
-
-for (k in (n+1):(n+max_k)) {
-  choc_hw_ts2$estimated_seasonal[k] <- choc_hw_ts2$estimated_seasonal[k - 12] ######### MAGIC NUMBER: 12 periods per cycle
-  choc_hw_ts2$hw_estimate[k] <- an + (k - n) * bn + choc_hw_ts2$estimated_seasonal[k]
-}
-
-choc_hw_ts2 |> 
-  mutate(dates = yearmonth(ym(dates))) |>
-  mutate(value = as.numeric(value)) |>
-  mutate(hw_estimate = as.numeric(hw_estimate)) |> 
-  filter(dates >= yearmonth(ym("2015 Jan"))) |>
-  as_tsibble(index = dates) |>
-  autoplot(.vars = value) +
-  geom_line(data = choc_hw_ts2 |> tail(num_row_of_choc_data_to_keep + max_k) |> head(num_row_of_choc_data_to_keep), aes(x=dates, y=hw_estimate), linetype = "solid", color = "#E69F00") +
-  geom_line(data = choc_hw_ts2 |> tail(max_k + 1), aes(x=dates, y=hw_estimate), linetype = "dashed", color = "#E69F00") +
-    labs(
-      x = "Time",
-      y = "Chocolate Searches",
-      title = "Holt-Winters Filter Applied to Chocolate Google Search Data",
-      subtitle = "alpha = 0.2, beta = 0.2, gamma = 0.2"
-    ) +
-    theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.subtitle = element_text(hjust = 0.5)
-    ) +
-    theme(
-      plot.title = element_text(hjust = 0.5),
-    )
-```
-
-:::
 
 
 

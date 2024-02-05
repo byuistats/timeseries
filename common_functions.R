@@ -125,6 +125,20 @@ blank_out_cells_in_df <- function(df, ncols_to_keep = 2, nrows_to_keep = 0, deci
 }
 
 
+# Returns "" for all cells except the first ncols_to_keep columns and nrows_to_keep rows
+# Numeric values are rounded to "decimals" places
+blank_out_partial_row <- function(df, row_number = nrow(df), first_column_number = 2, last_column_number = ncol(df), decimals = 3) {
+  out_df <- df |>
+    convert_df_to_char(decimals)
+
+  for (j in first_column_number:last_column_number) {
+    out_df[row_number,j] <- ""
+  }
+
+  return(out_df)
+}
+
+
 ###### Compute sum or mean of numeric variables in a df
 
 append_sum_to_df <- function(df, label = "Sum") {
@@ -274,4 +288,37 @@ deg2rad <- function (x)
 rad2deg <- function (x)
 {
   x/base::pi * 180
+}
+
+
+
+
+################## Holt-Winters ####################
+
+holt_winters_additive_forecast <- function(data, value_var, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 12, a1 = NULL, b1 = NULL, s1 = NULL) {
+  # Assuming 'data' is a tsibble with a column 'value'
+  at <- numeric(nrow(data))
+  bt <- numeric(nrow(data))
+  st <- numeric(nrow(data))
+
+  at[1] <- ifelse(!is.null(a1), a1, data[[value_var]][1])
+  bt[1] <- ifelse(!is.null(b1), b1, (1 / p) * mean( data[[value_var]][(p+1):(2*p)] - data[[value_var]][1:p] ))
+  st[1:p] <- ifelse(!is.null(s1), s1, 0)
+
+  # First cycle
+  for (t in 2:p) {
+    at[t] <- alpha * (data[[value_var]][t] - st[t - 0 * p ]) + (1 - alpha) * (at[t - 1] + bt[t - 1])
+    bt[t] <- beta * (at[t] - at[t - 1]) + (1 - beta) * bt[t - 1]
+  }
+
+  for (t in (p + 1):nrow(data)) {
+    at[t] <- alpha * (data[[value_var]][t] - st[t - p]) + (1 - alpha) * (at[t - 1] + bt[t - 1])
+    bt[t] <- beta * (at[t] - at[t - 1]) + (1 - beta) * bt[t - 1]
+    st[t] <- gamma * (data[[value_var]][t] - at[t]) + (1 - gamma) * st[t - p]
+  }
+
+  data <- data %>%
+    mutate(estimated_level = at, estimated_slope = bt, estimated_seasonal = st)
+
+  data %>% return()
 }
