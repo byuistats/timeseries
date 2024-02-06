@@ -59,9 +59,192 @@ source("common_functions.R")
 
 
 
-## Class Discussion: Theory Supporting the EWMA
+
+<!-- Great reference: -->
+<!-- https://medium.com/analytics-vidhya/a-thorough-introduction-to-holt-winters-forecasting-c21810b8c0e6 -->
 
 
+
+## Class Discussion: Variations on the Holt-Winters Model
+
+There are many models to which the Holt-Winters process can be applied.
+
+### Forecasting 
+
+We can assume either additive or multiplicative seasonality. Similarly, we can assume either additive or multiplicative slope. These can be mixed-and-matched as is appropriate for the setting. We can combine the components in any combination of additive and multiplicative operators.
+
+@tbl-forecast-models summarizes the different forecasting equations we use, based on the model that is appropriate for the time series.
+
+
+
+|                          | **Additive Seasonality**                                                               | **Multiplicative Seasonality**                                                              |
+|------------------|----------------------------|----------------------------|
+| **Additive Slope**       | $$ \hat x_{n+k \mid n} = a_n + ( k \cdot b_n ) + s_{n+k-p} $$                          | $$ \hat x_{n+k \mid n} = a_n + ( k \cdot b_n ) + s_{n+k-p} $$                               |
+| **Multiplicative Slope** | $$ \hat x_{n+k \mid n} = \left[ a_n \cdot ( b_n )^k \right]+s_{n+k-p} $$ | $$ \hat x_{n+k \mid n} = \left[ a_n \cdot ( b_n )^k \right]\cdot s_{n+k-p} $$ |
+
+: Summary of the forecasting equations for different models {#tbl-forecast-models}
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   With your partner, for each of the equations in @tbl-forecast-models, identify where the additive or multiplicative terms are represented for both the slope and the seasonality.
+    -   How is an additive slope represented in the forecasting equation?
+    -   How is a multiplicative slope represented in the forecasting equation?
+    -   How is additive seasonality represented in the forecasting equation?
+    -   How is multiplicative seasonality represented in the forecasting equation?
+:::
+
+
+### Seasonality
+
+When we compute the estimated seasonal effect, $s_t$, we remove the level from the time step. So, if the level component is additive, we subtract it. If the level component is multiplicative we divide.
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+#### Additive Level
+$$
+  s_t = \gamma \left( x_t - a_t \right) + (1-\gamma) s_{t-p}
+$$
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+#### Multiplicative Level
+$$
+  s_t = \gamma \left( \frac{x_t}{a_t} \right) + (1-\gamma) s_{t-p}
+$$
+
+:::
+:::
+<!-- End of two columns -->
+
+Note that when the level is additive, we subtract it from the time series to remove its effect. If the level is multiplicative, we divide.
+
+### Level
+
+As we saw in the previous lesson, Winter's 1960 method requires a revised version of the level update equation, compared to simple exponential smoothing (EWMA). The form of this equation depends on the type of seasonality assumed.
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+#### Additive Seasonality
+$$
+  a_t = \alpha \left( x_t - s_{t-p} \right) + (1-\alpha) \left( a_{t-1} + b_{t-1} \right)
+$$
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+#### Multiplicative Seasonality
+$$
+  a_t = \alpha \left( \frac{x_t}{s_{t-p}} \right) + (1-\alpha) \left( a_{t-1} + b_{t-1} \right)
+$$
+
+:::
+:::
+<!-- End of two columns -->
+
+Notice in each case, the seasonality is removed by the appropriate inverse operation. We subtract to deseasonalize additive seasonality, and we divide to deseasonalize multiplicative seasonality.
+
+### Slope
+
+The same slope equation is used whether the level or seasonality terms are additive or multiplicative.
+
+$$
+  b_t = \beta \left( a_t - a_{t-1} \right) + (1-\beta) b_{t-1}
+$$
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Working with your partner, justify each of the seasonality and level update equations given above.
+
+:::
+
+## Which model should I choose?
+
+When is each of these models appropriate? It can be helpful to simulate the various situations and see which matches the data you are considering.
+
+```{r}
+#| echo: false
+
+set.seed(1)
+n_obs <- 100
+sigma <- 1
+df0 <- data.frame(t = 1:n_obs, a_t = 10, b_t = 1) 
+for(i in 2:nrow(df0)) {
+  df0$a_t[i] = df0$a_t[i-1] + df0$b_t[i-1] 
+}
+df <- df0 |>
+  mutate(
+    b_t = 0.05,
+    a_t = ifelse(is.na(lag(b_t)), 10, lag(a_t) + lag(b_t)),
+    s_t = 2 * sin(pi / 6 * (t-1)),
+    w_t = rnorm(n(), 0, sigma)
+  ) |>
+  mutate(
+    add_slope_add_season = ifelse(is.na(lag(b_t)), a_t + s_t, a_t + lag(b_t) + s_t + w_t),
+    add_slope_mult_season = ifelse(is.na(lag(b_t)), a_t * s_t, (a_t + lag(b_t)) * s_t + w_t),
+    mult_slope_add_season = ifelse(is.na(lag(b_t)), a_t + s_t, a_t * lag(b_t) + s_t + w_t),
+    add_slope_mult_season = ifelse(is.na(lag(b_t)), a_t * s_t, (a_t * lag(b_t)) * s_t + w_t) 
+  )
+  
+  
+plot(df$t,df$add_slope_add_season)
+plot(df$t,df$add_slope_mult_season)
+plot(df$t,df$mult_slope_add_season)
+plot(df$t,df$add_slope_mult_season)
+
+
+```
+
+
+
+
+## Small Group Activity: Demonstration of the Computation of the Holt-Winters Filter with Multiplicative Seasonals 
+
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+# Working above here
 
 ## Introduction to the Holt-Winters Method (Additive Model)
 
@@ -90,7 +273,7 @@ It is called exponential smoothing, because at each preceding value has exponent
 
 These computations are based on previous values and $a_1 = x_1$. The number $0 \le \alpha \le 1$ is a smoothing parameter. This determines how much weight is given to previous values when creating the updated level estimate.
 
-If you were to use this model for forecasting, you would not be able to consider any trend or seasonality in the forecast. Hence, the future values would all be forecasted as the last value of $a_n$:
+If you were to use this model for forecasting, you would not be able to consider any slope or seasonality in the forecast. Hence, the future values would all be forecasted as the last value of $a_n$:
 
 $$
   \hat x_{n+k|n} = a_n
