@@ -34,6 +34,91 @@ source("common_functions.R")
 </script>
 ```
 
+
+```{r}
+#| echo: false
+
+expand_hw_df <- function(df, date_var, value_var, p = 12, predict_periods = 18) {
+  # Note that p must be < nrow(df)
+  # Note that predict_periods must be < nrow(df)
+  
+  # Create new variables
+  df$date <- df[[date_var]]
+  df$x_t <- df[[value_var]]
+  
+  df2 <- df |>
+    # select(date, x_t) |>  # This deletes all variables in original file
+    mutate(
+      a_t = as.numeric(NA),
+      b_t = as.numeric(NA),
+      s_t = as.numeric(NA),
+      xhat_t = as.numeric(NA)
+    )
+  
+  header <- df2 |> 
+    head(p + 1) |>
+    mutate(
+      date = date - max(date) + min(date),
+      x_t = NA
+    ) |>
+    head(p)
+
+  footer <- df2 |>
+    tail(predict_periods + 1) |>
+    mutate(
+      date = date - min(date) + max(date),
+      x_t = NA
+    ) |>
+    tail(predict_periods)
+
+  df_final <- header |>
+    bind_rows(df2) |>
+    bind_rows(footer)
+  
+  return(df_final)
+}
+
+hw_additive_slope_additive_seasonal <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p)) {
+  
+  # Get expanded data frame
+  df <- df |> expand_hw_df(date_var, value_var, p, predict_periods)
+  
+  # Fill in prior belief about s_t
+  for (t in 1:p) {
+    df$s_t[t] <- s_initial[t]
+  }
+  
+  # Fill in first row of values
+  offset <- p # number of header rows to skip
+  df$a_t[1 + offset] <- df$x_t[1 + offset]
+  df$b_t[1 + offset] <- (1 / p) * mean(df$x_t[(p + 1 + offset):(2 * p + offset)] - df$x_t[(1 + offset):(p + offset)])
+  df$s_t[1 + offset] <- (1 - gamma) * df$s_t[1]
+
+  # Fill in remaining rows of body of df with values
+  for (t in (2 + offset):(nrow(df) - predict_periods) ) {
+    df$a_t[t] = alpha * (df$x_t[t] - df$s_t[t-p]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
+    df$b_t[t] = beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
+    df$s_t[t] = gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[t-p]
+  }
+  
+  df <- df |>
+    mutate(k = ifelse(row_number() >= nrow(df) - predict_periods, row_number() - (nrow(df) - predict_periods), NA))
+  
+  # Fill in forecasted values
+  offset <- nrow(df) - predict_periods
+  for (t in offset:nrow(df)) {
+    df$s_t[t] = df$s_t[t - p]
+    df$xhat_t[t] = df$a_t[offset] + df$k[t] * df$b_t[offset] + df$s_t[t - p]
+  }
+  
+  # Delete temporary variable k
+  df <- df |> select(-k)
+
+  return(df)
+}
+```
+
+
 ## Learning Outcomes
 
 {{< include outcomes/chapter_3_lesson_3_outcomes.qmd >}}
@@ -350,33 +435,12 @@ Next, we apply the Holt-Winters method to these data. @fig-hw-example-ts illustr
 #| echo: false
 #| warning: false
 
-temp1 <- holt_winters_additive_forecast(temp_ts, "value", alpha = 0.2, beta = 0.2, gamma = 0.2, p = 4, s1 = 0)
-
-start_date <- ym(max(temp1$date)) + months(1)
-date_seq <- seq(start_date,
-    start_date + months(max_k - 1),
-    by = "1 months")
-
-tail1 <- temp1 %>% mutate(n = row_number()) %>% tail(1)
-an <- tail1$estimated_level[1]
-bn <- tail1$estimated_slope[1]
-n <- tail1$n[1]
-
-temp2 <- temp1 %>%
-  bind_rows(data.frame(date = date_seq, value = NA, month = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA)) %>%
-  mutate(forecast = as.numeric(NA))
-
-temp2$forecast[n] <- temp2$estimated_level[n] + temp2$estimated_seasonal[n]
-
-for (k in (n+1):(n+max_k)) {
-  temp2$estimated_seasonal[k] <- temp2$estimated_seasonal[k - 4] ######### MAGIC NUMBER: 4 periods per cycle
-  temp2$forecast[k] <- an + (k - n) * bn + temp2$estimated_seasonal[k]
-}
-
-ggplot(temp2, aes(x = date)) +
-    geom_line(aes(y = value), color = "black", size = 1) +
-    geom_line(aes(y = estimated_level + estimated_seasonal, color = "Combined", alpha=0.5), size = 1) +
-    geom_line(aes(y = forecast, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
+temp_ts |> 
+  hw_additive_slope_additive_seasonal("date", "value", p = 4, predict_periods = 16) |>
+  ggplot(aes(x = date)) +
+    geom_line(aes(y = x_t), color = "black", size = 1) +
+    geom_line(aes(y = a_t + s_t, color = "Combined", alpha=0.5), size = 1) +
+    geom_line(aes(y = xhat_t, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
     coord_cartesian(ylim = c(95,130)) +
     labs(
       x = "Date",
@@ -391,7 +455,6 @@ ggplot(temp2, aes(x = date)) +
     )
 ```
 
-
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
 
@@ -400,9 +463,103 @@ ggplot(temp2, aes(x = date)) +
 :::
 
 
+# WORKING HERE...........
+# WORKING HERE...........
+# WORKING HERE...........
+# Need to create blank table (with rounded values) and compute solutions (based on rounded values)
+
+## Small Group Activity: Holt-Winters Model for Residential Natural Gas Consumption (25 min)
+
+The United States Energy Information Administration (EIA) [publishes data](https://www.eia.gov/dnav/ng/ng_cons_sum_dcu_nus_m.htm) on the total residential natural gas consumption in the country. 
 
 
-## Small Group Activity: Holt-Winters Model for BYU-Idaho Enrollment Data (25 min)
+
+```{r}
+#| echo: false
+#| warning: false
+
+hw_additive_slope_additive_seasonal_gas <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p)) {
+  
+  # Get expanded data frame
+  df <- df |> expand_hw_df(date_var, value_var, p, predict_periods)
+  
+  # Fill in prior belief about s_t
+  for (t in 1:p) {
+    df$s_t[t] <- s_initial[t]
+  }
+  
+  # Fill in first row of values
+  offset <- p # number of header rows to skip
+  df$a_t[1 + offset] <- round( df$x_t[1 + offset] )
+  df$b_t[1 + offset] <- round( (1 / p) * mean(df$x_t[(p + 1 + offset):(2 * p + offset)] - df$x_t[(1 + offset):(p + offset)]) )
+  df$s_t[1 + offset] <- round( (1 - gamma) * df$s_t[1] )
+
+  # Fill in remaining rows of body of df with values
+  for (t in (2 + offset):(nrow(df) - predict_periods) ) {
+    df$a_t[t] = round( alpha * (df$x_t[t] - df$s_t[t-p]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1]) )
+    df$b_t[t] = round( beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1] )
+    df$s_t[t] = round( gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[t-p] )
+  }
+  
+  df <- df |>
+    mutate(k = ifelse(row_number() >= nrow(df) - predict_periods, row_number() - (nrow(df) - predict_periods), NA))
+  
+  # Fill in forecasted values
+  offset <- nrow(df) - predict_periods
+  for (t in offset:nrow(df)) {
+    df$s_t[t] = round( df$s_t[t - p] )
+    df$xhat_t[t] = round( df$a_t[offset] + df$k[t] * df$b_t[offset] + df$s_t[t - p] )
+  }
+  
+  # Delete temporary variable k
+  df <- df |> select(-k)
+  
+  return(df)
+}
+
+nat_gas <- rio::import("data/natural_gas_consumption_residential_us.csv") |>
+  dplyr::select(-comments) |>
+  mutate(
+    month = my(month),
+    quarter = yearquarter(month)
+  ) |>
+  group_by(quarter) |> 
+  summarize(
+    gas_use = sum(residential_nat_gas_consumption),
+    n = n()
+  ) |>
+  filter(n == 3) |>
+  select(-n)
+
+nat_gas_ts <- nat_gas |>
+  filter(quarter > my("Dec 2016")) |>
+  mutate(billion_cf_gas = round(gas_use / 10^3 ) ) |>
+  hw_additive_slope_additive_seasonal_gas("quarter", "billion_cf_gas", p = 4, predict_periods = 12, s_initial = c(1000, -1000, -1000, 1000)) |>
+  as_tsibble(index = date) |> 
+  dplyr::select(date, x_t, a_t, b_t, s_t, xhat_t)
+  
+nat_gas_ts |>
+  ggplot(aes(x = date)) +
+    geom_line(aes(y = x_t), color = "black", size = 1) +
+    geom_line(aes(y = a_t + s_t, color = "Combined", alpha=0.5), size = 1) +
+    geom_line(aes(y = xhat_t, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
+    coord_cartesian(ylim = c(0,2500)) +
+    labs(
+      x = "Date",
+      y = "Natural Gas Use (Billions of Cubic Feet)",
+      title = "U.S. Residential Natural Gas Consumption, by Quarter",
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+
+
+## Small Group Activity: Holt-Winters Model for BYU-Idaho Enrollment Data (25 min) --- MULTIPLICATIVE
 
 In Chapter 2, Lesson 3, we explored the BYU-Idaho Enrollment data. We will apply the Holt-Winters model to these data with $\alpha = \beta = \gamma = 0.2$. @fig-enrollment-ts illustrates these data.
 
@@ -414,6 +571,53 @@ In Chapter 2, Lesson 3, we explored the BYU-Idaho Enrollment data. We will apply
 #| warning: false
 # read in the data from a csv and make the tsibble
 
+# byui_enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment_2012.csv") |>
+byui_enrollment_ts <- rio::import("data/byui_enrollment_2012.csv") |> 
+  rename(
+    semester = "TermCode",
+    year = "Year",
+    enrollment = "On Campus Enrollment (Campus HC)"
+  ) |>
+  mutate(
+    term = 
+      case_when(
+        left(semester, 2) == "WI" ~ 1,
+        left(semester, 2) == "SP" ~ 2,
+        left(semester, 2) == "FA" ~ 3,
+        TRUE ~ NA
+      )
+  ) |>
+  filter(!is.na(term)) |>
+  mutate(dates = yearmonth( ym( paste(year, term * 4 - 3) ) ) ) |>
+  dplyr::select(semester, dates, enrollment) |>
+  as_tsibble(index = dates)
+# |>
+# filter(dates >= my("May 2019"))
+
+byui_enrollment_ts |> 
+  as_tibble() |>
+  hw_additive_slope_additive_seasonal("dates", "enrollment", p = 3, predict_periods = 12) |>
+  as_tsibble(index = date) |>
+  ggplot(aes(x = date)) +
+    geom_line(aes(y = x_t), color = "black", size = 1) +
+    geom_line(aes(y = a_t + s_t, color = "Combined", alpha=0.5), size = 1) +
+    geom_line(aes(y = xhat_t, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
+    # coord_cartesian(ylim = c(95,130)) +
+    labs(
+      x = "Date",
+      y = "Value",
+      title = "BYU-Idaho Enrollments with Holt-Winters Forecast",
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+
+```{r}
 enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
   mutate(dates = yearmonth( ym( paste(year, term * 4 - 3) ) ) ) |>
   dplyr::select(semester, dates, enrollment) |>
@@ -428,7 +632,7 @@ extra_terms <- enrollment_ts |>
       as.integer(right(semester, 2)) + 2
       )
   ) |>
-  mutate(enrollment = NA, enroll_thousand = NA)
+  mutate(enrollment = NA)
 
 enrollment_ts |>
   bind_rows(extra_terms) |>
@@ -768,7 +972,7 @@ crime_data <- daily_summary_df |>
 crime_tsibble <- as_tsibble(crime_data, index = dates) 
 ```
 
-Here are a few rows of the summarized data.
+Here are a few rows of the data when summarized daily.
 
 ```{r}
 #| echo: false
@@ -938,7 +1142,7 @@ augment(crime_hw) |>
     labs(color = "")
 ```
 
-@fig-crime-hw-forecast contains the information from @fig-crime-hw, with the addition of an additional four years of forecasted values. The light blue bands give a 95% prediction bands for the forecast.
+@fig-crime-hw-forecast contains the information from @fig-crime-hw, with the addition of an additional four years of forecasted values. The light blue bands give the 95% prediction bands for the forecast.
 
 ```{r}
 #| label: fig-crime-hw-forecast
