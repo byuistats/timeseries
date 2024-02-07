@@ -586,10 +586,11 @@ hw_additive_slope_additive_seasonal_gas <- function(df, date_var, value_var, p =
 nat_gas_ts <- nat_gas |>
   hw_additive_slope_additive_seasonal_gas("quarter", "gas_billion_cf", p = 4, predict_periods = 9, s_initial = c(1000, -1000, -1000, 1000)) |>
   as_tsibble(index = date) %>%  
-  mutate(t = (1 - 4):(nrow(.) - 4)) |>
+  mutate(t = (1 - 4):(nrow(.) - 4)) |> # Create column t
   dplyr::select(date, t, x_t, a_t, b_t, s_t, xhat_t)
 
 nat_gas_ts |>
+  # Hide values from students
   mutate(
     xhat_t = 
       case_when(
@@ -601,6 +602,14 @@ nat_gas_ts |>
     b_t = ifelse(t %in% c(1:6, 26:27), NA, b_t),
     s_t = ifelse(t %in% c(1:6, 26:nrow(nat_gas_ts)), NA, s_t)
   ) |>
+  replace_na_with_char() |>
+  # Add emdashes to make it clear where students should not put values
+  mutate(
+    x_t = ifelse(t %in% c(-3:0, 28:nrow(nat_gas_ts)), "—", x_t),
+    a_t = ifelse(t %in% c(-3:0, 28:nrow(nat_gas_ts)), "—", a_t),
+    b_t = ifelse(t %in% c(-3:0, 28:nrow(nat_gas_ts)), "—", b_t),
+    xhat_t = ifelse(t %in% c(-3:0), "—", xhat_t)
+  ) |>
   rename(
     "$$Quarter$$" = date,
     "$$t$$" = t,
@@ -610,7 +619,6 @@ nat_gas_ts |>
     "$$s_t$$" = s_t,
     "$$\\hat x_t$$" = xhat_t,
   ) |>
-  replace_na_with_char() |>
   display_table("0.75in")
 ```
 
