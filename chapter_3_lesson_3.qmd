@@ -338,8 +338,16 @@ For $t=1, 2, 3, \ldots, p$ iterations, use your estimate for $s_t$ when the form
       \right\}
     $$
     give a good estimate of the slope at the beginning of the time series?
--   Suppose you needed to estimate $s_1, s_2, \ldots, s_p$ for monthly sales data, where sales are highest in the summer months and lowest in the winter months. If January corresponds to month 1, which values of $s_t$ would you set to be positive? negative? near zero?
+-   Suppose you needed to estimate $s_1, s_2, s_3, \ldots, s_p$ for monthly sales data, where sales are highest in the summer months and lowest in the winter months. If January corresponds to month 1, which values of $s_t$ would you set to be positive? negative? near zero?
 
+:::
+
+::: {.callout-note}
+To implement the initial seasonality estimates, we include them in the model as 
+$$
+  s_{1-p}, s_{2-p}, s_{3-p}, \ldots, s_{p-p}
+$$
+so we can begin to update these values in the first cycle of seasonality ($t = 1, 2, 3, \ldots, p$).
 :::
 
 ### Illustration of the Holt-Winters Method for a Sample Time Series
@@ -463,10 +471,6 @@ temp_ts |>
 :::
 
 
-# WORKING HERE...........
-# WORKING HERE...........
-# WORKING HERE...........
-# Need to create blank table (with rounded values) and compute solutions (based on rounded values)
 
 ## Small Group Activity: Holt-Winters Model for Residential Natural Gas Consumption (25 min)
 
@@ -490,7 +494,7 @@ nat_gas <- nat_gas_raw |>
   mutate(gas_billion_cf = round(gas_use_mmcf / 10^3))
 ```
 
-The United States Energy Information Administration (EIA) [publishes data](https://www.eia.gov/dnav/ng/ng_cons_sum_dcu_nus_m.htm) on the total residential natural gas consumption in the country. The government publishes monthly data beginning in January 1973. For the purpose of this example, we will only consider quarterly values beginning in 2017. The data are given in MMcf (thousand-thousand cubic feet, or millions of cubic feet). We convert the data to billions of cubic feet (Bcf) to make the numbers a little more manageable.
+The United States Energy Information Administration (EIA) [publishes data](https://www.eia.gov/dnav/ng/ng_cons_sum_dcu_nus_m.htm) on the total residential natural gas consumption in the country. The government publishes monthly data beginning in January 1973. For the purpose of this example, we will only consider quarterly values beginning in 2017. The data are given in MMcf (thousand-thousand cubic feet, or millions of cubic feet). We convert the data to billions of cubic feet (Bcf) and round to the nearest integer to make the numbers a little more manageable.
 
 ```{r}
 #| code-fold: true
@@ -531,7 +535,7 @@ $$
 $$
 
 There are $p=4$ quarters in a year. 
-We will implement these in the model as 
+We implement initial seasonality estimates in the Holt-Winters model as 
 $$
   s_{1-p} = s_{(-3)} = 1000, ~~~ s_{2-p} = s_{(-2)} = -1000, ~~~ s_{3-p} = s_{(-1)} = -1000, ~~~ s_{4-p} = s_{0} = 1000
 $$
@@ -580,10 +584,41 @@ hw_additive_slope_additive_seasonal_gas <- function(df, date_var, value_var, p =
 }
 
 nat_gas_ts <- nat_gas |>
-  hw_additive_slope_additive_seasonal_gas("quarter", "gas_billion_cf", p = 4, predict_periods = 12, s_initial = c(1000, -1000, -1000, 1000)) |>
-  as_tsibble(index = date) |> 
-  dplyr::select(date, x_t, a_t, b_t, s_t, xhat_t)
-  
+  hw_additive_slope_additive_seasonal_gas("quarter", "gas_billion_cf", p = 4, predict_periods = 9, s_initial = c(1000, -1000, -1000, 1000)) |>
+  as_tsibble(index = date) %>%  
+  mutate(t = (1 - 4):(nrow(.) - 4)) |>
+  dplyr::select(date, t, x_t, a_t, b_t, s_t, xhat_t)
+
+nat_gas_ts |>
+  mutate(
+    xhat_t = 
+      case_when(
+        t %in% c(1:6, 26:nrow(nat_gas_ts)) ~ NA,
+        t %in% c(7:25) ~ a_t + s_t,
+        TRUE ~ xhat_t
+      ),
+    a_t = ifelse(t %in% c(1:6, 26:27), NA, a_t),
+    b_t = ifelse(t %in% c(1:6, 26:27), NA, b_t),
+    s_t = ifelse(t %in% c(1:6, 26:nrow(nat_gas_ts)), NA, s_t)
+  ) |>
+  rename(
+    "$$Quarter$$" = date,
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$b_t$$" = b_t,
+    "$$s_t$$" = s_t,
+    "$$\\hat x_t$$" = xhat_t,
+  ) |>
+  replace_na_with_char() |>
+  display_table("0.75in")
+```
+
+
+```{r}
+#| echo: false
+#| warning: false
+
 nat_gas_ts |>
   ggplot(aes(x = date)) +
     geom_line(aes(y = x_t), color = "black", size = 1) +

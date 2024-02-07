@@ -139,6 +139,16 @@ blank_out_partial_row <- function(df, row_number = nrow(df), first_column_number
 }
 
 
+# Replace all NAs with a character
+replace_na_with_char <- function(df, new_character = "", decimals = 3) {
+  out_df <- df |>
+    convert_df_to_char(decimals) |>
+    mutate(
+      across(everything(), ~replace_na(.x, new_character))
+    )
+  return(out_df)
+}
+
 ###### Compute sum or mean of numeric variables in a df
 
 append_sum_to_df <- function(df, label = "Sum") {
