@@ -197,7 +197,8 @@ ui <- fluidPage(
       column(12, plotOutput("plot_st")),
       #column(12, uiOutput("formula1")),
       #column(12, h3("Table: Title???")),
-      column(12, tableOutput("table"))
+      column(12, tableOutput("table")),
+      column(12, plotOutput("predplot"))
     )
   )
 )
@@ -276,10 +277,11 @@ server <- function(input, output, session) {
     }
 
     forecast_dat <- holt_winters_additive_forecast(data, "value", alpha = input$a, input$b, gamma = input$g, p = 3, a1 = NULL, b1 = NULL, s1 = NULL)
-    preddat <- hw_additive_slope_additive_seasonal(forecast, "dates", "value", p = 3, predict_periods = 4, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p))
+    preddat <- hw_additive_slope_additive_seasonal(forecast_dat, "dates", "value", p = 3, predict_periods = 4, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p))
     return(
       list(
-        data <- forecast_dat
+        data <- forecast_dat,
+        preddata <- preddat
       )
     )
   })
@@ -357,7 +359,8 @@ output$plot_st<-renderPlot({
   })
 
   output$predplot<-renderPlot({
-    ggplot(preddat, aes(x = date)) +
+    data <- sim_data()[[2]]
+    ggplot(data, aes(x = date)) +
       geom_line(aes(y = x_t, color = "Base"), size = 1) +
       geom_line(aes(y = xhat_t, color = "Components", alpha=0.5),linetype=3, size = 1) +
       labs(
