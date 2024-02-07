@@ -114,6 +114,7 @@ The weather is colder in the first and fourth quarters, so the demand for natura
 #| echo: false
 #| warning: false
 
+# This is a variation on the function hw_additive_slope_additive_seasonal(), but it rounds the data to the nearest one unit at each step
 hw_additive_slope_additive_seasonal_gas <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p)) {
   
   # Get expanded data frame
@@ -129,12 +130,14 @@ hw_additive_slope_additive_seasonal_gas <- function(df, date_var, value_var, p =
   df$a_t[1 + offset] <- round( df$x_t[1 + offset] )
   df$b_t[1 + offset] <- round( (1 / p) * mean(df$x_t[(p + 1 + offset):(2 * p + offset)] - df$x_t[(1 + offset):(p + offset)]) )
   df$s_t[1 + offset] <- round( (1 - gamma) * df$s_t[1] )
+  df$xhat_t[1 + offset] <- round( df$x_t[1 + offset] )
 
   # Fill in remaining rows of body of df with values
   for (t in (2 + offset):(nrow(df) - predict_periods) ) {
     df$a_t[t] = round( alpha * (df$x_t[t] - df$s_t[t-p]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1]) )
     df$b_t[t] = round( beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1] )
     df$s_t[t] = round( gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[t-p] )
+    df$xhat_t[t] = round( (df$a_t[t] + df$s_t[t]) )
   }
   
   df <- df |>
@@ -215,10 +218,10 @@ nat_gas_ts |>
   replace_na_with_char() |>
   # Add emdashes to make it clear where students should not put values
   mutate(
-    x_t = ifelse(t %in% c(-3:0, 28:nrow(nat_gas_ts)), "—", x_t),
-    a_t = ifelse(t %in% c(-3:0, 28:nrow(nat_gas_ts)), "—", a_t),
-    b_t = ifelse(t %in% c(-3:0, 28:nrow(nat_gas_ts)), "—", b_t),
-    xhat_t = ifelse(t %in% c(-3:0), "—", xhat_t)
+    x_t = ifelse(t %in% c(-3:0, 28:nrow(nat_gas_ts)), emdash, x_t),
+    a_t = ifelse(t %in% c(-3:0, 28:nrow(nat_gas_ts)), emdash, a_t),
+    b_t = ifelse(t %in% c(-3:0, 28:nrow(nat_gas_ts)), emdash, b_t),
+    xhat_t = ifelse(t %in% c(-3:0), emdash, xhat_t)
   ) |>
   rename(
     "$$Quarter$$" = date,
@@ -232,6 +235,23 @@ nat_gas_ts |>
   display_table("0.75in")
 ```
 
+
+::: {.callout-note title="Holt-Winters Update Equations (Additive Model)"}
+
+Recall the three Holt-Winters update equations for an additive model are:
+
+\begin{align*}
+  a_t &= \alpha \left( x_t - s_{t-p} \right) + (1-\alpha) \left( a_{t-1} + b_{t-1} \right) && \text{Level} \\
+  b_t &= \beta \left( a_t - a_{t-1} \right) + (1-\beta) b_{t-1} && \text{Slope} \\
+  s_t &= \gamma \left( x_t - a_t \right) + (1-\gamma) s_{t-p} && \text{Seasonal}
+\end{align*}
+
+where $\{x_t\}$ is a time series from $t=1$ to $t=n$ that has seasonality with a period of $p$ time units; at time $t$, $a_t$ is the estimated level of the time series, $b_t$ is the estimated slope, and $s_t$ is the estimated seasonal component; and $\alpha$, $\beta$, and $\gamma$ are parameters (all between 0 and 1).
+
+The details of these computations are given in [Chapter 3 Lesson 3](https://byuistats.github.io/timeseries/chapter_3_lesson_3.html).
+:::
+
+
 <!-- Check Your Understanding -->
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
@@ -241,7 +261,7 @@ Apply Holt-Winters filtering to these data.
 -   Find $a_1$
 -   Find $b_1$
 -   Compute the missing values of $a_t$, $b_t$, and $s_t$ for all quarters from Q1 of 2017 to the end of the data set.
--   Find $\hat x_t$ for all rows. Note that the expression to compute $\hat x_t$ is different for the rows with data versus the rows where forecasting is required.
+-   Find $\hat x_t$ for all rows where $t \ge 1$. Note that the expression to compute $\hat x_t$ is different for the rows with data versus the rows where forecasting is required.
 -   Superimpose a sketch of your Holt-Winters filter and the associated forecast on @fig-naturalgas-tsplot.
 
 :::
@@ -306,7 +326,7 @@ Apply Holt-Winters filtering to these data.
 
 <!-- for (row_num in (num_row_of_choc_data_to_keep + 1):nrow(choc_hw_ts3)) { -->
 <!--   for(col_num in 2:5) { -->
-<!--     choc_hw_ts3[row_num, col_num] <- "—" -->
+<!--     choc_hw_ts3[row_num, col_num] <- emdash -->
 <!--   } -->
 <!-- } -->
 
@@ -431,7 +451,7 @@ crime_data <- daily_summary_df |>
 crime_tsibble <- as_tsibble(crime_data, index = dates) 
 ```
 
-Here are a few rows of the data when summarized daily.
+Here are a few rows of the data after summing the crime incidents each day.
 
 ```{r}
 #| echo: false
@@ -743,8 +763,67 @@ crime_monthly_ts1 |>
 
 <!-- ::: -->
 
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">Natural Gas Holt-Winters Filter</a>
+
+::: {#Solutions1 style="display:none;"}
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-cap: "Quarterly U.S. natural gas consumption (Bcf)"
+
+nat_gas_ts |>
+  filter(t > 0) |>
+  # filter(!is.na(x_t)) |> ###### Comment out to get the solution
+  ggplot(aes(x = date)) +
+    geom_line(aes(y = x_t), color = "black", size = 1) +
+    ################### Uncomment these lines to show the solution ############################
+    geom_line(aes(y = a_t + s_t, color = "Combined", alpha=0.5), size = 1) +
+    geom_line(aes(y = xhat_t, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
+    coord_cartesian(ylim = c(0,2500)) +
+    labs(
+      x = "Date",
+      y = "Natural Gas Use (Billions of Cubic Feet)",
+      title = "U.S. Residential Natural Gas Consumption, by Quarter",
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+```{r}
+#| tbl-cap: "Holt-Winters filter for the quarterly natural gas consumption in the U.S. in billions of cubic feet"
+#| echo: false
+#| warning: false
+
+nat_gas_ts |>
+  replace_na_with_char(emdash) |>
+  rename(
+    "$$Quarter$$" = date,
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$b_t$$" = b_t,
+    "$$s_t$$" = s_t,
+    "$$\\hat x_t$$" = xhat_t,
+  ) |>
+  display_table("0.75in")
+```
+
+
+:::
+
+
+
+
 <a href="javascript:showhide('Solutions2')"
-style="font-size:.8em;">Balitmore Crime Time Plot</a>
+style="font-size:.8em;">Balitmore Crime Spike</a>
 
 ::: {#Solutions2 style="display:none;"}
 
@@ -754,6 +833,17 @@ crime_data |> arrange(desc(incidents)) |> head()
 ```
 
 On April 27, 2015, 419 crimes were recorded. These are associated with protests over arrest of Freddie Gray.
+
+
+:::
+
+
+
+
+<a href="javascript:showhide('Solutions3')"
+style="font-size:.8em;">Balitmore (Mean Crimes Per Day)</a>
+
+::: {#Solutions3 style="display:none;"}
 
 
 :::
