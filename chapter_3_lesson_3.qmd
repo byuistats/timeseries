@@ -470,9 +470,71 @@ temp_ts |>
 
 ## Small Group Activity: Holt-Winters Model for Residential Natural Gas Consumption (25 min)
 
-The United States Energy Information Administration (EIA) [publishes data](https://www.eia.gov/dnav/ng/ng_cons_sum_dcu_nus_m.htm) on the total residential natural gas consumption in the country. 
+```{r}
+#| echo: false
+#| warning: false
 
+# nat_gas <- rio::import("https://byuistats.github.io/timeseries/data/natural_gas_res.csv") |>
+nat_gas_raw <- rio::import("data/natural_gas_res.csv") |>
+  mutate(date = my(month)) |>
+  filter(date >= my("Jan 2017"))
+nat_gas <- nat_gas_raw |>
+  mutate(quarter = yearquarter(date)) |>
+  group_by(quarter) |> 
+  summarize(
+    gas_use_mmcf = sum(residential_nat_gas_consumption),
+    n = n()
+  ) |>
+  filter(n == 3) |>  # Eliminate partial quarter(s)
+  dplyr::select(-n) |>
+  mutate(gas_billion_cf = round(gas_use_mmcf / 10^3))
+```
 
+The United States Energy Information Administration (EIA) [publishes data](https://www.eia.gov/dnav/ng/ng_cons_sum_dcu_nus_m.htm) on the total residential natural gas consumption in the country. The government publishes monthly data beginning in January 1973. For the purpose of this example, we will only consider quarterly values beginning in 2017. The data are given in MMcf (thousand-thousand cubic feet, or millions of cubic feet). We convert the data to billions of cubic feet (Bcf) to make the numbers a little more manageable.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| eval: false
+
+nat_gas <- rio::import("https://byuistats.github.io/timeseries/data/natural_gas_res.csv") |>
+  mutate(date = my(month)) |>
+  filter(date >= my("Jan 2017")) |>
+  mutate(quarter = yearquarter(date)) |>
+  group_by(quarter) |> 
+  summarize(
+    gas_use_mmcf = sum(residential_nat_gas_consumption),
+    n = n()
+  ) |>
+  filter(n == 3) |>  # Eliminate partial quarter(s)
+  dplyr::select(-n) |>
+  mutate(gas_billion_cf = round(gas_use_mmcf / 10^3))
+```
+
+```{r}
+#| echo: false
+nat_gas |>
+  display_partial_table(6,6)
+```
+
+The quarters consist of the following months:
+-   **Quarter 1:** Jan, Feb, Mar
+-   **Quarter 2:** Apr, May, Jun
+-   **Quarter 3:** Jul, Aug, Sep
+-   **Quarter 4:** Oct, Nov, Dec
+
+The weather is colder in the first and fourth quarters, so the demand for natural gas will be higher then. Also, the demand for natural gas over the four quarters can easily vary by as much as 2000 Bcf. We will use this information to create an initial estimate of the seasonality of the time series. We will assume that in Quarters 1 and 4, natural gas use is 1000 Bcf above the level of the time series and in Quarters 2 and 3, it is 1000 Bcf below the level of the time series. 
+
+The part of the time series we are using begins in Quarter 1 of 2017. So we will let
+$$
+  s_{Q1} = 1000, ~~~ s_{Q2} = -1000, ~~~ s_{Q3} = -1000, ~~~ s_{Q4} = 1000
+$$
+
+There are $p=4$ quarters in a year. 
+We will implement these in the model as 
+$$
+  s_{1-p} = s_{(-3)} = 1000, ~~~ s_{2-p} = s_{(-2)} = -1000, ~~~ s_{3-p} = s_{(-1)} = -1000, ~~~ s_{4-p} = s_{0} = 1000
+$$
 
 ```{r}
 #| echo: false
@@ -517,24 +579,8 @@ hw_additive_slope_additive_seasonal_gas <- function(df, date_var, value_var, p =
   return(df)
 }
 
-nat_gas <- rio::import("data/natural_gas_consumption_residential_us.csv") |>
-  dplyr::select(-comments) |>
-  mutate(
-    month = my(month),
-    quarter = yearquarter(month)
-  ) |>
-  group_by(quarter) |> 
-  summarize(
-    gas_use = sum(residential_nat_gas_consumption),
-    n = n()
-  ) |>
-  filter(n == 3) |>
-  select(-n)
-
 nat_gas_ts <- nat_gas |>
-  filter(quarter > my("Dec 2016")) |>
-  mutate(billion_cf_gas = round(gas_use / 10^3 ) ) |>
-  hw_additive_slope_additive_seasonal_gas("quarter", "billion_cf_gas", p = 4, predict_periods = 12, s_initial = c(1000, -1000, -1000, 1000)) |>
+  hw_additive_slope_additive_seasonal_gas("quarter", "gas_billion_cf", p = 4, predict_periods = 12, s_initial = c(1000, -1000, -1000, 1000)) |>
   as_tsibble(index = date) |> 
   dplyr::select(date, x_t, a_t, b_t, s_t, xhat_t)
   
