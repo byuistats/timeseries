@@ -1,5 +1,5 @@
 ---
-title: "Holt-Winters Method (Additive Model)"
+title: "Holt-Winters Method (Additive Model) - Part 1"
 subtitle: "Chapter 3: Lesson 3"
 format: html
 editor: source
@@ -34,6 +34,8 @@ source("common_functions.R")
 </script>
 ```
 
+
+
 ## Learning Outcomes
 
 {{< include outcomes/chapter_3_lesson_3_outcomes.qmd >}}
@@ -43,7 +45,7 @@ source("common_functions.R")
 
 ## Preparation
 
--   Read Section 3.4.2 (Page 59)
+-   Read Section 3.4.2 (Page 59 - top of page 60 only)
 
 
 
@@ -59,11 +61,8 @@ source("common_functions.R")
 
 
 
-## Class Discussion: Theory Supporting the EWMA
 
-
-
-## Introduction to the Holt-Winters Method (Additive Model)
+## Introduction to the Holt-Winters Method--Additive Model (35 min)
 
 We will describe the historical progression that led to the Holt-Winters method.
 
@@ -149,7 +148,7 @@ where $\{x_t\}$ is a time series from $t=1$ to $t=n$ that has seasonality with a
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
-Consider the following update equations and answer the questions associated with each.
+Work with your partner to answer the following questions about the update equations.
 
 $$
 a_t = \alpha \cdot \underbrace{ \left( x_t - s_{t-p} \right) }_{A} + (1-\alpha) \cdot  \underbrace{ \left( a_{t-1} + b_{t-1} \right) }_{B}
@@ -186,13 +185,24 @@ $$
 
 :::
 
+
 #### Initial Estimates of $a_t$, $b_t$, and $s_t$
 
 We can use the update equations to compute the next value of $a_t$, $b_t$, and $s_t$, once we get going. Yet, how do we get started? What are the initial values of these estimates?
 
+
 ##### Estimating $a_1$:
 
 It is reasonable to let $a_1 = x_t$. We simply start our estimate of the level of the time series at the initial data value.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Explain why it is reasonable to let $a_1 = x_1$.
+
+:::
+
 
 ##### Estimating $b_1$:
 
@@ -235,7 +245,6 @@ For $t=1, 2, 3, \ldots, p$ iterations, use your estimate for $s_t$ when the form
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Explain why it is reasonable to let $a_1 = x_1$.
 -   What does the term
     $$
       \dfrac{x_{p+1} - x_{1}}{p}
@@ -253,11 +262,19 @@ For $t=1, 2, 3, \ldots, p$ iterations, use your estimate for $s_t$ when the form
       \right\}
     $$
     give a good estimate of the slope at the beginning of the time series?
--   Suppose you needed to estimate $s_1, s_2, \ldots, s_p$ for monthly sales data, where sales are highest in the summer months and lowest in the winter months. If January corresponds to month 1, which values of $s_t$ would you set to be positive? negative? near zero?
+-   Suppose you needed to estimate $s_1, s_2, s_3, \ldots, s_p$ for monthly sales data, where sales are highest in the summer months and lowest in the winter months. If January corresponds to month 1, which values of $s_t$ would you set to be positive? negative? near zero?
 
 :::
 
-### Illustration of the Holt-Winters Method for a Sample Time Series
+::: {.callout-note}
+To implement the initial seasonality estimates, we include them in the model as 
+$$
+  s_{1-p}, ~ s_{2-p}, ~ s_{3-p}, ~ \ldots, ~ s_{p-p}
+$$
+This allows us to begin using the data to update the $s_p$ values in the first cycle of seasonality ($t = 1, 2, 3, \ldots, p$).
+:::
+
+## Application of the Holt-Winters Method to a Sample Time Series (10 min)
 
 The Holt-Winters method provides a way to model a time series in which we consider the time series in layers. first, there is the level (the smoothed $x_t$ values from the time series) at time $t$. We will denote the *level* by $a_t$. The level can change from time to time.
 We introduce a value $b_n$, which we call the *slope*. This is the change in the level of the series from one time period to another. (As the book points out, R and many textbooks call the slope the *trend*.)
@@ -350,33 +367,12 @@ Next, we apply the Holt-Winters method to these data. @fig-hw-example-ts illustr
 #| echo: false
 #| warning: false
 
-temp1 <- holt_winters_additive_forecast(temp_ts, "value", alpha = 0.2, beta = 0.2, gamma = 0.2, p = 4, s1 = 0)
-
-start_date <- ym(max(temp1$date)) + months(1)
-date_seq <- seq(start_date,
-    start_date + months(max_k - 1),
-    by = "1 months")
-
-tail1 <- temp1 %>% mutate(n = row_number()) %>% tail(1)
-an <- tail1$estimated_level[1]
-bn <- tail1$estimated_slope[1]
-n <- tail1$n[1]
-
-temp2 <- temp1 %>%
-  bind_rows(data.frame(date = date_seq, value = NA, month = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA)) %>%
-  mutate(forecast = as.numeric(NA))
-
-temp2$forecast[n] <- temp2$estimated_level[n] + temp2$estimated_seasonal[n]
-
-for (k in (n+1):(n+max_k)) {
-  temp2$estimated_seasonal[k] <- temp2$estimated_seasonal[k - 4] ######### MAGIC NUMBER: 4 periods per cycle
-  temp2$forecast[k] <- an + (k - n) * bn + temp2$estimated_seasonal[k]
-}
-
-ggplot(temp2, aes(x = date)) +
-    geom_line(aes(y = value), color = "black", size = 1) +
-    geom_line(aes(y = estimated_level + estimated_seasonal, color = "Combined", alpha=0.5), size = 1) +
-    geom_line(aes(y = forecast, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
+temp_ts |> 
+  hw_additive_slope_additive_seasonal("date", "value", p = 4, predict_periods = 16) |>
+  ggplot(aes(x = date)) +
+    geom_line(aes(y = x_t), color = "black", size = 1) +
+    geom_line(aes(y = a_t + s_t, color = "Combined", alpha=0.5), size = 1) +
+    geom_line(aes(y = xhat_t, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
     coord_cartesian(ylim = c(95,130)) +
     labs(
       x = "Date",
@@ -390,7 +386,6 @@ ggplot(temp2, aes(x = date)) +
       plot.title = element_text(hjust = 0.5)
     )
 ```
-
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
@@ -406,9 +401,14 @@ ggplot(temp2, aes(x = date)) +
 
 -   Review upcoming homework assignment
 -   Clarify questions
+
+
 ::: {.callout-note icon=false}
+
 ## Download Homework
+
 <a href="https://byuistats.github.io/timeseries/homework/homework_3_3.qmd" download="homework_3_3.qmd"> homework_3_3.qmd </a>
+
 :::
 
 
@@ -423,5 +423,6 @@ ggplot(temp2, aes(x = date)) +
 
 
 ## References
+
 -   C. C. Holt (1957) Forecasting seasonals and trends by exponentially weighted moving averages, ONR Research Memorandum, Carnegie Institute of Technology 52. (Reprint at [https://doi.org/10.1016/j.ijforecast.2003.09.015](https://doi.org/10.1016/j.ijforecast.2003.09.015)).
 -   P. R. Winters (1960). Forecasting sales by exponentially weighted moving averages. Management Science, 6, 324--342. (Reprint at [https://doi.org/10.1287/mnsc.6.3.324](https://doi.org/10.1287/mnsc.6.3.324).)

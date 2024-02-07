@@ -142,6 +142,53 @@ blank_out_partial_row <- function(df, row_number = nrow(df), first_column_number
 }
 
 
+# Replace all NAs with a character
+replace_na_with_char <- function(df, new_character = "", decimals = 3) {
+  out_df <- df |>
+    convert_df_to_char(decimals) |>
+    mutate(
+      across(everything(), ~replace_na(.x, new_character))
+    )
+  return(out_df)
+}
+
+#################################### USE THIS CODE TO REVISE MY PREVIOUS FUNCTIONS! ###############################
+
+###### Format text cells in a data frame
+#
+# https://stackoverflow.com/questions/28166168/how-to-change-fontface-bold-italics-for-a-cell-in-a-kable-table-in-rmarkdown
+format_cells <- function(df, rows ,cols, value = c("italics", "bold", "strikethrough")){
+
+  # select the correct markup
+  # one * for italics, two ** for bold
+  map <- setNames(c("*", "**", "~~"), c("italics", "bold", "strikethrough"))
+  markup <- map[value]
+
+  for (r in rows){
+    for(c in cols){
+
+      # Make sure values are not factors
+      df[[c]] <- as.character( df[[c]])
+
+      # Update formatting
+      df[r, c] <- paste0(markup, df[r, c], markup)
+    }
+  }
+
+  return(df)
+}
+#### Example of use:
+# library(tidyverse)
+#
+# df <- data.frame(char = c('a','b','c'),
+#                  num = c(1,2,3))
+#
+# df %>%
+#   format_cells(1, 1, "italics") %>%
+#   format_cells(2, 2, "bold") %>%
+#   format_cells(3, 1:2, "strikethrough") %>%
+#   knitr::kable()
+
 ###### Compute sum or mean of numeric variables in a df
 
 append_sum_to_df <- function(df, label = "Sum") {
@@ -360,6 +407,7 @@ expand_holt_winters_df <- function(df, date_var, value_var, p = 12, predict_peri
       x_t = NA
     ) |>
     tail(predict_periods)
+
 
   df_final <- df_final <- as.data.frame(header)|>
     bind_rows(as.data.frame(df2)) |>
