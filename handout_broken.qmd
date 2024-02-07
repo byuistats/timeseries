@@ -1,3 +1,13 @@
+---
+title: "Holt-Winters Method (Additive Model)"
+subtitle: "Chapter 3: Lesson 3"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#this is a sourced file in the textbook. since some of the functions are referenced I needed to include the whole thing here when sharing.
 # Load packages ----
 
 if (!require("pacman")) install.packages("pacman")
@@ -138,53 +148,6 @@ blank_out_partial_row <- function(df, row_number = nrow(df), first_column_number
   return(out_df)
 }
 
-
-# Replace all NAs with a character
-replace_na_with_char <- function(df, new_character = "", decimals = 3) {
-  out_df <- df |>
-    convert_df_to_char(decimals) |>
-    mutate(
-      across(everything(), ~replace_na(.x, new_character))
-    )
-  return(out_df)
-}
-
-#################################### USE THIS CODE TO REVISE MY PREVIOUS FUNCTIONS! ###############################
-
-###### Format text cells in a data frame
-#
-# https://stackoverflow.com/questions/28166168/how-to-change-fontface-bold-italics-for-a-cell-in-a-kable-table-in-rmarkdown
-format_cells <- function(df, rows ,cols, value = c("italics", "bold", "strikethrough")){
-
-  # select the correct markup
-  # one * for italics, two ** for bold
-  map <- setNames(c("*", "**", "~~"), c("italics", "bold", "strikethrough"))
-  markup <- map[value]
-
-  for (r in rows){
-    for(c in cols){
-
-      # Make sure values are not factors
-      df[[c]] <- as.character( df[[c]])
-
-      # Update formatting
-      df[r, c] <- paste0(markup, df[r, c], markup)
-    }
-  }
-
-  return(df)
-}
-#### Example of use:
-# library(tidyverse)
-#
-# df <- data.frame(char = c('a','b','c'),
-#                  num = c(1,2,3))
-#
-# df %>%
-#   format_cells(1, 1, "italics") %>%
-#   format_cells(2, 2, "bold") %>%
-#   format_cells(3, 1:2, "strikethrough") %>%
-#   knitr::kable()
 
 ###### Compute sum or mean of numeric variables in a df
 
@@ -369,3 +332,180 @@ holt_winters_additive_forecast <- function(data, value_var, alpha = 0.2, beta = 
 
   data %>% return()
 }
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+```{r}
+#| label: fig-enrollment-ts
+#| fig-cap: "Time Series Plot of BYU-Idaho Campus Enrollments"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+# read in the data from a csv and make the tsibble
+
+enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
+  mutate(dates = yearmonth( ym( paste(year, term * 4 - 3) ) ) ) |>
+  dplyr::select(semester, dates, enrollment) |>
+  as_tsibble(index = dates)
+
+extra_terms <- enrollment_ts |>
+  tail(6) |>
+  mutate(dates = yearmonth(ym(dates) + years(2))) |>
+  mutate(
+    semester = paste0(
+      left(semester, 2),
+      as.integer(right(semester, 2)) + 2
+      )
+  ) |>
+  mutate(enrollment = NA, enroll_thousand = NA)
+
+enrollment_ts |>
+  bind_rows(extra_terms) |>
+  autoplot(.vars = enrollment) +
+    labs(
+      x = "Time",
+      y = "Enrollment",
+      title = paste0("BYU-Idaho On-Campus Enrollment Counts")
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+
+@tbl-enrollment-table summarizes the intermediate values for Holt-Winters filtering.
+
+```{r}
+#| label: tbl-enrollment-table
+#| tbl-cap: "Holt-Winters Smoothing for BYU-Idaho campus enrollments"
+#| warning: false
+#| echo: false
+
+# Set parameters
+p <- 3
+alpha <- 0.2
+beta <- 0.2
+gamma <- 0.2
+
+enroll <- enrollment_ts |>
+  as_tibble() |>
+  rename(x_t = enrollment) |>
+  mutate(
+    t = row_number(),
+    a_t = 0,
+    b_t = 0,
+    s_t = 0,
+  ) |>
+  dplyr::select(semester, t, x_t, a_t, b_t, s_t)
+
+# initialize a1
+enroll$a_t[1] = enroll$x_t[1]
+
+# initialize b1
+enroll$b_t[1] <-
+  (1 / p) * mean( enroll$x_t[(p+1):(2*p)] - enroll$x_t[1:p] )
+
+# First cycle
+for (t in 2:p) {
+  enroll$a_t[t] <-
+    alpha * (enroll$x_t[t] - enroll$s_t[t - 0 * p ]) +
+    (1 - alpha) * (enroll$a_t[t - 1] + enroll$b_t[t - 1])
+  enroll$b_t[t] <-
+    beta * (enroll$a_t[t] - enroll$a_t[t - 1]) +
+    (1 - beta) * enroll$b_t[t - 1]
+}
+enroll$s_t[1] <- enroll$s_t[2] <- enroll$s_t[3] <- 0
+
+for (t in (p + 1):nrow(enroll)) {
+  enroll$a_t[t] <-
+    alpha * (enroll$x_t[t] - enroll$s_t[t - p]) +
+    (1 - alpha) * (enroll$a_t[t - 1] + enroll$b_t[t - 1])
+  enroll$b_t[t] <-
+    beta * (enroll$a_t[t] - enroll$a_t[t - 1]) +
+    (1 - beta) * enroll$b_t[t - 1]
+  enroll$s_t[t] <-
+    gamma * (enroll$x_t[t] - enroll$a_t[t]) +
+    (1 - gamma) * enroll$s_t[t - p]
+}
+
+final_season <- c(
+  enroll$s_t |> tail(3),
+  enroll$s_t |> tail(3)
+)
+
+enroll_extension <- enroll |>
+  tail(6) |>
+  mutate(
+    semester = paste0(
+      left(semester, 2),
+      as.integer(right(semester, 2)) + 2
+      ),
+    t = t + 6,
+    x_t = NA,
+    a_t = NA,
+    b_t = NA,
+    s_t = NA,
+    est =
+      enroll$a_t[nrow(enroll)] +
+      row_number() * enroll$b_t[nrow(enroll)] +
+      final_season[row_number()]
+  )
+
+enroll <- enroll |>
+  bind_rows(enroll_extension) |>
+  mutate(
+    est = case_when(
+      row_number() == 1 ~ x_t,
+      row_number() <= nrow(enroll) ~ a_t + s_t,
+      TRUE ~ est
+    )
+  ) |>
+  round_df(0) |>
+  blank_out_cells_in_df(ncols_to_keep = 6, nrows_to_keep = 0) |>
+  blank_out_partial_row(row_number = 1, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 2, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 3, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 4, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 5, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 6, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 13, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 14, first_column_number = 4) |>
+  mutate(
+    across(everything(), ~replace_na(.x, ""))
+  ) 
+enroll <- enroll |>
+  rename(
+    "$$Semester$$" = semester,
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$b_t$$" = b_t,
+    "$$s_t$$" = s_t,
+    "$$\\hat x_t$$" = est
+  )
+
+
+  enroll |> display_table()
+```
