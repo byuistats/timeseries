@@ -39,6 +39,9 @@ okabeito_colors_list <- c(
   `amber` = "#F5C710"
 )
 
+# Definition
+emdash <- "—"
+
 # Rounding ----
 ## Round Dataframe ----
 round_df <- function(df, digits) {
