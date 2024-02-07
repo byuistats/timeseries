@@ -34,91 +34,6 @@ source("common_functions.R")
 </script>
 ```
 
-
-```{r}
-#| echo: false
-
-expand_hw_df <- function(df, date_var, value_var, p = 12, predict_periods = 18) {
-  # Note that p must be < nrow(df)
-  # Note that predict_periods must be < nrow(df)
-  
-  # Create new variables
-  df$date <- df[[date_var]]
-  df$x_t <- df[[value_var]]
-  
-  df2 <- df |>
-    # select(date, x_t) |>  # This deletes all variables in original file
-    mutate(
-      a_t = as.numeric(NA),
-      b_t = as.numeric(NA),
-      s_t = as.numeric(NA),
-      xhat_t = as.numeric(NA)
-    )
-  
-  header <- df2 |> 
-    head(p + 1) |>
-    mutate(
-      date = date - max(date) + min(date),
-      x_t = NA
-    ) |>
-    head(p)
-
-  footer <- df2 |>
-    tail(predict_periods + 1) |>
-    mutate(
-      date = date - min(date) + max(date),
-      x_t = NA
-    ) |>
-    tail(predict_periods)
-
-  df_final <- header |>
-    bind_rows(df2) |>
-    bind_rows(footer)
-  
-  return(df_final)
-}
-
-hw_additive_slope_additive_seasonal <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p)) {
-  
-  # Get expanded data frame
-  df <- df |> expand_hw_df(date_var, value_var, p, predict_periods)
-  
-  # Fill in prior belief about s_t
-  for (t in 1:p) {
-    df$s_t[t] <- s_initial[t]
-  }
-  
-  # Fill in first row of values
-  offset <- p # number of header rows to skip
-  df$a_t[1 + offset] <- df$x_t[1 + offset]
-  df$b_t[1 + offset] <- (1 / p) * mean(df$x_t[(p + 1 + offset):(2 * p + offset)] - df$x_t[(1 + offset):(p + offset)])
-  df$s_t[1 + offset] <- (1 - gamma) * df$s_t[1]
-
-  # Fill in remaining rows of body of df with values
-  for (t in (2 + offset):(nrow(df) - predict_periods) ) {
-    df$a_t[t] = alpha * (df$x_t[t] - df$s_t[t-p]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
-    df$b_t[t] = beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
-    df$s_t[t] = gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[t-p]
-  }
-  
-  df <- df |>
-    mutate(k = ifelse(row_number() >= nrow(df) - predict_periods, row_number() - (nrow(df) - predict_periods), NA))
-  
-  # Fill in forecasted values
-  offset <- nrow(df) - predict_periods
-  for (t in offset:nrow(df)) {
-    df$s_t[t] = df$s_t[t - p]
-    df$xhat_t[t] = df$a_t[offset] + df$k[t] * df$b_t[offset] + df$s_t[t - p]
-  }
-  
-  # Delete temporary variable k
-  df <- df |> select(-k)
-
-  return(df)
-}
-```
-
-
 ## Learning Outcomes
 
 {{< include outcomes/chapter_3_lesson_3_outcomes.qmd >}}
@@ -338,16 +253,8 @@ For $t=1, 2, 3, \ldots, p$ iterations, use your estimate for $s_t$ when the form
       \right\}
     $$
     give a good estimate of the slope at the beginning of the time series?
--   Suppose you needed to estimate $s_1, s_2, s_3, \ldots, s_p$ for monthly sales data, where sales are highest in the summer months and lowest in the winter months. If January corresponds to month 1, which values of $s_t$ would you set to be positive? negative? near zero?
+-   Suppose you needed to estimate $s_1, s_2, \ldots, s_p$ for monthly sales data, where sales are highest in the summer months and lowest in the winter months. If January corresponds to month 1, which values of $s_t$ would you set to be positive? negative? near zero?
 
-:::
-
-::: {.callout-note}
-To implement the initial seasonality estimates, we include them in the model as 
-$$
-  s_{1-p}, ~ s_{2-p}, ~ s_{3-p}, ~ \ldots, ~ s_{p-p}
-$$
-so we can begin to update these values in the first cycle of seasonality ($t = 1, 2, 3, \ldots, p$).
 :::
 
 ### Illustration of the Holt-Winters Method for a Sample Time Series
@@ -443,12 +350,33 @@ Next, we apply the Holt-Winters method to these data. @fig-hw-example-ts illustr
 #| echo: false
 #| warning: false
 
-temp_ts |> 
-  hw_additive_slope_additive_seasonal("date", "value", p = 4, predict_periods = 16) |>
-  ggplot(aes(x = date)) +
-    geom_line(aes(y = x_t), color = "black", size = 1) +
-    geom_line(aes(y = a_t + s_t, color = "Combined", alpha=0.5), size = 1) +
-    geom_line(aes(y = xhat_t, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
+temp1 <- holt_winters_additive_forecast(temp_ts, "value", alpha = 0.2, beta = 0.2, gamma = 0.2, p = 4, s1 = 0)
+
+start_date <- ym(max(temp1$date)) + months(1)
+date_seq <- seq(start_date,
+    start_date + months(max_k - 1),
+    by = "1 months")
+
+tail1 <- temp1 %>% mutate(n = row_number()) %>% tail(1)
+an <- tail1$estimated_level[1]
+bn <- tail1$estimated_slope[1]
+n <- tail1$n[1]
+
+temp2 <- temp1 %>%
+  bind_rows(data.frame(date = date_seq, value = NA, month = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA)) %>%
+  mutate(forecast = as.numeric(NA))
+
+temp2$forecast[n] <- temp2$estimated_level[n] + temp2$estimated_seasonal[n]
+
+for (k in (n+1):(n+max_k)) {
+  temp2$estimated_seasonal[k] <- temp2$estimated_seasonal[k - 4] ######### MAGIC NUMBER: 4 periods per cycle
+  temp2$forecast[k] <- an + (k - n) * bn + temp2$estimated_seasonal[k]
+}
+
+ggplot(temp2, aes(x = date)) +
+    geom_line(aes(y = value), color = "black", size = 1) +
+    geom_line(aes(y = estimated_level + estimated_seasonal, color = "Combined", alpha=0.5), size = 1) +
+    geom_line(aes(y = forecast, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
     coord_cartesian(ylim = c(95,130)) +
     labs(
       x = "Date",
@@ -463,6 +391,7 @@ temp_ts |>
     )
 ```
 
+
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
 
@@ -472,185 +401,157 @@ temp_ts |>
 
 
 
-## Small Group Activity: Holt-Winters Model for Residential Natural Gas Consumption (25 min)
+
+## Small Group Activity: Holt-Winters Model for BYU-Idaho Enrollment Data (25 min)
+
+In Chapter 2, Lesson 3, we explored the BYU-Idaho Enrollment data. We will apply the Holt-Winters model to these data with $\alpha = \beta = \gamma = 0.2$. @fig-enrollment-ts illustrates these data.
 
 ```{r}
-#| echo: false
-#| warning: false
-
-# nat_gas <- rio::import("https://byuistats.github.io/timeseries/data/natural_gas_res.csv") |>
-nat_gas_raw <- rio::import("data/natural_gas_res.csv") |>
-  mutate(date = my(month)) |>
-  filter(date >= my("Jan 2017"))
-nat_gas <- nat_gas_raw |>
-  mutate(quarter = yearquarter(date)) |>
-  group_by(quarter) |> 
-  summarize(
-    gas_use_mmcf = sum(residential_nat_gas_consumption),
-    n = n()
-  ) |>
-  filter(n == 3) |>  # Eliminate partial quarter(s)
-  dplyr::select(-n) |>
-  mutate(gas_billion_cf = round(gas_use_mmcf / 10^3))
-```
-
-The United States Energy Information Administration (EIA) [publishes data](https://www.eia.gov/dnav/ng/ng_cons_sum_dcu_nus_m.htm) on the total residential natural gas consumption in the country. The government publishes monthly data beginning in January 1973. For the purpose of this example, we will only consider quarterly values beginning in 2017. The data are given in MMcf (thousand-thousand cubic feet, or millions of cubic feet). We convert the data to billions of cubic feet (Bcf) and round to the nearest integer to make the numbers a little more manageable.
-
-```{r}
+#| label: fig-enrollment-ts
+#| fig-cap: "Time Series Plot of BYU-Idaho Campus Enrollments"
 #| code-fold: true
 #| code-summary: "Show the code"
-#| eval: false
-
-nat_gas <- rio::import("https://byuistats.github.io/timeseries/data/natural_gas_res.csv") |>
-  mutate(date = my(month)) |>
-  filter(date >= my("Jan 2017")) |>
-  mutate(quarter = yearquarter(date)) |>
-  group_by(quarter) |> 
-  summarize(
-    gas_use_mmcf = sum(residential_nat_gas_consumption),
-    n = n()
-  ) |>
-  filter(n == 3) |>  # Eliminate partial quarter(s)
-  dplyr::select(-n) |>
-  mutate(gas_billion_cf = round(gas_use_mmcf / 10^3))
-```
-
-```{r}
-#| echo: false
-nat_gas |>
-  display_partial_table(6,6)
-```
-
-The quarters are defined as:
-
--   **Quarter 1:** Jan, Feb, Mar
--   **Quarter 2:** Apr, May, Jun
--   **Quarter 3:** Jul, Aug, Sep
--   **Quarter 4:** Oct, Nov, Dec
-
-The weather is colder in the first and fourth quarters, so the demand for natural gas will be higher then. As illustrated in @fig-naturalgas-tsplot, the difference in the consumption in the lowest and highest quarters of a year tends to be about 2000 Bcf. 
-
-```{r}
-#| label: fig-naturalgas-tsplot
-#| fig-cap: "Quarterly U.S. natural gas consumption (Bcf)"
-#| echo: false
 #| warning: false
+# read in the data from a csv and make the tsibble
 
-hw_additive_slope_additive_seasonal_gas <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p)) {
-  
-  # Get expanded data frame
-  df <- df |> expand_hw_df(date_var, value_var, p, predict_periods)
-  
-  # Fill in prior belief about s_t
-  for (t in 1:p) {
-    df$s_t[t] <- s_initial[t]
-  }
-  
-  # Fill in first row of values
-  offset <- p # number of header rows to skip
-  df$a_t[1 + offset] <- round( df$x_t[1 + offset] )
-  df$b_t[1 + offset] <- round( (1 / p) * mean(df$x_t[(p + 1 + offset):(2 * p + offset)] - df$x_t[(1 + offset):(p + offset)]) )
-  df$s_t[1 + offset] <- round( (1 - gamma) * df$s_t[1] )
+enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
+  mutate(dates = yearmonth( ym( paste(year, term * 4 - 3) ) ) ) |>
+  dplyr::select(semester, dates, enrollment) |>
+  as_tsibble(index = dates)
 
-  # Fill in remaining rows of body of df with values
-  for (t in (2 + offset):(nrow(df) - predict_periods) ) {
-    df$a_t[t] = round( alpha * (df$x_t[t] - df$s_t[t-p]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1]) )
-    df$b_t[t] = round( beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1] )
-    df$s_t[t] = round( gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[t-p] )
-  }
-  
-  df <- df |>
-    mutate(k = ifelse(row_number() >= nrow(df) - predict_periods, row_number() - (nrow(df) - predict_periods), NA))
-  
-  # Fill in forecasted values
-  offset <- nrow(df) - predict_periods
-  for (t in offset:nrow(df)) {
-    df$s_t[t] = round( df$s_t[t - p] )
-    df$xhat_t[t] = round( df$a_t[offset] + df$k[t] * df$b_t[offset] + df$s_t[t - p] )
-  }
-  
-  # Delete temporary variable k
-  df <- df |> select(-k)
-  
-  return(df)
-}
+extra_terms <- enrollment_ts |>
+  tail(6) |>
+  mutate(dates = yearmonth(ym(dates) + years(2))) |>
+  mutate(
+    semester = paste0(
+      left(semester, 2),
+      as.integer(right(semester, 2)) + 2
+      )
+  ) |>
+  mutate(enrollment = NA, enroll_thousand = NA)
 
-nat_gas_ts <- nat_gas |>
-  hw_additive_slope_additive_seasonal_gas("quarter", "gas_billion_cf", p = 4, predict_periods = 9, s_initial = c(1000, -1000, -1000, 1000)) |>
-  as_tsibble(index = date) %>%  
-  mutate(t = (1 - 4):(nrow(.) - 4)) |> # Create column t
-  dplyr::select(date, t, x_t, a_t, b_t, s_t, xhat_t)
-
-nat_gas_ts |>
-  filter(t > 0) |>
-  filter(!is.na(x_t)) |> ###### Comment out to get the solution
-  ggplot(aes(x = date)) +
-    geom_line(aes(y = x_t), color = "black", size = 1) +
-    ################### Uncomment these lines to show the solution ############################
-    # geom_line(aes(y = a_t + s_t, color = "Combined", alpha=0.5), size = 1) +
-    # geom_line(aes(y = xhat_t, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
-    coord_cartesian(ylim = c(0,2500)) +
+enrollment_ts |>
+  bind_rows(extra_terms) |>
+  autoplot(.vars = enrollment) +
     labs(
-      x = "Date",
-      y = "Natural Gas Use (Billions of Cubic Feet)",
-      title = "U.S. Residential Natural Gas Consumption, by Quarter",
-      color = "Components"
+      x = "Time",
+      y = "Enrollment",
+      title = paste0("BYU-Idaho On-Campus Enrollment Counts")
     ) +
-    theme_minimal() +
-    theme(legend.position = "none") +
     theme(
       plot.title = element_text(hjust = 0.5)
     )
 ```
 
-We will use this information to create an initial estimate of the seasonality of the time series. We will assume that in Quarters 1 and 4, natural gas use is 1000 Bcf above the level of the time series and in Quarters 2 and 3, it is 1000 Bcf below the level of the time series. 
 
-The part of the time series we are using begins in Quarter 1 of 2017. So we will let
-$$
-  s_{Q1} = 1000, ~~~ s_{Q2} = -1000, ~~~ s_{Q3} = -1000, ~~~ s_{Q4} = 1000
-$$
-
-There are $p=4$ quarters in a year. 
-We implement initial seasonality estimates in the Holt-Winters model as 
-$$
-  s_{1-p} = s_{(-3)} = 1000, ~~~ s_{2-p} = s_{(-2)} = -1000, ~~~ s_{3-p} = s_{(-1)} = -1000, ~~~ s_{4-p} = s_{0} = 1000
-$$
+@tbl-enrollment-table summarizes the intermediate values for Holt-Winters filtering.
 
 ```{r}
-#| label: tbl-natural-gas-worksheet-blank
-#| tbl-cap: "Holt-Winters filter for the quarterly natural gas consumption in the U.S. in billions of cubic feet"
-#| echo: false
+#| label: tbl-enrollment-table
+#| tbl-cap: "Holt-Winters Smoothing for BYU-Idaho campus enrollments"
 #| warning: false
+#| echo: false
 
-nat_gas_ts |>
-  # Hide values from students
+# Set parameters
+p <- 3
+alpha <- 0.2
+beta <- 0.2
+gamma <- 0.2
+
+enroll <- enrollment_ts |>
+  as_tibble() |>
+  rename(x_t = enrollment) |>
   mutate(
-    xhat_t = 
-      case_when(
-        t %in% c(1:6, 26:nrow(nat_gas_ts)) ~ NA,
-        t %in% c(7:25) ~ a_t + s_t,
-        TRUE ~ xhat_t
-      ),
-    a_t = ifelse(t %in% c(1:6, 26:27), NA, a_t),
-    b_t = ifelse(t %in% c(1:6, 26:27), NA, b_t),
-    s_t = ifelse(t %in% c(1:6, 26:nrow(nat_gas_ts)), NA, s_t)
+    t = row_number(),
+    a_t = 0,
+    b_t = 0,
+    s_t = 0,
   ) |>
-  replace_na_with_char() |>
-  # Add emdashes to make it clear where students should not put values
+  dplyr::select(semester, t, x_t, a_t, b_t, s_t)
+
+# initialize a1
+enroll$a_t[1] = enroll$x_t[1]
+
+# initialize b1
+enroll$b_t[1] <-
+  (1 / p) * mean( enroll$x_t[(p+1):(2*p)] - enroll$x_t[1:p] )
+
+# First cycle
+for (t in 2:p) {
+  enroll$a_t[t] <-
+    alpha * (enroll$x_t[t] - enroll$s_t[t - 0 * p ]) +
+    (1 - alpha) * (enroll$a_t[t - 1] + enroll$b_t[t - 1])
+  enroll$b_t[t] <-
+    beta * (enroll$a_t[t] - enroll$a_t[t - 1]) +
+    (1 - beta) * enroll$b_t[t - 1]
+}
+enroll$s_t[1] <- enroll$s_t[2] <- enroll$s_t[3] <- 0
+
+for (t in (p + 1):nrow(enroll)) {
+  enroll$a_t[t] <-
+    alpha * (enroll$x_t[t] - enroll$s_t[t - p]) +
+    (1 - alpha) * (enroll$a_t[t - 1] + enroll$b_t[t - 1])
+  enroll$b_t[t] <-
+    beta * (enroll$a_t[t] - enroll$a_t[t - 1]) +
+    (1 - beta) * enroll$b_t[t - 1]
+  enroll$s_t[t] <-
+    gamma * (enroll$x_t[t] - enroll$a_t[t]) +
+    (1 - gamma) * enroll$s_t[t - p]
+}
+
+final_season <- c(
+  enroll$s_t |> tail(3),
+  enroll$s_t |> tail(3)
+)
+
+enroll_extension <- enroll |>
+  tail(6) |>
   mutate(
-    x_t = ifelse(t %in% c(-3:0, 28:nrow(nat_gas_ts)), "—", x_t),
-    a_t = ifelse(t %in% c(-3:0, 28:nrow(nat_gas_ts)), "—", a_t),
-    b_t = ifelse(t %in% c(-3:0, 28:nrow(nat_gas_ts)), "—", b_t),
-    xhat_t = ifelse(t %in% c(-3:0), "—", xhat_t)
+    semester = paste0(
+      left(semester, 2),
+      as.integer(right(semester, 2)) + 2
+      ),
+    t = t + 6,
+    x_t = NA,
+    a_t = NA,
+    b_t = NA,
+    s_t = NA,
+    est =
+      enroll$a_t[nrow(enroll)] +
+      row_number() * enroll$b_t[nrow(enroll)] +
+      final_season[row_number()]
+  )
+
+enroll |>
+  bind_rows(enroll_extension) |>
+  mutate(
+    est = case_when(
+      row_number() == 1 ~ x_t,
+      row_number() <= nrow(enroll) ~ a_t + s_t,
+      TRUE ~ est
+    )
   ) |>
   rename(
-    "$$Quarter$$" = date,
+    "$$Semester$$" = semester,
     "$$t$$" = t,
     "$$x_t$$" = x_t,
     "$$a_t$$" = a_t,
     "$$b_t$$" = b_t,
     "$$s_t$$" = s_t,
-    "$$\\hat x_t$$" = xhat_t,
+    "$$\\hat x_t$$" = est
+  ) |>
+  round_df(0) |>
+  blank_out_cells_in_df(ncols_to_keep = 6, nrows_to_keep = 0) |>
+  blank_out_partial_row(row_number = 1, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 2, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 3, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 4, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 5, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 6, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 13, first_column_number = 4) |>
+  blank_out_partial_row(row_number = 14, first_column_number = 4) |>
+  mutate(
+    across(everything(), ~replace_na(.x, ""))
   ) |>
   display_table("0.75in")
 ```
@@ -659,16 +560,29 @@ nat_gas_ts |>
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
-Apply Holt-Winters filtering to these data.
-
+You will apply Holt-Winters filtering to these data.
 -   Find $a_1$
 -   Find $b_1$
--   Compute the missing values of $a_t$, $b_t$, and $s_t$ for all quarters from Q1 of 2017 to the end of the data set.
+-   Letting $s_1 = s_2 = s_3 = 0$, compute the values of $a_t$, $b_t$, and $s_t$ for all semesters for which the enrollment counts have been reported.
 -   Find $\hat x_t$ for all rows. Note that the expression to compute $\hat x_t$ is different for the rows with data versus the rows where forecasting is required.
--   Superimpose a sketch of your Holt-Winters filter and the associated forecast on @fig-naturalgas-tsplot.
+-   Superimpose a sketch of your Holt-Winters filter and the associated forecast on @fig-enrollment-ts.
 
 :::
 
+
+
+
+
+```{r}
+#| include: false
+#| eval: false
+
+# THIS IS A SUCCESSFUL TEST OF THIS FUNCTION.
+# THE FUNCTION IS IN THE common_functions FILE
+
+holt_winters_additive_forecast(enrollment_ts, "enrollment", alpha = 0.2, beta = 0.2, gamma = 0.2, p = 3, a1 = NULL, b1 = NULL, s1 = NULL) |>
+  display_table()
+```
 
 
 
@@ -854,7 +768,7 @@ crime_data <- daily_summary_df |>
 crime_tsibble <- as_tsibble(crime_data, index = dates) 
 ```
 
-Here are a few rows of the data when summarized daily.
+Here are a few rows of the summarized data.
 
 ```{r}
 #| echo: false
@@ -1024,7 +938,7 @@ augment(crime_hw) |>
     labs(color = "")
 ```
 
-@fig-crime-hw-forecast contains the information from @fig-crime-hw, with the addition of an additional four years of forecasted values. The light blue bands give the 95% prediction bands for the forecast.
+@fig-crime-hw-forecast contains the information from @fig-crime-hw, with the addition of an additional four years of forecasted values. The light blue bands give a 95% prediction bands for the forecast.
 
 ```{r}
 #| label: fig-crime-hw-forecast
@@ -1106,64 +1020,68 @@ crime_monthly_ts1 |>
 
 
 
-<!-- <a href="javascript:showhide('Solutions1')" -->
-<!-- style="font-size:.8em;">BYU-Idaho Enrollment</a> -->
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">BYU-Idaho Enrollment</a>
 
-<!-- ::: {#Solutions1 style="display:none;"} -->
-
-
-<!-- @fig-enrollment-ts: -->
-
-<!-- ```{r} -->
-<!-- #| warning: false -->
-<!-- #| echo: false -->
-
-<!-- enrollment_ts |> -->
-<!--   bind_rows(extra_terms) |> -->
-<!--   autoplot(.vars = enrollment) + -->
-<!--     labs( -->
-<!--       x = "Time", -->
-<!--       y = "Enrollment", -->
-<!--       title = paste0("BYU-Idaho On-Campus Enrollment Counts") -->
-<!--     ) + -->
-<!--     theme( -->
-<!--       plot.title = element_text(hjust = 0.5) -->
-<!--     ) -->
-<!-- ``` -->
+::: {#Solutions1 style="display:none;"}
 
 
-<!-- @tbl-enrollment-table: -->
+@fig-enrollment-ts:
 
-<!-- ```{r} -->
-<!-- #| warning: false -->
-<!-- #| echo: false -->
+```{r}
+#| warning: false
+#| echo: false
 
-<!-- enroll |> -->
-<!--   bind_rows(enroll_extension) |> -->
-<!--   mutate( -->
-<!--     est = case_when( -->
-<!--       row_number() == 1 ~ x_t, -->
-<!--       row_number() <= nrow(enroll) ~ a_t + s_t, -->
-<!--       TRUE ~ est -->
-<!--     ) -->
-<!--   ) |> -->
-<!--   rename( -->
-<!--     "$$Semester$$" = semester, -->
-<!--     "$$t$$" = t, -->
-<!--     "$$x_t$$" = x_t, -->
-<!--     "$$a_t$$" = a_t, -->
-<!--     "$$b_t$$" = b_t, -->
-<!--     "$$s_t$$" = s_t, -->
-<!--     "$$\\hat x_t$$" = est -->
-<!--   ) |> -->
-<!--   convert_df_to_char(0) |> -->
-<!--   mutate( -->
-<!--     across(everything(), ~replace_na(.x, "")) -->
-<!--   ) |> -->
-<!--   display_table("0.75in") -->
-<!-- ``` -->
+enrollment_ts |>
+  bind_rows(extra_terms) |>
+  autoplot(.vars = enrollment) +
+    labs(
+      x = "Time",
+      y = "Enrollment",
+      title = paste0("BYU-Idaho On-Campus Enrollment Counts")
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
 
-<!-- ::: -->
+
+@tbl-enrollment-table:
+
+```{r}
+#| warning: false
+#| echo: false
+
+enroll |>
+  bind_rows(enroll_extension) |>
+  mutate(
+    est = case_when(
+      row_number() == 1 ~ x_t,
+      row_number() <= nrow(enroll) ~ a_t + s_t,
+      TRUE ~ est
+    )
+  ) |>
+  rename(
+    "$$Semester$$" = semester,
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$b_t$$" = b_t,
+    "$$s_t$$" = s_t,
+    "$$\\hat x_t$$" = est
+  ) |>
+  convert_df_to_char(0) |>
+  mutate(
+    across(everything(), ~replace_na(.x, ""))
+  ) |>
+  display_table("0.75in")
+```
+
+
+
+
+
+:::
 
 <a href="javascript:showhide('Solutions2')"
 style="font-size:.8em;">Balitmore Crime Time Plot</a>

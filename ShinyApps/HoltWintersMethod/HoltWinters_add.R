@@ -11,7 +11,6 @@ library(dplyr)
 library(ggplot2)
 library(kableExtra)
 library(tidyverse)
-library(tsibble)
 library(rio)
 library(shinyjs)
 library(shinyWidgets)
@@ -96,26 +95,20 @@ holt_winters_forecast_plot <- function(data, alpha = 0.2, beta = 0.2, gamma = 0.
 # Define the UI
 ui <- fluidPage(
   useShinyjs(),
-  withMathJax(),
     titlePanel("Exploration: Holt-Winters Additive Model"),
     fluidRow(
-      column(3, dateRangeInput("dateRange", "Select date range:",
-                               start = "2011-01-01",  # Default start date
-                               end = "2016-11-12",         # Default end date
-                               min = "2011-01-01",       # Earliest date selectable
-                               max = "2016-11-12")),
-      column(3, selectInput("dataset", label = "Choose a Dataset:",
-                            choices = c("Basic", "Enrollment", "Crime"))),
-      column(3, selectInput("series", label = "Choose a Series:",
-                            choices = c("Monthly Total", "Daily Average for Month"))),
-      column(3, materialSwitch(inputId = "toggle", value = FALSE, label = "Advanced Inputs")),
-    ),
-    fluidRow(
-      column(4, sliderInput("a", "$$\\alpha$$", min = 0, max = 1, value = 0.2, step=0.1)),
+      column(4, sliderInput("a", "Alpha", min = 0, max = 1, value = 0.2, step=0.1)),
       column(4, sliderInput("b", "Beta", min = 0, max = 1, value = 0.2, step=0.1)),
       column(4, sliderInput("g", "Gamma", min = 0, max = 1, value = 0.2, step=0.1))
     ),
-
+    fluidRow(
+      column(6, dateRangeInput("dateRange", "Select date range:",
+                     start = "2011-01-01",  # Default start date
+                     end = "2016-11-12",         # Default end date
+                     min = "2011-01-01",       # Earliest date selectable
+                     max = "2016-11-12")),
+      column(6, materialSwitch(inputId = "toggle", value = FALSE, label = "Advanced Inputs")),
+    ),
   div(id = "AdvInputs",
     fluidRow(
       column(2, numericInput("s1", "s1",0)),
