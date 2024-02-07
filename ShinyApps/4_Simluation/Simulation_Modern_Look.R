@@ -7,6 +7,8 @@ library(shiny)
 library(dplyr)
 library(ggplot2)
 library(ggokabeito)
+library(fpp3) 
+library(tsibble)
 
 ui <- fluidPage(
   titlePanel("Bivariate Normal Distribution Simulator"),
@@ -36,12 +38,14 @@ server <- function(input, output, session) {
       values = cumsum(w)
     )
     
-    acf_plot <- wd %>%
-      as_tsibble(index = seq) %>%
-      ACF(values) %>%
-      autoplot()
+    wd_tsibble <- wd %>%
+      as_tsibble(index = seq)
     
-    list(sim_data = wd, acf_plot = acf_plot)
+    acf_object <- ACF(wd_tsibble)
+    
+    print(acf_object)
+    
+    list(sim_data = wd, acf_object = acf_object)
   })
   
   output$plot <- renderPlot({
@@ -49,19 +53,30 @@ server <- function(input, output, session) {
     
     ggplot(df, aes(x = seq, y = values)) +
       geom_line() +
-      labs(title = "Bivariate Normal Distribution Simulator (cumulative sum)",
+      labs(title = "Bivariate Normal Distribution Simulator",
            x = "x",
            y = "y")
   })
   
   output$acf_plot <- renderPlot({
-    sim_data()$acf_plot +
-      ggtitle("Auto-correlation Function Plot")  # Adding title to the ACF plot
+    # Get the ACF object from sim_data
+    acf_object <- sim_data()$acf_object
+    
+    # Create ACF plot
+    acf_plot <- ggplot(data = acf_object, aes(x = lag, y = acf)) +
+      geom_bar(stat = "identity") +
+      labs(title = "Autocorrelation Function Plot",
+           x = "Lag",
+           y = "Autocorrelation Coefficient")
+    
+    # Print ACF plot object
+    print(acf_plot)
+    
+    # Return ACF plot
+    acf_plot
   })
+  
 }
-
-
-
 
 
 
