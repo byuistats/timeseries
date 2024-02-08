@@ -152,6 +152,22 @@ replace_na_with_char <- function(df, new_character = "", decimals = 3) {
   return(out_df)
 }
 
+## This is the preferred function for replacing text with any character
+replace_cells_with_char <- function(df, rows, cols, new_char = "", decimals = 3){
+  for (r in rows){
+    for(c in cols){
+
+      # Make sure values are not factors
+      df[[c]] <- as.character( df[[c]])
+
+      # Update formatting
+      df[r, c] <- new_char
+    }
+  }
+
+  return(df)
+}
+
 #################################### USE THIS CODE TO REVISE MY PREVIOUS FUNCTIONS! ###############################
 
 ###### Format text cells in a data frame

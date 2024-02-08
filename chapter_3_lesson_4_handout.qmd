@@ -35,169 +35,151 @@ source("common_functions.R")
 ```
 
 
-### BYU-Idaho Enrollment Data
+```{r}
+#| echo: false
+#| warning: false
 
-Apply the Holt-Winters model to the BYU-Idaho Enrollment data with 
-$\alpha = \beta = \gamma = 0.2$.
+# nat_gas <- rio::import("https://byuistats.github.io/timeseries/data/natural_gas_res.csv") |>
+nat_gas_raw <- rio::import("data/natural_gas_res.csv") |>
+  mutate(date = my(month)) |>
+  filter(date >= my("Jan 2017"))
+nat_gas <- nat_gas_raw |>
+  mutate(quarter = yearquarter(date)) |>
+  group_by(quarter) |> 
+  summarize(
+    gas_use_mmcf = sum(residential_nat_gas_consumption),
+    n = n()
+  ) |>
+  filter(n == 3) |>  # Eliminate partial quarter(s)
+  dplyr::select(-n) |>
+  mutate(gas_billion_cf = round(gas_use_mmcf / 10^3))
+```
 
-#### Figure 4
+#### Figure 1: Quarterly U.S. natural gas consumption (Bcf)
 
 ```{r}
 #| echo: false
 #| warning: false
 
-# read in the data from a csv and make the tsibble
-enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
-  mutate(dates = yearmonth( ym( paste(year, term * 4 - 3) ) ) ) |>
-  dplyr::select(semester, dates, enrollment) |>
-  as_tsibble(index = dates)
+# This is a variation on the function hw_additive_slope_additive_seasonal(), but it rounds the data to the nearest one unit at each step
+hw_additive_slope_additive_seasonal_gas <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p)) {
+  
+  # Get expanded data frame
+  df <- df |> expand_holt_winters_df(date_var, value_var, p, predict_periods)
+  
+  # Fill in prior belief about s_t
+  for (t in 1:p) {
+    df$s_t[t] <- s_initial[t]
+  }
+  
+  # Fill in first row of values
+  offset <- p # number of header rows to skip
+  df$a_t[1 + offset] <- round( df$x_t[1 + offset] )
+  df$b_t[1 + offset] <- round( (1 / p) * mean(df$x_t[(p + 1 + offset):(2 * p + offset)] - df$x_t[(1 + offset):(p + offset)]) )
+  df$s_t[1 + offset] <- round( (1 - gamma) * df$s_t[1] )
+  df$xhat_t[1 + offset] <- round( df$x_t[1 + offset] )
 
-extra_terms <- enrollment_ts |>
-  tail(6) |>
-  mutate(dates = yearmonth(ym(dates) + years(2))) |>
-  mutate(
-    semester = paste0(
-      left(semester, 2),
-      as.integer(right(semester, 2)) + 2
-      )
-  ) |>
-  mutate(enrollment = NA, enroll_thousand = NA)
+  # Fill in remaining rows of body of df with values
+  for (t in (2 + offset):(nrow(df) - predict_periods) ) {
+    df$a_t[t] = round( alpha * (df$x_t[t] - df$s_t[t-p]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1]) )
+    df$b_t[t] = round( beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1] )
+    df$s_t[t] = round( gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[t-p] )
+    df$xhat_t[t] = round( (df$a_t[t] + df$s_t[t]) )
+  }
+  
+  df <- df |>
+    mutate(k = ifelse(row_number() >= nrow(df) - predict_periods, row_number() - (nrow(df) - predict_periods), NA))
+  
+  # Fill in forecasted values
+  offset <- nrow(df) - predict_periods
+  for (t in offset:nrow(df)) {
+    df$s_t[t] = round( df$s_t[t - p] )
+    df$xhat_t[t] = round( df$a_t[offset] + df$k[t] * df$b_t[offset] + df$s_t[t - p] )
+  }
+  
+  # Delete temporary variable k
+  df <- df |> select(-k)
+  
+  return(df)
+}
 
-enrollment_ts |>
-  bind_rows(extra_terms) |>
-  autoplot(.vars = enrollment) +
+nat_gas_ts <- nat_gas |>
+  hw_additive_slope_additive_seasonal_gas("quarter", "gas_billion_cf", p = 4, predict_periods = 9, s_initial = c(1000, -1000, -1000, 1000)) |>
+  as_tsibble(index = date) %>%  
+  mutate(t = (1 - 4):(nrow(.) - 4)) |> # Create column t
+  dplyr::select(date, t, x_t, a_t, b_t, s_t, xhat_t)
+
+nat_gas_ts |>
+  filter(t > 0) |>
+  filter(!is.na(x_t)) |> ###### Comment out to get the solution
+  ggplot(aes(x = date)) +
+    geom_line(aes(y = x_t), color = "black", size = 1) +
+    ################### Uncomment these lines to show the solution ############################
+    # geom_line(aes(y = a_t + s_t, color = "Combined", alpha=0.5), size = 1) +
+    # geom_line(aes(y = xhat_t, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
+    coord_cartesian(ylim = c(0,2500)) +
     labs(
-      x = "Time",
-      y = "Enrollment",
-      title = paste0("BYU-Idaho On-Campus Enrollment Counts")
+      x = "Date",
+      y = "Natural Gas Use (Billions of Cubic Feet)",
+      title = "U.S. Residential Natural Gas Consumption, by Quarter",
+      color = "Components"
     ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
     theme(
       plot.title = element_text(hjust = 0.5)
     )
 ```
 
+$\ $
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
 
-
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-
-
-
-#### Table 1
-
+#### Table 1: Holt-Winters filter for the U.S. quarterly natural gas consumption (in Bcf)
 ```{r}
-#| warning: false
 #| echo: false
+#| warning: false
 
-# Set parameters
-p <- 3
-alpha <- 0.2
-beta <- 0.2
-gamma <- 0.2
-
-enroll <- enrollment_ts |>
-  as_tibble() |>
-  rename(x_t = enrollment) |>
+nat_gas_ts |>
+  # Hide values from students
   mutate(
-    t = row_number(),
-    a_t = 0,
-    b_t = 0,
-    s_t = 0,
-  ) |>
-  dplyr::select(semester, t, x_t, a_t, b_t, s_t)
-
-# initialize a1
-enroll$a_t[1] = enroll$x_t[1]
-
-# initialize b1
-enroll$b_t[1] <-
-  (1 / p) * mean( enroll$x_t[(p+1):(2*p)] - enroll$x_t[1:p] )
-
-# First cycle
-for (t in 2:p) {
-  enroll$a_t[t] <-
-    alpha * (enroll$x_t[t] - enroll$s_t[t - 0 * p ]) +
-    (1 - alpha) * (enroll$a_t[t - 1] + enroll$b_t[t - 1])
-  enroll$b_t[t] <-
-    beta * (enroll$a_t[t] - enroll$a_t[t - 1]) +
-    (1 - beta) * enroll$b_t[t - 1]
-}
-enroll$s_t[1] <- enroll$s_t[2] <- enroll$s_t[3] <- 0
-
-for (t in (p + 1):nrow(enroll)) {
-  enroll$a_t[t] <-
-    alpha * (enroll$x_t[t] - enroll$s_t[t - p]) +
-    (1 - alpha) * (enroll$a_t[t - 1] + enroll$b_t[t - 1])
-  enroll$b_t[t] <-
-    beta * (enroll$a_t[t] - enroll$a_t[t - 1]) +
-    (1 - beta) * enroll$b_t[t - 1]
-  enroll$s_t[t] <-
-    gamma * (enroll$x_t[t] - enroll$a_t[t]) +
-    (1 - gamma) * enroll$s_t[t - p]
-}
-
-final_season <- c(
-  enroll$s_t |> tail(3),
-  enroll$s_t |> tail(3)
-)
-
-enroll_extension <- enroll |>
-  tail(6) |>
-  mutate(
-    semester = paste0(
-      left(semester, 2),
-      as.integer(right(semester, 2)) + 2
+    xhat_t = 
+      case_when(
+        t %in% c(1:4, 26:36) ~ NA,
+        t %in% c(7:25) ~ a_t + s_t,
+        TRUE ~ xhat_t
       ),
-    t = t + 6,
-    x_t = NA,
-    a_t = NA,
-    b_t = NA,
-    s_t = NA,
-    est =
-      enroll$a_t[nrow(enroll)] +
-      row_number() * enroll$b_t[nrow(enroll)] +
-      final_season[row_number()]
-  )
-
-enroll |>
-  bind_rows(enroll_extension) |>
+    a_t = ifelse(t %in% c(1:4), NA, a_t),
+    b_t = ifelse(t %in% c(1:4), NA, b_t),
+    s_t = ifelse(t %in% c(1:4), NA, s_t)
+    # xhat_t = ifelse(t %in% c(24:27), NA, xhat_t)
+  ) |>
+  replace_na_with_char() |>
+  # Add emdashes to make it clear where students should not put values
   mutate(
-    est = case_when(
-      row_number() == 1 ~ x_t,
-      row_number() <= nrow(enroll) ~ a_t + s_t,
-      TRUE ~ est
-    )
+    x_t = ifelse(t %in% c(-3:0, 28:36), emdash, x_t),
+    a_t = ifelse(t %in% c(-3:0, 28:36), emdash, a_t),
+    b_t = ifelse(t %in% c(-3:0, 28:36), emdash, b_t),
+    xhat_t = ifelse(t %in% c(-3:0), emdash, xhat_t)
   ) |>
   rename(
-    "$$Semester$$" = semester,
+    "$$Quarter$$" = date,
     "$$t$$" = t,
     "$$x_t$$" = x_t,
     "$$a_t$$" = a_t,
     "$$b_t$$" = b_t,
     "$$s_t$$" = s_t,
-    "$$\\hat x_t$$" = est
-  ) |>
-  round_df(0) |>
-  blank_out_cells_in_df(ncols_to_keep = 6, nrows_to_keep = 0) |>
-  blank_out_partial_row(row_number = 1, first_column_number = 4) |>
-  blank_out_partial_row(row_number = 2, first_column_number = 4) |>
-  blank_out_partial_row(row_number = 3, first_column_number = 4) |>
-  blank_out_partial_row(row_number = 4, first_column_number = 4) |>
-  blank_out_partial_row(row_number = 5, first_column_number = 4) |>
-  blank_out_partial_row(row_number = 6, first_column_number = 4) |>
-  blank_out_partial_row(row_number = 13, first_column_number = 4) |>
-  blank_out_partial_row(row_number = 14, first_column_number = 4) |>
-  mutate(
-    across(everything(), ~replace_na(.x, ""))
+    "$$\\hat x_t$$" = xhat_t,
   ) |>
   display_table("0.75in")
 ```
-
-
