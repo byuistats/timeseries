@@ -34,6 +34,50 @@ source("common_functions.R")
 </script>
 ```
 
+```{r}
+# MOVE TO COMMON FUNCTIONS WHEN SAFE
+
+hw_additive_slope_multiplicative_seasonal <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p)) {
+
+  # Get expanded data frame
+  df <- df |> expand_holt_winters_df(date_var, value_var, p, predict_periods)
+
+  # Fill in prior belief about s_t
+  for (t in 1:p) {
+    df$s_t[t] <- s_initial[t]
+  }
+
+  # Fill in first row of values
+  offset <- p # number of header rows to skip
+  df$a_t[1 + offset] <- df$x_t[1 + offset]
+  df$b_t[1 + offset] <- (1 / p) * mean(df$x_t[(p + 1 + offset):(2 * p + offset)] - df$x_t[(1 + offset):(p + offset)])
+  df$s_t[1 + offset] <- (1 - gamma) * df$s_t[1]
+
+  # Fill in remaining rows of body of df with values
+  for (t in (2 + offset):(nrow(df) - predict_periods) ) {
+    df$a_t[t] = alpha * (df$x_t[t] - df$s_t[t-p]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
+    df$b_t[t] = beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
+    df$s_t[t] = gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[t-p]
+  }
+
+  df <- df |>
+    mutate(k = ifelse(row_number() >= nrow(df) - predict_periods, row_number() - (nrow(df) - predict_periods), NA))
+
+  # Fill in forecasted values
+  offset <- nrow(df) - predict_periods
+  for (t in offset:nrow(df)) {
+    df$s_t[t] = df$s_t[t - p]
+    df$xhat_t[t] = (df$a_t[offset] + df$k[t] * df$b_t[offset]) * df$s_t[t - p]
+  }
+
+  # Delete temporary variable k
+  df <- df |> select(-k)
+
+  return(df)
+}
+```
+
+
 ## Learning Outcomes
 
 {{< include outcomes/chapter_3_lesson_5_outcomes.qmd >}}
@@ -65,7 +109,7 @@ source("common_functions.R")
 
 
 
-## Class Discussion: Variations on the Holt-Winters Model
+## Class Discussion: Variations on the Holt-Winters Model (10 min)
 
 There are many models to which the Holt-Winters process can be applied.
 
@@ -104,7 +148,7 @@ When we compute the estimated seasonal effect, $s_t$, we remove the level from t
 ::: columns
 ::: {.column width="45%"}
 
-#### Additive Level
+#### Additive Slope
 $$
   s_t = \gamma \left( x_t - a_t \right) + (1-\gamma) s_{t-p}
 $$
@@ -117,7 +161,7 @@ $$
 
 ::: {.column width="45%"}
 
-#### Multiplicative Level
+#### Multiplicative Slope
 $$
   s_t = \gamma \left( \frac{x_t}{a_t} \right) + (1-\gamma) s_{t-p}
 $$
@@ -176,42 +220,17 @@ $$
 
 :::
 
-## Which model should I choose?
+### Which model should I choose?
 
-When is each of these models appropriate? It can be helpful to simulate the various situations and see which matches the data you are considering.
+When is each of these models appropriate? 
 
-```{r}
-#| echo: false
-
-set.seed(1)
-n_obs <- 100
-sigma <- 1
-df0 <- data.frame(t = 1:n_obs, a_t = 10, b_t = 1) 
-for(i in 2:nrow(df0)) {
-  df0$a_t[i] = df0$a_t[i-1] + df0$b_t[i-1] 
-}
-df <- df0 |>
-  mutate(
-    b_t = 0.05,
-    a_t = ifelse(is.na(lag(b_t)), 10, lag(a_t) + lag(b_t)),
-    s_t = 2 * sin(pi / 6 * (t-1)),
-    w_t = rnorm(n(), 0, sigma)
-  ) |>
-  mutate(
-    add_slope_add_season = ifelse(is.na(lag(b_t)), a_t + s_t, a_t + lag(b_t) + s_t + w_t),
-    add_slope_mult_season = ifelse(is.na(lag(b_t)), a_t * s_t, (a_t + lag(b_t)) * s_t + w_t),
-    mult_slope_add_season = ifelse(is.na(lag(b_t)), a_t + s_t, a_t * lag(b_t) + s_t + w_t),
-    add_slope_mult_season = ifelse(is.na(lag(b_t)), a_t * s_t, (a_t * lag(b_t)) * s_t + w_t) 
-  )
-  
-  
-plot(df$t,df$add_slope_add_season)
-plot(df$t,df$add_slope_mult_season)
-plot(df$t,df$mult_slope_add_season)
-plot(df$t,df$add_slope_mult_season)
-
-
-```
+-   Trend:
+    -   When the trend is linear, an additive trend term is appropriate. 
+    -   If the trend shows exponential growth, a multiplicative trend should be applied. 
+-   Seasonality:
+    -   If the variation from one season to the next is roughly constant, then an additive seasonality component is appropirate.
+    -   If the variation increases as the level increases, then a multiplicative seasonality term is appropriate.
+    
 
 
 
@@ -220,11 +239,11 @@ plot(df$t,df$add_slope_mult_season)
 
 ## Small Group Activity: Holt-Winters Model for BYU-Idaho Enrollment Data (25 min) --- MULTIPLICATIVE
 
-In Chapter 2, Lesson 3, we explored the BYU-Idaho Enrollment data. We will apply the Holt-Winters model to these data with $\alpha = \beta = \gamma = 0.2$. @fig-enrollment-ts illustrates these data.
+We will now apply Holt-Winters filtering to the BYU-Idaho Enrollment data. First, we examine the time plot in @fig-enrollment-ts.
 
 ```{r}
 #| label: fig-enrollment-ts
-#| fig-cap: "Time Series Plot of BYU-Idaho Campus Enrollments"
+#| fig-cap: "Time Plot of BYU-Idaho Campus Enrollments"
 #| code-fold: true
 #| code-summary: "Show the code"
 #| warning: false
@@ -275,6 +294,14 @@ byui_enrollment_ts |>
     )
 ```
 
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Which of the four Holt-Winter models described above is appropriate for this situation? Justify your answer.
+
+:::
 
 ```{r}
 enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
