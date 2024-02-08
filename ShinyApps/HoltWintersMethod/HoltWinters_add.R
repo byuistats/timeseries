@@ -55,51 +55,63 @@ holt_winters_additive_forecast <- function(data, value_var, alpha = 0.2, beta = 
 
 
 
-expand_holt_winters_df <- function(df, date_var, value_var, p = 3, predict_periods = 10) {
-  # Note that p must be < nrow(df)
-  # Note that predict_periods must be < nrow(df)
+expand_holt_winters_df <- function(df, date_var, value_var, p = 12, predict_periods = 18, round_to = "day") {
+  # Ensure date is in Date format
+  df[[date_var]] <- as.Date(df[[date_var]])
 
-  # Create new variables
-  df$date <- df[[date_var]]
+  # Check if all dates have the same day component
+  same_day <- all(day(df[[date_var]]) == day(df[[date_var]][1]))
+
+  start_date <- min(df[[date_var]])
+  end_date <- max(df[[date_var]])
+
+  if(round_to == "month" | round_to == "Month") {
+    # Calculate the difference in months between the first two rows
+    date_diff_months <- as.integer(round(as.numeric(difftime(df[[date_var]][2], df[[date_var]][1], units = "days")) / 30))
+
+    # Create sequences for header and footer with distinct months
+    header_dates <- seq.Date(from = start_date %m-% months(date_diff_months * p), by = paste0(date_diff_months, " months"), length.out = p)
+    footer_dates <- seq.Date(from = end_date %m+% months(date_diff_months), by = paste0(date_diff_months, " months"), length.out = predict_periods)
+  } else {
+    # Calculate the difference in days between the first two rows
+    date_diff <- as.numeric(df[[date_var]][2] - df[[date_var]][1])
+    # Create the header by generating a sequence of dates before the first date
+    header_dates <- seq(from = start_date - date_diff*p, by = date_diff, length.out = p)
+
+    # Create the footer by generating a sequence of dates after the last date
+    footer_dates <- seq(from = end_date + date_diff, by = date_diff, length.out = predict_periods)
+
+  }
+  # Combine header, original df, and footer
+  header_df <- data.frame(date = header_dates, x_t = rep(NA, p), section="H")
+  footer_df <- data.frame(date = footer_dates, x_t = rep(NA, predict_periods), section="F")
+
+
+  # Ensure original df has the necessary columns
   df$x_t <- df[[value_var]]
-
-  df2 <- df |>
+  df$date <- df[[date_var]]
+  df <- df |>
     # select(date, x_t) |>  # This deletes all variables in original file
     mutate(
       a_t = as.numeric(NA),
       b_t = as.numeric(NA),
       s_t = as.numeric(NA),
-      xhat_t = as.numeric(NA)
+      xhat_t = as.numeric(NA),
+      section = "B"
     )
 
-  header <- df2 |>
-    head(p + 1) |>
-    mutate(
-      date = date - max(date) + min(date),
-      x_t = NA
-    ) |>
-    head(p)
-
-  footer <- df2 |>
-    tail(predict_periods + 1) |>
-    mutate(
-      date = date - min(date) + max(date),
-      x_t = NA
-    ) |>
-    tail(predict_periods)
-
-  df_final <- df_final <- as.data.frame(header)|>
-    bind_rows(as.data.frame(df2)) |>
-    bind_rows(as.data.frame(footer))
-  df_tsibble <- df_final |> as_tsibble(index = date)
+  # Combine all parts
+  df_final <- bind_rows(header_df, as.data.frame(df), footer_df)
+  #df_final$date <- format(df_final$date, output_date_format)
+  # Convert to tsibble if necessary
+  df_tsibble <- as_tsibble(df_final, index = date)
 
   return(df_tsibble)
 }
 
-hw_additive_slope_additive_seasonal <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p)) {
-
+hw_additive_slope_additive_seasonal <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p), round_to) {
   # Get expanded data frame
-  df <- df |> expand_holt_winters_df(date_var, value_var, p, predict_periods)
+  df <- df |> expand_holt_winters_df(date_var, value_var, p, predict_periods, round_to)
 
   # Fill in prior belief about s_t
   for (t in 1:p) {
@@ -110,9 +122,9 @@ hw_additive_slope_additive_seasonal <- function(df, date_var, value_var, p = 12,
   offset <- p # number of header rows to skip
   df$a_t[1 + offset] <- df$x_t[1 + offset]
   df$b_t[1 + offset] <- (1 / p) * mean(df$x_t[(p + 1 + offset):(2 * p + offset)] - df$x_t[(1 + offset):(p + offset)])
-  df$s_t[1 + offset] <- (1 - gamma) * df$s_t[1]
+  df$s_t[1 + offset] <- df$s_t[1]
 
-  # Fill in remaining rows of body of df with values
+  # # Fill in remaining rows of body of df with values
   for (t in (2 + offset):(nrow(df) - predict_periods) ) {
     df$a_t[t] = alpha * (df$x_t[t] - df$s_t[t-p]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
     df$b_t[t] = beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
@@ -126,10 +138,10 @@ hw_additive_slope_additive_seasonal <- function(df, date_var, value_var, p = 12,
   offset <- nrow(df) - predict_periods
   for (t in offset:nrow(df)) {
     df$s_t[t] = df$s_t[t - p]
-    df$xhat_t[t] = df$a_t[offset] + df$k[t] * df$b_t[offset] + df$s_t[t - p]
+    df$xhat_t[t] = ( df$a_t[offset] + df$k[t] * df$b_t[offset] ) + df$s_t[t - p] # add slope & add season
   }
 
-  # Delete temporary variable k
+  #Delete temporary variable k
   df <- df |> select(-k)
 
   return(df)
@@ -158,8 +170,10 @@ ui <- fluidPage(
     ),
   div(id = "DynInputs",
     fluidRow(
-      column(4, numericInput("p", "Periods per Season", min = 1, max =10, value = 3, step=1)),
-      column(4, numericInput("periods", "Periods to Predict", min = 1, max =10, value = 3, step=1))
+      column(4, numericInput("p", "Periods per Season", min = 1, max =1, value = 1, step=1)),
+      column(4, numericInput("periods", "Periods to Predict", min = 1, max=1 , value = 1, step=1)),
+      column(4, selectInput("round_to", label = "Round off dates to:",
+                            choices = c("day", "month")))
     ),
   ),
   div(id = "AdvInputs",
@@ -180,9 +194,14 @@ ui <- fluidPage(
       column(2, numericInput("s12", "s12",0))
       ),
     ),
+  fluidRow(
+    column(12, tableOutput("preview")),
+  ),
+  div(id = "Predict",
     fluidRow(
-      column(4, offset = 5,actionButton("go", "Run!")),
+      column(4, offset = 5,actionButton("go", "Predict!")),
     ),
+  ),
   div(id = "outputs",
     fluidRow(
       #column(12, uiOutput("formula0")),
@@ -198,7 +217,8 @@ ui <- fluidPage(
       #column(12, uiOutput("formula1")),
       #column(12, h3("Table: Title???")),
       column(12, tableOutput("table")),
-      column(12, plotOutput("predplot"))
+      column(12, plotOutput("predplot")),
+      column(12, dataTableOutput("dattable"))
     )
   )
 )
@@ -209,33 +229,6 @@ ui <- fluidPage(
 
 # Define the server logic
 server <- function(input, output, session) {
-  observe({
-    if(input$toggle) {
-      show("AdvInputs")
-    } else {
-      hide("AdvInputs")
-    }
-  })
-
-  observe({
-    if(input$go) {
-      show("outputs")
-    } else {
-      hide("outputs")
-    }
-  })
-
-
-  # output$p_input <- renderUI({
-  #   req(sim_data()) # Wait for the data to be loaded
-  #   if (input$dataset_in == "Enrollment"){
-  #     data <- enrollment_ts #filter(enrollment_ts, dates >= as.Date(input$dateRange[1], format = "%Y/%m/%d") & dates <= as.Date(input$dateRange[2], format = "%Y/%m/%d"))
-  #   } else {
-  #     data <- filter(crime_data, dates >= as.Date(input$dateRange[1], format = "%Y/%m/%d") & dates <= as.Date(input$dateRange[2], format = "%Y/%m/%d"))
-  #   }
-  #   numericInput("p", "Periods in a season", min = 1, max = nrow(data()), value = 3, step=1)
-  # })
-
   #### import data ####
   crime_data <- rio::import("https://byuistats.github.io/timeseries/data/baltimore_crime.csv", header=TRUE, stringsAsFactors=FALSE)
 
@@ -266,9 +259,51 @@ server <- function(input, output, session) {
     ) |>
     mutate(value = NA, enroll_thousand = NA)
 
-  #### app ####
+  #### observe updates ####
+  observe({
+    if(input$toggle) {
+      show("AdvInputs")
+    } else {
+      hide("AdvInputs")
+    }
+  })
+
+  observe({
+    if(input$go) {
+      show("outputs")
+    } else {
+      hide("outputs")
+    }
+  })
+
+  observe({
+    # Determine the length of the selected dataset
+    datasetLength <- if (input$dataset_in == "Enrollment") {
+      nrow(enrollment_ts)
+    } else if (input$dataset_in == "Crimes") {
+      nrow(crime_data)
+    } else {
+      1 # Default or fallback value
+    }
+
+    # Update the max parameter of the 'p' and 'periods' inputs
+    updateNumericInput(session, "p", max = datasetLength)
+    updateNumericInput(session, "periods", max = datasetLength)
+  })
+
+
+  #### event reactives ####
 
   #Reactive data input
+  sel_data <- reactive({
+    if (input$dataset_in == "Enrollment"){
+      data <- enrollment_ts #filter(enrollment_ts, dates >= as.Date(input$dateRange[1], format = "%Y/%m/%d") & dates <= as.Date(input$dateRange[2], format = "%Y/%m/%d"))
+    } else {
+      data <- filter(crime_data, dates >= as.Date(input$dateRange[1], format = "%Y/%m/%d") & dates <= as.Date(input$dateRange[2], format = "%Y/%m/%d"))
+    }
+    data
+  })
+
   sim_data <- eventReactive(input$go,{
     if (input$dataset_in == "Enrollment"){
       data <- enrollment_ts #filter(enrollment_ts, dates >= as.Date(input$dateRange[1], format = "%Y/%m/%d") & dates <= as.Date(input$dateRange[2], format = "%Y/%m/%d"))
@@ -277,7 +312,7 @@ server <- function(input, output, session) {
     }
 
     forecast_dat <- holt_winters_additive_forecast(data, "value", alpha = input$a, input$b, gamma = input$g, p = 3, a1 = NULL, b1 = NULL, s1 = NULL)
-    preddat <- hw_additive_slope_additive_seasonal(forecast_dat, "dates", "value", p = 3, predict_periods = 4, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p))
+    preddat <- hw_additive_slope_additive_seasonal(data, "dates", "value", p = input$p, predict_periods = input$periods, alpha = input$a, beta = input$b, gamma = input$g, s_initial = rep(0,input$p), round_to = input$round_to)
     return(
       list(
         data <- forecast_dat,
@@ -286,62 +321,71 @@ server <- function(input, output, session) {
     )
   })
 
-output$plot_fin<-renderPlot({
-  data <- sim_data()[[1]]
-  ggplot(data, aes(x = dates)) +
-    geom_line(aes(y = value, color = "Base"),linetype=3, size = 1) +
-    geom_line(aes(y = estimated_level + estimated_seasonal, color = "Components", alpha=0.5), size = 1) +
-    labs(
-      x = "Date",
-      y = "Value",
-      title = NULL,
-      color = "Series"
-    ) +
-    theme_minimal() +
-    theme(legend.position = "top")+
-    scale_color_manual(values = c("black", "#56B4E9"))+
-    guides(alpha = FALSE)
-})
-output$plot_at<-renderPlot({
-  data <- sim_data()[[1]]
-  ggplot(data, aes(x = dates, y = estimated_level)) +
-    geom_line(color = "#009E73", size = 1) +
-    labs(
-      x = "Date",
-      y = "Seasonal (st)",
-      title = NULL
-    ) +
-    theme_minimal()+
-    theme(legend.position = "none")
+  output$plot_fin<-renderPlot({
+    data <- sim_data()[[1]]
+    ggplot(data, aes(x = dates)) +
+      geom_line(aes(y = value, color = "Base"),linetype=3, size = 1) +
+      geom_line(aes(y = estimated_level + estimated_seasonal, color = "Components", alpha=0.7), size = 1) +
+      labs(
+        x = "Date",
+        y = "Value",
+        title = NULL,
+        color = "Series"
+      ) +
+      theme_minimal() +
+      theme(legend.position = "top")+
+      scale_color_manual(values = c("black", "#56B4E9"))+
+      guides(alpha = FALSE)
   })
-output$plot_bt<-renderPlot({
-  data <- sim_data()[[1]]
-  ggplot(data, aes(x = dates, y = estimated_slope)) +
-    geom_line(color = "#D55E00", size = 1) +
-    labs(
-      x = "Date",
-      y = "Seasonal (st)",
-      title = NULL
-    ) +
-    theme_minimal()+
-    theme(legend.position = "none")
-})
-output$plot_st<-renderPlot({
-  data <- sim_data()[[1]]
-  ggplot(data, aes(x = dates, y = estimated_seasonal)) +
-    geom_line(color = "#E69F00", size = 1) +
-    labs(
-      x = "Date",
-      y = "Seasonal (st)",
-      title = NULL
-    ) +
-    theme_minimal()+
-    theme(legend.position = "none")
-})
+  output$plot_at<-renderPlot({
+    data <- sim_data()[[1]]
+    ggplot(data, aes(x = dates, y = estimated_level)) +
+      geom_line(color = "#009E73", size = 1) +
+      labs(
+        x = "Date",
+        y = "Seasonal (st)",
+        title = NULL
+      ) +
+      theme_minimal()+
+      theme(legend.position = "none")
+    })
+  output$plot_bt<-renderPlot({
+    data <- sim_data()[[1]]
+    ggplot(data, aes(x = dates, y = estimated_slope)) +
+      geom_line(color = "#D55E00", size = 1) +
+      labs(
+        x = "Date",
+        y = "Seasonal (st)",
+        title = NULL
+      ) +
+      theme_minimal()+
+      theme(legend.position = "none")
+  })
+  output$plot_st<-renderPlot({
+    data <- sim_data()[[1]]
+    ggplot(data, aes(x = dates, y = estimated_seasonal)) +
+      geom_line(color = "#E69F00", size = 1) +
+      labs(
+        x = "Date",
+        y = "Seasonal (st)",
+        title = NULL
+      ) +
+      theme_minimal()+
+      theme(legend.position = "none")
+  })
 
 
   output$table<- renderTable({
     sim_data()[[1]]
+  })
+  output$dattable<- renderDataTable({
+    sim_data()[[2]]
+  })
+
+  output$preview<- renderTable({
+    data <- sel_data()
+    data$dates <- as.character(data$dates)
+    data[1:5,]
   })
 
   output$plot_enroll<-renderPlot({
@@ -362,7 +406,7 @@ output$plot_st<-renderPlot({
     data <- sim_data()[[2]]
     ggplot(data, aes(x = date)) +
       geom_line(aes(y = x_t, color = "Base"), size = 1) +
-      geom_line(aes(y = xhat_t, color = "Components", alpha=0.5),linetype=3, size = 1) +
+      geom_line(aes(y = xhat_t, color = "Components"),linetype=3, size = 1) +
       labs(
         x = "Date",
         y = "Value",
