@@ -7,8 +7,6 @@ library(shiny)
 library(dplyr)
 library(ggplot2)
 library(ggokabeito)
-library(fpp3) 
-library(tsibble)
 
 ui <- fluidPage(
   titlePanel("Bivariate Normal Distribution Simulator"),
@@ -27,29 +25,29 @@ ui <- fluidPage(
   )
 )
 
-
-
 server <- function(input, output, session) {
   sim_data <- eventReactive(input$go, {
     set.seed(1)
     
+
     wd <- tibble(
       seq = seq_len(input$n_points),
       values = rnorm(input$n_points, sd = input$sigma)
     )
     
-    wd_tsibble <- wd %>%
-      as_tsibble(index = seq)
+    # ACF plot data
+    acf_plot <- tsibble(
+      seq = seq_len(nrow(wd)),  
+      values = wd$values, 
+      index = seq
+    ) |> ACF(values) |> autoplot()
     
-    acf_object <- ACF(wd_tsibble)
-    
-    print(acf_object)
-    
-    list(sim_data = wd, acf_object = acf_object)
+    list(sim_data = wd, acf_plot = acf_plot)
   })
   
   output$plot <- renderPlot({
     df <- sim_data()$sim_data
+    
     
     ggplot(df, aes(x = seq, y = values)) +
       geom_line() +
@@ -59,28 +57,9 @@ server <- function(input, output, session) {
   })
   
   output$acf_plot <- renderPlot({
-    # Get the ACF object from sim_data
-    acf_object <- sim_data()$acf_object
-    
-    # Create ACF plot
-    acf_plot <- ggplot(data = acf_object, aes(x = lag, y = acf)) +
-      geom_bar(stat = "identity") +
-      labs(title = "Autocorrelation Function Plot",
-           x = "Lag",
-           y = "Autocorrelation Coefficient")
-    
-    # Print ACF plot object
-    print(acf_plot)
-    
-    # Return ACF plot
-    acf_plot
+    sim_data()$acf_plot 
   })
-  
 }
-
-
-
-
 
 
 shinyApp(ui, server)

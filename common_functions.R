@@ -408,11 +408,13 @@ expand_holt_winters_df <- function(df, date_var, value_var, p = 12, predict_peri
     ) |>
     tail(predict_periods)
 
-  df_final <- header |>
-    bind_rows(df2) |>
-    bind_rows(footer)
 
-  return(df_final)
+  df_final <- df_final <- as.data.frame(header)|>
+    bind_rows(as.data.frame(df2)) |>
+    bind_rows(as.data.frame(footer))
+  df_tsibble <- df_final |> as_tsibble(index = date)
+
+  return(df_tsibble)
 }
 
 hw_additive_slope_additive_seasonal <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p)) {
