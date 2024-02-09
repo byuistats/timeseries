@@ -397,6 +397,7 @@ expand_holt_winters_df <- function(df, date_var, value_var, p = 12, predict_peri
 
   # Create new variables
   df$date <- df[[date_var]]
+  df$t <- (1 - p):(nrow(df) - p)  # Create column t
   df$x_t <- df[[value_var]]
 
   df2 <- df |>
@@ -513,4 +514,3 @@ hw_additive_slope_multiplicative_seasonal <- function(df, date_var, value_var, p
 
   return(df)
 }
-```
