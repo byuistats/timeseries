@@ -391,7 +391,7 @@ holt_winters_additive_forecast <- function(data, value_var, alpha = 0.2, beta = 
 
 
 
-expand_holt_winters_df <- function(df, date_var, value_var, p = 12, predict_periods = 18) {
+expand_holt_winters_df_old <- function(df, date_var, value_var, p = 12, predict_periods = 18) {
   # Note that p must be < nrow(df)
   # Note that predict_periods must be < nrow(df)
 
@@ -439,7 +439,7 @@ expand_holt_winters_df <- function(df, date_var, value_var, p = 12, predict_peri
 hw_additive_slope_additive_seasonal <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p)) {
 
   # Get expanded data frame
-  df <- df |> expand_holt_winters_df(date_var, value_var, p, predict_periods)
+  df <- df |> expand_holt_winters_df_old(date_var, value_var, p, predict_periods)
 
   # Fill in prior belief about s_t
   for (t in 1:p) {
@@ -516,3 +516,121 @@ hw_additive_slope_multiplicative_seasonal <- function(df, date_var, value_var, p
 
   return(df)
 }
+
+################## Holt-Winters ####################
+
+expand_holt_winters_df <- function(df, date_var, value_var, p = 12, predict_periods = 18, round_to = "day") {
+  # Ensure date is in Date format
+  df[[date_var]] <- as.Date(df[[date_var]])
+
+  # Check if all dates have the same day component
+  same_day <- all(day(df[[date_var]]) == day(df[[date_var]][1]))
+
+  start_date <- min(df[[date_var]])
+  end_date <- max(df[[date_var]])
+
+  if(round_to == "month" | round_to == "Month") {
+    # Calculate the difference in months between the first two rows
+    date_diff_months <- as.integer(round(as.numeric(difftime(df[[date_var]][2], df[[date_var]][1], units = "days")) / 30))
+
+    # Create sequences for header and footer with distinct months
+    header_dates <- seq.Date(from = start_date %m-% months(date_diff_months * p), by = paste0(date_diff_months, " months"), length.out = p)
+    footer_dates <- seq.Date(from = end_date %m+% months(date_diff_months), by = paste0(date_diff_months, " months"), length.out = predict_periods)
+  } else {
+    # Calculate the difference in days between the first two rows
+    date_diff <- as.numeric(df[[date_var]][2] - df[[date_var]][1])
+    # Create the header by generating a sequence of dates before the first date
+    header_dates <- seq(from = start_date - date_diff*p, by = date_diff, length.out = p)
+
+    # Create the footer by generating a sequence of dates after the last date
+    footer_dates <- seq(from = end_date + date_diff, by = date_diff, length.out = predict_periods)
+
+  }
+  # Combine header, original df, and footer
+  header_df <- data.frame(date = header_dates, x_t = rep(NA, p), section="H")
+  footer_df <- data.frame(date = footer_dates, x_t = rep(NA, predict_periods), section="F")
+
+
+  # Ensure original df has the necessary columns
+  df$x_t <- df[[value_var]]
+  df$date <- df[[date_var]]
+  df <- df |>
+    # select(date, x_t) |>  # This deletes all variables in original file
+    mutate(
+      a_t = as.numeric(NA),
+      b_t = as.numeric(NA),
+      s_t = as.numeric(NA),
+      xhat_t = as.numeric(NA),
+      section = "B"
+    )
+
+  # Combine all parts
+  df_final <- bind_rows(header_df, as.data.frame(df), footer_df)
+  #df_final$date <- format(df_final$date, output_date_format)
+  # Convert to tsibble if necessary
+  df_tsibble <- as_tsibble(df_final, index = date)
+
+  return(df_tsibble)
+}
+
+holt_winters_forecast <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0, p), round_to, slope_type = "add", season_type = "add") {
+  # Get expanded data frame with section column
+  df <- df |> expand_holt_winters_df(date_var, value_var, p, predict_periods, round_to)
+
+  ### Header
+  # Initialize the seasonal component for the header section
+  df$s_t[1:p] <- s_initial
+
+
+  ### Initial row of body
+  # Calculate initial level and trend values based on the first period of actual data
+  actual_start <- p + 1 # The start of actual data in the expanded dataframe
+  df$a_t[actual_start] <- df$x_t[actual_start]
+
+  roll_mean <- df %>%
+    filter(section == "B") %>%
+    mutate(roll_mean = rollmean(x_t, 7, fill = NA, align = "center")) %>%
+    select(roll_mean)
+  roll_mean <- roll_mean[4,1][[1]]
+
+  #df$b_t[actual_start] <- mean(diff(df$x_t[actual_start:(actual_start + p - 1)])) / p #chat gpt code doesn't calc correctly
+  #df$b_t[actual_start] <- mean(df$x_t[(actual_start + p):(3 * p)] - df$x_t[(actual_start):(p + p)]) / p # simplified Bro Johnson code
+  df$b_t[actual_start] <- (df$x_t[actual_start] - roll_mean) / df$x_t[actual_start] # period 4 of 7 period rolling average (Bro Moncayo)
+  df$s_t[actual_start] <- df$s_t[1]
+
+
+
+  ### Fill Body
+  for (t in (actual_start + 1):(nrow(df) - predict_periods)) {
+    prior_seasonal_index <- ifelse(t <= actual_start + p, t - actual_start, t - p)
+    df$a_t[t] <- alpha * (df$x_t[t] - df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t - 1] + df$b_t[t - 1])
+    df$b_t[t] <- beta * (df$a_t[t] - df$a_t[t - 1]) + (1 - beta) * df$b_t[t - 1]
+    df$s_t[t] <- gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index]
+  }
+
+  ### Footer
+  # Prepare for forecasting
+  last_actual_t <- nrow(df) - predict_periods
+  forecast_start <- last_actual_t
+
+  # Forecast future values
+  for (t in forecast_start:nrow(df)) {
+    forecast_index <- t - last_actual_t
+    df$s_t[t] <- df$s_t[t - p] # Carry forward the seasonal component
+    if (slope_type == "add" & season_type == "add"){
+      df$xhat_t[t] <- (df$a_t[last_actual_t] + forecast_index * df$b_t[last_actual_t]) + df$s_t[t - p] # add slope & add season
+    } else if (slope_type == "add" & season_type == "mult"){
+      df$xhat_t[t] <- (df$a_t[last-actual_t] + forecast_index * df$b_t[last-actual_t]) * df$s_t[t - p] # add slope & mult season
+    } else if (slope_type == "mult" & season_type == "add"){
+      df$xhat_t[t] <- (df$a_t[last-actual_t] + df$b_t[last-actual_t]^(forecast_index)) + df$s_t[t - p] # mult slope & add season
+    } else {
+      df$xhat_t[t] <- (df$a_t[last-actual_t] + df$b_t[last-actual_t]^(forecast_index)) * df$s_t[t - p] # mult slope & mult season
+    }
+  }
+
+
+  return(df)
+}
+
+
+
