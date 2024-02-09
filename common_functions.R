@@ -472,3 +472,45 @@ hw_additive_slope_additive_seasonal <- function(df, date_var, value_var, p = 12,
   return(df)
 }
 
+
+###### For Chapter 3 Lesson 5
+hw_additive_slope_multiplicative_seasonal <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(1,p)) {
+
+  # Get expanded data frame
+  df <- df |> expand_holt_winters_df(date_var, value_var, p, predict_periods)
+
+  # Fill in prior belief about s_t
+  for (t in 1:p) {
+    df$s_t[t] <- s_initial[t]
+  }
+
+  # Fill in first row of values
+  offset <- p # number of header rows to skip
+  df$a_t[1 + offset] <- df$x_t[1 + offset]
+  df$b_t[1 + offset] <- (1 / p) * mean(df$x_t[(p + 1 + offset):(2 * p + offset)] - df$x_t[(1 + offset):(p + offset)])
+  df$s_t[1 + offset] <- df$s_t[1]
+
+  # Fill in remaining rows of body of df with values
+  for (t in (2 + offset):(nrow(df) - predict_periods) ) {
+    df$a_t[t] = alpha * (df$x_t[t] / df$s_t[t-p]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
+    df$b_t[t] = beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
+    df$s_t[t] = gamma * (df$x_t[t] / df$a_t[t]) + (1 - gamma) * df$s_t[t-p]
+  }
+
+  df <- df |>
+    mutate(k = ifelse(row_number() >= nrow(df) - predict_periods, row_number() - (nrow(df) - predict_periods), NA))
+
+  # Fill in forecasted values
+  offset <- nrow(df) - predict_periods
+  for (t in (offset+1):nrow(df)) {
+    df$s_t[t] = df$s_t[t - p]
+    df$xhat_t[t] = (df$a_t[offset] + df$k[t] * df$b_t[offset]) * df$s_t[t - p]
+  }
+  df$xhat_t[offset] = (df$a_t[offset] + df$k[offset] * df$b_t[offset]) * df$s_t[offset] #### NOTE THIS ISSUE!!!
+
+  # Delete temporary variable k
+  df <- df |> select(-k)
+
+  return(df)
+}
+```
