@@ -480,7 +480,7 @@ hw_additive_slope_additive_seasonal <- function(df, date_var, value_var, p = 12,
 hw_additive_slope_multiplicative_seasonal <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(1,p)) {
 
   # Get expanded data frame
-  df <- df |> expand_holt_winters_df(date_var, value_var, p, predict_periods)
+  df <- df |> expand_holt_winters_df_old(date_var, value_var, p, predict_periods)
 
   # Fill in prior belief about s_t
   for (t in 1:p) {
@@ -601,11 +601,41 @@ holt_winters_forecast <- function(df, date_var, value_var, p = 12, predict_perio
 
 
   ### Fill Body
-  for (t in (actual_start + 1):(nrow(df) - predict_periods)) {
+  #Add + Add
+  # for (t in (actual_start + 1):(nrow(df) - predict_periods)) {
+  #   prior_seasonal_index <- ifelse(t <= actual_start + p, t - actual_start, t - p)
+  #   df$a_t[t] <- alpha * (df$x_t[t] - df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t - 1] + df$b_t[t - 1])
+  #   df$b_t[t] <- beta * (df$a_t[t] - df$a_t[t - 1]) + (1 - beta) * df$b_t[t - 1]
+  #   df$s_t[t] <- gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index]
+  # }
+  #
+  # #Add + Mult
+  # for (t in (2 + actual_start):(nrow(df) - predict_periods) ) {
+  #   prior_seasonal_index <- ifelse(t <= actual_start + p, t - actual_start, t - p)
+  #   df$a_t[t] = alpha * (df$x_t[t] / df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
+  #   df$b_t[t] = beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
+  #   df$s_t[t] = gamma * (df$x_t[t] / df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index]
+  # }
+
+  for (t in (2 + actual_start):(nrow(df) - predict_periods) ) {
     prior_seasonal_index <- ifelse(t <= actual_start + p, t - actual_start, t - p)
-    df$a_t[t] <- alpha * (df$x_t[t] - df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t - 1] + df$b_t[t - 1])
-    df$b_t[t] <- beta * (df$a_t[t] - df$a_t[t - 1]) + (1 - beta) * df$b_t[t - 1]
-    df$s_t[t] <- gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index]
+    if (slope_type == "add" & season_type == "add"){
+      df$a_t[t] <- alpha * (df$x_t[t] - df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t - 1] + df$b_t[t - 1])
+      df$b_t[t] <- beta * (df$a_t[t] - df$a_t[t - 1]) + (1 - beta) * df$b_t[t - 1]
+      df$s_t[t] <- gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index]# add slope & add season
+    } else if (slope_type == "add" & season_type == "mult"){
+      df$a_t[t] = alpha * (df$x_t[t] / df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
+      df$b_t[t] = beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
+      df$s_t[t] = gamma * (df$x_t[t] / df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index] # add slope & mult season
+    } else if (slope_type == "mult" & season_type == "add"){
+      df$a_t[t] = alpha * (df$x_t[t] + df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
+      df$b_t[t] = beta * (df$a_t[t] / df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
+      df$s_t[t] = gamma * (df$x_t[t] + df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index] # mult slope & add season
+    } else {
+      df$a_t[t] = alpha * (df$x_t[t] / df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
+      df$b_t[t] = beta * (df$a_t[t] / df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
+      df$s_t[t] = gamma * (df$x_t[t] / df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index] # mult slope & mult season
+    }
   }
 
   ### Footer
