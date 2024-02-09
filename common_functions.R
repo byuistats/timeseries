@@ -590,7 +590,7 @@ holt_winters_forecast <- function(df, date_var, value_var, p = 12, predict_perio
   roll_mean <- df %>%
     filter(section == "B") %>%
     mutate(roll_mean = rollmean(x_t, 7, fill = NA, align = "center")) %>%
-    select(roll_mean)
+    dplyr::select(roll_mean)
   roll_mean <- roll_mean[4,1][[1]]
 
   #df$b_t[actual_start] <- mean(diff(df$x_t[actual_start:(actual_start + p - 1)])) / p #chat gpt code doesn't calc correctly
@@ -617,7 +617,7 @@ holt_winters_forecast <- function(df, date_var, value_var, p = 12, predict_perio
   #   df$s_t[t] = gamma * (df$x_t[t] / df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index]
   # }
 
-  for (t in (2 + actual_start):(nrow(df) - predict_periods) ) {
+  for (t in (1 + actual_start):(nrow(df) - predict_periods) ) {
     prior_seasonal_index <- ifelse(t <= actual_start + p, t - actual_start, t - p)
     if (slope_type == "add" & season_type == "add"){
       df$a_t[t] <- alpha * (df$x_t[t] - df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t - 1] + df$b_t[t - 1])
