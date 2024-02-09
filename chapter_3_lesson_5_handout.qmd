@@ -1,0 +1,197 @@
+---
+title: "Holt-Winters Method (Multiplicative Models)"
+subtitle: "Chapter 3: Lesson 5"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+```{r}
+#| echo: false
+
+# Rounds the values at each step
+
+hw_additive_slope_multiplicative_seasonal_rounded <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(1,p)) {
+
+  # Get expanded data frame
+  df <- df |> expand_holt_winters_df(date_var, value_var, p, predict_periods) |>
+    mutate(x_t = round(x_t, 1))
+
+  # Fill in prior belief about s_t
+  for (t in 1:p) {
+    df$s_t[t] <- s_initial[t]
+  }
+
+  # Fill in first row of values
+  offset <- p # number of header rows to skip
+  df$a_t[1 + offset] <- df$x_t[1 + offset]
+  df$b_t[1 + offset] <- round( (1 / p) * mean(df$x_t[(p + 1 + offset):(2 * p + offset)] - df$x_t[(1 + offset):(p + offset)]), 3)
+  df$s_t[1 + offset] <- df$s_t[1]
+
+  # Fill in remaining rows of body of df with values
+  for (t in (2 + offset):(nrow(df) - predict_periods) ) {
+    df$a_t[t] = round( alpha * (df$x_t[t] / df$s_t[t-p]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1]), 1)
+    df$b_t[t] = round( beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1], 3)
+    df$s_t[t] = round( gamma * (df$x_t[t] / df$a_t[t]) + (1 - gamma) * df$s_t[t-p], 2)
+  }
+
+  df <- df |>
+    mutate(k = ifelse(row_number() >= nrow(df) - predict_periods, row_number() - (nrow(df) - predict_periods), NA))
+
+  # Fill in forecasted values
+  offset <- nrow(df) - predict_periods
+  for (t in (offset+1):nrow(df)) {
+    df$s_t[t] = df$s_t[t - p]
+    df$xhat_t[t] = round( (df$a_t[offset] + df$k[t] * df$b_t[offset]) * df$s_t[t - p], 1)
+  }
+  df$xhat_t[offset] = round( (df$a_t[offset] + df$k[offset] * df$b_t[offset]) * df$s_t[offset], 1) #### NOTE THIS ISSUE!!!
+
+  # Delete temporary variable k
+  df <- df |> select(-k)
+
+  return(df)
+}
+```
+
+```{r}
+#| echo: false
+#| warning: false
+
+# read in the data from a csv and make the tsibble
+byui_enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment_2012.csv") |>
+  rename(
+    semester = "TermCode",
+    year = "Year",
+    enrollment = "On Campus Enrollment (Campus HC)"
+  ) |>
+  mutate(
+    term = 
+      case_when(
+        left(semester, 2) == "WI" ~ 1,
+        left(semester, 2) == "SP" ~ 2,
+        left(semester, 2) == "FA" ~ 3,
+        TRUE ~ NA
+      )
+  ) |>
+  filter(!is.na(term)) |>
+  mutate(dates = yearmonth( ym( paste(year, term * 4 - 3) ) ) ) |>
+  mutate(enrollment_1000 = enrollment / 1000) |>
+  dplyr::select(semester, dates, enrollment_1000) |>
+  as_tsibble(index = dates) 
+
+byui_enrollment_ts_expanded <- byui_enrollment_ts |>
+  as_tibble() |>
+  hw_additive_slope_multiplicative_seasonal_rounded("dates", "enrollment_1000", p = 3, predict_periods = 9) |>
+  mutate(xhat_t = ifelse(t %in% c(1:36), round(a_t * s_t, 1), xhat_t)) |>
+  select(-dates, -enrollment_1000)
+
+# This is hard-coded for this data set, because I am in a hurry to get done.
+# This revises the semester codes
+byui_enrollment_ts_expanded$semester[1:3] <- c("SP11", "FA11", "WI12")
+byui_enrollment_ts_expanded$semester[40:48] <- c("SP24", "FA24", "WI25",
+                                                 "SP25", "FA25", "WI26",
+                                                 "SP26", "FA26", "WI27")
+```
+
+
+#### Figure 1: Time plot of BYU-Idaho campus enrollments
+
+
+```{r}
+#| echo: false
+#| warning: false
+
+## Holt-Winters Multiplicative Model - Plot
+byui_enrollment_ts |> 
+  as_tibble() |>
+  hw_additive_slope_multiplicative_seasonal_rounded("dates", "enrollment_1000", p = 3, predict_periods = 9) |>
+  as_tsibble(index = date) |>
+  tail(-3) |>
+  ggplot(aes(x = date)) +
+    geom_line(aes(y = x_t), color = "black", linewidth = 1) +
+    geom_line(aes(y = a_t * s_t, color = "Combined", alpha=0.5), linewidth = 1) +
+    # geom_line(aes(y = xhat_t, color = "Combined", alpha=0.5), linetype = "dashed", linewidth = 1) +
+    coord_cartesian(ylim = c(10, 22)) +
+    scale_y_continuous(breaks = seq(10, 22, by = 2)) +
+    labs(
+      x = "Date",
+      y = "Enrollment (in Thousands)",
+      title = "BYU-Idaho Enrollments with Holt-Winters Forecast",
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+$\ $
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+#### Table 1: Holt-Winters smoothing for BYU-Idaho campus enrollments
+
+```{r}
+#| warning: false
+#| echo: false
+
+byui_enrollment_ts_expanded |>
+  as_tibble() |>
+  select(-date) |>
+  rename(
+    "$$Semester$$" = semester,
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$b_t$$" = b_t,
+    "$$s_t$$" = s_t,
+    "$$\\hat x_t$$" = xhat_t
+  ) |>
+  replace_cells_with_char(rows = 1:3, cols = 3:5, new_char = emdash) |>
+  replace_cells_with_char(rows = 1:3, cols = 6, new_char = "") |>
+  replace_cells_with_char(rows = 1:3, cols = 7, new_char = emdash) |>
+  replace_cells_with_char(rows = 4, cols = 4:7, new_char = "") |>
+  replace_cells_with_char(rows = 9:10, cols = 4:7, new_char = "") |>
+  replace_cells_with_char(rows = 40:48, cols = 3:5, new_char = emdash) |>
+  replace_cells_with_char(rows = 40:43, cols = 6:7, new_char = "") |>
+  replace_na_with_char() |>
+  # head(nrow(byui_enrollment_ts_expanded) - 3) |>
+  display_partial_table(14, 14, min_col_width = "0.75in")
+```
