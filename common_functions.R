@@ -397,7 +397,7 @@ expand_holt_winters_df <- function(df, date_var, value_var, p = 12, predict_peri
 
   # Create new variables
   df$date <- df[[date_var]]
-  df$t <- (1 - p):(nrow(df) - p)  # Create column t
+  df$t <- 1:nrow(df)  # Create column t
   df$x_t <- df[[value_var]]
 
   df2 <- df |>
@@ -413,6 +413,7 @@ expand_holt_winters_df <- function(df, date_var, value_var, p = 12, predict_peri
     head(p + 1) |>
     mutate(
       date = date - max(date) + min(date),
+      t = t - p,
       x_t = NA
     ) |>
     head(p)
@@ -421,6 +422,7 @@ expand_holt_winters_df <- function(df, date_var, value_var, p = 12, predict_peri
     tail(predict_periods + 1) |>
     mutate(
       date = date - min(date) + max(date),
+      t = t + predict_periods,
       x_t = NA
     ) |>
     tail(predict_periods)
