@@ -51,9 +51,9 @@ The stock prices of x can be fetched from the specified date range using the tq_
 
 ```{r, warning=FALSE}
 # Set symbol and date range
-symbol <- "NFLX"
-date_start <- "2020-01-16"
-date_end <- "2024-01-17"
+symbol <- "MCD"
+date_start <- "2021-01-01"
+date_end <- "2024-01-01"
 
 # Fetch stock prices
 df_stock <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
@@ -99,9 +99,23 @@ desired_tsibble <- desired_tsibble %>%
 # Generate time series plot using plot_ly
 plot_ly(desired_tsibble, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') %>%
   layout(
-    xaxis = list(title = ""),
+    xaxis = list(title = "Date"),
     yaxis = list(title = "Value"),
     title = "Time Series Plot"
+  )
+```
+
+
+```{r, warning=FALSE}
+desired_tsibble <- desired_tsibble |>
+  mutate(diff = value - lag(value))
+
+# Generate time series plot using plot_ly
+plot_ly(desired_tsibble, x = ~dates, y = ~diff, type = 'scatter', mode = 'lines') %>%
+  layout(
+    xaxis = list(title = "Date"),
+    yaxis = list(title = "Value"),
+    title = paste0("Difference of ", symbol, " Daily Closing Price")
   )
 ```
 
