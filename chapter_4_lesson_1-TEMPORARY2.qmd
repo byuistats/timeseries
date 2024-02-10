@@ -1,0 +1,138 @@
+---
+title: "PASTE INTO LESSON 4-1"
+subtitle: "Chapter 4: Lesson 1"
+format: html
+editor: source
+sidebar: false
+eval: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+
+
+
+
+## Class Activity: Random Walks (15 min)
+
+### Definitions
+
+Consider moving on a number line, where your movements are determined by a discrete white noise (DWN) process. Each successive value indicates how far you will move along the number line from your current position. This is mathematically equivalent to allowing your position at time $t$ to be the sum of all the observed DWN values up to time $t$.
+
+::: {.callout-note title="Definition of a Random Walk"}
+
+Let $\{x_t\}$ be a time series. Then, $\{x_t\}$ is a **random walk** if it can be expressed as
+$$
+  x_{t} = x_{t-1} + w_{t}
+$$
+where $\{w_t\}$ is a white noise series.
+
+:::
+
+There are other ways to represent this expression.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Notice that $x_{t-1} = x_{t-2} + w_{t-1}$ and x_{t-2} = x_{t-3} + w_{t-2}. Use this to explain why it is possible to write $x_t$ as
+    $$
+      x_{t} = w_{t} + w_{t-1} + w_{t-2} + \cdot + w_2 + w_1
+    $$
+    where $w_1$ is the first observation of the DWN time series.
+    
+:::
+
+This process of *back substitution* is so common, we define notation to handle it.
+
+::: {.callout-note title="Definition of the Backward Shift Operator"}
+
+We define the **backward shift operator** or the **lag operator**, $\mathbf{B}$, as:
+$$
+  \mathbf{B} x_t = x_{t-1}
+$$
+where $\{x_t\}$ is any time series.
+
+We can apply this operator repeatedly. We will use exponential notation to indicate this.
+
+$$
+  \mathbf{B}^2 x_t = \mathbf{B} \mathbf{B} x_t = \mathbf{B} \left( \mathbf{B} x_t \right) x_t = \mathbf{B} x_{t-1} = \mathbf{B} x_{t-2}
+$$
+
+In general, 
+$$
+  \mathbf{B}^n x_t = \underbrace{\mathbf{B} \cdot \mathbf{B} \cdot \cdots \cdot \mathbf{B}}_{n ~ \text{terms}} x_t = \mathbf{B}^{n-1} \left( \mathbf{B} x_t \right) = \mathbf{B}^{n-1} \left( x_{t-1} \right) = \mathbf{B}^{n-2} \left( x_{t-2} \right) = \cdots = \mathbf{B} x_{t-(n-1)} = x_{t-n}
+$$
+
+:::
+
+We will practice applying this operator.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Consider the time series:
+
+```{r, results='asis'}
+#| echo: false
+#| eval: false
+
+set.seed(6)
+n <- 8
+d_operator <- data.frame(t = c(1:n), x = sample(1:15, n, replace = FALSE)) |>
+  mutate(diff = t - n)
+cat( paste( paste0("$x_{t", ifelse(d_operator$t==n,"",d_operator$t-n), "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+
+d_value <- function(power_on_d = 0) {
+  out <- d_operator |>
+    filter(diff == -power_on_d) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+```
+
+
+Evaluate the following. 
+
+-   $\mathbf{B} x_t$
+-   $\mathbf{B}^4 x_t$
+-   $\left(\mathbf{B}^4 - \mathbf{B} \right) x_t$
+-   $\left(1 - 4 \mathbf{B} -2 \mathbf{B}^2 + 5 \mathbf{B}^3 \right) x_t$
+-   $\left(1-3\mathbf{B}-5\mathbf{B}^2 \right) \left( 1-\mathbf{B} \right) x_t$
+
+
+
+
+
+:::
+
