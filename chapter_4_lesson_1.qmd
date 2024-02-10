@@ -60,7 +60,7 @@ source("common_functions.R")
 
 
 
-## Class Activity: White Noise (5 min)
+## Class Activity: White Noise (15 min)
 
 ### Definition
 
@@ -76,7 +76,7 @@ In this class, we are learning to investigate different types of time series. Up
 :::
 
 
-::: {.callout-note title="Definition of a Discrete White Noise (DWN) Process"}
+::: {.callout-note icon=false title="Definition of a Discrete White Noise (DWN) Process"}
 
 A time series $\{w_t: t = 1, 2, \ldots, n\}$ is a **discrete white noise (DWN)** if the variables $w_1, w_2, \ldots, w_n$ are independent and identically distributed with mean 0. The assumption that the variables are identically distributed implies that there is a common variance denoted $\sigma$. The assumption of independence means that the covariance (and correlation) between different variables will be zero: $cov(w_i, w_j) = 0$ and $cor(w_i, w_j) = 0$ if $i \ne j$. 
 
@@ -180,7 +180,7 @@ Notice that the values follow a normal distribution. This suggests the data are 
 
 When we refer to the second-order properties of a time series, we are talking about its variance and covariance. The mean is a first-order property, the covariance is a second-order property.
 
-::: {.callout-note title="Second-Order Properties of a Discrete White Noise Process"}
+::: {.callout-note icon=false title="Second-Order Properties of a Discrete White Noise Process"}
 If $\{w_t\}_{t=1}^n$ is a DWN time series, then the population has the following properties. 
 
 $$ \mu_w = 0 $$
@@ -208,7 +208,7 @@ Note that the properties given above are theoretical properties of the populatio
 
 In your introductory statistics course, you learned about Type I error.
 
-::: {.callout-note title="Type I Errors"}
+::: {.callout-note icon=false title="Type I Errors"}
 
 Suppose we will conduct a hypothesis test with a level of significance equal to $\alpha = 0.05$. If the null hypothesis is true, due to sampling variation there is a probability of 0.05 that we will reject the null hypothesis...even though it is true. We refer to this as making a **Type I Error**. 
 
@@ -246,7 +246,7 @@ Since the mean of a DWN time series is zero, the only parameter we need to fit i
 
 Consider moving on a number line, where your movements are determined by a discrete white noise (DWN) process. Each successive value indicates how far you will move along the number line from your current position. This is mathematically equivalent to allowing your position at time $t$ to be the sum of all the observed DWN values up to time $t$.
 
-::: {.callout-note title="Definition of a Random Walk"}
+::: {.callout-note icon=false title="Definition of a Random Walk"}
 
 Let $\{x_t\}$ be a time series. Then, $\{x_t\}$ is a **random walk** if it can be expressed as
 $$
@@ -272,7 +272,7 @@ There are other ways to represent this expression.
 
 This process of *back substitution* is so common, we define notation to handle it.
 
-::: {.callout-note title="Definition of the Backward Shift Operator"}
+::: {.callout-note icon=false title="Definition of the Backward Shift Operator"}
 
 We define the **backward shift operator** or the **lag operator**, $\mathbf{B}$, as:
 $$
@@ -309,11 +309,25 @@ set.seed(6)
 n <- 8
 d_operator <- data.frame(t = c(1:n), x = sample(1:15, n, replace = FALSE)) |>
   mutate(diff = t - n)
-cat( paste( paste0("$x_{t", ifelse(d_operator$t==n,"",d_operator$t-n), "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
 
+#cat( paste( paste0("$x_{t", ifelse(d_operator$t==n,"",d_operator$t-n), "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+
+cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+
+# Computes the value of the "power_on_d"^th difference from x_n
 d_value <- function(power_on_d = 0) {
   out <- d_operator |> #### Note the use of this global variable
     filter(diff == -power_on_d) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+
+
+ts_val <- function(t_value) {
+  out <- d_operator |> #### Note the use of this global variable
+    filter(t == t_value) |>
     dplyr::select(x) |>
     pull()
   
@@ -323,13 +337,13 @@ d_value <- function(power_on_d = 0) {
 </center>
 Evaluate the following. 
 
--   $\mathbf{B} x_t$
--   $\mathbf{B}^4 x_t$
--   $\left(\mathbf{B}^4 - \mathbf{B} \right) x_t$
--   $\left( \mathbf{B}^2 - 6 \mathbf{B} + 9 \right) x_t$
--   $\left( (\mathbf{B} - 6 )\mathbf{B} + 9 \right) x_t$
--   $\left( \mathbf{B} - 3 \right)^2 x_t =  \left( \mathbf{B} - 3 \right) \left[ \left( \mathbf{B} - 3 \right) x_t \right]$
--   $\left( 1 - \frac{1}{2} B - \frac{1}{4} B^2 - \frac{1}{8} B^3 \right) x_t$
+-   $\mathbf{B} x_8$
+-   $\mathbf{B}^5 x_8$
+-   $\left(\mathbf{B}^5 - \mathbf{B} \right) x_8$
+-   $\left( \mathbf{B}^2 - 6 \mathbf{B} + 9 \right) x_8$
+-   $\left( (\mathbf{B} - 6 )\mathbf{B} + 9 \right) x_8$
+-   $\left( \mathbf{B} - 3 \right)^2 x_8 =  \left( \mathbf{B} - 3 \right) \left[ \left( \mathbf{B} - 3 \right) x_8 \right]$
+-   $\left( 1 - \frac{1}{2} B - \frac{1}{4} B^2 - \frac{1}{8} B^3 \right) x_8$
 
 :::
 
@@ -358,7 +372,7 @@ The following simulation illustrates a random walk.
 
 The second-order properties of a random walk are summarized below. 
 
-::: {.callout-note title="Second-Order Properties of a Random Walk"}
+::: {.callout-note icon=false title="Second-Order Properties of a Random Walk"}
 If $\{x_t\}_{t=1}^n$ is a random walk, then the population has the following properties. 
 
 $$ \mu_x = 0 $$
@@ -366,9 +380,38 @@ and
 $$
   cov(x_t, x_{t+k}) = t \sigma^2
 $$
+
+::: {.callout-tip title="Click here for a proof of the equation for $cov(x_t,x_{t+k})$" collapse=true}
+
+Why is $cov(x_t, x_{t+k}) = t \sigma^2$?
+
+First, note that that since the terms in the white noise series are independent, 
+
+$$
+cov \left( w_i, w_j \right) = 
+  \begin{cases}
+    \sigma^2, & \text{if } ~ i=j \\
+    0, & \text{otherwise}
+  \end{cases}
+$$
+
+Also, when random variables are independent, the covariance of a sum is the sum of the covariance.
+
+Hence,
+\begin{align*}
+  cov(x_t, x_{t+k})
+    &= cov \left( \sum_{i=1}^t w_i, \sum_{j=1}^{t+K} w_j \right) \\
+    &= \sum_{i=j} cov \left( w_i, w_j \right) \\
+    &= \sum_{i=1}^t \sigma^2 \\
+    &= t \sigma^2
+\end{align*}
+
+:::
+
+
 Note that the covariance of the process depends on $t$. The covariance depends on $t$, so random walks are non-stationary. The variance is unbounded as $t$ increases. That means a random walk will not provide good predictions in the long term.
 
-If $k>0$, the correlation function is therefore
+If $k>0$ and $t>0$, the correlation function is
 
 $$
   \rho_k 
@@ -386,13 +429,14 @@ $$
 
 :::
 
-Note that if $0 < k \gg t$, then $rho_k \approx 1$. Because of this, a correlogram for a random walk will typically demonstrate positive autocorrelations that start near 1 and slowly decrease as $k$ increases.
+Note that if $0 < k \ll t$, then $\rho_k \approx 1$. Because of this, a correlogram for a random walk will typically demonstrate positive autocorrelations that start near 1 and slowly decrease as $k$ increases.
 
-### Differencing a Time Series
+
+### Differencing a Time Series 
 
 Computing the difference between successive terms of a random walk leads to a discrete white noise series. In many cases, differencing sequential terms of a non-stationary process can lead to a stationary process of differences.
 
-Consider the closing price of McDonald's stock illustrated in the time plot in @fig-example-stock-price-plot, and @fig-example-stock-difference-plot gives the differences in the closing prices of the stock.
+<a id="differencing">Consider</a> the closing price of McDonald's stock illustrated in the time plot in @fig-example-stock-price-plot, and @fig-example-stock-difference-plot gives the differences in the closing prices of the stock.
 
 
 <!-- Beginning of two columns -->
@@ -400,11 +444,12 @@ Consider the closing price of McDonald's stock illustrated in the time plot in @
 ::: {.column width="45%"}
 
 
-```{r, fig.asp=0.61}
+```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 #| label: fig-example-stock-price-plot
 #| fig-cap: "Plot of the daily closing price of the stock"
+#| fig.asp: 0.61
 
 # Set symbol and date range
 symbol <- "MCD"
@@ -412,14 +457,16 @@ date_start <- "2021-01-01"
 date_end <- "2024-01-01"
 
 # Fetch stock prices (can be used to get new data)
-# df_stock <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
-# df_stock |> rio::export("data/stock_price_mcd.parquet")
+stock_df <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
+
+# Store data in a static file
+# stock_df |> rio::export("data/stock_price_mcd.parquet")
 
 # Retrieve static file
-df_stock <- rio::import("data/stock_price_mcd.parquet")
+# stock_df <- rio::import("data/stock_price_mcd.parquet")
 
 # Transform data into tibble
-stock_example_tsibble <- df_stock %>%
+stock_ts <- stock_df %>%
   mutate(
     dates = date, 
     year = lubridate::year(dates),
@@ -436,7 +483,7 @@ stock_example_tsibble <- df_stock %>%
   mutate(diff = value - lag(value)) |>
   as_tsibble(index = dates, key = NULL)
 
-plot_ly(stock_example_tsibble, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') %>%
+plot_ly(stock_ts, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') %>%
   layout(
     xaxis = list(title = paste0("Dates (", format(ymd(date_start), "%d/%m/%Y"), " to ", format(ymd(date_end), "%d/%m/%Y"), ")" ) ),
     yaxis = list(title = "Closing Price (US$)"),
@@ -453,14 +500,15 @@ plot_ly(stock_example_tsibble, x = ~dates, y = ~value, type = 'scatter', mode = 
 ::: {.column width="45%"}
 
 
-```{r, fig.asp=0.61}
+```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 #| label: fig-example-stock-difference-plot
 #| fig-cap: "Plot of the stock price differences"
+#| fig.asp: 0.61
 
 # Generate time series plot using plot_ly
-plot_ly(stock_example_tsibble, x = ~dates, y = ~diff, type = 'scatter', mode = 'lines') %>%
+plot_ly(stock_ts, x = ~dates, y = ~diff, type = 'scatter', mode = 'lines') %>%
   layout(
     xaxis = list(title = paste0("Dates (", format(ymd(date_start), "%d/%m/%Y"), " to ", format(ymd(date_end), "%d/%m/%Y"), ")" ) ),
     yaxis = list(title = "Closing Price (US$)"),
@@ -473,22 +521,85 @@ plot_ly(stock_example_tsibble, x = ~dates, y = ~diff, type = 'scatter', mode = '
 :::
 <!-- End of two columns -->
 
+@fig-example-stock-correlogram is the correlogram for the original `r symbol` stock price time series.
+@fig-example-stock-difference-histogram is a histogram of the differences.
+
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-example-stock-correlogram
+#| fig-cap: "Correlogram of the stock prices"
+#| fig.asp: 0.61
+
+acf(stock_ts$value, plot=TRUE, type = "correlation", lag.max = 25)
+```
+
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-example-stock-difference-histogram
+#| fig-cap: "Plot of the stock price differences"
+#| warning: false
+#| fig.asp: 0.61
+
+# Hisogram of differences in stock prices
+stock_ts |>
+  mutate(
+    density = dnorm(diff, mean(stock_ts$diff, na.rm = TRUE), sd(stock_ts$diff, na.rm = TRUE))
+  ) |>
+  ggplot(aes(x = diff)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 1) +
+    geom_line(aes(x = diff, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Difference",
+      y = "Frequency",
+      title = "Histogram of Difference in the Closing Stock Prices"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+
+Notice that the values in the correlogram start at 1 and slowly decay as $k$ increases. This is exactly what we would expect from a random walk. It is also interesting that the differences are nearly normally distributed.
 
 ### Difference Operator
 
-Since is differencing nonstationary time series often leads to a stationary series, we create a formal operator to express this process.
+Differencing nonstationary time series often leads to a stationary series, so we will define a formal operator to express this process.
 
-::: {.callout-note title="Definition of the Difference Operator"}
+::: {.callout-note icon=false title="Definition of the Difference Operator"}
 
 The **difference operator**, $\nabla$, is defined as:
 
 $$\nabla x_t = x_t - x_{t-1} = (1-\mathbf{B}) x_t$$
 
-:::
-
 Higher-order differencing can be denoted
 
 $$\nabla^n x_t = (1-\mathbf{B})^n x_t$$
+
+:::
 
 To see what this expression gives us, note that $\nabla$ gives a new time series that is comprised of the differences between successive terms of the original time series. The operator $\nabla^2$ generates a time series that is comprised of the differences between successive terms of the *differenced* time series. It is the difference of the differences, or the second difference.
 
@@ -496,13 +607,13 @@ To see what this expression gives us, note that $\nabla$ gives a new time series
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
-Consider the following time series:
+Consider the following time series, where $n=`r n`$:
 
 <center>
 ```{r, results='asis'}
 #| echo: false
 
-cat( paste( paste0("$x_{t", ifelse(d_operator$t==n,"",d_operator$t-n), "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
 ```
 </center>
 
@@ -520,44 +631,32 @@ $$
 
 :::
 
-<!-- (1-B)(x_t-x_{t-1}) -->
-<!-- (x_t-x_{t-1})-(x_{t-1}-x_{t-2}) -->
 
 
 
+## Small Group Activity: Differencing Stock Prices (15 min)
 
+In this activity, you will apply what you have learned to a new stock.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Small Group Activity: SectionTitle (xxx min)
-## Class Activity: SectionTitle (xxx min)
-
-
-<!-- Check your Understanding -->
+<!-- Check Your Understanding -->
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Question1
--   Question2
+Modify the code used to <a href="#differencing">get the prices of McDonald's stock</a> to download closing stock prices for a different stock over a time period of your choice. Do the following.
+
+-   Indicate which company you have chosen, the stock symbol, and the time period.
+-   Create a time plot of the daily closing stock prices.
+-   Produce a time plot of the differences in the daily closing stock prices.
+-   Create a correlogram of the stock prices
+-   Generate a histogram of the difference in the stock prices and superimpose the corresponding normal density.
+-   Compare your results with those from the other teams of students.
 
 :::
+
+
+
+
+
 
 
 
@@ -569,7 +668,7 @@ $$
 -   Clarify questions
 
 
-::: {.callout-note icon=false}
+::: {.callout-note icon=false icon=false}
 
 ## Download Homework
 
@@ -595,13 +694,23 @@ style="font-size:.8em;">Backward Shift Operator</a>
   
 ::: {#Solutions2 style="display:none;"}
 
--   $\mathbf{B} x_t = x_{t-1} = `r d_value(1)`$
--   $\mathbf{B}^4 x_t = x_{t-4} = `r d_value(4)`$
--   $\left(\mathbf{B}^4 - \mathbf{B} \right) x_t = x_{t-4} - x_{t-1} = `r d_value(4)` - `r d_value(1)` = `r d_value(4) - d_value(1)`$
--   $\left( \mathbf{B}^2 - 6 \mathbf{B} + 9 \right) x_t = x_{t-2} - 6 (x_{t-1}) + 9 (x_{t}) = `r d_value(2)` - 6 (`r d_value(1)`) + 9 (`r d_value(0)`) = `r d_value(2) - 6 * d_value(1) + 9 * d_value(0)`$
--   $\left( (\mathbf{B} - 6) \mathbf{B} + 9 \right) x_t = `r d_value(2) - 6 * d_value(1) + 9 * d_value(0)`$
--   $\left( \mathbf{B} - 3 \right)^2 x_t = `r d_value(2) - 6 * d_value(1) + 9 * d_value(0)`$
--   $\left( 1 - \frac{1}{2} B - \frac{1}{4} B^2 - \frac{1}{8} B^3 \right) x_t = x_t - \frac{1}{2} x_{t-1} - \frac{1}{4} x_{t-2} - \frac{1}{8} x_{t-3} = `r d_value(0)` - \frac{1}{2} (`r d_value(1)`) - \frac{1}{4} (`r d_value(2)`) - \frac{1}{8} (`r d_value(3)`) = `r d_value(0) - d_value(1) / 2 - d_value(2) / 4 - d_value(3) / 8`$
+<center>
+```{r, results='asis'}
+#| echo: false
+
+cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+```
+</center>
+
+Check Your Understanding Solutions:
+
+-   $\mathbf{B} x_8 = x_7 = `r ts_val(7)`$
+-   $\mathbf{B}^5 x_8 = x_3 = `r ts_val(3)`$
+-   $\left(\mathbf{B}^5 - \mathbf{B} \right) x_8 = x_3 - x_7 = `r ts_val(3)` - `r ts_val(7)` = `r ts_val(4) - ts_val(7)`$
+-   $\left( \mathbf{B}^2 - 6 \mathbf{B} + 9 \right) x_8 = x_6 - 6 (x_7) + 9 (x_{t}) = `r ts_val(6)` - 6 (`r ts_val(7)`) + 9 (`r ts_val(8)`) = `r ts_val(6) - 6 * ts_val(7) + 9 * ts_val(8)`$
+-   $\left( (\mathbf{B} - 6) \mathbf{B} + 9 \right) x_8 = `r ts_val(6) - 6 * ts_val(7) + 9 * ts_val(8)`$
+-   $\left( \mathbf{B} - 3 \right)^2 x_8 = `r ts_val(6) - 6 * ts_val(7) + 9 * ts_val(8)`$
+-   $\left( 1 - \frac{1}{2} B - \frac{1}{4} B^2 - \frac{1}{8} B^3 \right) x_8 = x_8 - \frac{1}{2} x_7 - \frac{1}{4} x_6 - \frac{1}{8} x_5 = `r ts_val(8)` - \frac{1}{2} (`r ts_val(7)`) - \frac{1}{4} (`r ts_val(6)`) - \frac{1}{8} (`r ts_val(5)`) = `r ts_val(8) - ts_val(7) / 2 - ts_val(6) / 4 - ts_val(5) / 8`$
 
 :::
 
@@ -613,62 +722,69 @@ style="font-size:.8em;">Difference Operator</a>
   
 ::: {#Solutions3 style="display:none;"}
 
+<center>
+```{r, results='asis'}
+#| echo: false
+
+cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+```
+</center>
+
+Check Your Understanding Solutions:
+
 -   The values of the first differences are:
 $$
 \nabla \{ x_t \}_{t=1}^n = 
 \{
-`r d_value(6) - d_value(7)`,
+`r ts_val(2) - ts_val(1)`,
 ~~
-`r d_value(5) - d_value(6)`,
+`r ts_val(3) - ts_val(2)`,
 ~~
-`r d_value(4) - d_value(5)`,
+`r ts_val(4) - ts_val(3)`,
 ~~
-`r d_value(3) - d_value(4)`,
+`r ts_val(5) - ts_val(4)`,
 ~~
-`r d_value(2) - d_value(3)`,
+`r ts_val(6) - ts_val(5)`,
 ~~
-`r d_value(1) - d_value(2)`,
+`r ts_val(7) - ts_val(6)`,
 ~~
-`r d_value(0) - d_value(1)`\}$$
+`r ts_val(8) - ts_val(7)`\}$$
 
 -   The values of the second differences are:
 $$
 \nabla^2 \{ x_t \}_{t=1}^n =
 \{
-`r (d_value(5) - d_value(6)) - (d_value(6) - d_value(7))`,
+`r (ts_val(3) - ts_val(2)) - (ts_val(2) - ts_val(1))`,
 ~~
-`r (d_value(4) - d_value(5)) - (d_value(5) - d_value(6))`,
+`r (ts_val(4) - ts_val(3)) - (ts_val(3) - ts_val(2))`,
 ~~
-`r (d_value(3) - d_value(4)) - (d_value(4) - d_value(5))`,
+`r (ts_val(5) - ts_val(4)) - (ts_val(4) - ts_val(3))`,
 ~~
-`r (d_value(2) - d_value(3)) - (d_value(3) - d_value(4))`,
+`r (ts_val(6) - ts_val(5)) - (ts_val(5) - ts_val(4))`,
 ~~
-`r (d_value(1) - d_value(2)) - (d_value(2) - d_value(3))`,
+`r (ts_val(7) - ts_val(6)) - (ts_val(6) - ts_val(5))`,
 ~~
-`r (d_value(0) - d_value(1)) - (d_value(1) - d_value(2))`\}$$
+`r (ts_val(8) - ts_val(7)) - (ts_val(7) - ts_val(6))`\}$$
 
 - By substitution, we get:
 
 \begin{align*}
-\left(1-\mathbf{B} \right)^2 x_t 
-&= \left(1-\mathbf{B} \right) \left[ \left(1-\mathbf{B} \right) x_t \right] \\
-&= \left(1-\mathbf{B} \right) \left( x_t - x_{t-1} \right) \\
-&= \left( x_t - x_{t-1} \right) - \mathbf{B} \left( x_t - x_{t-1} \right) \\
-&= \left( x_t - x_{t-1} \right) - \left( x_{t-1} - x_{t-2} \right) \\
-&= \left( \nabla x_t \right) - \left( \nabla x_{t-1} \right) \\
-&= \nabla \left( \nabla x_t \right) \\
-&= \nabla^2 x_t 
+\left(1-\mathbf{B} \right)^2 x_8 
+&= \left(1-\mathbf{B} \right) \left[ \left(1-\mathbf{B} \right) x_8 \right] \\
+&= \left(1-\mathbf{B} \right) \left( x_8 - x_7 \right) \\
+&= \left( x_8 - x_7 \right) - \mathbf{B} \left( x_8 - x_7 \right) \\
+&= \left( x_8 - x_7 \right) - \left( x_7 - x_6 \right) \\
+&= \left( \nabla x_8 \right) - \left( \nabla x_7 \right) \\
+&= \nabla \left( \nabla x_8 \right) \\
+&= \nabla^2 x_8 
 \end{align*}
 
 $$
-  \nabla^2 x_t 
-    = \left( x_t - x_{t-1} \right) - \left( x_{t-1} - x_{t-2} \right) 
-    = (`r d_value(0)` - `r d_value(1)`) - (`r d_value(1)` - `r d_value(2)`) \\
-    = `r (d_value(0) - d_value(1)) - (d_value(1) - d_value(2))`
+  \nabla^2 x_8 
+    = \left( x_8 - x_7 \right) - \left( x_7 - x_6 \right) 
+    = (`r ts_val(8)` - `r ts_val(7)`) - (`r ts_val(7)` - `r ts_val(6)`) \\
+    = `r (ts_val(8) - ts_val(7)) - (ts_val(7) - ts_val(6))`
 $$
 This is the value of the last term in the sequence of second differences.
 
 :::
-
-
-
