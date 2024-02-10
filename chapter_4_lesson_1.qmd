@@ -234,8 +234,294 @@ Since the mean of a DWN time series is zero, the only parameter we need to fit i
 
 
 
-## Random Walks
 
+
+
+
+
+
+## Class Activity: Random Walks (15 min)
+
+### Definitions
+
+Consider moving on a number line, where your movements are determined by a discrete white noise (DWN) process. Each successive value indicates how far you will move along the number line from your current position. This is mathematically equivalent to allowing your position at time $t$ to be the sum of all the observed DWN values up to time $t$.
+
+::: {.callout-note title="Definition of a Random Walk"}
+
+Let $\{x_t\}$ be a time series. Then, $\{x_t\}$ is a **random walk** if it can be expressed as
+$$
+  x_{t} = x_{t-1} + w_{t}
+$$
+where $\{w_t\}$ is a white noise series.
+
+:::
+
+There are other ways to represent this expression.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Notice that $x_{t-1} = x_{t-2} + w_{t-1}$ and x_{t-2} = x_{t-3} + w_{t-2}. Use this to explain why it is possible to write $x_t$ as
+    $$
+      x_{t} = w_{t} + w_{t-1} + w_{t-2} + \cdot + w_2 + w_1
+    $$
+    where $w_1$ is the first observation of the DWN time series.
+    
+:::
+
+This process of *back substitution* is so common, we define notation to handle it.
+
+::: {.callout-note title="Definition of the Backward Shift Operator"}
+
+We define the **backward shift operator** or the **lag operator**, $\mathbf{B}$, as:
+$$
+  \mathbf{B} x_t = x_{t-1}
+$$
+where $\{x_t\}$ is any time series.
+
+We can apply this operator repeatedly. We will use exponential notation to indicate this.
+
+$$
+  \mathbf{B}^2 x_t = \mathbf{B} \mathbf{B} x_t = \mathbf{B} \left( \mathbf{B} x_t \right) x_t = \mathbf{B} x_{t-1} = \mathbf{B} x_{t-2}
+$$
+
+In general, 
+$$
+  \mathbf{B}^n x_t = \underbrace{\mathbf{B} \cdot \mathbf{B} \cdot \cdots \cdot \mathbf{B}}_{n ~ \text{terms}} x_t = \mathbf{B}^{n-1} \left( \mathbf{B} x_t \right) = \mathbf{B}^{n-1} \left( x_{t-1} \right) = \mathbf{B}^{n-2} \left( x_{t-2} \right) = \cdots = \mathbf{B} x_{t-(n-1)} = x_{t-n}
+$$
+
+:::
+
+We will practice applying this operator.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Let $\{x_t\}$ be a time series with the following values. 
+
+<center>
+```{r, results='asis'}
+#| echo: false
+
+set.seed(6)
+n <- 8
+d_operator <- data.frame(t = c(1:n), x = sample(1:15, n, replace = FALSE)) |>
+  mutate(diff = t - n)
+cat( paste( paste0("$x_{t", ifelse(d_operator$t==n,"",d_operator$t-n), "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+
+d_value <- function(power_on_d = 0) {
+  out <- d_operator |> #### Note the use of this global variable
+    filter(diff == -power_on_d) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+```
+</center>
+Evaluate the following. 
+
+-   $\mathbf{B} x_t$
+-   $\mathbf{B}^4 x_t$
+-   $\left(\mathbf{B}^4 - \mathbf{B} \right) x_t$
+-   $\left( \mathbf{B}^2 - 6 \mathbf{B} + 9 \right) x_t$
+-   $\left( (\mathbf{B} - 6 )\mathbf{B} + 9 \right) x_t$
+-   $\left( \mathbf{B} - 3 \right)^2 x_t =  \left( \mathbf{B} - 3 \right) \left[ \left( \mathbf{B} - 3 \right) x_t \right]$
+-   $\left( 1 - \frac{1}{2} B - \frac{1}{4} B^2 - \frac{1}{8} B^3 \right) x_t$
+
+:::
+
+
+
+
+### Simulation
+
+The following simulation illustrates a random walk.
+
+![](images/simulation_goes_here.png)
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you notice about this time series?
+-   What characteristics do you observe in the correlogram?
+-   How does this compare to the time series and correlogram for the DWN process?
+
+:::
+
+
+
+### Second-Order Properties
+
+The second-order properties of a random walk are summarized below. 
+
+::: {.callout-note title="Second-Order Properties of a Random Walk"}
+If $\{x_t\}_{t=1}^n$ is a random walk, then the population has the following properties. 
+
+$$ \mu_x = 0 $$
+and
+$$
+  cov(x_t, x_{t+k}) = t \sigma^2
+$$
+Note that the covariance of the process depends on $t$. The covariance depends on $t$, so random walks are non-stationary. The variance is unbounded as $t$ increases. That means a random walk will not provide good predictions in the long term.
+
+If $k>0$, the correlation function is therefore
+
+$$
+  \rho_k 
+  = 
+    \frac{
+            cov(x_t, x_{t+k})
+          }{
+            \sqrt{var(x_t)} \sqrt{var(x_{t+k})}
+          }
+  =
+    \frac{t \sigma^2}{\sqrt{t \sigma^2} \sqrt{(t+k) \sigma^2}}
+  =
+    \frac{1}{\sqrt{1+\frac{k}{t}}}
+$$
+
+:::
+
+Note that if $0 < k \gg t$, then $rho_k \approx 1$. Because of this, a correlogram for a random walk will typically demonstrate positive autocorrelations that start near 1 and slowly decrease as $k$ increases.
+
+### Differencing a Time Series
+
+Computing the difference between successive terms of a random walk leads to a discrete white noise series. In many cases, differencing sequential terms of a non-stationary process can lead to a stationary process of differences.
+
+Consider the closing price of McDonald's stock illustrated in the time plot in @fig-example-stock-price-plot, and @fig-example-stock-difference-plot gives the differences in the closing prices of the stock.
+
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+
+```{r, fig.asp=0.61}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-example-stock-price-plot
+#| fig-cap: "Plot of the daily closing price of the stock"
+
+# Set symbol and date range
+symbol <- "MCD"
+date_start <- "2021-01-01"
+date_end <- "2024-01-01"
+
+# Fetch stock prices (can be used to get new data)
+# df_stock <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
+# df_stock |> rio::export("data/stock_price_mcd.parquet")
+
+# Retrieve static file
+df_stock <- rio::import("data/stock_price_mcd.parquet")
+
+# Transform data into tibble
+stock_example_tsibble <- df_stock %>%
+  mutate(
+    dates = date, 
+    year = lubridate::year(dates),
+    month = lubridate::month(dates),
+    value = adjusted
+  ) %>%
+  select(dates, year, month, value) %>%
+  as_tibble() %>% 
+  arrange(dates) |>
+  mutate(
+    year = lubridate::year(dates),
+    month = lubridate::month(dates)
+  ) %>%
+  mutate(diff = value - lag(value)) |>
+  as_tsibble(index = dates, key = NULL)
+
+plot_ly(stock_example_tsibble, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') %>%
+  layout(
+    xaxis = list(title = paste0("Dates (", format(ymd(date_start), "%d/%m/%Y"), " to ", format(ymd(date_end), "%d/%m/%Y"), ")" ) ),
+    yaxis = list(title = "Closing Price (US$)"),
+    title = paste0("Time Plot of ", symbol, " Daily Closing Price")
+  )
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+
+```{r, fig.asp=0.61}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-example-stock-difference-plot
+#| fig-cap: "Plot of the stock price differences"
+
+# Generate time series plot using plot_ly
+plot_ly(stock_example_tsibble, x = ~dates, y = ~diff, type = 'scatter', mode = 'lines') %>%
+  layout(
+    xaxis = list(title = paste0("Dates (", format(ymd(date_start), "%d/%m/%Y"), " to ", format(ymd(date_end), "%d/%m/%Y"), ")" ) ),
+    yaxis = list(title = "Closing Price (US$)"),
+    title = paste0("Difference of ", symbol, " Daily Closing Price")
+  )
+
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+
+### Difference Operator
+
+Since is differencing nonstationary time series often leads to a stationary series, we create a formal operator to express this process.
+
+::: {.callout-note title="Definition of the Difference Operator"}
+
+The **difference operator**, $\nabla$, is defined as:
+
+$$\nabla x_t = x_t - x_{t-1} = (1-\mathbf{B}) x_t$$
+
+:::
+
+Higher-order differencing can be denoted
+
+$$\nabla^n x_t = (1-\mathbf{B})^n x_t$$
+
+To see what this expression gives us, note that $\nabla$ gives a new time series that is comprised of the differences between successive terms of the original time series. The operator $\nabla^2$ generates a time series that is comprised of the differences between successive terms of the *differenced* time series. It is the difference of the differences, or the second difference.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Consider the following time series:
+
+<center>
+```{r, results='asis'}
+#| echo: false
+
+cat( paste( paste0("$x_{t", ifelse(d_operator$t==n,"",d_operator$t-n), "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+```
+</center>
+
+-   Find  $\nabla \{ x_t \}_{t=1}^n$, the sequence of first differences.
+-   Find  $\nabla^2 \{ x_t \}_{t=1}^n$, the sequence of second differences.
+-   Verify that 
+$$
+\left(1-\mathbf{B} \right)^2 x_t = \left(1-\mathbf{B} \right) \left[ \left(1-\mathbf{B} \right) x_t \right] = \nabla^2 x_t
+$$ 
+is equal to the last term in the sequence of second differences.
+-   How could you show that 
+$$
+\nabla^n x_t = \left(1-\mathbf{B} \right)^n x_t
+$$ 
+
+:::
+
+<!-- (1-B)(x_t-x_{t-1}) -->
+<!-- (x_t-x_{t-1})-(x_{t-1}-x_{t-2}) -->
 
 
 
@@ -304,17 +590,10 @@ The sample variance of the DWN data is computed using the R command `var(white_n
 
 
 
-<a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Class Activity</a>
+<a href="javascript:showhide('Solutions2')"
+style="font-size:.8em;">Backward Shift Operator</a>
   
 ::: {#Solutions2 style="display:none;"}
-
-
-
-```{r}
-d_value <- function(a) {1}
-```
-
 
 -   $\mathbf{B} x_t = x_{t-1} = `r d_value(1)`$
 -   $\mathbf{B}^4 x_t = x_{t-4} = `r d_value(4)`$
@@ -324,17 +603,70 @@ d_value <- function(a) {1}
 -   $\left( \mathbf{B} - 3 \right)^2 x_t = `r d_value(2) - 6 * d_value(1) + 9 * d_value(0)`$
 -   $\left( 1 - \frac{1}{2} B - \frac{1}{4} B^2 - \frac{1}{8} B^3 \right) x_t = x_t - \frac{1}{2} x_{t-1} - \frac{1}{4} x_{t-2} - \frac{1}{8} x_{t-3} = `r d_value(0)` - \frac{1}{2} (`r d_value(1)`) - \frac{1}{4} (`r d_value(2)`) - \frac{1}{8} (`r d_value(3)`) = `r d_value(0) - d_value(1) / 2 - d_value(2) / 4 - d_value(3) / 8`$
 
-
 :::
 
 
 
 
 <a href="javascript:showhide('Solutions3')"
-style="font-size:.8em;">Class Activity</a>
+style="font-size:.8em;">Difference Operator</a>
   
 ::: {#Solutions3 style="display:none;"}
-    
+
+-   The values of the first differences are:
+$$
+\nabla \{ x_t \}_{t=1}^n = 
+\{
+`r d_value(6) - d_value(7)`,
+~~
+`r d_value(5) - d_value(6)`,
+~~
+`r d_value(4) - d_value(5)`,
+~~
+`r d_value(3) - d_value(4)`,
+~~
+`r d_value(2) - d_value(3)`,
+~~
+`r d_value(1) - d_value(2)`,
+~~
+`r d_value(0) - d_value(1)`\}$$
+
+-   The values of the second differences are:
+$$
+\nabla^2 \{ x_t \}_{t=1}^n =
+\{
+`r (d_value(5) - d_value(6)) - (d_value(6) - d_value(7))`,
+~~
+`r (d_value(4) - d_value(5)) - (d_value(5) - d_value(6))`,
+~~
+`r (d_value(3) - d_value(4)) - (d_value(4) - d_value(5))`,
+~~
+`r (d_value(2) - d_value(3)) - (d_value(3) - d_value(4))`,
+~~
+`r (d_value(1) - d_value(2)) - (d_value(2) - d_value(3))`,
+~~
+`r (d_value(0) - d_value(1)) - (d_value(1) - d_value(2))`\}$$
+
+- By substitution, we get:
+
+\begin{align*}
+\left(1-\mathbf{B} \right)^2 x_t 
+&= \left(1-\mathbf{B} \right) \left[ \left(1-\mathbf{B} \right) x_t \right] \\
+&= \left(1-\mathbf{B} \right) \left( x_t - x_{t-1} \right) \\
+&= \left( x_t - x_{t-1} \right) - \mathbf{B} \left( x_t - x_{t-1} \right) \\
+&= \left( x_t - x_{t-1} \right) - \left( x_{t-1} - x_{t-2} \right) \\
+&= \left( \nabla x_t \right) - \left( \nabla x_{t-1} \right) \\
+&= \nabla \left( \nabla x_t \right) \\
+&= \nabla^2 x_t 
+\end{align*}
+
+$$
+  \nabla^2 x_t 
+    = \left( x_t - x_{t-1} \right) - \left( x_{t-1} - x_{t-2} \right) 
+    = (`r d_value(0)` - `r d_value(1)`) - (`r d_value(1)` - `r d_value(2)`) \\
+    = `r (d_value(0) - d_value(1)) - (d_value(1) - d_value(2))`
+$$
+This is the value of the last term in the sequence of second differences.
 
 :::
 
