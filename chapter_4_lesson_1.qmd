@@ -434,34 +434,16 @@ Note that if $0 < k \ll t$, then $\rho_k \approx 1$. Because of this, a correlog
 
 ### Differencing a Time Series 
 
-```{r}
-#| echo: false
-
-# Change this if the company is change in the future.
-company <- "McDonald's"
-```
-
-
-Computing the difference between successive terms of a random walk leads to a discrete white noise series. In many cases, differencing sequential terms of a non-stationary process can lead to a stationary process of differences.
-
-<a id="differencing">Consider</a> th
-e closing price of `r company` stock illustrated in the time plot in @fig-example-stock-price-plot, and @fig-example-stock-difference-plot gives the differences in the closing prices of the stock.
-
-
-<!-- Beginning of two columns -->
-::: columns
-::: {.column width="45%"}
-
+<a id="differencing">Computing</a> the difference between successive terms of a random walk leads to a discrete white noise series. In many cases, differencing sequential terms of a non-stationary process can lead to a stationary process of differences.
+We use the code below to obtain the daily closing stock prices for any publicly-traded company. 
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
-#| label: fig-example-stock-price-plot
-#| fig-cap: "Plot of the daily closing price of the stock"
-#| fig.asp: 0.61
 
 # Set symbol and date range
 symbol <- "MCD"
+company <- "McDonald's"
 date_start <- "2021-01-01"
 date_end <- "2024-01-01"
 
@@ -491,6 +473,22 @@ stock_ts <- stock_df %>%
   ) %>%
   mutate(diff = value - lag(value)) |>
   as_tsibble(index = dates, key = NULL)
+```
+
+Consider the closing price of `r company` stock illustrated in the time plot in @fig-example-stock-price-plot, and @fig-example-stock-difference-plot gives the differences in the closing prices of the stock as a time series.
+
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-example-stock-price-plot
+#| fig-cap: "Plot of the daily closing price of the stock"
+#| fig.asp: 0.61
 
 plot_ly(stock_ts, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') %>%
   layout(
@@ -529,9 +527,8 @@ plot_ly(stock_ts, x = ~dates, y = ~diff, type = 'scatter', mode = 'lines') %>%
 :::
 <!-- End of two columns -->
 
-@fig-example-stock-correlogram is the correlogram for the original `r symbol` stock price time series.
-@fig-example-stock-difference-histogram is a histogram of the differences.
-
+@fig-example-stock-correlogram is the correlogram for the original `r company` stock price time series.
+@fig-example-diff-correlogram gives the correlogram for the differences in successive closing stock prices.
 
 <!-- Beginning of two columns -->
 ::: columns
@@ -556,11 +553,33 @@ acf(stock_ts$value, plot=TRUE, type = "correlation", lag.max = 25)
 
 ::: {.column width="45%"}
 
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-example-diff-correlogram
+#| fig-cap: "Correlogram of the stock prices"
+#| fig.asp: 0.61
+
+acf(stock_ts$diff |> na.omit(), plot=TRUE, type = "correlation", lag.max = 25)
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+@fig-example-stock-difference-histogram is a histogram of the differences.
+On the right, we give the variance of the differences in the stock prices. This is a simple measure of the volatility of the stock, or in other words, how much the price changes in a day.
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 #| label: fig-example-stock-difference-histogram
-#| fig-cap: "Plot of the stock price differences"
+#| fig-cap: "Histogram of the stock price differences"
 #| warning: false
 #| fig.asp: 0.61
 
@@ -583,6 +602,16 @@ stock_ts |>
       plot.title = element_text(hjust = 0.5)
     )
 ```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+The variance of the differences is `r var(stock_ts$diff, na.rm = TRUE)|> round(3)`.
 
 :::
 :::
@@ -650,13 +679,15 @@ In this activity, you will apply what you have learned to a new stock.
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
-Modify the code used to <a href="#differencing">get the prices of `r company` stock</a> to download closing stock prices for a different stock over a time period of your choice. Do the following.
+Modify the <a href="#differencing">code used to get the prices of `r company` stock</a> to download closing stock prices for a different publicly-traded company over a time period of your choice. Do the following.
 
 -   Indicate which company you have chosen, the stock symbol, and the time period.
 -   Create a time plot of the daily closing stock prices.
 -   Produce a time plot of the differences in the daily closing stock prices.
 -   Create a correlogram of the stock prices
+-   Create a correlogram of the differences
 -   Generate a histogram of the difference in the stock prices and superimpose the corresponding normal density.
+-   Compute the variance of the differences
 -   Compare your results with those from the other teams of students.
 
 :::
