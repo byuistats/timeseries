@@ -128,22 +128,33 @@ holt_winters_forecast <- function(df, date_var, value_var, p = 12, predict_perio
   roll_mean <- df %>%
     filter(section == "B") %>%
     mutate(roll_mean = rollmean(x_t, 7, fill = NA, align = "center")) %>%
-    select(roll_mean)
+    dplyr::select(roll_mean)
   roll_mean <- roll_mean[4,1][[1]]
 
-  #df$b_t[actual_start] <- mean(diff(df$x_t[actual_start:(actual_start + p - 1)])) / p #chat gpt code doesn't calc correctly
   #df$b_t[actual_start] <- mean(df$x_t[(actual_start + p):(3 * p)] - df$x_t[(actual_start):(p + p)]) / p # simplified Bro Johnson code
   df$b_t[actual_start] <- (df$x_t[actual_start] - roll_mean) / df$x_t[actual_start] # period 4 of 7 period rolling average (Bro Moncayo)
   df$s_t[actual_start] <- df$s_t[1]
 
 
-
-  ### Fill Body
-  for (t in (actual_start + 1):(nrow(df) - predict_periods)) {
+  for (t in (1 + actual_start):(nrow(df) - predict_periods) ) {
     prior_seasonal_index <- ifelse(t <= actual_start + p, t - actual_start, t - p)
-    df$a_t[t] <- alpha * (df$x_t[t] - df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t - 1] + df$b_t[t - 1])
-    df$b_t[t] <- beta * (df$a_t[t] - df$a_t[t - 1]) + (1 - beta) * df$b_t[t - 1]
-    df$s_t[t] <- gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index]
+    if (slope_type == "Additive" & season_type == "Additive"){
+      df$a_t[t] <- alpha * (df$x_t[t] - df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t - 1] + df$b_t[t - 1])
+      df$b_t[t] <- beta * (df$a_t[t] - df$a_t[t - 1]) + (1 - beta) * df$b_t[t - 1]
+      df$s_t[t] <- gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index]# add slope & add season
+    } else if (slope_type == "Multiplicative" & season_type == "Multiplicative"){
+      df$a_t[t] = alpha * (df$x_t[t] / df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
+      df$b_t[t] = beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
+      df$s_t[t] = gamma * (df$x_t[t] / df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index] # add slope & mult season
+    } else if (slope_type == "Multiplicative" & season_type == "Additive"){
+      df$a_t[t] = alpha * (df$x_t[t] + df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
+      df$b_t[t] = beta * (df$a_t[t] / df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
+      df$s_t[t] = gamma * (df$x_t[t] + df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index] # mult slope & add season
+    } else {
+      df$a_t[t] = alpha * (df$x_t[t] / df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
+      df$b_t[t] = beta * (df$a_t[t] / df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
+      df$s_t[t] = gamma * (df$x_t[t] / df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index] # mult slope & mult season
+    }
   }
 
   ### Footer
@@ -155,14 +166,14 @@ holt_winters_forecast <- function(df, date_var, value_var, p = 12, predict_perio
   for (t in forecast_start:nrow(df)) {
     forecast_index <- t - last_actual_t
     df$s_t[t] <- df$s_t[t - p] # Carry forward the seasonal component
-    if (slope_type == "add" & season_type == "add"){
+    if (slope_type == "Additive" & season_type == "Additive"){
       df$xhat_t[t] <- (df$a_t[last_actual_t] + forecast_index * df$b_t[last_actual_t]) + df$s_t[t - p] # add slope & add season
-    } else if (slope_type == "add" & season_type == "mult"){
-      df$xhat_t[t] <- (df$a_t[last-actual_t] + forecast_index * df$b_t[last-actual_t]) * df$s_t[t - p] # add slope & mult season
-    } else if (slope_type == "mult" & season_type == "add"){
-      df$xhat_t[t] <- (df$a_t[last-actual_t] + df$b_t[last-actual_t]^(forecast_index)) + df$s_t[t - p] # mult slope & add season
+    } else if (slope_type == "Additive" & season_type == "Multiplicative"){
+      df$xhat_t[t] <- (df$a_t[last_actual_t] + forecast_index * df$b_t[last_actual_t]) * df$s_t[t - p] # add slope & mult season
+    } else if (slope_type == "Multiplicative" & season_type == "Additive"){
+      df$xhat_t[t] <- (df$a_t[last_actual_t] + df$b_t[last_actual_t]^(forecast_index)) + df$s_t[t - p] # mult slope & add season
     } else {
-      df$xhat_t[t] <- (df$a_t[last-actual_t] + df$b_t[last-actual_t]^(forecast_index)) * df$s_t[t - p] # mult slope & mult season
+      df$xhat_t[t] <- (df$a_t[last_actual_t] + df$b_t[last_actual_t]^(forecast_index)) * df$s_t[t - p] # mult slope & mult season
     }
   }
 
@@ -178,13 +189,14 @@ ui <- fluidPage(
     titlePanel("Exploration: Holt-Winters Additive Model"),
     fluidRow(
       column(4, dateRangeInput("dateRange", "Select date range:",
-                     start = "2011-01-01",  # Default start date
-                     end = "2016-11-12",         # Default end date
-                     min = "2011-01-01",       # Earliest date selectable
-                     max = "2016-11-12")),
+                     start = "2000-01-01",  # Default start date
+                     end = "2024-01-01",         # Default end date
+                     min = "2000-01-01",       # Earliest date selectable
+                     max = "2024-01-01")),
       column(4, selectInput("dataset_in", label = "Choose a Dataset",
-                  choices = c("Enrollment", "Crimes"))),
-      column(4, materialSwitch(inputId = "toggle", value = FALSE, label = "Advanced Inputs"))
+                  choices = c("Enrollment", "Crimes", "Apple"))),
+      column(2, materialSwitch(inputId = "toggle_advIn", value = FALSE, label = "Advanced Inputs")),
+      column(2, materialSwitch(inputId = "toggle_advOut", value = FALSE, label = "Advanced Outputs"))
     ),
     fluidRow(
       column(4, sliderInput("a", "Alpha", min = 0, max = 1, value = 0.2, step=0.1)),
@@ -193,56 +205,48 @@ ui <- fluidPage(
     ),
   div(id = "DynInputs",
     fluidRow(
-      column(4, numericInput("p", "Periods per Season", min = 1, max =1, value = 1, step=1)),
-      column(4, numericInput("periods", "Periods to Predict", min = 1, max=1 , value = 1, step=1)),
-      column(4, selectInput("round_to", label = "Round off dates to:",
-                            choices = c("day", "month")))
+      column(3, numericInput("p", "Periods per Season", min = 1, max =1, value = 1, step=1)),
+      column(3, numericInput("periods", "Periods to Predict", min = 1, max=1 , value = 1, step=1)),
+      #column(3, selectInput("slope", "Type of Slope", choices = c("Additive", "Multiplicative"))),
+      column(3, selectInput("season", "Type of Seasonality", choices = c("Additive", "Multiplicative"))),
+      column(3, selectInput("value", "Value", selected = NULL, choices = c()))
+      #column(4, selectInput("round_to", label = "Round off dates to:", choices = c("day", "month")))
     ),
   ),
   div(id = "AdvInputs",
     fluidRow(
-      column(2, numericInput("s1", "s1",0)),
-      column(2, numericInput("s2", "s2",0)),
-      column(2, numericInput("s3", "s3",0)),
-      column(2, numericInput("s4", "s4",0)),
-      column(2, numericInput("s5", "s5",0)),
-      column(2, numericInput("s6", "s6",0))
-      ),
-    fluidRow(
-      column(2, numericInput("s7", "s7",0)),
-      column(2, numericInput("s8", "s8",0)),
-      column(2, numericInput("s9", "s9",0)),
-      column(2, numericInput("s10", "s10",0)),
-      column(2, numericInput("s11", "s11",0)),
-      column(2, numericInput("s12", "s12",0))
+      column(3, textInput("S_list", "Initial S values, seperated by commas", placeholder = "1,0.9,1,1.2"))
       ),
     ),
   fluidRow(
-    column(12, tableOutput("preview")),
+    column(6, tableOutput("preview_data")),
+    column(6, verbatimTextOutput("preview")),
   ),
   div(id = "Predict",
     fluidRow(
       column(4, offset = 5,actionButton("go", "Predict!")),
+      column(4, offset = 5,actionButton("explore", "exp!")),
     ),
   ),
-  div(id = "outputs",
+  div(id = "AdvOutputs",
     fluidRow(
-      #column(12, uiOutput("formula0")),
-      column(12, h4("Original & 'a_t + b_t + s_t'")),
-      column(12, plotOutput("plot_fin")),
       column(12, h4("Components:")),
       column(12, h4("'a_t'")),
       column(12, plotOutput("plot_at")),
       column(12, h4("'b_t'")),
       column(12, plotOutput("plot_bt")),
       column(12, h4("'s_t'")),
-        column(12, plotOutput("plot_st")),
-      column(12, uiOutput("formula1")),
-      #column(12, h3("Table: Title???")),
-      column(12, tableOutput("table")),
+      column(12, plotOutput("plot_st"))
+    )
+  ),
+  div(id = "outputs",
+    fluidRow(
+      column(12, h4("Original & 'Components'")),
+      column(12, plotOutput("plot_fin")),
+      column(12, h4("Table: Title???")),
       column(12, plotOutput("predplot")),
-      column(12, dataTableOutput("dattable"))
-     # column(12, textOutput("text"))
+      column(12, dataTableOutput("dattable")),
+      column(12, textOutput("initial_list"))
     )
   )
 )
@@ -253,52 +257,20 @@ ui <- fluidPage(
 
 # Define the server logic
 server <- function(input, output, session) {
-  #### import data ####
-  crime_data <- rio::import("https://byuistats.github.io/timeseries/data/baltimore_crime.csv", header=TRUE, stringsAsFactors=FALSE)
-
-  #wrangle data
-  crime_data <- crime_data %>%
-    group_by(CrimeDate) %>%
-    summarise(
-      value = sum(Total.Incidents)
-    )
-  crime_data <- crime_data %>%
-    mutate(dates = base::as.Date(CrimeDate, format = "%m/%d/%Y")) %>%
-    arrange(dates)
-
-  crime_summary <- as.data.frame(crime_data)
-  crime_summary <- crime_summary %>%
-    mutate(dates = floor_date(dates, "month")) %>%
-    group_by(dates) %>%
-    summarise(
-      value = sum(value)
-    ) %>%
-    mutate(average_value = value / days_in_month(dates)) %>%
-    as_tsibble(index = dates)
-  #is coming out Y D M needs to be Y M D
-
-  enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
-    mutate(dates = yearmonth( ym( paste(year, term * 4 - 3) ) ), value = enrollment ) |>
-    dplyr::select(semester, dates, value) |>
-    as_tsibble(index = dates)
-
-  # extra_terms <- enrollment_ts |>
-  #   tail(6) |>
-  #   mutate(dates = yearmonth(ym(dates) + years(2))) |>
-  #   mutate(
-  #     semester = paste0(
-  #       left(semester, 2),
-  #       as.integer(right(semester, 2)) + 2
-  #     )
-  #   ) |>
-  #   mutate(value = NA, enroll_thousand = NA)
-
   #### observe updates ####
   observe({
-    if(input$toggle) {
+    if(input$toggle_advIn) {
       show("AdvInputs")
     } else {
       hide("AdvInputs")
+    }
+  })
+
+  observe({
+    if(input$toggle_advOut) {
+      show("AdvOutputs")
+    } else {
+      hide("AdvOutputs")
     }
   })
 
@@ -312,66 +284,163 @@ server <- function(input, output, session) {
 
   observe({
     # Determine the length of the selected dataset
-    datasetLength <- if (input$dataset_in == "Enrollment") {
-      nrow(enrollment_ts)
-    } else if (input$dataset_in == "Crimes") {
-      nrow(crime_data)
-    } else {
-      1 # Default or fallback value
-    }
+    datasetLength <- nrow(sel_data())
+    datasetColumns <- colnames(sel_data())
 
     # Update the max parameter of the 'p' and 'periods' inputs
     updateNumericInput(session, "p", max = datasetLength)
-    updateNumericInput(session, "periods", max = datasetLength)
+    updateNumericInput(session, "periods", max = datasetLength*10)
+    updateSelectInput(session, "value", choices = datasetColumns)
+    updateDateRangeInput(session, "dateRange",   start = data_dates()[[1]], end = data_dates()[[2]], min = data_dates()[[1]], max = data_dates()[[2]])
   })
 
+  #### import data ####
+  crime_data <- rio::import("https://byuistats.github.io/timeseries/data/baltimore_crime.csv", header=TRUE, stringsAsFactors=FALSE)
+
+  crime_data <- crime_data %>%
+    group_by(CrimeDate) %>%
+    summarise(
+      value = sum(Total.Incidents)
+    )
+
+  crime_data <- crime_data %>%
+    mutate(dates = base::as.Date(CrimeDate, format = "%m/%d/%Y")) %>%
+    filter(dates >= base::as.Date("2011-01-01", format = "%Y-%m-%d") & dates <= base::as.Date("2016-10-31", format = "%Y-%m-%d")) %>%
+    arrange(dates)
+
+  #crime_summary <- as.data.frame(crime_data)
+  crime_summary <- crime_data %>%
+    mutate(dates = yearmonth(floor_date(dates, "month"))) %>%
+    group_by(dates) %>%
+    summarise(
+      value = sum(value)
+    ) %>%
+    mutate(average_value = value / days_in_month(dates)) %>%
+    as_tsibble(index = dates)
+
+  enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
+    mutate(dates = yearmonth( ym( paste(year, term * 4 - 3) ) ), value = enrollment ) |>
+    dplyr::select(semester, dates, value) |>
+    as_tsibble(index = dates)
+
+  apple_ts <- rio::import("https://byuistats.github.io/timeseries/data/apple_revenue.csv") |>
+    mutate(
+      dates = mdy(date),
+      year = lubridate::year(dates),
+      quarter = lubridate::quarter(dates),
+      value = revenue_billions
+    ) |>
+    dplyr::select(dates, year, quarter, value)  |>
+    arrange(dates) |>
+    mutate(index = tsibble::yearquarter(dates)) |>
+    as_tsibble(index = index) |>
+    dplyr::select(index, dates, year, quarter, value)
 
   #### event reactives ####
+  # list of defined s's
+  S_initial_list <- reactive({
+    values <- input$S_list
+    p <- input$p
+    season_type <- input$season
+
+    tryCatch({
+      values <- as.numeric(strsplit(values, ",")[[1]])
+      if (length(values)==p){
+        S_initial_list <- values
+      } else {
+        if (season_type == "Additive"){
+          S_initial_list <-rep(0, p)
+        } else{
+          S_initial_list <-rep(1, p)
+        }
+      }
+    }, error = function(error) {
+      if (season_type == "Additive"){
+        S_initial_list <-rep(0, p)
+      } else{
+        S_initial_list <-rep(1, p)
+      }
+    })
+    S_initial_list
+  })
+  output$initial_list <- renderText({
+    paste(S_initial_list())
+  })
 
   #Reactive data input
   sel_data <- reactive({
     if (input$dataset_in == "Enrollment"){
-      data <- enrollment_ts #filter(enrollment_ts, dates >= as.Date(input$dateRange[1], format = "%Y/%m/%d") & dates <= as.Date(input$dateRange[2], format = "%Y/%m/%d"))
+      data <- enrollment_ts
+    } else if (input$dataset_in == "Apple"){
+      data <- apple_ts
     } else {
-      data <- filter(crime_data, dates >= as.Date(input$dateRange[1], format = "%Y/%m/%d") & dates <= as.Date(input$dateRange[2], format = "%Y/%m/%d"))
+      data <- crime_summary
     }
     data
   })
 
-  sim_data <- eventReactive(input$go,{
-    if (input$dataset_in == "Enrollment"){
-      data <- enrollment_ts #filter(enrollment_ts, dates >= as.Date(input$dateRange[1], format = "%Y/%m/%d") & dates <= as.Date(input$dateRange[2], format = "%Y/%m/%d"))
-    } else {
-      data <- filter(crime_summary, dates >= as.Date(input$dateRange[1], format = "%Y/%m/%d") & dates <= as.Date(input$dateRange[2], format = "%Y/%m/%d"))
-    }
+  data_dates <- reactive({
+    data <- sel_data()
+    oldest_date <- min(data$dates, na.rm = TRUE)
+    most_recent_date <- max(data$dates, na.rm = TRUE)
+    return(
+      list(
+        oldest_date,
+        most_recent_date
+      )
+    )
 
-    forecast_dat <- holt_winters_forecast(data, "dates","value", alpha = input$a, input$b, gamma = input$g, p = input$p, predict_periods = input$periods,s_initial = rep(0,input$p), round_to = input$round_to)
-    #preddat <- hw_additive_slope_additive_seasonal(data, "dates", "value", p = input$p, predict_periods = input$periods, alpha = input$a, beta = input$b, gamma = input$g, s_initial = rep(0,input$p), round_to = input$round_to)
-    #expanddat <- expand_holt_winters_df(data, "dates", "value", p = input$p, predict_periods = input$periods, round_to = input$round_to)
+  })
+
+  fil_data <- reactive({
+    data <- sel_data()
+    data <- filter(data, dates >= base::as.Date(input$dateRange[1], format = "%Y/%m/%d") & dates <= base::as.Date(input$dateRange[2], format = "%Y/%m/%d"))
+  })
+
+
+
+  sim_data <- eventReactive(input$go,{
+    data <- fil_data()
+
+    forecast_dat <- holt_winters_forecast(data, "dates","value", alpha = input$a, input$b, gamma = input$g, p = input$p, predict_periods = input$periods,s_initial = S_initial_list(), round_to = "month", slope_type = "Additive", season_type = input$season)
     return(
       list(
         data <- forecast_dat
-        #preddata <- preddat
-        #expand <- expanddat
       )
     )
   })
 
   output$plot_fin<-renderPlot({
     data <- sim_data()[[1]]
-    ggplot(data, aes(x = dates)) +
-      geom_line(aes(y = value, color = "Base"),linetype=3, size = 1) +
-      geom_line(aes(y = a_t + s_t, color = "Components", alpha=0.7), size = 1) +
-      labs(
-        x = "Date",
-        y = "Value",
-        title = NULL,
-        color = "Series"
-      ) +
-      theme_minimal() +
-      theme(legend.position = "top")+
-      scale_color_manual(values = c("black", "#56B4E9"))+
-      guides(alpha = FALSE)
+    if (input$season == "Additive"){
+      ggplot(data, aes(x = dates)) +
+        geom_line(aes(y = value, color = "Base"),linetype=3, size = 1) +
+        geom_line(aes(y = a_t + s_t, color = "Components", alpha=0.7), size = 1) +
+        labs(
+          x = "Date",
+          y = "Value",
+          title = NULL,
+          color = "Series"
+        ) +
+        theme_minimal() +
+        theme(legend.position = "top")+
+        scale_color_manual(values = c("black", "#56B4E9"))+
+        guides(alpha = FALSE)
+    } else {
+      ggplot(data, aes(x = dates)) +
+        geom_line(aes(y = value, color = "Base"),linetype=3, size = 1) +
+        geom_line(aes(y = a_t * s_t, color = "Components", alpha=0.7), size = 1) +
+        labs(
+          x = "Date",
+          y = "Value",
+          title = NULL,
+          color = "Series"
+        ) +
+        theme_minimal() +
+        theme(legend.position = "top")+
+        scale_color_manual(values = c("black", "#56B4E9"))+
+        guides(alpha = FALSE)
+    }
   })
 
   output$plot_at<-renderPlot({
@@ -412,52 +481,74 @@ server <- function(input, output, session) {
   })
 
 
-  # output$table<- renderTable({
-  #   sim_data()[[1]]
-  # })
-  output$dattable<- renderDataTable({
+  output$dattable <- renderDataTable({
     sim_data()[[1]]
   })
 
-  output$preview<- renderTable({
-    data <- sel_data()
+  output$preview_data <- renderTable({
+    data <- fil_data()
     data$dates <- as.character(data$dates)
     data[1:5,]
   })
 
-  # output$text<- renderText({
-  #   sim_data()[[1]]
-  # })
+  exp_data <- eventReactive(input$explore,{
+    data <- fil_data()
+    selected_val <- input$value
 
-  # output$plot_enroll<-renderPlot({
-  #   enrollment_ts |>
-  #     bind_rows(extra_terms) |>
-  #     autoplot(.vars = value) +
-  #     labs(
-  #       x = "Time",
-  #       y = "Enrollment",
-  #       title = paste0("BYU-Idaho On-Campus Enrollment Counts")
-  #     ) +
-  #     theme(
-  #       plot.title = element_text(hjust = 0.5)
-  #     )
-  # })
+    # Rename the dynamically selected column to a fixed name, e.g., "target"
+    data <- data %>%
+      mutate(target = .data[[selected_val]])
+
+    # Now, you can use a fixed formula since the target column name is known
+    season_type <- if (input$season == "Additive") "A" else "M"
+    formula <- paste0("target ~ trend('A') + error('A') + season('", season_type, "')")
+
+    data_hw <- data |>
+      model(ExploreModel = ETS(!!as.formula(formula), opt_crit = "amse", nmse = 1))
+
+    report(data_hw)
+  })
+
+  output$preview <- renderPrint({
+    req(exp_data())
+    exp_data()
+  })
+
 
   output$predplot<-renderPlot({
     data <- sim_data()[[1]]
-    ggplot(data, aes(x = date)) +
-      geom_line(aes(y = x_t, color = "Base"), size = 1) +
-      geom_line(aes(y = xhat_t, color = "Components"),linetype=3, size = 1) +
-      labs(
-        x = "Date",
-        y = "Value",
-        title = NULL,
-        color = "Series"
-      ) +
-      theme_minimal() +
-      theme(legend.position = "top")+
-      scale_color_manual(values = c("black", "#56B4E9"))+
-      guides(alpha = FALSE)
+    data <- filter(data, section != "H")
+    if (input$season == "Additive"){
+      ggplot(data, aes(x = date)) +
+        geom_line(aes(y = x_t, color = "Base"), size = 1) +
+        geom_line(aes(y = a_t + s_t, color = "Components", alpha=0.7), size = 1) +
+        geom_line(aes(y = xhat_t, color = "Components"),linetype=3, size = 1) +
+        labs(
+          x = "Date",
+          y = "Value",
+          title = NULL,
+          color = "Series"
+        ) +
+        theme_minimal() +
+        theme(legend.position = "top")+
+        scale_color_manual(values = c("black", "#56B4E9"))+
+        guides(alpha = FALSE)
+    } else {
+      ggplot(data, aes(x = date)) +
+        geom_line(aes(y = x_t, color = "Base"), size = 1) +
+        geom_line(aes(y = a_t * s_t, color = "Components", alpha=0.7), size = 1) +
+        geom_line(aes(y = xhat_t, color = "Components"),linetype=3, size = 1) +
+        labs(
+          x = "Date",
+          y = "Value",
+          title = NULL,
+          color = "Series"
+        ) +
+        theme_minimal() +
+        theme(legend.position = "top")+
+        scale_color_manual(values = c("black", "#56B4E9"))+
+        guides(alpha = FALSE)
+    }
   })
 
 }
