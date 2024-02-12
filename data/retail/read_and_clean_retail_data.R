@@ -34,9 +34,8 @@ read_one_sheet <- function(year) {
     ) |>
     select(-TOTAL) |>
     convert_df_to_char() |>
-    mutate(ordering = row_number()) |>
     pivot_longer(cols = contains(" "), names_to = "month", values_to = "sales") |>
-    select("naics", "business", "month", "sales", "ordering") |>
+    select("naics", "business", "month", "sales") |>
     mutate(
       month = yearmonth(my(month)),
       naics = as.integer(naics),
@@ -87,6 +86,7 @@ decompose_retail_sales <- function(df, naics_value, model_type = "multiplicative
 #   retail <- retail |> bind_rows(read_one_sheet(i))
 # }
 # retail |> rio::export("data/retail_by_business_type.parquet")
+
 
 # Read in clean data
 retail <- rio::import("data/retail_by_business_type.parquet")
