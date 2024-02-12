@@ -8,9 +8,11 @@ library(dplyr)
 library(ggplot2)
 library(ggokabeito)
 library(fpp3)
+library(shinyjs)
 
 ui <- fluidPage(
-  titlePanel(" 4.3.7 “Simulation” Modern Look "),
+  useShinyjs(),
+  titlePanel("Simulated White Noise"),
   # A fluidRow() defines a row (ik pretty complex)
   # Each row is then split into columns, the first value passed to these defines how much relative space they are alloted for that row as a fraction of 12.
   # 2 columns with an allotment of 6 will be centered into two equal columns on one row.
@@ -25,46 +27,55 @@ ui <- fluidPage(
     column(4,  offset = 5, actionButton("go", "Simulate!"))
   ),
   # Here is an example of using the overflow feature to get multiple 'rows' without needing to define tons of fluidRow()'s
-  fluidRow(
-    column(12, h4("Series")),
-    column(12, plotOutput("plot")),
-    column(12, h4("ACF")),
-    column(12, plotOutput("acf_plot"))
+  div(id = "outputs",
+    fluidRow(
+      column(12, h4("Series")),
+      column(12, plotOutput("plot")),
+      column(12, h4("ACF")),
+      column(12, plotOutput("acf_plot"))
+    )
   )
 )
 
 server <- function(input, output, session) {
+  observe({
+    if(input$go) {
+      show("outputs")
+    } else {
+      hide("outputs")
+    }
+  })
+
   sim_data <- eventReactive(input$go, {
     set.seed(1)
-    
-    
+
+
     wd <- tibble(
       seq = seq_len(input$n_points),
-      w = rnorm(input$n_points, sd = input$sigma),
-      values = cumsum(w)
+      values = rnorm(input$n_points, sd = input$sigma)
     )
-    
+
     # ACF plot data
     acf_plot <- tsibble(
       seq = seq_len(nrow(wd)),
       values = wd$values,
       index = seq
-    ) |> ACF(values, w) |> autoplot()
-    
+    ) |> ACF(values) |> autoplot()
+
     list(sim_data = wd, acf_plot = acf_plot)
   })
-  
+
   output$plot <- renderPlot({
     df <- sim_data()$sim_data
-    
-    
+
+
     ggplot(df, aes(x = seq, y = values)) +
       geom_line() +
       labs(title = NULL,
            x = "x",
            y = "y")
   })
-  
+
   output$acf_plot <- renderPlot({
     sim_data()$acf_plot
   })

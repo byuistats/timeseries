@@ -8,9 +8,11 @@ library(dplyr)
 library(ggplot2)
 library(ggokabeito)
 library(fpp3)
+library(shinyjs)
 
 ui <- fluidPage(
-  titlePanel("IDK what this one is supposed to be called"),
+  useShinyjs(),
+  titlePanel("Simulated Random Walk"),
   # A fluidRow() defines a row (ik pretty complex)
   # Each row is then split into columns, the first value passed to these defines how much relative space they are alloted for that row as a fraction of 12.
   # 2 columns with an allotment of 6 will be centered into two equal columns on one row.
@@ -25,22 +27,33 @@ ui <- fluidPage(
     column(4,  offset = 5, actionButton("go", "Simulate!"))
   ),
   # Here is an example of using the overflow feature to get multiple 'rows' without needing to define tons of fluidRow()'s
-  fluidRow(
-    column(12, h4("Series")),
-    column(12, plotOutput("plot")),
-    column(12, h4("ACF")),
-    column(12, plotOutput("acf_plot"))
+  div(id = "outputs",
+      fluidRow(
+        column(12, h4("Series")),
+        column(12, plotOutput("plot")),
+        column(12, h4("ACF")),
+        column(12, plotOutput("acf_plot"))
+      )
   )
 )
 
 server <- function(input, output, session) {
+  observe({
+    if(input$go) {
+      show("outputs")
+    } else {
+      hide("outputs")
+    }
+  })
+
   sim_data <- eventReactive(input$go, {
     set.seed(1)
 
 
     wd <- tibble(
       seq = seq_len(input$n_points),
-      values = rnorm(input$n_points, sd = input$sigma)
+      w = rnorm(input$n_points, sd = input$sigma),
+      values = cumsum(w)
     )
 
     # ACF plot data
@@ -48,7 +61,7 @@ server <- function(input, output, session) {
       seq = seq_len(nrow(wd)),
       values = wd$values,
       index = seq
-    ) |> ACF(values) |> autoplot()
+    ) |> ACF(values, w) |> autoplot()
 
     list(sim_data = wd, acf_plot = acf_plot)
   })
