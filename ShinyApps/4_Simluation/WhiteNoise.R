@@ -47,8 +47,6 @@ server <- function(input, output, session) {
   })
 
   sim_data <- eventReactive(input$go, {
-    set.seed(1)
-
 
     wd <- tibble(
       seq = seq_len(input$n_points),
