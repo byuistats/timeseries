@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>BYU-Idaho Time Series - Fitted Models and Diagnostic Plots</title>
+<title>BYU-Idaho Time Series - White Noise and Random Walks: Part 2</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -19,6 +19,40 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -64,6 +98,14 @@ ul.task-list li input[type="checkbox"] {
     "search-label": "Search"
   }
 }</script>
+<script src="site_libs/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+<script src="site_libs/plotly-binding-4.10.3/plotly.js"></script>
+<script src="site_libs/typedarray-0.1/typedarray.min.js"></script>
+<script src="site_libs/jquery-3.5.1/jquery.min.js"></script>
+<link href="site_libs/crosstalk-1.2.1/css/crosstalk.min.css" rel="stylesheet">
+<script src="site_libs/crosstalk-1.2.1/js/crosstalk.min.js"></script>
+<link href="site_libs/plotly-htmlwidgets-css-2.11.1/plotly-htmlwidgets.css" rel="stylesheet">
+<script src="site_libs/plotly-main-2.11.1/plotly-latest.min.js"></script>
 
   <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
@@ -228,31 +270,31 @@ ul.task-list li input[type="checkbox"] {
         <li class="dropdown-header">Lesson 1</li>
         <li>
     <a class="dropdown-item" href="./chapter_4_lesson_1.html" rel="" target="">
- <span class="dropdown-text">White Noise and Random Walks</span></a>
+ <span class="dropdown-text">White Noise and Random Walks: Part 1</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li class="dropdown-header">Lesson 2</li>
         <li>
     <a class="dropdown-item" href="./chapter_4_lesson_2.html" rel="" target="">
- <span class="dropdown-text">Fitted Models and Diagnostic Plots</span></a>
+ <span class="dropdown-text">White Noise and Random Walks: Part 2</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li class="dropdown-header">Lesson 3</li>
         <li>
     <a class="dropdown-item" href="./chapter_4_lesson_3.html" rel="" target="">
- <span class="dropdown-text">Autoregressive Models: Part 1</span></a>
+ <span class="dropdown-text">Fitted Models and Diagnostic Plots—NEED TO WORK ON THIS</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li class="dropdown-header">Lesson 4</li>
         <li>
     <a class="dropdown-item" href="./chapter_4_lesson_4.html" rel="" target="">
- <span class="dropdown-text">Autoregressive Models: Part 2</span></a>
+ <span class="dropdown-text">Autoregressive Models: Part 1</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li class="dropdown-header">Lesson 5</li>
         <li>
     <a class="dropdown-item" href="./chapter_4_lesson_5.html" rel="" target="">
- <span class="dropdown-text">Fitted Models</span></a>
+ <span class="dropdown-text">Autoregressive Models: Part 2</span></a>
   </li>  
     </ul>
   </li>
@@ -276,9 +318,14 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#learning-outcomes" id="toc-learning-outcomes" class="nav-link active" data-scroll-target="#learning-outcomes">Learning Outcomes</a></li>
   <li><a href="#preparation" id="toc-preparation" class="nav-link" data-scroll-target="#preparation">Preparation</a></li>
   <li><a href="#learning-journal-exchange-10-mins" id="toc-learning-journal-exchange-10-mins" class="nav-link" data-scroll-target="#learning-journal-exchange-10-mins">Learning Journal Exchange (10 mins)</a></li>
-  <li><a href="#class-activity-fitting-a-holt-winters-model-and-connecting-it-to-the-backward-shift-operator-15-min" id="toc-class-activity-fitting-a-holt-winters-model-and-connecting-it-to-the-backward-shift-operator-15-min" class="nav-link" data-scroll-target="#class-activity-fitting-a-holt-winters-model-and-connecting-it-to-the-backward-shift-operator-15-min">Class Activity: Fitting a Holt-Winters Model and Connecting it to the Backward Shift Operator (15 min)</a></li>
-  <li><a href="#class-activity-fitting-a-random-walk-with-drift-15-min" id="toc-class-activity-fitting-a-random-walk-with-drift-15-min" class="nav-link" data-scroll-target="#class-activity-fitting-a-random-walk-with-drift-15-min">Class Activity: Fitting a Random Walk with Drift (15 min)</a></li>
-  <li><a href="#small-group-activity-fitting-a-random-walk-with-drift-20-min" id="toc-small-group-activity-fitting-a-random-walk-with-drift-20-min" class="nav-link" data-scroll-target="#small-group-activity-fitting-a-random-walk-with-drift-20-min">Small Group Activity: Fitting a Random Walk with Drift (20 min)</a></li>
+  <li><a href="#class-activity-random-walks-continued-15-min" id="toc-class-activity-random-walks-continued-15-min" class="nav-link" data-scroll-target="#class-activity-random-walks-continued-15-min">Class Activity: Random Walks (Continued) (15 min)</a>
+  <ul class="collapse">
+  <li><a href="#simulation" id="toc-simulation" class="nav-link" data-scroll-target="#simulation">Simulation</a></li>
+  <li><a href="#second-order-properties-of-a-random-walk" id="toc-second-order-properties-of-a-random-walk" class="nav-link" data-scroll-target="#second-order-properties-of-a-random-walk">Second-Order Properties of a Random Walk</a></li>
+  <li><a href="#differencing-a-time-series" id="toc-differencing-a-time-series" class="nav-link" data-scroll-target="#differencing-a-time-series">Differencing a Time Series</a></li>
+  <li><a href="#difference-operator" id="toc-difference-operator" class="nav-link" data-scroll-target="#difference-operator">Difference Operator</a></li>
+  </ul></li>
+  <li><a href="#small-group-activity-differencing-stock-prices-15-min" id="toc-small-group-activity-differencing-stock-prices-15-min" class="nav-link" data-scroll-target="#small-group-activity-differencing-stock-prices-15-min">Small Group Activity: Differencing Stock Prices (15 min)</a></li>
   <li><a href="#homework-preview-5-min" id="toc-homework-preview-5-min" class="nav-link" data-scroll-target="#homework-preview-5-min">Homework Preview (5 min)</a></li>
   </ul>
 </nav>
@@ -288,7 +335,7 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Fitted Models and Diagnostic Plots</h1>
+<h1 class="title">White Noise and Random Walks: Part 2</h1>
 <p class="subtitle lead">Chapter 4: Lesson 2</p>
 </div>
 
@@ -385,7 +432,7 @@ Check model adequacy using diagnostic plots like correlograms of residuals
 <section id="preparation" class="level2">
 <h2 class="anchored" data-anchor-id="preparation">Preparation</h2>
 <ul>
-<li>Read Section 4.4</li>
+<li>Read Sections 4.3.3-4.3.7</li>
 </ul>
 </section>
 <section id="learning-journal-exchange-10-mins" class="level2">
@@ -397,15 +444,14 @@ Check model adequacy using diagnostic plots like correlograms of residuals
 <li><p>Sign the Learning Journal review sheet for your peer</p></li>
 </ul>
 </section>
-<section id="class-activity-fitting-a-holt-winters-model-and-connecting-it-to-the-backward-shift-operator-15-min" class="level2">
-<h2 class="anchored" data-anchor-id="class-activity-fitting-a-holt-winters-model-and-connecting-it-to-the-backward-shift-operator-15-min">Class Activity: Fitting a Holt-Winters Model and Connecting it to the Backward Shift Operator (15 min)</h2>
-</section>
-<section id="class-activity-fitting-a-random-walk-with-drift-15-min" class="level2">
-<h2 class="anchored" data-anchor-id="class-activity-fitting-a-random-walk-with-drift-15-min">Class Activity: Fitting a Random Walk with Drift (15 min)</h2>
-</section>
-<section id="small-group-activity-fitting-a-random-walk-with-drift-20-min" class="level2">
-<h2 class="anchored" data-anchor-id="small-group-activity-fitting-a-random-walk-with-drift-20-min">Small Group Activity: Fitting a Random Walk with Drift (20 min)</h2>
-<!-- Check your Understanding -->
+<section id="class-activity-random-walks-continued-15-min" class="level2">
+<h2 class="anchored" data-anchor-id="class-activity-random-walks-continued-15-min">Class Activity: Random Walks (Continued) (15 min)</h2>
+<p>Recall the definition of a random walk:</p>
+<p><span class="math inline">\(\{x_t\}\)</span> is a <strong>random walk</strong> if it can be expressed as <span class="math display">\[
+  x_{t} = x_{t-1} + w_{t}
+\]</span> where <span class="math inline">\(\{w_t\}\)</span> is a white noise series.</p>
+<p>There are other ways to represent this expression.</p>
+<!-- Check Your Understanding -->
 <div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -417,8 +463,421 @@ Check Your Understanding
 </div>
 <div class="callout-body-container callout-body">
 <ul>
-<li>Question1</li>
-<li>Question2</li>
+<li>Notice that <span class="math inline">\(x_{t-1} = x_{t-2} + w_{t-1}\)</span> and x_{t-2} = x_{t-3} + w_{t-2}. Use this to explain why it is possible to write <span class="math inline">\(x_t\)</span> as <span class="math display">\[
+  x_{t} = w_1 + w_2 + w_3 + \cdots + w_{t-1} + w_{t}
+\]</span> where <span class="math inline">\(\{w_t\}\)</span> is a DWN time series.</li>
+</ul>
+</div>
+</div>
+<!-- Note that this implies that: -->
+<!-- \begin{align*} -->
+<!--   x_{t} &= x_{t-1} + w_{t} \\ -->
+<!--   x_{t-1} &= x_{t-2} + w_{t-1} \\ -->
+<!--   x_{t-2} &= x_{t-3} + w_{t-2} \\ -->
+<!--   x_{t-3} &= x_{t-4} + w_{t-3} \\ -->
+<!--   \vdots ~~ &= ~~~~~~~~~~~~ \vdots \\ -->
+<!--   x_{4} &= x_{3} + w_{4} \\ -->
+<!--   x_{3} &= x_{2} + w_{3} \\ -->
+<!--   x_{2} &= x_{1} + w_{2} \\ -->
+<!--   x_{1} &= w_{1}  -->
+<!-- \end{align*} -->
+<!-- We can write this as -->
+<!-- \begin{align*} -->
+<!--   x_{t}  -->
+<!--     &= x_{t-1} + w_{t} \\ -->
+<!--     &= \underbrace{x_{t-2} + w_{t-1}} + w_{t} \\ -->
+<!--     &= \underbrace{x_{t-3} + w_{t-2}} + w_{t-1} + w_{t} \\ -->
+<!--     &= \underbrace{x_{t-4} + w_{t-3}} + w_{t-2} + w_{t-1} + w_{t} \\ -->
+<!--     &= ~~~~ \vdots \\ -->
+<!--     &= \underbrace{x_3 + w_4} + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
+<!--     &= \underbrace{x_2 + w_3} + w_4 + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
+<!--     &= \underbrace{x_1 + w_2} + w_3 + w_4 + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
+<!--     &= w_1 + w_2 + w_3 + w_4 + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t}  -->
+<!-- \end{align*} -->
+<p>This process of <em>back substitution</em> is so common, we define notation to handle it.</p>
+<div class="callout callout-style-default callout-note no-icon callout-titled" title="Definition of the Backward Shift Operator">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Definition of the Backward Shift Operator
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>We define the <strong>backward shift operator</strong> or the <strong>lag operator</strong>, <span class="math inline">\(\mathbf{B}\)</span>, as: <span class="math display">\[
+  \mathbf{B} x_t = x_{t-1}
+\]</span> where <span class="math inline">\(\{x_t\}\)</span> is any time series.</p>
+<p>We can apply this operator repeatedly. We will use exponential notation to indicate this.</p>
+<p><span class="math display">\[
+  \mathbf{B}^2 x_t = \mathbf{B} \mathbf{B} x_t = \mathbf{B} ( \mathbf{B} x_t ) x_t = \mathbf{B} x_{t-1} = \mathbf{B} x_{t-2}
+\]</span></p>
+<p>In general, <span class="math display">\[
+  \mathbf{B}^n x_t = \underbrace{\mathbf{B} \cdot \mathbf{B} \cdot \cdots \cdot \mathbf{B}}_{n ~ \text{terms}} x_t = \mathbf{B}^{n-1} ( \mathbf{B} x_t ) = \mathbf{B}^{n-1} ( x_{t-1} ) = \mathbf{B}^{n-2} ( x_{t-2} ) = \cdots = \mathbf{B} x_{t-(n-1)} = x_{t-n}
+\]</span></p>
+</div>
+</div>
+<p>We will practice applying this operator.</p>
+<!-- Check Your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Let <span class="math inline">\(\{x_t\}\)</span> be a time series with the following values.</p>
+<center>
+<p><span class="math inline">\(x_{1} = 5\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{2} = 10\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{3} = 13\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{4} = 8\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{5} = 4\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{6} = 3\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{7} = 9\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{8} = 2\)</span></p>
+</center>
+<p>Evaluate the following.</p>
+<ul>
+<li><span class="math inline">\(\mathbf{B} x_8\)</span></li>
+<li><span class="math inline">\(\mathbf{B}^5 x_8\)</span></li>
+<li><span class="math inline">\((\mathbf{B}^5 - \mathbf{B} ) x_8\)</span></li>
+<li><span class="math inline">\(( \mathbf{B}^2 - 6 \mathbf{B} + 9 ) x_8\)</span></li>
+<li><span class="math inline">\(( (\mathbf{B} - 6 )\mathbf{B} + 9 ) x_8\)</span></li>
+<li><span class="math inline">\(( \mathbf{B} - 3 )^2 x_8 = ( \mathbf{B} - 3 ) \left[ ( \mathbf{B} - 3 ) x_8 \right]\)</span></li>
+<li><span class="math inline">\(( 1 - \frac{1}{2} B - \frac{1}{4} B^2 - \frac{1}{8} B^3 ) x_8\)</span></li>
+</ul>
+</div>
+</div>
+<section id="simulation" class="level3">
+<h3 class="anchored" data-anchor-id="simulation">Simulation</h3>
+<p>The following simulation illustrates a random walk.</p>
+ <iframe id="Randomwalk" src="https://posit.byui.edu/content/f9a0690a-87ce-423c-9d9c-4dfd0188dd86" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe>
+<!-- Check Your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>What do you notice about this time series?</li>
+<li>What characteristics do you observe in the correlogram?</li>
+<li>How does this compare to the time series and correlogram for the DWN process?</li>
+</ul>
+</div>
+</div>
+</section>
+<section id="second-order-properties-of-a-random-walk" class="level3">
+<h3 class="anchored" data-anchor-id="second-order-properties-of-a-random-walk">Second-Order Properties of a Random Walk</h3>
+<p>The second-order properties of a random walk are summarized below.</p>
+<div class="callout callout-style-default callout-note no-icon callout-titled" title="Second-Order Properties of a Random Walk">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Second-Order Properties of a Random Walk
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>If <span class="math inline">\(\{x_t\}_{t=1}^n\)</span> is a random walk, then the population has the following properties.</p>
+<p><span class="math display">\[ \mu_x = 0 \]</span> and <span class="math display">\[
+  cov(x_t, x_{t+k}) = t \sigma^2
+\]</span></p>
+<div class="callout callout-style-default callout-tip callout-titled" title="Click here for a proof of the equation for $cov(x_t,x_{t+k})$">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Click here for a proof of the equation for <span class="math inline">\(cov(x_t,x_{t+k})\)</span>
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-5" class="callout-5-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Why is <span class="math inline">\(cov(x_t, x_{t+k}) = t \sigma^2\)</span>?</p>
+<p>First, note that that since the terms in the white noise series are independent,</p>
+<p><span class="math display">\[
+cov ( w_i, w_j ) =
+  \begin{cases}
+    \sigma^2, &amp; \text{if } ~ i=j \\
+    0, &amp; \text{otherwise}
+  \end{cases}
+\]</span></p>
+<p>Also, when random variables are independent, the covariance of a sum is the sum of the covariance.</p>
+<p>Hence, <span class="math display">\[\begin{align*}
+  cov(x_t, x_{t+k})
+    &amp;= cov ( \sum_{i=1}^t w_i, \sum_{j=1}^{t+K} w_j ) \\
+    &amp;= \sum_{i=j} cov ( w_i, w_j ) \\
+    &amp;= \sum_{i=1}^t \sigma^2 \\
+    &amp;= t \sigma^2
+\end{align*}\]</span></p>
+</div>
+</div>
+</div>
+<p>If <span class="math inline">\(k&gt;0\)</span> and <span class="math inline">\(t&gt;0\)</span>, the correlation function is</p>
+<p><span class="math display">\[
+  \rho_k
+  =
+    \frac{
+            cov(x_t, x_{t+k})
+          }{
+            \sqrt{var(x_t)} \sqrt{var(x_{t+k})}
+          }
+  =
+    \frac{t \sigma^2}{\sqrt{t \sigma^2} \sqrt{(t+k) \sigma^2}}
+  =
+    \frac{1}{\sqrt{1+\frac{k}{t}}}
+\]</span></p>
+</div>
+</div>
+<p>Note that the covariance of a random walk process depends on <span class="math inline">\(t\)</span>. Hence, random walks are non-stationary. The variance is unbounded as <span class="math inline">\(t\)</span> increases. That implies a random walk will not provide good predictions in the long term.</p>
+<p>Note that if <span class="math inline">\(0 &lt; k \ll t\)</span>, then <span class="math inline">\(\rho_k \approx 1\)</span>. Because of this, a correlogram for a random walk will typically demonstrate positive autocorrelations that start near 1 and slowly decrease as <span class="math inline">\(k\)</span> increases.</p>
+</section>
+<section id="differencing-a-time-series" class="level3">
+<h3 class="anchored" data-anchor-id="differencing-a-time-series">Differencing a Time Series</h3>
+<p><a id="differencing">Computing</a> the difference between successive terms of a random walk leads to a discrete white noise series. In many cases, differencing sequential terms of a non-stationary process can lead to a stationary process of differences. We use the code below to obtain the daily closing stock prices for any publicly-traded company.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set symbol and date range</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>symbol <span class="ot">&lt;-</span> <span class="st">"MCD"</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>company <span class="ot">&lt;-</span> <span class="st">"McDonald's"</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>date_start <span class="ot">&lt;-</span> <span class="st">"2021-01-01"</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>date_end <span class="ot">&lt;-</span> <span class="st">"2024-01-01"</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Fetch stock prices (can be used to get new data)</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>stock_df <span class="ot">&lt;-</span> <span class="fu">tq_get</span>(symbol, <span class="at">from =</span> date_start, <span class="at">to =</span> date_end, <span class="at">get =</span> <span class="st">"stock.prices"</span>)</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Store data in a static file</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># stock_df |&gt; rio::export("data/stock_price_mcd.parquet")</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Retrieve static file</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># stock_df &lt;- rio::import("data/stock_price_mcd.parquet")</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Transform data into tibble</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>stock_ts <span class="ot">&lt;-</span> stock_df <span class="sc">%&gt;%</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> date, </span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(dates),</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(dates),</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">value =</span> adjusted</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(dates, year, month, value) <span class="sc">%&gt;%</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(dates) <span class="sc">|&gt;</span></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(dates),</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(dates)</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">diff =</span> value <span class="sc">-</span> <span class="fu">lag</span>(value)) <span class="sc">|&gt;</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates, <span class="at">key =</span> <span class="cn">NULL</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>Consider the closing price of McDonald’s stock illustrated in the time plot in <a href="#fig-example-stock-price-plot">Figure&nbsp;1</a>, and <a href="#fig-example-stock-difference-plot">Figure&nbsp;2</a> gives the differences in the closing prices of the stock as a time series.</p>
+<!-- Beginning of two columns -->
+<div class="columns">
+<div class="column" style="width:45%;">
+<div class="cell" data-fig.asp="0.61">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_ly</span>(stock_ts, <span class="at">x =</span> <span class="sc">~</span>dates, <span class="at">y =</span> <span class="sc">~</span>value, <span class="at">type =</span> <span class="st">'scatter'</span>, <span class="at">mode =</span> <span class="st">'lines'</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layout</span>(</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">xaxis =</span> <span class="fu">list</span>(<span class="at">title =</span> <span class="fu">paste0</span>(<span class="st">"Dates ("</span>, <span class="fu">format</span>(<span class="fu">ymd</span>(date_start), <span class="st">"%d/%m/%Y"</span>), <span class="st">" to "</span>, <span class="fu">format</span>(<span class="fu">ymd</span>(date_end), <span class="st">"%d/%m/%Y"</span>), <span class="st">")"</span> ) ),</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">yaxis =</span> <span class="fu">list</span>(<span class="at">title =</span> <span class="st">"Closing Price (US$)"</span>),</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="fu">paste0</span>(<span class="st">"Time Plot of "</span>, symbol, <span class="st">" Daily Closing Price"</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div id="fig-example-stock-price-plot" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-c179619d1a829487b055" style="width:100%;height:396px;"></div>
+<script type="application/json" data-for="htmlwidget-c179619d1a829487b055">{"x":{"visdat":{"6e14336b7db9":["function () ","plotlyVisDat"]},"cur_data":"6e14336b7db9","attrs":{"6e14336b7db9":{"x":{},"y":{},"mode":"lines","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":"Dates (01/01/2021 to 01/01/2024)"},"yaxis":{"domain":[0,1],"automargin":true,"title":"Closing Price (US$)"},"title":"Time Plot of MCD Daily Closing Price","hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":["2021-01-04","2021-01-05","2021-01-06","2021-01-07","2021-01-08","2021-01-11","2021-01-12","2021-01-13","2021-01-14","2021-01-15","2021-01-19","2021-01-20","2021-01-21","2021-01-22","2021-01-25","2021-01-26","2021-01-27","2021-01-28","2021-01-29","2021-02-01","2021-02-02","2021-02-03","2021-02-04","2021-02-05","2021-02-08","2021-02-09","2021-02-10","2021-02-11","2021-02-12","2021-02-16","2021-02-17","2021-02-18","2021-02-19","2021-02-22","2021-02-23","2021-02-24","2021-02-25","2021-02-26","2021-03-01","2021-03-02","2021-03-03","2021-03-04","2021-03-05","2021-03-08","2021-03-09","2021-03-10","2021-03-11","2021-03-12","2021-03-15","2021-03-16","2021-03-17","2021-03-18","2021-03-19","2021-03-22","2021-03-23","2021-03-24","2021-03-25","2021-03-26","2021-03-29","2021-03-30","2021-03-31","2021-04-01","2021-04-05","2021-04-06","2021-04-07","2021-04-08","2021-04-09","2021-04-12","2021-04-13","2021-04-14","2021-04-15","2021-04-16","2021-04-19","2021-04-20","2021-04-21","2021-04-22","2021-04-23","2021-04-26","2021-04-27","2021-04-28","2021-04-29","2021-04-30","2021-05-03","2021-05-04","2021-05-05","2021-05-06","2021-05-07","2021-05-10","2021-05-11","2021-05-12","2021-05-13","2021-05-14","2021-05-17","2021-05-18","2021-05-19","2021-05-20","2021-05-21","2021-05-24","2021-05-25","2021-05-26","2021-05-27","2021-05-28","2021-06-01","2021-06-02","2021-06-03","2021-06-04","2021-06-07","2021-06-08","2021-06-09","2021-06-10","2021-06-11","2021-06-14","2021-06-15","2021-06-16","2021-06-17","2021-06-18","2021-06-21","2021-06-22","2021-06-23","2021-06-24","2021-06-25","2021-06-28","2021-06-29","2021-06-30","2021-07-01","2021-07-02","2021-07-06","2021-07-07","2021-07-08","2021-07-09","2021-07-12","2021-07-13","2021-07-14","2021-07-15","2021-07-16","2021-07-19","2021-07-20","2021-07-21","2021-07-22","2021-07-23","2021-07-26","2021-07-27","2021-07-28","2021-07-29","2021-07-30","2021-08-02","2021-08-03","2021-08-04","2021-08-05","2021-08-06","2021-08-09","2021-08-10","2021-08-11","2021-08-12","2021-08-13","2021-08-16","2021-08-17","2021-08-18","2021-08-19","2021-08-20","2021-08-23","2021-08-24","2021-08-25","2021-08-26","2021-08-27","2021-08-30","2021-08-31","2021-09-01","2021-09-02","2021-09-03","2021-09-07","2021-09-08","2021-09-09","2021-09-10","2021-09-13","2021-09-14","2021-09-15","2021-09-16","2021-09-17","2021-09-20","2021-09-21","2021-09-22","2021-09-23","2021-09-24","2021-09-27","2021-09-28","2021-09-29","2021-09-30","2021-10-01","2021-10-04","2021-10-05","2021-10-06","2021-10-07","2021-10-08","2021-10-11","2021-10-12","2021-10-13","2021-10-14","2021-10-15","2021-10-18","2021-10-19","2021-10-20","2021-10-21","2021-10-22","2021-10-25","2021-10-26","2021-10-27","2021-10-28","2021-10-29","2021-11-01","2021-11-02","2021-11-03","2021-11-04","2021-11-05","2021-11-08","2021-11-09","2021-11-10","2021-11-11","2021-11-12","2021-11-15","2021-11-16","2021-11-17","2021-11-18","2021-11-19","2021-11-22","2021-11-23","2021-11-24","2021-11-26","2021-11-29","2021-11-30","2021-12-01","2021-12-02","2021-12-03","2021-12-06","2021-12-07","2021-12-08","2021-12-09","2021-12-10","2021-12-13","2021-12-14","2021-12-15","2021-12-16","2021-12-17","2021-12-20","2021-12-21","2021-12-22","2021-12-23","2021-12-27","2021-12-28","2021-12-29","2021-12-30","2021-12-31","2022-01-03","2022-01-04","2022-01-05","2022-01-06","2022-01-07","2022-01-10","2022-01-11","2022-01-12","2022-01-13","2022-01-14","2022-01-18","2022-01-19","2022-01-20","2022-01-21","2022-01-24","2022-01-25","2022-01-26","2022-01-27","2022-01-28","2022-01-31","2022-02-01","2022-02-02","2022-02-03","2022-02-04","2022-02-07","2022-02-08","2022-02-09","2022-02-10","2022-02-11","2022-02-14","2022-02-15","2022-02-16","2022-02-17","2022-02-18","2022-02-22","2022-02-23","2022-02-24","2022-02-25","2022-02-28","2022-03-01","2022-03-02","2022-03-03","2022-03-04","2022-03-07","2022-03-08","2022-03-09","2022-03-10","2022-03-11","2022-03-14","2022-03-15","2022-03-16","2022-03-17","2022-03-18","2022-03-21","2022-03-22","2022-03-23","2022-03-24","2022-03-25","2022-03-28","2022-03-29","2022-03-30","2022-03-31","2022-04-01","2022-04-04","2022-04-05","2022-04-06","2022-04-07","2022-04-08","2022-04-11","2022-04-12","2022-04-13","2022-04-14","2022-04-18","2022-04-19","2022-04-20","2022-04-21","2022-04-22","2022-04-25","2022-04-26","2022-04-27","2022-04-28","2022-04-29","2022-05-02","2022-05-03","2022-05-04","2022-05-05","2022-05-06","2022-05-09","2022-05-10","2022-05-11","2022-05-12","2022-05-13","2022-05-16","2022-05-17","2022-05-18","2022-05-19","2022-05-20","2022-05-23","2022-05-24","2022-05-25","2022-05-26","2022-05-27","2022-05-31","2022-06-01","2022-06-02","2022-06-03","2022-06-06","2022-06-07","2022-06-08","2022-06-09","2022-06-10","2022-06-13","2022-06-14","2022-06-15","2022-06-16","2022-06-17","2022-06-21","2022-06-22","2022-06-23","2022-06-24","2022-06-27","2022-06-28","2022-06-29","2022-06-30","2022-07-01","2022-07-05","2022-07-06","2022-07-07","2022-07-08","2022-07-11","2022-07-12","2022-07-13","2022-07-14","2022-07-15","2022-07-18","2022-07-19","2022-07-20","2022-07-21","2022-07-22","2022-07-25","2022-07-26","2022-07-27","2022-07-28","2022-07-29","2022-08-01","2022-08-02","2022-08-03","2022-08-04","2022-08-05","2022-08-08","2022-08-09","2022-08-10","2022-08-11","2022-08-12","2022-08-15","2022-08-16","2022-08-17","2022-08-18","2022-08-19","2022-08-22","2022-08-23","2022-08-24","2022-08-25","2022-08-26","2022-08-29","2022-08-30","2022-08-31","2022-09-01","2022-09-02","2022-09-06","2022-09-07","2022-09-08","2022-09-09","2022-09-12","2022-09-13","2022-09-14","2022-09-15","2022-09-16","2022-09-19","2022-09-20","2022-09-21","2022-09-22","2022-09-23","2022-09-26","2022-09-27","2022-09-28","2022-09-29","2022-09-30","2022-10-03","2022-10-04","2022-10-05","2022-10-06","2022-10-07","2022-10-10","2022-10-11","2022-10-12","2022-10-13","2022-10-14","2022-10-17","2022-10-18","2022-10-19","2022-10-20","2022-10-21","2022-10-24","2022-10-25","2022-10-26","2022-10-27","2022-10-28","2022-10-31","2022-11-01","2022-11-02","2022-11-03","2022-11-04","2022-11-07","2022-11-08","2022-11-09","2022-11-10","2022-11-11","2022-11-14","2022-11-15","2022-11-16","2022-11-17","2022-11-18","2022-11-21","2022-11-22","2022-11-23","2022-11-25","2022-11-28","2022-11-29","2022-11-30","2022-12-01","2022-12-02","2022-12-05","2022-12-06","2022-12-07","2022-12-08","2022-12-09","2022-12-12","2022-12-13","2022-12-14","2022-12-15","2022-12-16","2022-12-19","2022-12-20","2022-12-21","2022-12-22","2022-12-23","2022-12-27","2022-12-28","2022-12-29","2022-12-30","2023-01-03","2023-01-04","2023-01-05","2023-01-06","2023-01-09","2023-01-10","2023-01-11","2023-01-12","2023-01-13","2023-01-17","2023-01-18","2023-01-19","2023-01-20","2023-01-23","2023-01-24","2023-01-25","2023-01-26","2023-01-27","2023-01-30","2023-01-31","2023-02-01","2023-02-02","2023-02-03","2023-02-06","2023-02-07","2023-02-08","2023-02-09","2023-02-10","2023-02-13","2023-02-14","2023-02-15","2023-02-16","2023-02-17","2023-02-21","2023-02-22","2023-02-23","2023-02-24","2023-02-27","2023-02-28","2023-03-01","2023-03-02","2023-03-03","2023-03-06","2023-03-07","2023-03-08","2023-03-09","2023-03-10","2023-03-13","2023-03-14","2023-03-15","2023-03-16","2023-03-17","2023-03-20","2023-03-21","2023-03-22","2023-03-23","2023-03-24","2023-03-27","2023-03-28","2023-03-29","2023-03-30","2023-03-31","2023-04-03","2023-04-04","2023-04-05","2023-04-06","2023-04-10","2023-04-11","2023-04-12","2023-04-13","2023-04-14","2023-04-17","2023-04-18","2023-04-19","2023-04-20","2023-04-21","2023-04-24","2023-04-25","2023-04-26","2023-04-27","2023-04-28","2023-05-01","2023-05-02","2023-05-03","2023-05-04","2023-05-05","2023-05-08","2023-05-09","2023-05-10","2023-05-11","2023-05-12","2023-05-15","2023-05-16","2023-05-17","2023-05-18","2023-05-19","2023-05-22","2023-05-23","2023-05-24","2023-05-25","2023-05-26","2023-05-30","2023-05-31","2023-06-01","2023-06-02","2023-06-05","2023-06-06","2023-06-07","2023-06-08","2023-06-09","2023-06-12","2023-06-13","2023-06-14","2023-06-15","2023-06-16","2023-06-20","2023-06-21","2023-06-22","2023-06-23","2023-06-26","2023-06-27","2023-06-28","2023-06-29","2023-06-30","2023-07-03","2023-07-05","2023-07-06","2023-07-07","2023-07-10","2023-07-11","2023-07-12","2023-07-13","2023-07-14","2023-07-17","2023-07-18","2023-07-19","2023-07-20","2023-07-21","2023-07-24","2023-07-25","2023-07-26","2023-07-27","2023-07-28","2023-07-31","2023-08-01","2023-08-02","2023-08-03","2023-08-04","2023-08-07","2023-08-08","2023-08-09","2023-08-10","2023-08-11","2023-08-14","2023-08-15","2023-08-16","2023-08-17","2023-08-18","2023-08-21","2023-08-22","2023-08-23","2023-08-24","2023-08-25","2023-08-28","2023-08-29","2023-08-30","2023-08-31","2023-09-01","2023-09-05","2023-09-06","2023-09-07","2023-09-08","2023-09-11","2023-09-12","2023-09-13","2023-09-14","2023-09-15","2023-09-18","2023-09-19","2023-09-20","2023-09-21","2023-09-22","2023-09-25","2023-09-26","2023-09-27","2023-09-28","2023-09-29","2023-10-02","2023-10-03","2023-10-04","2023-10-05","2023-10-06","2023-10-09","2023-10-10","2023-10-11","2023-10-12","2023-10-13","2023-10-16","2023-10-17","2023-10-18","2023-10-19","2023-10-20","2023-10-23","2023-10-24","2023-10-25","2023-10-26","2023-10-27","2023-10-30","2023-10-31","2023-11-01","2023-11-02","2023-11-03","2023-11-06","2023-11-07","2023-11-08","2023-11-09","2023-11-10","2023-11-13","2023-11-14","2023-11-15","2023-11-16","2023-11-17","2023-11-20","2023-11-21","2023-11-22","2023-11-24","2023-11-27","2023-11-28","2023-11-29","2023-11-30","2023-12-01","2023-12-04","2023-12-05","2023-12-06","2023-12-07","2023-12-08","2023-12-11","2023-12-12","2023-12-13","2023-12-14","2023-12-15","2023-12-18","2023-12-19","2023-12-20","2023-12-21","2023-12-22","2023-12-26","2023-12-27","2023-12-28","2023-12-29"],"y":[196.56245422363281,197.7406005859375,197.29176330566406,198.20811462402344,201.84536743164062,200.31192016601562,197.85282897949219,198.31098937988281,194.95419311523438,196.27259826660156,195.50587463378906,199.75091552734375,199.65740966796875,199.51715087890625,199.479736328125,201.38723754882812,193.55166625976562,193.38337707519531,194.33708190917969,194.42120361328125,196.13232421875,195.15058898925781,197.31982421875,198.76914978027344,197.8341064453125,201.94822692871094,200.47090148925781,200.34931945800781,200.00338745117188,201.05995178222656,199.58259582519531,201.4339599609375,198.45123291015625,198.28289794921875,197.59095764160156,199.41429138183594,197.24501037597656,193.93344116210938,195.91853332519531,196.31364440917969,193.63241577148438,192.71044921875,195.09062194824219,196.72758483886719,196.20072937011719,200.67889404296875,199.04193115234375,199.76632690429688,207.40550231933594,206.84101867675781,210.83937072753906,209.70100402832031,209.26823425292969,211.74253845214844,211.083984375,210.78291320800781,210.92404174804688,211.87425231933594,213.88751220703125,211.65786743164062,210.86761474609375,211.87425231933594,215.2987060546875,218.17750549316406,218.8360595703125,216.61579895019531,217.77293395996094,217.28376770019531,217.62245178222656,216.6722412109375,217.58477783203125,219.27821350097656,218.08343505859375,219.21237182617188,218.50677490234375,219.16532897949219,220.68940734863281,218.55380249023438,221.06570434570312,218.64790344238281,221.2821044921875,222.10057067871094,221.61138916015625,220.01200866699219,221.12214660644531,220.95285034179688,220.93400573730469,223.06959533691406,220.01200866699219,214.44261169433594,216.16423034667969,217.99876403808594,217.96107482910156,218.1962890625,216.52174377441406,218.43150329589844,217.54718017578125,218.17750549316406,218.39389038085938,218.59147644042969,220.95285034179688,221.2554931640625,220.640625,221.15150451660156,219.89334106445312,220.77305603027344,219.17436218261719,220.07305908203125,218.96629333496094,221.91770935058594,224.13130187988281,224.1785888671875,223.58265686035156,222.85423278808594,221.24609375,217.21617126464844,220.31901550292969,221.24609375,220.640625,220.72579956054688,219.86492919921875,218.60676574707031,217.9256591796875,218.51219177246094,219.72308349609375,221.00955200195312,220.17710876464844,221.95556640625,220.26225280761719,222.94882202148438,222.88261413574219,223.41238403320312,224.32049560546875,224.08399963378906,222.06906127929688,216.87564086914062,221.61502075195312,223.18533325195312,225.77732849121094,229.83560180664062,230.80047607421875,233.04246520996094,228.71931457519531,230.83831787109375,229.59906005859375,227.13006591796875,224.15022277832031,222.14479064941406,223.64889526367188,223.49749755859375,222.00285339355469,220.83927917480469,222.82585144042969,223.88534545898438,225.91921997070312,227.95307922363281,227.30035400390625,225.21919250488281,224.41510009765625,225.60704040527344,226.71385192871094,225.55026245117188,225.92868041992188,224.15022277832031,224.65159606933594,223.8096923828125,225.86419677734375,226.52047729492188,228.15650939941406,227.15779113769531,224.65620422363281,226.96754455566406,226.95803833007812,227.50021362304688,229.43106079101562,229.35498046875,229.2122802734375,231.33340454101562,230.64859008789062,227.41459655761719,228.7557373046875,231.25732421875,232.82673645019531,234.38665771484375,235.99412536621094,231.86605834960938,232.35115051269531,229.33595275878906,231.06709289550781,231.20976257324219,233.24525451660156,235.03346252441406,236.19389343261719,235.60414123535156,234.53886413574219,232.5794677734375,230.80075073242188,232.60798645019531,230.42030334472656,230.42979431152344,230.9149169921875,228.01385498046875,229.61178588867188,226.79634094238281,225.75006103515625,224.87498474121094,230.87684631347656,233.51156616210938,233.55914306640625,238.34353637695312,237.0689697265625,238.17228698730469,241.08287048339844,242.27183532714844,240.74046325683594,240.31239318847656,240.76898193359375,237.94401550292969,238.42909240722656,240.58828735351562,240.13169860839844,240.35047912597656,241.10189819335938,239.64662170410156,241.10189819335938,243.1658935546875,244.55461120605469,237.80134582519531,238.07719421386719,233.94537353515625,233.54365539550781,237.96243286132812,238.46931457519531,244.64793395996094,248.58848571777344,248.27281188964844,250.91261291503906,253.42807006835938,251.62994384765625,251.084716796875,252.99763488769531,253.98275756835938,250.30052185058594,250.32920837402344,252.87333679199219,253.39933776855469,254.36541748046875,256.55560302734375,256.21127319335938,256.79473876953125,255.5704345703125,256.39300537109375,256.88076782226562,256.81387329101562,255.55134582519531,257.94247436523438,255.42703247070312,252.89247131347656,250.70217895507812,249.55445861816406,250.02311706542969,246.48428344726562,245.30787658691406,244.10276794433594,242.10380554199219,243.50019836425781,242.56288146972656,239.76051330566406,238.9666748046875,237.90501403808594,244.93482971191406,248.14851379394531,247.70854187011719,250.85523986816406,249.28666687011719,248.73194885253906,248.53111267089844,248.75103759765625,248.54061889648438,245.68089294433594,244.04536437988281,242.35249328613281,242.75418090820312,242.06553649902344,239.99961853027344,239.68402099609375,241.69252014160156,236.99642944335938,234.35659790039062,238.58409118652344,235.41026306152344,230.46684265136719,231.72673034667969,227.60076904296875,226.79289245605469,215.75189208984375,214.27078247070312,213.96298217773438,213.51095581054688,218.19474792480469,217.5311279296875,223.67681884765625,229.03378295898438,228.38941955566406,229.78396606445312,226.32164001464844,229.01455688476562,227.09103393554688,231.07273864746094,232.34225463867188,233.65025329589844,238.68025207519531,239.50738525390625,237.82431030273438,239.71897888183594,237.39149475097656,239.00724792480469,241.84446716308594,244.63357543945312,241.84446716308594,240.87309265136719,239.64202880859375,241.71943664550781,240.93080139160156,241.45973205566406,245.63381958007812,246.06660461425781,245.48954772949219,240.60379028320312,243.21015930175781,239.07460021972656,237.68963623046875,244.47007751464844,239.63243103027344,237.20877075195312,236.46821594238281,244.59510803222656,239.40158081054688,241.19046020507812,238.02626037597656,236.28547668457031,235.08328247070312,234.85247802734375,235.66993713378906,234.70817565917969,232.39035034179688,222.21492004394531,220.24331665039062,224.96556091308594,228.899169921875,235.16986083984375,234.6793212890625,238.60333251953125,242.23878479003906,242.5657958984375,239.74781799316406,240.80577087402344,240.18681335449219,239.90638732910156,240.74775695800781,237.52731323242188,234.19084167480469,229.56819152832031,230.62229919433594,230.90275573730469,231.03813171386719,227.45022583007812,226.66690063476562,231.70542907714844,235.06124877929688,235.56414794921875,239.74195861816406,238.90060424804688,234.83880615234375,239.58723449707031,238.75553894042969,244.63545227050781,243.98748779296875,243.18482971191406,244.61610412597656,244.90623474121094,244.94490051269531,243.20414733886719,244.35498046875,244.28732299804688,246.61796569824219,244.11322021484375,248.0589599609375,246.2021484375,245.12867736816406,245.63157653808594,242.14036560058594,248.62953186035156,250.37033081054688,254.7899169921875,254.70286560058594,255.53457641601562,252.459228515625,253.46501159667969,252.06271362304688,250.69912719726562,248.34906005859375,251.50181579589844,252.75898742675781,250.7474365234375,253.55201721191406,256.7047119140625,257.52679443359375,258.03933715820312,257.80718994140625,257.7685546875,254.29670715332031,251.96600341796875,252.27543640136719,253.91949462890625,248.49415588378906,247.24659729003906,245.14802551269531,245.31330871582031,249.38760375976562,247.48171997070312,247.36503601074219,251.28376770019531,252.89788818359375,252.35336303710938,253.17990112304688,247.30670166015625,248.65830993652344,246.470458984375,247.87068176269531,249.91270446777344,248.34713745117188,244.14645385742188,241.09317016601562,239.15811157226562,237.02859497070312,230.16354370117188,230.39692687988281,227.92706298828125,224.36814880371094,228.84111022949219,231.91383361816406,232.487548828125,228.26739501953125,226.75048828125,228.46186828613281,230.50387573242188,230.51361083984375,239.93600463867188,236.44515991210938,239.67344665527344,242.30865478515625,243.8255615234375,242.87261962890625,247.52061462402344,248.26936340332031,248.66802978515625,249.52371215820312,257.78897094726562,266.93917846679688,265.13055419921875,265.41253662109375,262.90374755859375,265.41253662109375,267.036376953125,268.7769775390625,270.71200561523438,270.118896484375,268.2615966796875,263.89556884765625,264.75125122070312,260.443603515625,264.98471069335938,265.81112670898438,265.8209228515625,266.93917846679688,267.17251586914062,265.72366333007812,267.40591430664062,265.34445190429688,263.9150390625,266.7508544921875,267.34732055664062,267.34732055664062,265.577392578125,265.75341796875,264.35507202148438,267.33758544921875,266.01742553710938,270.49603271484375,268.20785522460938,268.45233154296875,265.71432495117188,260.22848510742188,259.94488525390625,261.33349609375,262.22332763671875,259.88626098632812,261.64642333984375,260.93255615234375,259.2408447265625,260.04269409179688,257.69586181640625,258.47808837890625,258.53683471679688,256.356201171875,263.50433349609375,261.33349609375,262.95675659179688,262.85891723632812,260.785888671875,262.93719482421875,268.04159545898438,260.15029907226562,257.74472045898438,262.634033203125,263.32833862304688,263.59234619140625,266.95614624023438,268.63809204101562,266.42813110351562,264.89291381835938,261.48016357421875,260.37515258789062,257.3829345703125,258.38037109375,261.9886474609375,261.42147827148438,257.00155639648438,254.88935852050781,256.61044311523438,260.30673217773438,260.7076416015625,260.65878295898438,259.94488525390625,264.0128173828125,262.60470581054688,262.6927490234375,260.8739013671875,257.84249877929688,258.91815185546875,259.55746459960938,258.38705444335938,263.1571044921875,264.63238525390625,266.17648315429688,262.72433471679688,260.95401000976562,257.31503295898438,257.70843505859375,258.7410888671875,261.51461791992188,261.94735717773438,266.10760498046875,262.79318237304688,266.2747802734375,265.7535400390625,263.45211791992188,265.17327880859375,266.85507202148438,269.32369995117188,271.300537109375,272.86428833007812,273.20855712890625,274.99850463867188,277.48678588867188,277.62448120117188,277.3687744140625,278.22442626953125,279.0997314453125,279.7882080078125,280.59466552734375,284.30252075195312,284.2139892578125,284.53851318359375,286.11215209960938,286.46621704101562,286.20068359375,287.2431640625,288.3643798828125,286.7022705078125,284.98110961914062,289.85931396484375,290.87234497070312,292.672119140625,293.15408325195312,290.35104370117188,290.29208374023438,291.70834350585938,291.79681396484375,291.767333984375,291.67880249023438,289.92816162109375,291.25588989257812,291.01983642578125,289.2987060546875,288.62008666992188,289.20034790039062,290.67562866210938,284.57791137695312,281.64700317382812,281.2044677734375,280.81103515625,281.32247924804688,280.220947265625,280.40777587890625,283.12225341796875,286.64215087890625,285.1788330078125,281.33270263671875,278.72244262695312,282.5587158203125,283.55734252929688,285.3172607421875,285.29745483398438,285.18875122070312,289.31170654296875,290.38946533203125,289.73687744140625,291.20016479492188,289.99392700195312,286.64215087890625,285.83139038085938,288.01644897460938,288.45150756835938,291.1507568359375,295.04632568359375,291.51657104492188,293.5533447265625,291.595703125,288.80746459960938,291.17050170898438,291.417724609375,292.27789306640625,291.89227294921875,291.615478515625,291.35836791992188,290.50808715820312,290.8145751953125,293.78079223632812,292.27789306640625,291.98129272460938,289.06454467773438,288.46142578125,291.86264038085938,290.7156982421875,289.89508056640625,287.78909301757812,286.35543823242188,287.7396240234375,283.78469848632812,288.1153564453125,286.31585693359375,284.9810791015625,284.35821533203125,285.36669921875,285.5545654296875,285.05029296875,282.1829833984375,278.68289184570312,278.56423950195312,276.88339233398438,277.15036010742188,278.69277954101562,279.16738891601562,281.37222290039062,280.48239135742188,280.39337158203125,281.03604125976562,279.47540283203125,279.26666259765625,277.49728393554688,273.7994384765625,276.67221069335938,277.55691528320312,278.09371948242188,279.03802490234375,280.09170532226562,283.06393432617188,276.57281494140625,276.06585693359375,276.47341918945312,275.5489501953125,269.60455322265625,270.59860229492188,268.17315673828125,266.12542724609375,262.06973266601562,264.00808715820312,261.87091064453125,256.21478271484375,252.97421264648438,254.28634643554688,250.72767639160156,246.74156188964844,248.43142700195312,250.02191162109375,249.42547607421875,244.72364807128906,246.83102416992188,248.45130920410156,249.6441650390625,254.50503540039062,256.84103393554688,256.5726318359375,253.232666015625,255.73764038085938,256.49313354492188,254.30622863769531,254.23664855957031,258.60049438476562,260.60848999023438,260.40966796875,265.26058959960938,266.27450561523438,267.30831909179688,267.06976318359375,265.89675903320312,265.32025146484375,266.19500732421875,267.59661865234375,269.87295532226562,268.77951049804688,274.47537231445312,274.10757446289062,277.3680419921875,278.79946899414062,280.25076293945312,280.85714721679688,280.16131591796875,280.40982055664062,278.71002197265625,281.83999633789062,285.95999145507812,286.1300048828125,286.54000854492188,286.8599853515625,286.79000854492188,285.52999877929688,289.14999389648438,291.42001342773438,295.92999267578125,290.01998901367188,287.26998901367188,290.23001098632812,290.73001098632812,288.989990234375,291.3900146484375,291.70001220703125,292.8599853515625,294.54998779296875,295.83999633789062,296.510009765625],"mode":"lines","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+<figcaption class="figure-caption">Figure&nbsp;1: Plot of the daily closing price of the stock</figcaption>
+</figure>
+</div>
+</div>
+</div><div class="column" style="width:10%;">
+<!-- empty column to create gap -->
+</div><div class="column" style="width:45%;">
+<div class="cell" data-fig.asp="0.61">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate time series plot using plot_ly</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_ly</span>(stock_ts, <span class="at">x =</span> <span class="sc">~</span>dates, <span class="at">y =</span> <span class="sc">~</span>diff, <span class="at">type =</span> <span class="st">'scatter'</span>, <span class="at">mode =</span> <span class="st">'lines'</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">layout</span>(</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">xaxis =</span> <span class="fu">list</span>(<span class="at">title =</span> <span class="fu">paste0</span>(<span class="st">"Dates ("</span>, <span class="fu">format</span>(<span class="fu">ymd</span>(date_start), <span class="st">"%d/%m/%Y"</span>), <span class="st">" to "</span>, <span class="fu">format</span>(<span class="fu">ymd</span>(date_end), <span class="st">"%d/%m/%Y"</span>), <span class="st">")"</span> ) ),</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">yaxis =</span> <span class="fu">list</span>(<span class="at">title =</span> <span class="st">"Closing Price (US$)"</span>),</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="fu">paste0</span>(<span class="st">"Difference of "</span>, symbol, <span class="st">" Daily Closing Price"</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div id="fig-example-stock-difference-plot" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-3e20898641d831133fef" style="width:100%;height:396px;"></div>
+<script type="application/json" data-for="htmlwidget-3e20898641d831133fef">{"x":{"visdat":{"6e1466c3357b":["function () ","plotlyVisDat"]},"cur_data":"6e1466c3357b","attrs":{"6e1466c3357b":{"x":{},"y":{},"mode":"lines","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":"Dates (01/01/2021 to 01/01/2024)"},"yaxis":{"domain":[0,1],"automargin":true,"title":"Closing Price (US$)"},"title":"Difference of MCD Daily Closing Price","hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":["2021-01-05","2021-01-06","2021-01-07","2021-01-08","2021-01-11","2021-01-12","2021-01-13","2021-01-14","2021-01-15","2021-01-19","2021-01-20","2021-01-21","2021-01-22","2021-01-25","2021-01-26","2021-01-27","2021-01-28","2021-01-29","2021-02-01","2021-02-02","2021-02-03","2021-02-04","2021-02-05","2021-02-08","2021-02-09","2021-02-10","2021-02-11","2021-02-12","2021-02-16","2021-02-17","2021-02-18","2021-02-19","2021-02-22","2021-02-23","2021-02-24","2021-02-25","2021-02-26","2021-03-01","2021-03-02","2021-03-03","2021-03-04","2021-03-05","2021-03-08","2021-03-09","2021-03-10","2021-03-11","2021-03-12","2021-03-15","2021-03-16","2021-03-17","2021-03-18","2021-03-19","2021-03-22","2021-03-23","2021-03-24","2021-03-25","2021-03-26","2021-03-29","2021-03-30","2021-03-31","2021-04-01","2021-04-05","2021-04-06","2021-04-07","2021-04-08","2021-04-09","2021-04-12","2021-04-13","2021-04-14","2021-04-15","2021-04-16","2021-04-19","2021-04-20","2021-04-21","2021-04-22","2021-04-23","2021-04-26","2021-04-27","2021-04-28","2021-04-29","2021-04-30","2021-05-03","2021-05-04","2021-05-05","2021-05-06","2021-05-07","2021-05-10","2021-05-11","2021-05-12","2021-05-13","2021-05-14","2021-05-17","2021-05-18","2021-05-19","2021-05-20","2021-05-21","2021-05-24","2021-05-25","2021-05-26","2021-05-27","2021-05-28","2021-06-01","2021-06-02","2021-06-03","2021-06-04","2021-06-07","2021-06-08","2021-06-09","2021-06-10","2021-06-11","2021-06-14","2021-06-15","2021-06-16","2021-06-17","2021-06-18","2021-06-21","2021-06-22","2021-06-23","2021-06-24","2021-06-25","2021-06-28","2021-06-29","2021-06-30","2021-07-01","2021-07-02","2021-07-06","2021-07-07","2021-07-08","2021-07-09","2021-07-12","2021-07-13","2021-07-14","2021-07-15","2021-07-16","2021-07-19","2021-07-20","2021-07-21","2021-07-22","2021-07-23","2021-07-26","2021-07-27","2021-07-28","2021-07-29","2021-07-30","2021-08-02","2021-08-03","2021-08-04","2021-08-05","2021-08-06","2021-08-09","2021-08-10","2021-08-11","2021-08-12","2021-08-13","2021-08-16","2021-08-17","2021-08-18","2021-08-19","2021-08-20","2021-08-23","2021-08-24","2021-08-25","2021-08-26","2021-08-27","2021-08-30","2021-08-31","2021-09-01","2021-09-02","2021-09-03","2021-09-07","2021-09-08","2021-09-09","2021-09-10","2021-09-13","2021-09-14","2021-09-15","2021-09-16","2021-09-17","2021-09-20","2021-09-21","2021-09-22","2021-09-23","2021-09-24","2021-09-27","2021-09-28","2021-09-29","2021-09-30","2021-10-01","2021-10-04","2021-10-05","2021-10-06","2021-10-07","2021-10-08","2021-10-11","2021-10-12","2021-10-13","2021-10-14","2021-10-15","2021-10-18","2021-10-19","2021-10-20","2021-10-21","2021-10-22","2021-10-25","2021-10-26","2021-10-27","2021-10-28","2021-10-29","2021-11-01","2021-11-02","2021-11-03","2021-11-04","2021-11-05","2021-11-08","2021-11-09","2021-11-10","2021-11-11","2021-11-12","2021-11-15","2021-11-16","2021-11-17","2021-11-18","2021-11-19","2021-11-22","2021-11-23","2021-11-24","2021-11-26","2021-11-29","2021-11-30","2021-12-01","2021-12-02","2021-12-03","2021-12-06","2021-12-07","2021-12-08","2021-12-09","2021-12-10","2021-12-13","2021-12-14","2021-12-15","2021-12-16","2021-12-17","2021-12-20","2021-12-21","2021-12-22","2021-12-23","2021-12-27","2021-12-28","2021-12-29","2021-12-30","2021-12-31","2022-01-03","2022-01-04","2022-01-05","2022-01-06","2022-01-07","2022-01-10","2022-01-11","2022-01-12","2022-01-13","2022-01-14","2022-01-18","2022-01-19","2022-01-20","2022-01-21","2022-01-24","2022-01-25","2022-01-26","2022-01-27","2022-01-28","2022-01-31","2022-02-01","2022-02-02","2022-02-03","2022-02-04","2022-02-07","2022-02-08","2022-02-09","2022-02-10","2022-02-11","2022-02-14","2022-02-15","2022-02-16","2022-02-17","2022-02-18","2022-02-22","2022-02-23","2022-02-24","2022-02-25","2022-02-28","2022-03-01","2022-03-02","2022-03-03","2022-03-04","2022-03-07","2022-03-08","2022-03-09","2022-03-10","2022-03-11","2022-03-14","2022-03-15","2022-03-16","2022-03-17","2022-03-18","2022-03-21","2022-03-22","2022-03-23","2022-03-24","2022-03-25","2022-03-28","2022-03-29","2022-03-30","2022-03-31","2022-04-01","2022-04-04","2022-04-05","2022-04-06","2022-04-07","2022-04-08","2022-04-11","2022-04-12","2022-04-13","2022-04-14","2022-04-18","2022-04-19","2022-04-20","2022-04-21","2022-04-22","2022-04-25","2022-04-26","2022-04-27","2022-04-28","2022-04-29","2022-05-02","2022-05-03","2022-05-04","2022-05-05","2022-05-06","2022-05-09","2022-05-10","2022-05-11","2022-05-12","2022-05-13","2022-05-16","2022-05-17","2022-05-18","2022-05-19","2022-05-20","2022-05-23","2022-05-24","2022-05-25","2022-05-26","2022-05-27","2022-05-31","2022-06-01","2022-06-02","2022-06-03","2022-06-06","2022-06-07","2022-06-08","2022-06-09","2022-06-10","2022-06-13","2022-06-14","2022-06-15","2022-06-16","2022-06-17","2022-06-21","2022-06-22","2022-06-23","2022-06-24","2022-06-27","2022-06-28","2022-06-29","2022-06-30","2022-07-01","2022-07-05","2022-07-06","2022-07-07","2022-07-08","2022-07-11","2022-07-12","2022-07-13","2022-07-14","2022-07-15","2022-07-18","2022-07-19","2022-07-20","2022-07-21","2022-07-22","2022-07-25","2022-07-26","2022-07-27","2022-07-28","2022-07-29","2022-08-01","2022-08-02","2022-08-03","2022-08-04","2022-08-05","2022-08-08","2022-08-09","2022-08-10","2022-08-11","2022-08-12","2022-08-15","2022-08-16","2022-08-17","2022-08-18","2022-08-19","2022-08-22","2022-08-23","2022-08-24","2022-08-25","2022-08-26","2022-08-29","2022-08-30","2022-08-31","2022-09-01","2022-09-02","2022-09-06","2022-09-07","2022-09-08","2022-09-09","2022-09-12","2022-09-13","2022-09-14","2022-09-15","2022-09-16","2022-09-19","2022-09-20","2022-09-21","2022-09-22","2022-09-23","2022-09-26","2022-09-27","2022-09-28","2022-09-29","2022-09-30","2022-10-03","2022-10-04","2022-10-05","2022-10-06","2022-10-07","2022-10-10","2022-10-11","2022-10-12","2022-10-13","2022-10-14","2022-10-17","2022-10-18","2022-10-19","2022-10-20","2022-10-21","2022-10-24","2022-10-25","2022-10-26","2022-10-27","2022-10-28","2022-10-31","2022-11-01","2022-11-02","2022-11-03","2022-11-04","2022-11-07","2022-11-08","2022-11-09","2022-11-10","2022-11-11","2022-11-14","2022-11-15","2022-11-16","2022-11-17","2022-11-18","2022-11-21","2022-11-22","2022-11-23","2022-11-25","2022-11-28","2022-11-29","2022-11-30","2022-12-01","2022-12-02","2022-12-05","2022-12-06","2022-12-07","2022-12-08","2022-12-09","2022-12-12","2022-12-13","2022-12-14","2022-12-15","2022-12-16","2022-12-19","2022-12-20","2022-12-21","2022-12-22","2022-12-23","2022-12-27","2022-12-28","2022-12-29","2022-12-30","2023-01-03","2023-01-04","2023-01-05","2023-01-06","2023-01-09","2023-01-10","2023-01-11","2023-01-12","2023-01-13","2023-01-17","2023-01-18","2023-01-19","2023-01-20","2023-01-23","2023-01-24","2023-01-25","2023-01-26","2023-01-27","2023-01-30","2023-01-31","2023-02-01","2023-02-02","2023-02-03","2023-02-06","2023-02-07","2023-02-08","2023-02-09","2023-02-10","2023-02-13","2023-02-14","2023-02-15","2023-02-16","2023-02-17","2023-02-21","2023-02-22","2023-02-23","2023-02-24","2023-02-27","2023-02-28","2023-03-01","2023-03-02","2023-03-03","2023-03-06","2023-03-07","2023-03-08","2023-03-09","2023-03-10","2023-03-13","2023-03-14","2023-03-15","2023-03-16","2023-03-17","2023-03-20","2023-03-21","2023-03-22","2023-03-23","2023-03-24","2023-03-27","2023-03-28","2023-03-29","2023-03-30","2023-03-31","2023-04-03","2023-04-04","2023-04-05","2023-04-06","2023-04-10","2023-04-11","2023-04-12","2023-04-13","2023-04-14","2023-04-17","2023-04-18","2023-04-19","2023-04-20","2023-04-21","2023-04-24","2023-04-25","2023-04-26","2023-04-27","2023-04-28","2023-05-01","2023-05-02","2023-05-03","2023-05-04","2023-05-05","2023-05-08","2023-05-09","2023-05-10","2023-05-11","2023-05-12","2023-05-15","2023-05-16","2023-05-17","2023-05-18","2023-05-19","2023-05-22","2023-05-23","2023-05-24","2023-05-25","2023-05-26","2023-05-30","2023-05-31","2023-06-01","2023-06-02","2023-06-05","2023-06-06","2023-06-07","2023-06-08","2023-06-09","2023-06-12","2023-06-13","2023-06-14","2023-06-15","2023-06-16","2023-06-20","2023-06-21","2023-06-22","2023-06-23","2023-06-26","2023-06-27","2023-06-28","2023-06-29","2023-06-30","2023-07-03","2023-07-05","2023-07-06","2023-07-07","2023-07-10","2023-07-11","2023-07-12","2023-07-13","2023-07-14","2023-07-17","2023-07-18","2023-07-19","2023-07-20","2023-07-21","2023-07-24","2023-07-25","2023-07-26","2023-07-27","2023-07-28","2023-07-31","2023-08-01","2023-08-02","2023-08-03","2023-08-04","2023-08-07","2023-08-08","2023-08-09","2023-08-10","2023-08-11","2023-08-14","2023-08-15","2023-08-16","2023-08-17","2023-08-18","2023-08-21","2023-08-22","2023-08-23","2023-08-24","2023-08-25","2023-08-28","2023-08-29","2023-08-30","2023-08-31","2023-09-01","2023-09-05","2023-09-06","2023-09-07","2023-09-08","2023-09-11","2023-09-12","2023-09-13","2023-09-14","2023-09-15","2023-09-18","2023-09-19","2023-09-20","2023-09-21","2023-09-22","2023-09-25","2023-09-26","2023-09-27","2023-09-28","2023-09-29","2023-10-02","2023-10-03","2023-10-04","2023-10-05","2023-10-06","2023-10-09","2023-10-10","2023-10-11","2023-10-12","2023-10-13","2023-10-16","2023-10-17","2023-10-18","2023-10-19","2023-10-20","2023-10-23","2023-10-24","2023-10-25","2023-10-26","2023-10-27","2023-10-30","2023-10-31","2023-11-01","2023-11-02","2023-11-03","2023-11-06","2023-11-07","2023-11-08","2023-11-09","2023-11-10","2023-11-13","2023-11-14","2023-11-15","2023-11-16","2023-11-17","2023-11-20","2023-11-21","2023-11-22","2023-11-24","2023-11-27","2023-11-28","2023-11-29","2023-11-30","2023-12-01","2023-12-04","2023-12-05","2023-12-06","2023-12-07","2023-12-08","2023-12-11","2023-12-12","2023-12-13","2023-12-14","2023-12-15","2023-12-18","2023-12-19","2023-12-20","2023-12-21","2023-12-22","2023-12-26","2023-12-27","2023-12-28","2023-12-29"],"y":[1.1781463623046875,-0.4488372802734375,0.916351318359375,3.6372528076171875,-1.533447265625,-2.4590911865234375,0.458160400390625,-3.3567962646484375,1.3184051513671875,-0.7667236328125,4.2450408935546875,-0.093505859375,-0.1402587890625,-0.03741455078125,1.907501220703125,-7.8355712890625,-0.1682891845703125,0.953704833984375,0.0841217041015625,1.71112060546875,-0.9817352294921875,2.1692352294921875,1.4493255615234375,-0.9350433349609375,4.1141204833984375,-1.477325439453125,-0.12158203125,-0.3459320068359375,1.0565643310546875,-1.47735595703125,1.8513641357421875,-2.98272705078125,-0.1683349609375,-0.6919403076171875,1.823333740234375,-2.169281005859375,-3.3115692138671875,1.9850921630859375,0.395111083984375,-2.6812286376953125,-0.921966552734375,2.3801727294921875,1.636962890625,-0.52685546875,4.4781646728515625,-1.636962890625,0.724395751953125,7.6391754150390625,-0.564483642578125,3.99835205078125,-1.13836669921875,-0.432769775390625,2.47430419921875,-0.6585540771484375,-0.3010711669921875,0.1411285400390625,0.9502105712890625,2.0132598876953125,-2.229644775390625,-0.790252685546875,1.0066375732421875,3.4244537353515625,2.8787994384765625,0.6585540771484375,-2.2202606201171875,1.157135009765625,-0.489166259765625,0.33868408203125,-0.9502105712890625,0.91253662109375,1.6934356689453125,-1.1947784423828125,1.128936767578125,-0.705596923828125,0.6585540771484375,1.524078369140625,-2.1356048583984375,2.51190185546875,-2.4178009033203125,2.6342010498046875,0.8184661865234375,-0.4891815185546875,-1.5993804931640625,1.110137939453125,-0.1692962646484375,-0.0188446044921875,2.135589599609375,-3.057586669921875,-5.56939697265625,1.72161865234375,1.83453369140625,-0.037689208984375,0.2352142333984375,-1.6745452880859375,1.909759521484375,-0.8843231201171875,0.6303253173828125,0.2163848876953125,0.1975860595703125,2.3613739013671875,0.302642822265625,-0.6148681640625,0.5108795166015625,-1.2581634521484375,0.8797149658203125,-1.59869384765625,0.8986968994140625,-1.1067657470703125,2.951416015625,2.213592529296875,0.0472869873046875,-0.5959320068359375,-0.728424072265625,-1.6081390380859375,-4.0299224853515625,3.10284423828125,0.9270782470703125,-0.60546875,0.085174560546875,-0.860870361328125,-1.2581634521484375,-0.6811065673828125,0.5865325927734375,1.2108917236328125,1.286468505859375,-0.8324432373046875,1.7784576416015625,-1.6933135986328125,2.6865692138671875,-0.0662078857421875,0.5297698974609375,0.908111572265625,-0.2364959716796875,-2.0149383544921875,-5.19342041015625,4.7393798828125,1.5703125,2.5919952392578125,4.0582733154296875,0.964874267578125,2.2419891357421875,-4.323150634765625,2.1190032958984375,-1.2392578125,-2.468994140625,-2.9798431396484375,-2.00543212890625,1.5041046142578125,-0.151397705078125,-1.4946441650390625,-1.16357421875,1.986572265625,1.0594940185546875,2.03387451171875,2.0338592529296875,-0.6527252197265625,-2.0811614990234375,-0.8040924072265625,1.1919403076171875,1.1068115234375,-1.1635894775390625,0.37841796875,-1.7784576416015625,0.501373291015625,-0.8419036865234375,2.05450439453125,0.656280517578125,1.6360321044921875,-0.99871826171875,-2.5015869140625,2.31134033203125,-0.0095062255859375,0.54217529296875,1.93084716796875,-0.076080322265625,-0.1427001953125,2.121124267578125,-0.684814453125,-3.2339935302734375,1.3411407470703125,2.5015869140625,1.5694122314453125,1.5599212646484375,1.6074676513671875,-4.1280670166015625,0.4850921630859375,-3.01519775390625,1.73114013671875,0.142669677734375,2.035491943359375,1.7882080078125,1.160430908203125,-0.589752197265625,-1.065277099609375,-1.9593963623046875,-1.778717041015625,1.8072357177734375,-2.18768310546875,0.009490966796875,0.4851226806640625,-2.90106201171875,1.597930908203125,-2.8154449462890625,-1.0462799072265625,-0.8750762939453125,6.001861572265625,2.6347198486328125,0.047576904296875,4.784393310546875,-1.274566650390625,1.1033172607421875,2.91058349609375,1.18896484375,-1.5313720703125,-0.428070068359375,0.4565887451171875,-2.8249664306640625,0.485076904296875,2.1591949462890625,-0.4565887451171875,0.218780517578125,0.7514190673828125,-1.4552764892578125,1.4552764892578125,2.063995361328125,1.3887176513671875,-6.753265380859375,0.275848388671875,-4.1318206787109375,-0.4017181396484375,4.4187774658203125,0.5068817138671875,6.178619384765625,3.9405517578125,-0.315673828125,2.639801025390625,2.5154571533203125,-1.798126220703125,-0.54522705078125,1.9129180908203125,0.9851226806640625,-3.6822357177734375,0.0286865234375,2.54412841796875,0.5260009765625,0.9660797119140625,2.190185546875,-0.344329833984375,0.583465576171875,-1.22430419921875,0.82257080078125,0.487762451171875,-0.06689453125,-1.2625274658203125,2.3911285400390625,-2.51544189453125,-2.5345611572265625,-2.1902923583984375,-1.1477203369140625,0.468658447265625,-3.5388336181640625,-1.1764068603515625,-1.205108642578125,-1.99896240234375,1.396392822265625,-0.93731689453125,-2.8023681640625,-0.7938385009765625,-1.0616607666015625,7.029815673828125,3.21368408203125,-0.439971923828125,3.146697998046875,-1.568572998046875,-0.554718017578125,-0.200836181640625,0.2199249267578125,-0.210418701171875,-2.8597259521484375,-1.635528564453125,-1.69287109375,0.4016876220703125,-0.6886444091796875,-2.06591796875,-0.3155975341796875,2.0084991455078125,-4.6960906982421875,-2.63983154296875,4.2274932861328125,-3.173828125,-4.94342041015625,1.2598876953125,-4.1259613037109375,-0.8078765869140625,-11.041000366210938,-1.481109619140625,-0.30780029296875,-0.4520263671875,4.6837921142578125,-0.6636199951171875,6.14569091796875,5.356964111328125,-0.6443634033203125,1.3945465087890625,-3.4623260498046875,2.6929168701171875,-1.92352294921875,3.9817047119140625,1.2695159912109375,1.3079986572265625,5.029998779296875,0.8271331787109375,-1.683074951171875,1.8946685791015625,-2.327484130859375,1.615753173828125,2.83721923828125,2.7891082763671875,-2.7891082763671875,-0.97137451171875,-1.2310638427734375,2.0774078369140625,-0.78863525390625,0.5289306640625,4.1740875244140625,0.4327850341796875,-0.577056884765625,-4.8857574462890625,2.6063690185546875,-4.13555908203125,-1.3849639892578125,6.7804412841796875,-4.837646484375,-2.4236602783203125,-0.7405548095703125,8.12689208984375,-5.1935272216796875,1.78887939453125,-3.1641998291015625,-1.74078369140625,-1.2021942138671875,-0.230804443359375,0.8174591064453125,-0.961761474609375,-2.3178253173828125,-10.175430297851562,-1.9716033935546875,4.7222442626953125,3.9336090087890625,6.27069091796875,-0.49053955078125,3.92401123046875,3.6354522705078125,0.3270111083984375,-2.8179779052734375,1.057952880859375,-0.61895751953125,-0.280426025390625,0.84136962890625,-3.2204437255859375,-3.3364715576171875,-4.622650146484375,1.054107666015625,0.28045654296875,0.1353759765625,-3.5879058837890625,-0.7833251953125,5.0385284423828125,3.3558197021484375,0.502899169921875,4.1778106689453125,-0.8413543701171875,-4.061798095703125,4.7484283447265625,-0.831695556640625,5.879913330078125,-0.6479644775390625,-0.8026580810546875,1.4312744140625,0.290130615234375,0.038665771484375,-1.740753173828125,1.1508331298828125,-0.067657470703125,2.3306427001953125,-2.5047454833984375,3.94573974609375,-1.8568115234375,-1.0734710693359375,0.502899169921875,-3.4912109375,6.489166259765625,1.7407989501953125,4.419586181640625,-0.0870513916015625,0.8317108154296875,-3.075347900390625,1.0057830810546875,-1.4022979736328125,-1.36358642578125,-2.350067138671875,3.1527557373046875,1.257171630859375,-2.0115509033203125,2.8045806884765625,3.1526947021484375,0.82208251953125,0.512542724609375,-0.232147216796875,-0.03863525390625,-3.4718475341796875,-2.3307037353515625,0.3094329833984375,1.6440582275390625,-5.4253387451171875,-1.24755859375,-2.09857177734375,0.165283203125,4.0742950439453125,-1.9058837890625,-0.1166839599609375,3.918731689453125,1.6141204833984375,-0.544525146484375,0.8265380859375,-5.873199462890625,1.3516082763671875,-2.1878509521484375,1.4002227783203125,2.042022705078125,-1.5655670166015625,-4.20068359375,-3.05328369140625,-1.93505859375,-2.1295166015625,-6.86505126953125,0.2333831787109375,-2.4698638916015625,-3.5589141845703125,4.47296142578125,3.072723388671875,0.5737152099609375,-4.22015380859375,-1.51690673828125,1.7113800048828125,2.0420074462890625,0.009735107421875,9.422393798828125,-3.4908447265625,3.2282867431640625,2.6352081298828125,1.51690673828125,-0.95294189453125,4.6479949951171875,0.748748779296875,0.3986663818359375,0.855682373046875,8.2652587890625,9.15020751953125,-1.808624267578125,0.281982421875,-2.5087890625,2.5087890625,1.62384033203125,1.7406005859375,1.935028076171875,-0.593109130859375,-1.8572998046875,-4.36602783203125,0.855682373046875,-4.307647705078125,4.541107177734375,0.826416015625,0.009796142578125,1.118255615234375,0.23333740234375,-1.4488525390625,1.6822509765625,-2.06146240234375,-1.429412841796875,2.8358154296875,0.596466064453125,0,-1.769927978515625,0.176025390625,-1.398345947265625,2.982513427734375,-1.320159912109375,4.478607177734375,-2.288177490234375,0.244476318359375,-2.738006591796875,-5.48583984375,-0.283599853515625,1.38861083984375,0.88983154296875,-2.337066650390625,1.760162353515625,-0.7138671875,-1.69171142578125,0.801849365234375,-2.346832275390625,0.7822265625,0.058746337890625,-2.180633544921875,7.14813232421875,-2.17083740234375,1.623260498046875,-0.09783935546875,-2.073028564453125,2.15130615234375,5.104400634765625,-7.89129638671875,-2.40557861328125,4.889312744140625,0.694305419921875,0.264007568359375,3.363800048828125,1.68194580078125,-2.2099609375,-1.53521728515625,-3.412750244140625,-1.105010986328125,-2.992218017578125,0.9974365234375,3.6082763671875,-0.567169189453125,-4.419921875,-2.1121978759765625,1.7210845947265625,3.6962890625,0.400909423828125,-0.048858642578125,-0.713897705078125,4.06793212890625,-1.408111572265625,0.088043212890625,-1.81884765625,-3.031402587890625,1.075653076171875,0.639312744140625,-1.17041015625,4.770050048828125,1.47528076171875,1.544097900390625,-3.4521484375,-1.77032470703125,-3.63897705078125,0.393402099609375,1.03265380859375,2.773529052734375,0.4327392578125,4.160247802734375,-3.314422607421875,3.481597900390625,-0.521240234375,-2.301422119140625,1.721160888671875,1.681793212890625,2.4686279296875,1.976837158203125,1.563751220703125,0.344268798828125,1.789947509765625,2.48828125,0.1376953125,-0.255706787109375,0.85565185546875,0.87530517578125,0.6884765625,0.80645751953125,3.707855224609375,-0.088531494140625,0.32452392578125,1.573638916015625,0.35406494140625,-0.265533447265625,1.04248046875,1.1212158203125,-1.662109375,-1.721160888671875,4.878204345703125,1.013031005859375,1.799774169921875,0.481964111328125,-2.80303955078125,-0.0589599609375,1.416259765625,0.088470458984375,-0.02947998046875,-0.088531494140625,-1.750640869140625,1.327728271484375,-0.236053466796875,-1.72113037109375,-0.678619384765625,0.58026123046875,1.47528076171875,-6.09771728515625,-2.930908203125,-0.442535400390625,-0.3934326171875,0.511444091796875,-1.101531982421875,0.18682861328125,2.7144775390625,3.5198974609375,-1.46331787109375,-3.84613037109375,-2.610260009765625,3.836273193359375,0.998626708984375,1.759918212890625,-0.019805908203125,-0.10870361328125,4.122955322265625,1.0777587890625,-0.652587890625,1.463287353515625,-1.20623779296875,-3.351776123046875,-0.810760498046875,2.18505859375,0.43505859375,2.699249267578125,3.89556884765625,-3.529754638671875,2.036773681640625,-1.9576416015625,-2.788238525390625,2.363037109375,0.247222900390625,0.86016845703125,-0.3856201171875,-0.27679443359375,-0.257110595703125,-0.85028076171875,0.306488037109375,2.966217041015625,-1.502899169921875,-0.296600341796875,-2.916748046875,-0.603118896484375,3.401214599609375,-1.146942138671875,-0.82061767578125,-2.105987548828125,-1.43365478515625,1.384185791015625,-3.954925537109375,4.330657958984375,-1.79949951171875,-1.33477783203125,-0.62286376953125,1.00848388671875,0.1878662109375,-0.5042724609375,-2.8673095703125,-3.500091552734375,-0.11865234375,-1.68084716796875,0.2669677734375,1.54241943359375,0.474609375,2.204833984375,-0.88983154296875,-0.089019775390625,0.642669677734375,-1.560638427734375,-0.208740234375,-1.769378662109375,-3.697845458984375,2.872772216796875,0.88470458984375,0.53680419921875,0.944305419921875,1.053680419921875,2.97222900390625,-6.491119384765625,-0.5069580078125,0.407562255859375,-0.924468994140625,-5.94439697265625,0.994049072265625,-2.425445556640625,-2.0477294921875,-4.055694580078125,1.9383544921875,-2.137176513671875,-5.6561279296875,-3.240570068359375,1.3121337890625,-3.5586700439453125,-3.986114501953125,1.6898651123046875,1.590484619140625,-0.596435546875,-4.7018280029296875,2.1073760986328125,1.6202850341796875,1.1928558349609375,4.860870361328125,2.33599853515625,-0.268402099609375,-3.3399658203125,2.504974365234375,0.7554931640625,-2.1869049072265625,-0.069580078125,4.3638458251953125,2.00799560546875,-0.198822021484375,4.850921630859375,1.013916015625,1.0338134765625,-0.238555908203125,-1.173004150390625,-0.576507568359375,0.874755859375,1.401611328125,2.276336669921875,-1.09344482421875,5.69586181640625,-0.3677978515625,3.260467529296875,1.431427001953125,1.4512939453125,0.60638427734375,-0.695831298828125,0.248504638671875,-1.699798583984375,3.129974365234375,4.1199951171875,0.170013427734375,0.410003662109375,0.319976806640625,-0.069976806640625,-1.260009765625,3.6199951171875,2.27001953125,4.509979248046875,-5.910003662109375,-2.75,2.96002197265625,0.5,-1.740020751953125,2.4000244140625,0.30999755859375,1.15997314453125,1.69000244140625,1.290008544921875,0.670013427734375],"mode":"lines","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+<figcaption class="figure-caption">Figure&nbsp;2: Plot of the stock price differences</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<!-- End of two columns -->
+<p><a href="#fig-example-stock-correlogram">Figure&nbsp;3</a> is the correlogram for the original McDonald’s stock price time series. <a href="#fig-example-diff-correlogram">Figure&nbsp;4</a> gives the correlogram for the differences in successive closing stock prices.</p>
+<!-- Beginning of two columns -->
+<div class="columns">
+<div class="column" style="width:45%;">
+<div class="cell" data-fig.asp="0.61">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(stock_ts<span class="sc">$</span>value, <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>, <span class="at">lag.max =</span> <span class="dv">25</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-example-stock-correlogram" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_4_lesson_2_files/figure-html/fig-example-stock-correlogram-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;3: Correlogram of the stock prices</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:10%;">
+<!-- empty column to create gap -->
+</div><div class="column" style="width:45%;">
+<div class="cell" data-fig.asp="0.61">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(stock_ts<span class="sc">$</span>diff <span class="sc">|&gt;</span> <span class="fu">na.omit</span>(), <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">type =</span> <span class="st">"correlation"</span>, <span class="at">lag.max =</span> <span class="dv">25</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-example-diff-correlogram" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_4_lesson_2_files/figure-html/fig-example-diff-correlogram-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;4: Correlogram of the stock prices</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- End of two columns -->
+<p><a href="#fig-example-stock-difference-histogram">Figure&nbsp;5</a> is a histogram of the differences. On the right, we give the variance of the differences in the stock prices. This is a simple measure of the volatility of the stock, or in other words, how much the price changes in a day.</p>
+<!-- Beginning of two columns -->
+<div class="columns">
+<div class="column" style="width:45%;">
+<div class="cell" data-fig.asp="0.61">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Hisogram of differences in stock prices</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>stock_ts <span class="sc">|&gt;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">density =</span> <span class="fu">dnorm</span>(diff, <span class="fu">mean</span>(stock_ts<span class="sc">$</span>diff, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="fu">sd</span>(stock_ts<span class="sc">$</span>diff, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> diff)) <span class="sc">+</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_histogram</span>(<span class="fu">aes</span>(<span class="at">y =</span> <span class="fu">after_stat</span>(density)),</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">color =</span> <span class="st">"white"</span>, <span class="at">fill =</span> <span class="st">"#56B4E9"</span>, <span class="at">binwidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> diff, <span class="at">y =</span> density)) <span class="sc">+</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Difference"</span>,</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Frequency"</span>,</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Histogram of Difference in the Closing Stock Prices"</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-example-stock-difference-histogram" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_4_lesson_2_files/figure-html/fig-example-stock-difference-histogram-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;5: Histogram of the stock price differences</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div><div class="column" style="width:10%;">
+<!-- empty column to create gap -->
+</div><div class="column" style="width:45%;">
+<p>The variance of the differences is 6.336.</p>
+</div>
+</div>
+<!-- End of two columns -->
+<p>Notice that the values in the correlogram start at 1 and slowly decay as <span class="math inline">\(k\)</span> increases. This is exactly what we would expect from a random walk. It is also interesting that the differences are nearly normally distributed.</p>
+</section>
+<section id="difference-operator" class="level3">
+<h3 class="anchored" data-anchor-id="difference-operator">Difference Operator</h3>
+<p>Differencing nonstationary time series often leads to a stationary series, so we will define a formal operator to express this process.</p>
+<div class="callout callout-style-default callout-note no-icon callout-titled" title="Definition of the Difference Operator">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Definition of the Difference Operator
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The <strong>difference operator</strong>, <span class="math inline">\(\nabla\)</span>, is defined as:</p>
+<p><span class="math display">\[\nabla x_t = x_t - x_{t-1} = (1-\mathbf{B}) x_t\]</span></p>
+<p>Higher-order differencing can be denoted</p>
+<p><span class="math display">\[\nabla^n x_t = (1-\mathbf{B})^n x_t\]</span></p>
+</div>
+</div>
+<p>To see what this expression gives us, note that <span class="math inline">\(\nabla\)</span> gives a new time series that is comprised of the differences between successive terms of the original time series. The operator <span class="math inline">\(\nabla^2\)</span> generates a time series that is comprised of the differences between successive terms of the <em>differenced</em> time series. It is the difference of the differences, or the second difference.</p>
+<!-- Check Your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Consider the following time series, where <span class="math inline">\(n=8\)</span>:</p>
+<center>
+<p><span class="math inline">\(x_{1} = 5\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{2} = 10\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{3} = 13\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{4} = 8\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{5} = 4\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{6} = 3\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{7} = 9\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{8} = 2\)</span></p>
+</center>
+<ul>
+<li>Find <span class="math inline">\(\nabla \{ x_t \}_{t=1}^n\)</span>, the sequence of first differences.</li>
+<li>Find <span class="math inline">\(\nabla^2 \{ x_t \}_{t=1}^n\)</span>, the sequence of second differences.</li>
+<li>Verify that <span class="math display">\[
+(1-\mathbf{B} )^2 x_t = (1-\mathbf{B} ) \left[ (1-\mathbf{B} ) x_t \right] = \nabla^2 x_t
+\]</span> is equal to the last term in the sequence of second differences.</li>
+<li>How could you show that <span class="math display">\[
+\nabla^n x_t = (1-\mathbf{B} )^n x_t
+\]</span></li>
+</ul>
+</div>
+</div>
+</section>
+</section>
+<section id="small-group-activity-differencing-stock-prices-15-min" class="level2">
+<h2 class="anchored" data-anchor-id="small-group-activity-differencing-stock-prices-15-min">Small Group Activity: Differencing Stock Prices (15 min)</h2>
+<p>In this activity, you will apply what you have learned to a new stock.</p>
+<!-- Check Your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Modify the <a href="#differencing">code used to get the prices of McDonald’s stock</a> to download closing stock prices for a different publicly-traded company over a time period of your choice. Do the following.</p>
+<ul>
+<li>Indicate which company you have chosen, the stock symbol, and the time period.</li>
+<li>Create a time plot of the daily closing stock prices.</li>
+<li>Produce a time plot of the differences in the daily closing stock prices.</li>
+<li>Create a correlogram of the stock prices</li>
+<li>Create a correlogram of the differences</li>
+<li>Generate a histogram of the difference in the stock prices and superimpose the corresponding normal density.</li>
+<li>Compute the variance of the differences</li>
+<li>Compare your results with those from the other teams of students.</li>
 </ul>
 </div>
 </div>
@@ -429,7 +888,7 @@ Check Your Understanding
 <li>Review upcoming homework assignment</li>
 <li>Clarify questions</li>
 </ul>
-<div class="callout callout-style-default callout-note no-icon callout-titled">
+<div class="callout callout-style-default callout-note no-icon callout-titled" data-icon="false">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
@@ -442,17 +901,77 @@ Download Homework
 <p><a href="https://byuistats.github.io/timeseries/homework/homework_4_2.qmd" download="homework_4_2.qmd"> homework_4_2.qmd </a></p>
 </div>
 </div>
-<p><a href="javascript:showhide('Solutions1')" style="font-size:.8em;">Class Activity</a></p>
-<div id="Solutions1" style="display:none;">
-
-</div>
-<p><a href="javascript:showhide('Solutions')" style="font-size:.8em;">Class Activity</a></p>
+<p><a href="javascript:showhide('Solutions2')" style="font-size:.8em;">Backward Shift Operator</a></p>
 <div id="Solutions2" style="display:none;">
-
+<center>
+<p><span class="math inline">\(x_{1} = 5\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{2} = 10\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{3} = 13\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{4} = 8\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{5} = 4\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{6} = 3\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{7} = 9\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{8} = 2\)</span></p>
+</center>
+<p>Check Your Understanding Solutions:</p>
+<ul>
+<li><span class="math inline">\(\mathbf{B} x_8 = x_7 = 9\)</span></li>
+<li><span class="math inline">\(\mathbf{B}^5 x_8 = x_3 = 13\)</span></li>
+<li><span class="math inline">\((\mathbf{B}^5 - \mathbf{B} ) x_8 = x_3 - x_7 = 13 - 9 = -1\)</span></li>
+<li><span class="math inline">\(( \mathbf{B}^2 - 6 \mathbf{B} + 9 ) x_8 = x_6 - 6 (x_7) + 9 (x_{t}) = 3 - 6 (9) + 9 (2) = -33\)</span></li>
+<li><span class="math inline">\(( (\mathbf{B} - 6) \mathbf{B} + 9 ) x_8 = -33\)</span></li>
+<li><span class="math inline">\(( \mathbf{B} - 3 )^2 x_8 = -33\)</span></li>
+<li><span class="math inline">\(( 1 - \frac{1}{2} B - \frac{1}{4} B^2 - \frac{1}{8} B^3 ) x_8 = x_8 - \frac{1}{2} x_7 - \frac{1}{4} x_6 - \frac{1}{8} x_5 = 2 - \frac{1}{2} (9) - \frac{1}{4} (3) - \frac{1}{8} (4) = -3.75\)</span></li>
+</ul>
 </div>
-<p><a href="javascript:showhide('Solutions3')" style="font-size:.8em;">Class Activity</a></p>
+<p><a href="javascript:showhide('Solutions3')" style="font-size:.8em;">Difference Operator</a></p>
 <div id="Solutions3" style="display:none;">
-
+<center>
+<p><span class="math inline">\(x_{1} = 5\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{2} = 10\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{3} = 13\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{4} = 8\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{5} = 4\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{6} = 3\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{7} = 9\)</span>,<span class="math inline">\(~\)</span> <span class="math inline">\(x_{8} = 2\)</span></p>
+</center>
+<p>Check Your Understanding Solutions:</p>
+<ul>
+<li><p>The values of the first differences are: <span class="math display">\[
+\nabla \{ x_t \}_{t=1}^n =
+\{
+5,
+~~
+3,
+~~
+-5,
+~~
+-4,
+~~
+-1,
+~~
+6,
+~~
+-7\}\]</span></p></li>
+<li><p>The values of the second differences are: <span class="math display">\[
+\nabla^2 \{ x_t \}_{t=1}^n =
+\{
+-2,
+~~
+-8,
+~~
+1,
+~~
+3,
+~~
+7,
+~~
+-13\}\]</span></p></li>
+<li><p>By substitution, we get:</p></li>
+</ul>
+<p><span class="math display">\[\begin{align*}
+(1-\mathbf{B} )^2 x_8
+&amp;= (1-\mathbf{B} ) \left[ (1-\mathbf{B} ) x_8 \right] \\
+&amp;= (1-\mathbf{B} ) ( x_8 - x_7 ) \\
+&amp;= ( x_8 - x_7 ) - \mathbf{B} ( x_8 - x_7 ) \\
+&amp;= ( x_8 - x_7 ) - ( x_7 - x_6 ) \\
+&amp;= ( \nabla x_8 ) - ( \nabla x_7 ) \\
+&amp;= \nabla ( \nabla x_8 ) \\
+&amp;= \nabla^2 x_8
+\end{align*}\]</span></p>
+<p><span class="math display">\[
+  \nabla^2 x_8
+    = ( x_8 - x_7 ) - ( x_7 - x_6 )
+    = (2 - 9) - (9 - 3) \\
+    = -13
+\]</span> This is the value of the last term in the sequence of second differences.</p>
 </div>
 
 
@@ -810,12 +1329,12 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
       <a href="./chapter_4_lesson_1.html" class="pagination-link">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">White Noise and Random Walks</span>
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">White Noise and Random Walks: Part 1</span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
       <a href="./chapter_4_lesson_3.html" class="pagination-link">
-        <span class="nav-page-text">Autoregressive Models: Part 1</span> <i class="bi bi-arrow-right-short"></i>
+        <span class="nav-page-text">Fitted Models and Diagnostic Plots—NEED TO WORK ON THIS</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
