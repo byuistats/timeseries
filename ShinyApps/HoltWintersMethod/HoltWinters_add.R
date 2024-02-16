@@ -220,12 +220,13 @@ ui <- fluidPage(
     ),
   fluidRow(
     column(6, tableOutput("preview_data")),
-    column(6, verbatimTextOutput("preview")),
+    column(6, verbatimTextOutput("preview"))
   ),
   div(id = "Predict",
     fluidRow(
-      column(4, offset = 5,actionButton("go", "Predict!")),
-      column(4, offset = 5,actionButton("explore", "exp!")),
+      column(4, offset = 5, actionButton("go", "Predict!")),
+      column(4, offset = 5, actionButton("explore", "exp!")),
+      column(12, textOutput("debug")),
     ),
   ),
   div(id = "AdvOutputs",
@@ -394,7 +395,16 @@ server <- function(input, output, session) {
 
   fil_data <- reactive({
     data <- sel_data()
-    data <- filter(data, dates >= base::as.Date(input$dateRange[1], format = "%Y/%m/%d") & dates <= base::as.Date(input$dateRange[2], format = "%Y/%m/%d"))
+
+    # Ensure the 'dates' column is of type Date
+    data <- data %>% mutate(dates = as.Date(dates))
+
+    # Convert input dates from Shiny input to Date objects
+    start_date <- as.Date(input$dateRange[1])
+    end_date <- as.Date(input$dateRange[2])
+
+    # Filter the data based on the date range
+    data <- data %>% dplyr::filter(dates >= start_date & dates <= end_date)
   })
 
 
@@ -402,7 +412,7 @@ server <- function(input, output, session) {
   sim_data <- eventReactive(input$go,{
     data <- fil_data()
 
-    forecast_dat <- holt_winters_forecast(data, "dates","value", alpha = input$a, input$b, gamma = input$g, p = input$p, predict_periods = input$periods,s_initial = S_initial_list(), round_to = "month", slope_type = "Additive", season_type = input$season)
+    forecast_dat <- holt_winters_forecast(data, "dates",input$value, alpha = input$a, input$b, gamma = input$g, p = input$p, predict_periods = input$periods,s_initial = S_initial_list(), round_to = "month", slope_type = "Additive", season_type = input$season)
     return(
       list(
         data <- forecast_dat
@@ -412,9 +422,10 @@ server <- function(input, output, session) {
 
   output$plot_fin<-renderPlot({
     data <- sim_data()[[1]]
+    value_col <- sym(input$value)
     if (input$season == "Additive"){
       ggplot(data, aes(x = dates)) +
-        geom_line(aes(y = value, color = "Base"),linetype=3, size = 1) +
+        geom_line(aes(y = !!value_col, color = "Base"),linetype=3, size = 1) +
         geom_line(aes(y = a_t + s_t, color = "Components", alpha=0.7), size = 1) +
         labs(
           x = "Date",
@@ -428,7 +439,7 @@ server <- function(input, output, session) {
         guides(alpha = FALSE)
     } else {
       ggplot(data, aes(x = dates)) +
-        geom_line(aes(y = value, color = "Base"),linetype=3, size = 1) +
+        geom_line(aes(y = !!value_col, color = "Base"),linetype=3, size = 1) +
         geom_line(aes(y = a_t * s_t, color = "Components", alpha=0.7), size = 1) +
         labs(
           x = "Date",
@@ -484,6 +495,11 @@ server <- function(input, output, session) {
   output$dattable <- renderDataTable({
     sim_data()[[1]]
   })
+
+  output$debug <- renderText({
+    paste0(" ")
+  })
+
 
   output$preview_data <- renderTable({
     data <- fil_data()

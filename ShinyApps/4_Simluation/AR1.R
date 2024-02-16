@@ -19,9 +19,9 @@ ui <- fluidPage(
   # If the columns of a row add to more than 12 it will simply start to overflow into a new row
   # so 3 columns in 6 in a single fluid row will have form a 2x2 grid, with the bottom right section being empty
   fluidRow(
-    column(6, sliderInput("sigma", "Standard Deviation", min = 0, max = 10, value = 1)),
-    column(6, sliderInput("alpha", "Alpha", min = 0, max = 1, value = .1)),
-    column(6, sliderInput("n_points", "Number of Points", min = 10, max = 500, value = 100, step = 10))
+    column(4, sliderInput("sigma", "Standard Deviation", min = 0, max = 10, value = 1)),
+    column(4, sliderInput("alpha", "Alpha", min = -1, max = 1, value = 1, step=0.2)),
+    column(4, sliderInput("n_points", "Number of Points", min = 10, max = 500, value = 100, step = 10))
   ),
   # the optional offset parameter allows you to adjust to position where the columns start
   fluidRow(
@@ -46,38 +46,38 @@ server <- function(input, output, session) {
       hide("outputs")
     }
   })
-  
+
   sim_data <- eventReactive(input$go, {
-    
-    
+
+
     wd <- tibble(
       seq = seq_len(input$n_points),
       w = rnorm(input$n_points, sd = input$sigma),
       values = ifelse(is.na(lag(cumsum(w),1)), w, input$alpha*(lag(cumsum(w),1)) + w)
     )
-    
-    
+
+
     # ACF plot data
     acf_plot <- tsibble(
       seq = seq_len(nrow(wd)),
       values = wd$values,
       index = seq
     ) |> ACF(values) |> autoplot()
-    
+
     list(sim_data = wd, acf_plot = acf_plot)
   })
-  
+
   output$plot <- renderPlot({
     df <- sim_data()$sim_data
-    
-    
+
+
     ggplot(df, aes(x = seq, y = values)) +
       geom_line() +
       labs(title = NULL,
            x = "x",
            y = "y")
   })
-  
+
   output$acf_plot <- renderPlot({
     sim_data()$acf_plot
   })
