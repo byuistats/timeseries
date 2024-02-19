@@ -297,7 +297,7 @@ date_end <- "2024-01-01"
 stock_df <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
 
 # Store data in a static file
-# stock_df |> rio::export("data/stock_price_mcd.parquet")
+stock_df |> rio::export("data/stock_price_mcd.parquet")
 
 # Retrieve static file
 # stock_df <- rio::import("data/stock_price_mcd.parquet")
@@ -306,22 +306,17 @@ stock_df <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices
 stock_ts <- stock_df %>%
   mutate(
     dates = date, 
-    year = lubridate::year(dates),
-    month = lubridate::month(dates),
     value = adjusted
   ) %>%
-  select(dates, year, month, value) %>%
+  select(dates, value) %>%
   as_tibble() %>% 
   arrange(dates) |>
-  mutate(
-    year = lubridate::year(dates),
-    month = lubridate::month(dates)
-  ) %>%
   mutate(diff = value - lag(value)) |>
   as_tsibble(index = dates, key = NULL)
 ```
 
-Consider the closing price of `r company` stock illustrated in the time plot in @fig-example-stock-price-plot, and @fig-example-stock-difference-plot gives the differences in the closing prices of the stock as a time series.
+Consider the closing price of `r company` stock illustrated in the time plot in @fig-example-stock-price-plot. 
+@fig-example-stock-difference-plot gives the differences in the closing prices of the stock as a time series.
 
 
 <!-- Beginning of two columns -->

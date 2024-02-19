@@ -161,6 +161,189 @@ for $k \ge 0$ when $|\alpha|<1$.
 
 ## Class Activity: Partial Autocorrelation (10 min)
 
+### Definition
+
+::: {.callout-note icon=false title="Partial Autocorrleation"}
+
+The **partial autocorrelation** at lag $k$ is defined as the portion of the correlation that is not explained by shorter lags.
+
+:::
+
+For example, the partial correlation for lag 4 is the correlation not explained by lags 1, 2, or 3.
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What is the value of the partial autocorrelation function for an $AR(2)$ process for all lags greater than 2?
+<!-- Zero -->
+
+:::
+
+On page 81, the textbook states that in general, the partial autocorrelation at lag $k$ is the $k^{th}$ coefficient of a fitted $AR(k)$ model.
+This implies that if the underlying process is $AR(p)$, then all the coefficients $\alpha_k=0$ if $k>p$. So, an $AR(p)$ process will yeild partial correlations that are zero after lag $p$. So, a correlogram of partial autocorrelations can be helpful to determine the order of an appropriate $AR$ process to model a time series.
+
+### Example: McDonald's Stock Price
+
+Here is a partial autocorrelation plot for the McDonald's stock price data:
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Set symbol and date range
+symbol <- "MCD"
+company <- "McDonald's"
+
+# Retrieve static file
+stock_df <- rio::import("data/stock_price_mcd.parquet")
+
+# Transform data into tibble
+stock_ts <- stock_df %>%
+  mutate(
+    dates = date, 
+    value = adjusted
+  ) %>%
+  select(dates, value) %>%
+  as_tibble() %>% 
+  arrange(dates) |>
+  mutate(diff = value - lag(value)) |>
+  as_tsibble(index = dates, key = NULL) 
+
+pacf(stock_ts$value, plot=TRUE, lag.max = 25)
+```
+
+The only significant partial correlation is at lag $k=1$. This suggests that an $AR(1)$ process could be used to model the McDonald's stock prices.
+
+### Partial Autocorrelation Plots of Various $AR(p)$ Processes
+
+Here are some time plots, correlograms, and partial correlograms for $AR(p)$ processes with various values of $p$.
+
+::: panel-tabset
+#### $p=1$
+
+```{r}
+#| echo: false
+
+alpha_1 <- 0.7
+```
+
+$$
+  x_t = `r alpha_1` x_{t-1} + w_t
+$$
+
+```{r}
+#| echo: false
+
+# AR(1) process
+set.seed(1)
+n_days <- 500
+x <- w <- rnorm(n_days)
+start_date <- my(paste(1, floor(year(now())-n_days/365)))
+date_seq <- seq(start_date,
+    start_date + days(n_days - 1),
+    by = "1 days")
+
+for (t in 2:n_days) {
+  x[t] <- alpha_1 * x[t-1] + w[t]
+}
+
+sim_ts <- data.frame(dates = date_seq, x=x) |>
+  as_tsibble(index = dates)
+
+sim_ts |>
+  autoplot(.vars = x)
+
+acf(sim_ts$x)
+
+pacf(sim_ts$x)
+```
+
+#### $p=2$
+
+```{r}
+#| echo: false
+
+alpha_1 <- 0.5
+alpha_2 <- 0.5
+```
+
+$$
+  x_t = `r alpha_1` x_{t-1} + `r alpha_2` x_{t-2} + w_t
+$$
+
+```{r}
+#| echo: false
+
+# AR(2) process
+x <- w <- rnorm(n_days)
+start_date <- my(paste(1, floor(year(now())-n_days/365)))
+date_seq <- seq(start_date,
+    start_date + days(n_days - 1),
+    by = "1 days")
+
+x[2] <- alpha_1 * x[1] + w[2]
+for (t in 3:n_days) {
+  x[t] <- alpha_1 * x[t-1] + alpha_2 * x[t-2] + w[t]
+}
+
+sim_ts <- data.frame(dates = date_seq, x=x) |>
+  as_tsibble(index = dates)
+
+sim_ts |>
+  autoplot(.vars = x)
+
+acf(sim_ts$x)
+
+pacf(sim_ts$x)
+```
+
+
+#### $p=3$
+
+```{r}
+#| echo: false
+
+alpha_1 <- 0.25
+alpha_2 <- 0.2
+alpha_3 <- 0.15
+```
+
+$$
+  x_t = `r alpha_1` x_{t-1} + `r alpha_2` x_{t-2} + `r alpha_3` x_{t-3} + w_t
+$$
+
+```{r}
+#| echo: false
+
+# AR(3) process
+x <- w <- rnorm(n_days)
+start_date <- my(paste(1, floor(year(now())-n_days/365)))
+date_seq <- seq(start_date,
+    start_date + days(n_days - 1),
+    by = "1 days")
+
+x[2] <- alpha_1 * x[1] + w[2]
+x[3] <- alpha_1 * x[2] + alpha_2 * x[1] + w[3]
+for (t in 4:n_days) {
+  x[t] <- alpha_1 * x[t-1] + alpha_2 * x[t-2] + alpha_3 * x[t-3] + w[t]
+}
+
+sim_ts <- data.frame(dates = date_seq, x=x) |>
+  as_tsibble(index = dates)
+
+sim_ts |>
+  autoplot(.vars = x)
+
+acf(sim_ts$x)
+
+pacf(sim_ts$x)
+```
+
+:::
+
 # Finish previous section
 
 ## Small Group Activity: Simulation (10 min)
