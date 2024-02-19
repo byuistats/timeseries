@@ -19,12 +19,20 @@ ui <- fluidPage(
   # If the columns of a row add to more than 12 it will simply start to overflow into a new row
   # so 3 columns in 6 in a single fluid row will have form a 2x2 grid, with the bottom right section being empty
   fluidRow(
-    column(6, sliderInput("sigma", "Standard Deviation", min = 0, max = 10, value = 1)),
-    column(6, sliderInput("n_points", "Number of Points", min = 10, max = 500, value = 100, step = 10)),
+    column(6, sliderInput("sigma", "Standard Deviation", min = 0, max = 10, value = 1, step = 0.1)),
+    column(6, sliderInput("n_points", "Number of Points", min = 0, max = 500, value = 100, step = 10)),
   ),
   # the optional offset parameter allows you to adjust to position where the columns start
-  fluidRow(
-    column(4,  offset = 5, actionButton("go", "Simulate!"))
+  div(id = "button",
+      fluidRow(
+        column(4,  offset = 5, actionButton("go", "Simulate!"))
+      )
+  ),
+  # Here is an example of using the overflow feature to get multiple 'rows' without needing to define tons of fluidRow()'s
+  div(id = "error",
+      fluidRow(
+        column(12, h4("Invalid Number of Points"))
+      )
   ),
   # Here is an example of using the overflow feature to get multiple 'rows' without needing to define tons of fluidRow()'s
   div(id = "outputs",
@@ -43,6 +51,16 @@ server <- function(input, output, session) {
       show("outputs")
     } else {
       hide("outputs")
+    }
+  })
+
+  observe({
+    if (input$n_points == 0) {
+      show("error")
+      hide("button")
+    } else {
+      show("button")
+      hide("error")
     }
   })
 

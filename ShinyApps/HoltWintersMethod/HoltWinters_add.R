@@ -7,11 +7,11 @@ if (!require("MASS")) install.packages("MASS")
 
 # Load required libraries
 library(shiny)
+library(zoo)
 library(dplyr)
 library(ggplot2)
 library(kableExtra)
 library(tidyverse)
-library(zoo)
 library(tsibble)
 library(rio)
 library(fable)
@@ -142,19 +142,19 @@ holt_winters_forecast <- function(df, date_var, value_var, p = 12, predict_perio
       df$a_t[t] <- alpha * (df$x_t[t] - df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t - 1] + df$b_t[t - 1])
       df$b_t[t] <- beta * (df$a_t[t] - df$a_t[t - 1]) + (1 - beta) * df$b_t[t - 1]
       df$s_t[t] <- gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index]# add slope & add season
-    } else if (slope_type == "Multiplicative" & season_type == "Multiplicative"){
+    } else { #(slope_type == "Additive" & season_type == "Multiplicative")
       df$a_t[t] = alpha * (df$x_t[t] / df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
       df$b_t[t] = beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
       df$s_t[t] = gamma * (df$x_t[t] / df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index] # add slope & mult season
-    } else if (slope_type == "Multiplicative" & season_type == "Additive"){
-      df$a_t[t] = alpha * (df$x_t[t] + df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
-      df$b_t[t] = beta * (df$a_t[t] / df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
-      df$s_t[t] = gamma * (df$x_t[t] + df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index] # mult slope & add season
-    } else {
-      df$a_t[t] = alpha * (df$x_t[t] / df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
-      df$b_t[t] = beta * (df$a_t[t] / df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
-      df$s_t[t] = gamma * (df$x_t[t] / df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index] # mult slope & mult season
-    }
+    } # else if (slope_type == "Multiplicative" & season_type == "Additive"){
+    #   df$a_t[t] = alpha * (df$x_t[t] + df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
+    #   df$b_t[t] = beta * (df$a_t[t] / df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
+    #   df$s_t[t] = gamma * (df$x_t[t] + df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index] # mult slope & add season
+    # } else {
+    #   df$a_t[t] = alpha * (df$x_t[t] / df$s_t[prior_seasonal_index]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1])
+    #   df$b_t[t] = beta * (df$a_t[t] / df$a_t[t-1]) + (1 - beta) * df$b_t[t-1]
+    #   df$s_t[t] = gamma * (df$x_t[t] / df$a_t[t]) + (1 - gamma) * df$s_t[prior_seasonal_index] # mult slope & mult season
+    # }
   }
 
   ### Footer
@@ -168,13 +168,14 @@ holt_winters_forecast <- function(df, date_var, value_var, p = 12, predict_perio
     df$s_t[t] <- df$s_t[t - p] # Carry forward the seasonal component
     if (slope_type == "Additive" & season_type == "Additive"){
       df$xhat_t[t] <- (df$a_t[last_actual_t] + forecast_index * df$b_t[last_actual_t]) + df$s_t[t - p] # add slope & add season
-    } else if (slope_type == "Additive" & season_type == "Multiplicative"){
+    } else { #(slope_type == "Additive" & season_type == "Multiplicative")
       df$xhat_t[t] <- (df$a_t[last_actual_t] + forecast_index * df$b_t[last_actual_t]) * df$s_t[t - p] # add slope & mult season
-    } else if (slope_type == "Multiplicative" & season_type == "Additive"){
-      df$xhat_t[t] <- (df$a_t[last_actual_t] + df$b_t[last_actual_t]^(forecast_index)) + df$s_t[t - p] # mult slope & add season
-    } else {
-      df$xhat_t[t] <- (df$a_t[last_actual_t] + df$b_t[last_actual_t]^(forecast_index)) * df$s_t[t - p] # mult slope & mult season
     }
+    # } else if (slope_type == "Multiplicative" & season_type == "Additive"){
+    #   df$xhat_t[t] <- (df$a_t[last_actual_t] + df$b_t[last_actual_t]^(forecast_index)) + df$s_t[t - p] # mult slope & add season
+    # } else {
+    #   df$xhat_t[t] <- (df$a_t[last_actual_t] + df$b_t[last_actual_t]^(forecast_index)) * df$s_t[t - p] # mult slope & mult season
+    # }
   }
 
 
@@ -505,6 +506,14 @@ server <- function(input, output, session) {
     data <- fil_data()
     data$dates <- as.character(data$dates)
     data[1:5,]
+    data <- fil_data()
+    selected_val <- input$value
+
+    # Rename the dynamically selected column to a fixed name, e.g., "target"
+    data <- data %>%
+      mutate(target = data[[selected_val]])
+    data$dates <- as.character(data$dates)
+    data[1:5,]
   })
 
   exp_data <- eventReactive(input$explore,{
@@ -513,7 +522,9 @@ server <- function(input, output, session) {
 
     # Rename the dynamically selected column to a fixed name, e.g., "target"
     data <- data %>%
-      mutate(target = .data[[selected_val]])
+      mutate(target = data[[selected_val]],
+             dates = as.Date(dates)) %>%
+      as_tsibble(index = dates)
 
     # Now, you can use a fixed formula since the target column name is known
     season_type <- if (input$season == "Additive") "A" else "M"
@@ -523,6 +534,8 @@ server <- function(input, output, session) {
       model(ExploreModel = ETS(!!as.formula(formula), opt_crit = "amse", nmse = 1))
 
     report(data_hw)
+    names(data)
+    print(formula)
   })
 
   output$preview <- renderPrint({
