@@ -20,6 +20,40 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -274,10 +308,14 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#learning-outcomes" id="toc-learning-outcomes" class="nav-link active" data-scroll-target="#learning-outcomes">Learning Outcomes</a></li>
   <li><a href="#preparation" id="toc-preparation" class="nav-link" data-scroll-target="#preparation">Preparation</a></li>
   <li><a href="#learning-journal-exchange-10-mins" id="toc-learning-journal-exchange-10-mins" class="nav-link" data-scroll-target="#learning-journal-exchange-10-mins">Learning Journal Exchange (10 mins)</a></li>
+  <li><a href="#class-activity-fitting-a-holt-winters-model-when-first-differences-leave-additional-correlations" id="toc-class-activity-fitting-a-holt-winters-model-when-first-differences-leave-additional-correlations" class="nav-link" data-scroll-target="#class-activity-fitting-a-holt-winters-model-when-first-differences-leave-additional-correlations">Class Activity: Fitting a Holt-Winters Model (When First Differences Leave Additional Correlations)</a></li>
+  <li><a href="#what-to-do-with-the-stuff-below-this-line" id="toc-what-to-do-with-the-stuff-below-this-line" class="nav-link" data-scroll-target="#what-to-do-with-the-stuff-below-this-line">What to do with the stuff below this line????</a>
+  <ul class="collapse">
   <li><a href="#class-activity-fitting-a-holt-winters-model-and-connecting-it-to-the-backward-shift-operator-15-min" id="toc-class-activity-fitting-a-holt-winters-model-and-connecting-it-to-the-backward-shift-operator-15-min" class="nav-link" data-scroll-target="#class-activity-fitting-a-holt-winters-model-and-connecting-it-to-the-backward-shift-operator-15-min">Class Activity: Fitting a Holt-Winters Model and Connecting it to the Backward Shift Operator (15 min)</a></li>
   <li><a href="#class-activity-fitting-a-random-walk-with-drift-15-min" id="toc-class-activity-fitting-a-random-walk-with-drift-15-min" class="nav-link" data-scroll-target="#class-activity-fitting-a-random-walk-with-drift-15-min">Class Activity: Fitting a Random Walk with Drift (15 min)</a></li>
   <li><a href="#small-group-activity-fitting-a-random-walk-with-drift-20-min" id="toc-small-group-activity-fitting-a-random-walk-with-drift-20-min" class="nav-link" data-scroll-target="#small-group-activity-fitting-a-random-walk-with-drift-20-min">Small Group Activity: Fitting a Random Walk with Drift (20 min)</a></li>
   <li><a href="#homework-preview-5-min" id="toc-homework-preview-5-min" class="nav-link" data-scroll-target="#homework-preview-5-min">Homework Preview (5 min)</a></li>
+  </ul></li>
   </ul>
 </nav>
     </div>
@@ -360,6 +398,76 @@ MainOutcome
 <li><p>Sign the Learning Journal review sheet for your peer</p></li>
 </ul>
 </section>
+<section id="class-activity-fitting-a-holt-winters-model-when-first-differences-leave-additional-correlations" class="level2">
+<h2 class="anchored" data-anchor-id="class-activity-fitting-a-holt-winters-model-when-first-differences-leave-additional-correlations">Class Activity: Fitting a Holt-Winters Model (When First Differences Leave Additional Correlations)</h2>
+<p>Consider the rate of exchange for one U.S. dollar (USD) to Canadian dollars. Here is a time plot of this exchange rate.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>usd1_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"data/exchange_rates.parquet"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(currency <span class="sc">==</span> <span class="st">"USD.CAD"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">diff =</span> rate <span class="sc">-</span> <span class="fu">lag</span>(rate)) <span class="sc">|&gt;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> date) <span class="sc">|&gt;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">na.omit</span>()</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>usd1_ts <span class="sc">%&gt;%</span> </span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> rate) <span class="sc">+</span> </span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Converstion Rate for 1 USD to Canadian Dollars"</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">subtitle =</span> </span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste0</span>(</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>          <span class="fu">format</span>(<span class="fu">min</span>(usd1_ts<span class="sc">$</span>date), <span class="st">"%d %b %Y"</span>),</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>            <span class="st">" - "</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>          <span class="fu">format</span>(<span class="fu">max</span>(usd1_ts<span class="sc">$</span>date), <span class="st">"%d %b %Y"</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>          ),</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Date"</span>,</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Conversion Rate"</span>,</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="chapter_4_lesson_3_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>The exchange rates between countries varies over time. It is reasonable to conclude that this time series is non-stationary. We take the first differences of the values to try to remove the non-stationarity.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>usd1_ts <span class="sc">%&gt;%</span> </span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> diff) <span class="sc">+</span> </span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"First Differences of the USD:CAD Converstion Rate"</span>,</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>      <span class="at">subtitle =</span> </span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">paste0</span>(</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>          <span class="fu">format</span>(<span class="fu">min</span>(usd1_ts<span class="sc">$</span>date), <span class="st">"%d %b %Y"</span>),</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>            <span class="st">" - "</span>,</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>          <span class="fu">format</span>(<span class="fu">max</span>(usd1_ts<span class="sc">$</span>date), <span class="st">"%d %b %Y"</span>)</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>          ),</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Date"</span>,</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Conversion Rate"</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="chapter_4_lesson_3_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
+</div>
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">acf</span>(usd1_ts<span class="sc">$</span>diff, <span class="at">main =</span> <span class="fu">paste</span>(<span class="st">"ACF of First Difference of"</span>, usd1_ts<span class="sc">$</span>currency[<span class="dv">1</span>]))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="chapter_4_lesson_3_files/figure-html/unnamed-chunk-3-2.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+</section>
+<section id="what-to-do-with-the-stuff-below-this-line" class="level1">
+<h1>What to do with the stuff below this line????</h1>
 <section id="class-activity-fitting-a-holt-winters-model-and-connecting-it-to-the-backward-shift-operator-15-min" class="level2">
 <h2 class="anchored" data-anchor-id="class-activity-fitting-a-holt-winters-model-and-connecting-it-to-the-backward-shift-operator-15-min">Class Activity: Fitting a Holt-Winters Model and Connecting it to the Backward Shift Operator (15 min)</h2>
 </section>
@@ -419,6 +527,7 @@ Download Homework
 </div>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->

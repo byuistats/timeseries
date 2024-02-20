@@ -59,6 +59,74 @@ source("common_functions.R")
 -   Sign the Learning Journal review sheet for your peer
 
 
+## Class Activity: Fitting a Holt-Winters Model (When First Differences Leave Additional Correlations)
+
+
+Consider the rate of exchange for one U.S. dollar (USD) to Canadian dollars. Here is a time plot of this exchange rate.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+usd1_ts <- rio::import("data/exchange_rates.parquet") |>
+  filter(currency == "USD.CAD") |>
+  mutate(diff = rate - lag(rate)) |>
+  as_tsibble(index = date) |>
+  na.omit()
+
+usd1_ts %>% 
+  autoplot(.vars = rate) + 
+    labs(
+      title = "Converstion Rate for 1 USD to Canadian Dollars",
+      subtitle = 
+        paste0(
+          format(min(usd1_ts$date), "%d %b %Y"),
+            " - ",
+          format(max(usd1_ts$date), "%d %b %Y")
+          ),
+      x = "Date",
+      y = "Conversion Rate",
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+```
+
+The exchange rates between countries varies over time. It is reasonable to conclude that this time series is non-stationary. We take the first differences of the values to try to remove the non-stationarity.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+usd1_ts %>% 
+  autoplot(.vars = diff) + 
+    labs(
+      title = "First Differences of the USD:CAD Converstion Rate",
+      subtitle = 
+        paste0(
+          format(min(usd1_ts$date), "%d %b %Y"),
+            " - ",
+          format(max(usd1_ts$date), "%d %b %Y")
+          ),
+      x = "Date",
+      y = "Conversion Rate",
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+
+```
+
+
+
+
+# What to do with the stuff below this line????
+
+
 ## Class Activity: Fitting a Holt-Winters Model and Connecting it to the Backward Shift Operator (15 min)
 
 
