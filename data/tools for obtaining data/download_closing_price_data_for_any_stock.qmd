@@ -57,47 +57,26 @@ date_end <- "2024-01-01"
 
 # Fetch stock prices
 df_stock <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
-```
 
 
 ## Data Transformation:
-The retrieved data was transformed into a tibble format and further converted into a tsibble, a specialized time series tibble, for easier handling and analysis.
+# The retrieved data was transformed into a tibble format and further converted into a # tsibble, a specialized time series tibble, for easier handling and analysis.
 
-```{r, warning=FALSE}
 # Transform data into tibble
-df_tibble <- df_stock %>%
+df_tsibble <- df_stock %>%
   mutate(
     dates = date, 
-    year = lubridate::year(dates),
-    month = lubridate::month(dates),
     value = adjusted
   ) %>%
-  select(dates, year, month, value) %>%
-  as_tibble() %>% 
+  select(dates, value) %>%
+  as_tsibble(index = dates, key = NULL) %>% 
   arrange(dates)
-```
 
 ## Time Series Plot:
-A time series plot was generated using plot_ly to visualize the trend in Netflix stock prices over the specified period. The plot provides insights into the historical performance of the stock chosen.
+# A time series plot was generated using plot_ly to visualize the trend in Netflix stock prices over the specified period. The plot provides insights into the historical performance of the stock chosen.
 
-```{r, warning=FALSE}
-# Convert tibble to tsibble
-desired_tsibble <- as_tsibble(df_tibble, index = dates, key = NULL)
-
-# Extract year and month from dates
-desired_tsibble <- desired_tsibble %>%
-  mutate(
-    year = lubridate::year(dates),
-    month = lubridate::month(dates)
-  ) %>%
-  select(-dates)
-```
-
-
-
-```{r, warning=FALSE}
 # Generate time series plot using plot_ly
-plot_ly(desired_tsibble, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') %>%
+plot_ly(df_tsibble, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') %>%
   layout(
     xaxis = list(title = "Date"),
     yaxis = list(title = "Value"),
@@ -107,11 +86,11 @@ plot_ly(desired_tsibble, x = ~dates, y = ~value, type = 'scatter', mode = 'lines
 
 
 ```{r, warning=FALSE}
-desired_tsibble <- desired_tsibble |>
+df_tsibble <- df_tsibble |>
   mutate(diff = value - lag(value))
 
 # Generate time series plot using plot_ly
-plot_ly(desired_tsibble, x = ~dates, y = ~diff, type = 'scatter', mode = 'lines') %>%
+plot_ly(df_tsibble, x = ~dates, y = ~diff, type = 'scatter', mode = 'lines') %>%
   layout(
     xaxis = list(title = "Date"),
     yaxis = list(title = "Value"),
@@ -122,7 +101,7 @@ plot_ly(desired_tsibble, x = ~dates, y = ~diff, type = 'scatter', mode = 'lines'
 
 
 ```{r}
-autoplot(desired_tsibble, .vars = value) +  
+autoplot(df_tsibble, .vars = value) +  
   labs(
     x = "",
     y = "Closign Price point",
@@ -138,7 +117,9 @@ autoplot(desired_tsibble, .vars = value) +
 
 
 ```{r}
-plot_ly(desired_tsibble, x = ~factor(month), y = ~value, type = 'box') %>%
+df_tsibble <- df_tsibble |>
+  mutate(month = month(dates))
+plot_ly(df_tsibble, x = ~factor(month), y = ~value, type = 'box') %>%
   layout(
     xaxis = list(title = ""),
     yaxis = list(title = "Value"),
@@ -149,7 +130,7 @@ plot_ly(desired_tsibble, x = ~factor(month), y = ~value, type = 'box') %>%
 
 
 ```{r}
-ggplot(desired_tsibble, aes(x = factor(month), y = value)) +
+ggplot(df_tsibble, aes(x = factor(month), y = value)) +
     geom_boxplot() +
   labs(
     x = "Month Number",
@@ -160,30 +141,6 @@ ggplot(desired_tsibble, aes(x = factor(month), y = value)) +
 ```
 
 
-
-
-```{r}
-# computes the 12-month centered moving average (m_hat)
-desired_tsibble <- desired_tsibble |> 
-  mutate(
-    m_hat = (
-          (1/2) * lag(value, 6)
-          + lag(value, 5)
-          + lag(value, 4)
-          + lag(value, 3)
-          + lag(value, 2)
-          + lag(value, 1)
-          + value
-          + lead(value, 1)
-          + lead(value, 2)
-          + lead(value, 3)
-          + lead(value, 4)
-          + lead(value, 5)
-          + (1/2) * lead(value, 6)
-        ) / 12
-  )
-desired_tsibble
-```
 
 
 

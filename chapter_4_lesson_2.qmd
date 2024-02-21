@@ -308,7 +308,7 @@ stock_ts <- stock_df %>%
     dates = date, 
     value = adjusted
   ) %>%
-  select(dates, value) %>%
+  dplyr::select(dates, value) %>%
   as_tibble() %>% 
   arrange(dates) |>
   mutate(diff = value - lag(value)) |>
@@ -509,7 +509,89 @@ $$
 
 :::
 
+The difference operator can be helpful in identifying the functional underpinnings of a trend.
+If a function is linear, then the first differences of equally-spaced values will be constant. If a function is quadratic, then the second differences of equally-spaced values will be constant. If a function is cubic, then the third differences of equally-spaced values will be constant, and so on.
 
+```{r, results='asis'}
+#| echo: false
+
+df_linear <- data.frame(t = 1:10) |>
+  mutate(x = 5 + 2.5 * t) |>
+  mutate(diff1 = x - lag(x))
+
+df_linear |>
+  ggplot(aes(x = t, y = x)) +
+  geom_point() +
+  theme_bw() +
+  labs(
+    title = "Linear Function",
+    subtitle = "$$x_t = 2.5 * t + 5$$"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+df_linear |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1
+  ) |>
+  display_table("1in")
+```
+
+```{r}
+#| echo: false
+
+df_quadratic <- data.frame(t = 1:10) |>
+  mutate(x = 2 * (t - 5.5)^2 - 4) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1))
+
+df_quadratic |>
+  ggplot(aes(x = t, y = x)) +
+  geom_point() +
+  theme_bw() +
+  labs(title = "Quadratic Function") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+df_quadratic |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    "$$\\nabla^2 x_t$$" = diff2
+  ) |>
+  display_table("1in")
+```
+
+```{r}
+#| echo: false
+
+df_cubic <- data.frame(t = 1:9) |>
+  mutate(x = (t - 5.5) * (t - 2) * (t - 7) / 10) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  mutate(diff3 = diff2 - lag(diff2)) 
+
+df_cubic |>
+  ggplot(aes(x = t, y = x)) +
+  geom_point() +
+  theme_bw() +
+  labs(title = "Cubic Function") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+df_cubic |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    "$$\\nabla^2 x_t$$" = diff2,
+    "$$\\nabla^3 x_t$$" = diff3
+  ) |>
+  display_table("1in")
+```
 
 
 ## Small Group Activity: Differencing Stock Prices (15 min)
@@ -536,6 +618,125 @@ Modify the <a href="#differencing">code used to get the prices of `r company` st
 
 
 
+## Class Activity: Random Walk with Drift (10 min)
+
+```{r}
+# Set date range
+date_start <- "2023-05-01"
+date_end <- "2024-01-01"
+```
+
+We will now consider the daily closing price of Abercrombie & Fitch stock. Here is a time series plot of these stock from 
+`r format(ymd(date_start), "%d %b %Y")` to `r format(ymd(date_end), "%d %b %Y")`.
+
+```{r}
+# Set symbol 
+symbol <- "ANF"
+
+# Fetch stock prices
+df_stock <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
+
+# Transform data into tibble
+df_tsibble <- df_stock |>
+  mutate(
+    dates = date, 
+    value = close
+  ) |>
+  dplyr::select(dates, value) |>
+  as_tibble() |> 
+  arrange(dates) |>
+  as_tsibble(index = dates, key = NULL)
+
+# Generate time series plot using plot_ly
+plot_ly(df_tsibble, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') |>
+  layout(
+    xaxis = list(title = "Date"),
+    yaxis = list(title = "Value"),
+    title = paste0("Time Plot of ", symbol, " Daily Closing Price")
+  )
+```
+
+We now generate a time plot and a correlogram of the differences.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+df_tsibble$diff = df_tsibble$value - lag(df_tsibble$value) 
+df_tsibble |>
+  na.omit() |>
+  autoplot(.vars = diff) + 
+    labs(
+      title = "Time Plot of Differences in Daily ANF Stock Prices",
+      subtitle = 
+        paste0(
+          format(min(df_tsibble$dates), "%d %b %Y"),
+            " - ",
+          format(max(df_tsibble$dates), "%d %b %Y")
+          ),
+      x = "Date",
+      y = "Difference",
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+acf(df_tsibble$diff |> na.omit(), main = "ACF of First Difference of ANF Stock Prices")
+```
+
+There is no significant autocorrelation in the differences. They appear to be modeled well by white noise. 
+
+We now compute the mean and standard deviation of the differences.
+
+```{r}
+mean_diff <- df_tsibble$diff |> mean(na.rm = TRUE)
+sd_diff <- df_tsibble$diff |> sd(na.rm = TRUE)
+n_diff <- df_tsibble$diff |> na.omit() |> length()
+```
+
+The mean of the differences is `r mean_diff |> round(3)`. The standard deviation of the differences is `r sd_diff |> round(3)`. There are `r n_diff` differences.
+
+We can use the t-distribution to create a 95% confidence interval for the drift parameter. 
+The critical $t$ value is given by
+`qt(0.975, df = `r n_diff` - 1)`, yielding a value of $t^*_{0.975} = `r qt(0.975, df = n_diff - 1) |> round(3)`$.
+
+So, our 95% confidence interval is computed as:
+$$
+  \left(
+    \bar x - t^*_{0.975} \cdot \frac{s}{\sqrt{n}}
+    , ~
+    \bar x + t^*_{0.975} \cdot \frac{s}{\sqrt{n}}
+  \right)
+$$
+$$
+  \left(
+    `r mean_diff |> round(3)` - `r qt(0.975, df = n_diff - 1) |> round(3)` \cdot  \frac{`r sd_diff |> round(3)`}{\sqrt{`r n_diff`}}
+    , ~
+    `r mean_diff |> round(3)` + `r qt(0.975, df = n_diff - 1) |> round(3)` \cdot  \frac{`r sd_diff |> round(3)`}{\sqrt{`r n_diff`}}
+  \right)
+$$
+$$
+  (`r (mean_diff - qt(0.975, df = n_diff - 1) * sd_diff / sqrt(n_diff)) |> round(3)`
+  , ~
+  `r (mean_diff + qt(0.975, df = n_diff - 1) * sd_diff / sqrt(n_diff)) |> round(3)`)
+$$
+
+This confidence interval does not contain 0, so we conclude that there is evidence of a positive drift in the price of Abercrombie & Fitch stock over this period.
+
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the McDonald's stock price data to do the following.
+
+-   What is the estimate of the drift parameter?
+-   What is the standard deviation of the differences?
+-   What is the 95% confidence interval for the drift parameter?
+-   Is there evidence to suggest that the time series can be modeled as a random walk with drift? Why or why not?
+
+:::
 
 
 
@@ -659,3 +860,98 @@ $$
 This is the value of the last term in the sequence of second differences.
 
 :::
+
+
+
+
+
+
+<!-- Solutions at the bottom of the page -->
+
+<a href="javascript:showhide('Solutions4')"
+style="font-size:.8em;">McDonald's Drift Parameter</a>
+
+::: {#Solutions4 style="display:none;"}
+
+Solutions to Class Activity
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the McDonald's stock price data to do the following.
+
+-   What is the estimate of the drift parameter?
+
+As seen above, there is no significant autocorrelation in the differences of the McDonald's stock prices. They appear to be modeled well by white noise. 
+
+We now compute the mean and standard deviation of the differences.
+
+```{r}
+#| echo: false
+
+mean_diff <- stock_ts$diff |> mean(na.rm = TRUE)
+sd_diff <- stock_ts$diff |> sd(na.rm = TRUE)
+n_diff <- stock_ts$diff |> na.omit() |> length()
+```
+
+```{r}
+mean(stock_ts$diff, na.rm = TRUE)
+```
+
+-   What is the standard deviation of the differences?
+
+```{r}
+sd(stock_ts$diff, na.rm = TRUE)
+```
+
+-   What is the 95% confidence interval for the drift parameter?
+
+The number of differences, $n$, is given by:
+
+```{r}
+length(stock_ts$diff |> na.omit())
+```
+
+The mean of the differences is `r mean_diff |> round(3)`. The standard deviation of the differences is `r sd_diff |> round(3)`. There are `r n_diff` differences.
+
+We can use the t-distribution to create a 95% confidence interval for the drift parameter. 
+The critical $t$ value is given by
+`qt(0.975, df = `r n_diff` - 1)`, yielding a value of $t^*_{0.975} = `r qt(0.975, df = n_diff - 1) |> round(3)`$.
+
+So, our 95% confidence interval is computed as:
+$$
+  \left(
+    \bar x - t^*_{0.975} \cdot \frac{s}{\sqrt{n}}
+    , ~
+    \bar x + t^*_{0.975} \cdot \frac{s}{\sqrt{n}}
+  \right)
+$$
+$$
+  \left(
+    `r mean_diff |> round(3)` - `r qt(0.975, df = n_diff - 1) |> round(3)` \cdot  \frac{`r sd_diff |> round(3)`}{\sqrt{`r n_diff`}}
+    , ~
+    `r mean_diff |> round(3)` + `r qt(0.975, df = n_diff - 1) |> round(3)` \cdot  \frac{`r sd_diff |> round(3)`}{\sqrt{`r n_diff`}}
+  \right)
+$$
+$$
+  (`r (mean_diff - qt(0.975, df = n_diff - 1) * sd_diff / sqrt(n_diff)) |> round(3)`
+  , ~
+  `r (mean_diff + qt(0.975, df = n_diff - 1) * sd_diff / sqrt(n_diff)) |> round(3)`)
+$$
+
+
+-   Is there evidence to suggest that the time series can be modeled as a random walk with drift? Why or why not?
+
+This confidence interval contains 0, so we cannt conclude that there is evidence of a positive drift in the price of McDonald's stock over this period.
+
+:::
+
+
+:::
+
+
+
+
+
+
