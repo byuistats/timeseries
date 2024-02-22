@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>BYU-Idaho Time Series - Autoregressive Models: Part 2 (MAYBE RECOMBINE)</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./chapter_4_lesson_5.html" rel="next">
+<link href="./chapter_4_lesson_3.html" rel="prev">
+<link href="./images/TSFavicon.png" rel="icon" type="image/png">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark.min.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-fixed">
+
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a href="./index.html" class="navbar-brand navbar-brand-logo">
+    <img src="./images/TSfavicon_inv.png" alt="" class="navbar-logo">
+    </a>
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">BYU-Idaho Time Series</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html" rel="" target="">
+ <span class="menu-text">Table of Contents</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./resource_blog.html" rel="" target="">
+ <span class="menu-text">Resources</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-1" role="button" data-bs-toggle="dropdown" aria-expanded="false" rel="" target="">
+ <span class="menu-text">Chapter 1</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-1">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1.html" rel="" target="">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_1.html" rel="" target="">
+ <span class="dropdown-text">Course Introduction</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_2.html" rel="" target="">
+ <span class="dropdown-text">Plots Trends, and Seasonal Variation</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_3.html" rel="" target="">
+ <span class="dropdown-text">Averages for Time Series</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 4</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_4.html" rel="" target="">
+ <span class="dropdown-text">Additive Models</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 5</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_5.html" rel="" target="">
+ <span class="dropdown-text">Multiplicative Models</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-2" role="button" data-bs-toggle="dropdown" aria-expanded="false" rel="" target="">
+ <span class="menu-text">Chapter 2</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-2">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_2.html" rel="" target="">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_2_lesson_1.html" rel="" target="">
+ <span class="dropdown-text">Covariance and Correlation</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_2_lesson_2.html" rel="" target="">
+ <span class="dropdown-text">Autocorrelation Concepts</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_2_lesson_3.html" rel="" target="">
+ <span class="dropdown-text">Exploration of Autocorrelation Concepts</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-3" role="button" data-bs-toggle="dropdown" aria-expanded="false" rel="" target="">
+ <span class="menu-text">Chapter 3</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-3">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3.html" rel="" target="">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_1.html" rel="" target="">
+ <span class="dropdown-text">Leading Variables and Associated Variables</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_2.html" rel="" target="">
+ <span class="dropdown-text">Exponential Smoothing (EWMA)</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_3.html" rel="" target="">
+ <span class="dropdown-text">Holt-Winters Method (Additive Model) - Part 1</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 4</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_4.html" rel="" target="">
+ <span class="dropdown-text">Holt-Winters Method (Additive Model) - Part 2</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 5</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_5.html" rel="" target="">
+ <span class="dropdown-text">Holt-Winters Method (Multiplicative Models)</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-4" role="button" data-bs-toggle="dropdown" aria-expanded="false" rel="" target="">
+ <span class="menu-text">Chapter 4</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-4">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4.html" rel="" target="">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_1.html" rel="" target="">
+ <span class="dropdown-text">White Noise and Random Walks: Part 1</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_2.html" rel="" target="">
+ <span class="dropdown-text">White Noise and Random Walks: Part 2</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_3.html" rel="" target="">
+ <span class="dropdown-text">Autoregressive Models: Part 1 (MAYBE RECOMBINE)</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 4</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_4.html" rel="" target="">
+ <span class="dropdown-text">Autoregressive Models: Part 2 (MAYBE RECOMBINE)</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 5</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_5.html" rel="" target="">
+ <span class="dropdown-text">Fitted Models</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+            <div class="quarto-navbar-tools ms-auto">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#learning-outcomes" id="toc-learning-outcomes" class="nav-link active" data-scroll-target="#learning-outcomes">Learning Outcomes</a></li>
+  <li><a href="#preparation" id="toc-preparation" class="nav-link" data-scroll-target="#preparation">Preparation</a></li>
+  <li><a href="#learning-journal-exchange-10-mins" id="toc-learning-journal-exchange-10-mins" class="nav-link" data-scroll-target="#learning-journal-exchange-10-mins">Learning Journal Exchange (10 mins)</a></li>
+  <li><a href="#class-activity-exploring-ar1-models-20-min" id="toc-class-activity-exploring-ar1-models-20-min" class="nav-link" data-scroll-target="#class-activity-exploring-ar1-models-20-min">Class Activity: Exploring <span class="math inline">\(AR(1)\)</span> Models (20 min)</a>
+  <ul class="collapse">
+  <li><a href="#recall-the-definition" id="toc-recall-the-definition" class="nav-link" data-scroll-target="#recall-the-definition">Recall the Definition</a></li>
+  <li><a href="#second-order-properties-of-an-ar1-model" id="toc-second-order-properties-of-an-ar1-model" class="nav-link" data-scroll-target="#second-order-properties-of-an-ar1-model">Second-Order Properties of an <span class="math inline">\(AR(1)\)</span> Model</a></li>
+  <li><a href="#correlogram-of-an-ar1-process" id="toc-correlogram-of-an-ar1-process" class="nav-link" data-scroll-target="#correlogram-of-an-ar1-process">Correlogram of an <span class="math inline">\(AR(1)\)</span> process</a></li>
+  <li><a href="#small-group-activity-simulation-of-an-ar1-process" id="toc-small-group-activity-simulation-of-an-ar1-process" class="nav-link" data-scroll-target="#small-group-activity-simulation-of-an-ar1-process">Small Group Activity: Simulation of an <span class="math inline">\(AR(1)\)</span> Process</a></li>
+  </ul></li>
+  <li><a href="#class-activity-partial-autocorrelation-10-min" id="toc-class-activity-partial-autocorrelation-10-min" class="nav-link" data-scroll-target="#class-activity-partial-autocorrelation-10-min">Class Activity: Partial Autocorrelation (10 min)</a>
+  <ul class="collapse">
+  <li><a href="#definition-of-partial-autocorrelation" id="toc-definition-of-partial-autocorrelation" class="nav-link" data-scroll-target="#definition-of-partial-autocorrelation">Definition of Partial Autocorrelation</a></li>
+  <li><a href="#example-mcdonalds-stock-price" id="toc-example-mcdonalds-stock-price" class="nav-link" data-scroll-target="#example-mcdonalds-stock-price">Example: McDonald’s Stock Price</a></li>
+  <li><a href="#partial-autocorrelation-plots-of-various-arp-processes" id="toc-partial-autocorrelation-plots-of-various-arp-processes" class="nav-link" data-scroll-target="#partial-autocorrelation-plots-of-various-arp-processes">Partial Autocorrelation Plots of Various <span class="math inline">\(AR(p)\)</span> Processes</a></li>
+  <li><a href="#shiny-app" id="toc-shiny-app" class="nav-link" data-scroll-target="#shiny-app">Shiny App</a></li>
+  <li><a href="#google-sheets-test" id="toc-google-sheets-test" class="nav-link" data-scroll-target="#google-sheets-test">google sheets test</a></li>
+  <li><a href="#onedrive-excel" id="toc-onedrive-excel" class="nav-link" data-scroll-target="#onedrive-excel">Onedrive excel</a></li>
+  </ul></li>
+  <li><a href="#finish-previous-section" id="toc-finish-previous-section" class="nav-link" data-scroll-target="#finish-previous-section">Finish previous section</a>
+  <ul class="collapse">
+  <li><a href="#homework-preview-5-min" id="toc-homework-preview-5-min" class="nav-link" data-scroll-target="#homework-preview-5-min">Homework Preview (5 min)</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Autoregressive Models: Part 2 (MAYBE RECOMBINE)</h1>
+<p class="subtitle lead">Chapter 4: Lesson 4</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+<section id="learning-outcomes" class="level2">
+<h2 class="anchored" data-anchor-id="learning-outcomes">Learning Outcomes</h2>
+<h1>
+OUTCOMES DOCUMENT NEEDS TO BE REVISED: DO THESE REALLY GO HERE?
+</h1>
+<details>
+<summary>
+Fit time series models to data and interpret fitted parameters
+</summary>
+<ul>
+<li>Explain how to estimate a random walk with increasing slope using Holt-Winters</li>
+<li>Fit an <span class="math inline">\(AR(p)\)</span> model to simulated data</li>
+<li>Explain the difference between parameters of the data generating process and estimates</li>
+<li>Calculate confidence intervals for AR coefficient estimates</li>
+<li>Interpret AR coefficient estimates in the context of the source and nature of historical data</li>
+</ul>
+</details>
+<details>
+<summary>
+Check model adequacy using diagnostic plots like correlograms of residuals
+</summary>
+<ul>
+<li>Characterize a random walk’s second order characteristics using a correlogram</li>
+<li>Define partial autocorrelations</li>
+<li>Explain how to use a partial correlogram to decide what model would be suitable to estimate an <span class="math inline">\(AR(p)\)</span> process</li>
+<li>Demonstrate the use of partial correlogram using a simulation and plots</li>
+<li>Compare AR fitted models to an underlying data generating process</li>
+<li>Explain the limitations of stochastic model fitting as evidence in favor or against real world arguments.</li>
+</ul>
+</details>
+</section>
+<section id="preparation" class="level2">
+<h2 class="anchored" data-anchor-id="preparation">Preparation</h2>
+<ul>
+<li>Read Sections 4.5.3-4.5.7</li>
+</ul>
+</section>
+<section id="learning-journal-exchange-10-mins" class="level2">
+<h2 class="anchored" data-anchor-id="learning-journal-exchange-10-mins">Learning Journal Exchange (10 mins)</h2>
+<ul>
+<li><p>Review another student’s journal</p></li>
+<li><p>What would you add to your learning journal after reading another student’s?</p></li>
+<li><p>What would you recommend the other student add to their learning journal?</p></li>
+<li><p>Sign the Learning Journal review sheet for your peer</p></li>
+</ul>
+</section>
+<section id="class-activity-exploring-ar1-models-20-min" class="level2">
+<h2 class="anchored" data-anchor-id="class-activity-exploring-ar1-models-20-min">Class Activity: Exploring <span class="math inline">\(AR(1)\)</span> Models (20 min)</h2>
+<section id="recall-the-definition" class="level3">
+<h3 class="anchored" data-anchor-id="recall-the-definition">Recall the Definition</h3>
+<p>Recall that an <span class="math inline">\(AR(p)\)</span> model is of the form <span class="math display">\[
+  x_t = \alpha_1 x_{t-1} + \alpha_2 x_{t-2} + \alpha_3 x_{t-3} + \cdots + \alpha_{p-1} x_{t-(p-1)} + \alpha_p x_{t-p} + w_t
+\]</span> So, an <span class="math inline">\(AR(1)\)</span> model is expressed as <span class="math display">\[
+  x_t = \alpha x_{t-1} + w_t
+\]</span> where <span class="math inline">\(\{w_t\}\)</span> is a white noise series with mean zero and variance <span class="math inline">\(\sigma^2\)</span>.</p>
+</section>
+<section id="second-order-properties-of-an-ar1-model" class="level3">
+<h3 class="anchored" data-anchor-id="second-order-properties-of-an-ar1-model">Second-Order Properties of an <span class="math inline">\(AR(1)\)</span> Model</h3>
+<p>We now explore the second-order properties of this model.</p>
+<div class="callout callout-style-default callout-note no-icon callout-titled" title="Second-Order Properties of an $AR(1)$ Model">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Second-Order Properties of an <span class="math inline">\(AR(1)\)</span> Model
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>If <span class="math inline">\(\{x_t\}_{t=1}^n\)</span> is an <span class="math inline">\(AR(1)\)</span> prcess, then its the first- and second-order properties are summarized below.</p>
+<p><span class="math display">\[
+\begin{align*}
+  \mu_x &amp;= 0 \\  
+  \gamma_k = cov(x_t, x_{t+k}) &amp;= \frac{\alpha^k \sigma^2}{1-\alpha^2}
+\end{align*}
+\]</span></p>
+<div class="callout callout-style-default callout-tip callout-titled" title="Click here for a proof of the equation for $cov(x_t,x_{t+k})$">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Click here for a proof of the equation for <span class="math inline">\(cov(x_t,x_{t+k})\)</span>
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Why is <span class="math inline">\(cov(x_t, x_{t+k}) = \dfrac{\alpha^k \sigma^2}{1-\alpha^2}\)</span>?</p>
+<p>If <span class="math inline">\(\{x_t\}\)</span> is a stable <span class="math inline">\(AR(1)\)</span> process (which means that $||&lt;1) can be written as:</p>
+<p><span class="math display">\[\begin{align*}
+  (1-\alpha \mathbf{B}) x_t &amp;= w_t \\
+  \implies x_t &amp;= (1-\alpha \mathbf{B})^{-1} w_t \\
+    &amp;= w_t + \alpha w_{t-1} + \alpha^2 w_{t-2} + \alpha^3 w_{t-3} + \cdots \\
+    &amp;= \sum\limits_{i=0}^\infty \alpha^i w_{t-i}
+\end{align*}\]</span></p>
+<p>From this, we can deduce that the mean is</p>
+<p><span class="math display">\[
+  E(x_t)
+    = E\left( \sum\limits_{i=0}^\infty \alpha^i w_{t-i} \right)
+    = \sum\limits_{i=0}^\infty \alpha^i E\left( w_{t-i} \right)
+    = 0
+\]</span></p>
+<p>The autocovariance is computed similarly as:</p>
+<p><span class="math display">\[\begin{align*}
+  \gamma_k = cov(x_t, x_{t+k})
+    &amp;= cov \left(
+      \sum\limits_{i=0}^\infty \alpha^i w_{t-i}, \\
+      \sum\limits_{j=0}^\infty \alpha^j w_{t+k-j} \right) \\
+    &amp;= \sum\limits_{j=k+i} \alpha^i \alpha^j cov ( w_{t-i}, w_{t+k-j} ) \\
+    &amp;= \alpha^k \sigma^2 \sum\limits_{i=0}^\infty \alpha^{2i} \\
+    &amp;= \frac{\alpha^k \sigma^2}{1-\alpha^2}
+\end{align*}\]</span></p>
+<p>See Equations (2.15) and (4.2).</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="correlogram-of-an-ar1-process" class="level3">
+<h3 class="anchored" data-anchor-id="correlogram-of-an-ar1-process">Correlogram of an <span class="math inline">\(AR(1)\)</span> process</h3>
+<div class="callout callout-style-default callout-note no-icon callout-titled" title="Correlogram of an AR(1) Process">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Correlogram of an AR(1) Process
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The autocorrelation function for an AR(1) process is</p>
+<p><span class="math display">\[
+  \rho_k = \alpha^k ~~~~~~ (k \ge 0)
+\]</span> where <span class="math inline">\(|\alpha| \le 1\)</span>.</p>
+</div>
+</div>
+<!-- Check Your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li><p>Use the equation for the autocovariance function, <span class="math inline">\(\gamma_k\)</span>, to show that <span class="math display">\[
+  \rho_k = \alpha^k
+\]</span> for <span class="math inline">\(k \ge 0\)</span> when <span class="math inline">\(|\alpha|&lt;1\)</span>.</p></li>
+<li><p>Use this to explain why the correlogram decays to zero more quickly when <span class="math inline">\(\alpha\)</span> is small.</p></li>
+</ul>
+</div>
+</div>
+</section>
+<section id="small-group-activity-simulation-of-an-ar1-process" class="level3">
+<h3 class="anchored" data-anchor-id="small-group-activity-simulation-of-an-ar1-process">Small Group Activity: Simulation of an <span class="math inline">\(AR(1)\)</span> Process</h3>
+ <iframe id="AR1_app" src="https://posit.byui.edu/content/be8ec2cd-6209-4b53-a5c6-be11464b86de" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe>
+<!-- Check Your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>In each of the following cases, what do you observe in the correlogram? (If you expect to see significant results and you do not, try increasing the number of points.)</p>
+<ul>
+<li><span class="math inline">\(\alpha = 1\)</span></li>
+<li><span class="math inline">\(\alpha = 0.5\)</span></li>
+<li><span class="math inline">\(\alpha = 0.1\)</span></li>
+<li><span class="math inline">\(\alpha = 0\)</span><br>
+</li>
+<li><span class="math inline">\(\alpha = -0.1\)</span></li>
+<li><span class="math inline">\(\alpha = -0.5\)</span></li>
+<li><span class="math inline">\(\alpha = -1\)</span></li>
+</ul>
+</div>
+</div>
+</section>
+</section>
+<section id="class-activity-partial-autocorrelation-10-min" class="level2">
+<h2 class="anchored" data-anchor-id="class-activity-partial-autocorrelation-10-min">Class Activity: Partial Autocorrelation (10 min)</h2>
+<section id="definition-of-partial-autocorrelation" class="level3">
+<h3 class="anchored" data-anchor-id="definition-of-partial-autocorrelation">Definition of Partial Autocorrelation</h3>
+<div class="callout callout-style-default callout-note no-icon callout-titled" title="Partial Autocorrleation">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Partial Autocorrleation
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The <strong>partial autocorrelation</strong> at lag <span class="math inline">\(k\)</span> is defined as the portion of the correlation that is not explained by shorter lags.</p>
+</div>
+</div>
+<p>For example, the partial correlation for lag 4 is the correlation not explained by lags 1, 2, or 3.</p>
+<!-- Check Your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>What is the value of the partial autocorrelation function for an <span class="math inline">\(AR(2)\)</span> process for all lags greater than 2? <!-- Zero --></li>
+</ul>
+</div>
+</div>
+<p>On page 81, the textbook states that in general, the partial autocorrelation at lag <span class="math inline">\(k\)</span> is the <span class="math inline">\(k^{th}\)</span> coefficient of a fitted <span class="math inline">\(AR(k)\)</span> model. This implies that if the underlying process is <span class="math inline">\(AR(p)\)</span>, then all the coefficients <span class="math inline">\(\alpha_k=0\)</span> if <span class="math inline">\(k&gt;p\)</span>. So, an <span class="math inline">\(AR(p)\)</span> process will yeild partial correlations that are zero after lag <span class="math inline">\(p\)</span>. So, a correlogram of partial autocorrelations can be helpful to determine the order of an appropriate <span class="math inline">\(AR\)</span> process to model a time series.</p>
+</section>
+<section id="example-mcdonalds-stock-price" class="level3">
+<h3 class="anchored" data-anchor-id="example-mcdonalds-stock-price">Example: McDonald’s Stock Price</h3>
+<p>Here is a partial autocorrelation plot for the McDonald’s stock price data:</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Set symbol and date range</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>symbol <span class="ot">&lt;-</span> <span class="st">"MCD"</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>company <span class="ot">&lt;-</span> <span class="st">"McDonald's"</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Retrieve static file</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>stock_df <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"data/stock_price_mcd.parquet"</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Transform data into tibble</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>stock_ts <span class="ot">&lt;-</span> stock_df <span class="sc">%&gt;%</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> date, </span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">value =</span> adjusted</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(dates, value) <span class="sc">%&gt;%</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(dates) <span class="sc">|&gt;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">diff =</span> value <span class="sc">-</span> <span class="fu">lag</span>(value)) <span class="sc">|&gt;</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates, <span class="at">key =</span> <span class="cn">NULL</span>) </span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="fu">pacf</span>(stock_ts<span class="sc">$</span>value, <span class="at">plot=</span><span class="cn">TRUE</span>, <span class="at">lag.max =</span> <span class="dv">25</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="chapter_4_lesson_4_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>The only significant partial correlation is at lag <span class="math inline">\(k=1\)</span>. This suggests that an <span class="math inline">\(AR(1)\)</span> process could be used to model the McDonald’s stock prices.</p>
+</section>
+<section id="partial-autocorrelation-plots-of-various-arp-processes" class="level3">
+<h3 class="anchored" data-anchor-id="partial-autocorrelation-plots-of-various-arp-processes">Partial Autocorrelation Plots of Various <span class="math inline">\(AR(p)\)</span> Processes</h3>
+<p>Here are some time plots, correlograms, and partial correlograms for <span class="math inline">\(AR(p)\)</span> processes with various values of <span class="math inline">\(p\)</span>.</p>
+</section>
+<section id="shiny-app" class="level3">
+<h3 class="anchored" data-anchor-id="shiny-app">Shiny App</h3>
+ <iframe id="FittedModels_app" src="https://posit.byui.edu/content/6c451298-48a0-43a4-b8e2-52d9adc6baeb" style="border: none; width: 100%; height: 1400px" frameborder="0"></iframe>
+</section>
+<section id="google-sheets-test" class="level3">
+<h3 class="anchored" data-anchor-id="google-sheets-test">google sheets test</h3>
+ <iframe id="googlesheets" src="https://docs.google.com/spreadsheets/d/1K0yK3Ck08FBgPp8eDxw4aa7NhwDvuhTvb04U0ZjqB4A/edit?usp=sharing" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe>
+</section>
+<section id="onedrive-excel" class="level3">
+<h3 class="anchored" data-anchor-id="onedrive-excel">Onedrive excel</h3>
+ <iframe id="excel" src="https://1drv.ms/x/s!AmVxjPrpSKCjgv4ZsHYfXZJZ4ZasWw?e=jRJW5j" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe>
+<!-- Check Your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Question1</li>
+<li>Question2</li>
+</ul>
+</div>
+</div>
+</section>
+</section>
+<section id="finish-previous-section" class="level1">
+<h1>Finish previous section</h1>
+<!-- Check Your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Stuff goes here</li>
+<li>Stuff goes here</li>
+</ul>
+</div>
+</div>
+<!-- Check your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Question1</li>
+<li>Question2</li>
+</ul>
+</div>
+</div>
+<section id="homework-preview-5-min" class="level2">
+<h2 class="anchored" data-anchor-id="homework-preview-5-min">Homework Preview (5 min)</h2>
+<ul>
+<li>Review upcoming homework assignment</li>
+<li>Clarify questions</li>
+</ul>
+<div class="callout callout-style-default callout-note no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Download Homework
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><a href="https://byuistats.github.io/timeseries/homework/homework_4_4.qmd" download="homework_4_4.qmd"> homework_4_4.qmd </a></p>
+</div>
+</div>
+<p><a href="javascript:showhide('Solutions1')" style="font-size:.8em;">Class Activity</a></p>
+<div id="Solutions1" style="display:none;">
+
+</div>
+<p><a href="javascript:showhide('Solutions')" style="font-size:.8em;">Class Activity</a></p>
+<div id="Solutions2" style="display:none;">
+
+</div>
+<p><a href="javascript:showhide('Solutions3')" style="font-size:.8em;">Class Activity</a></p>
+<div id="Solutions3" style="display:none;">
+
+</div>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const disableStylesheet = (stylesheets) => {
+    for (let i=0; i < stylesheets.length; i++) {
+      const stylesheet = stylesheets[i];
+      stylesheet.rel = 'prefetch';
+    }
+  }
+  const enableStylesheet = (stylesheets) => {
+    for (let i=0; i < stylesheets.length; i++) {
+      const stylesheet = stylesheets[i];
+      stylesheet.rel = 'stylesheet';
+    }
+  }
+  const manageTransitions = (selector, allowTransitions) => {
+    const els = window.document.querySelectorAll(selector);
+    for (let i=0; i < els.length; i++) {
+      const el = els[i];
+      if (allowTransitions) {
+        el.classList.remove('notransition');
+      } else {
+        el.classList.add('notransition');
+      }
+    }
+  }
+  const toggleColorMode = (alternate) => {
+    // Switch the stylesheets
+    const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+    manageTransitions('#quarto-margin-sidebar .nav-link', false);
+    if (alternate) {
+      enableStylesheet(alternateStylesheets);
+      for (const sheetNode of alternateStylesheets) {
+        if (sheetNode.id === "quarto-bootstrap") {
+          toggleBodyColorMode(sheetNode);
+        }
+      }
+    } else {
+      disableStylesheet(alternateStylesheets);
+      toggleBodyColorPrimary();
+    }
+    manageTransitions('#quarto-margin-sidebar .nav-link', true);
+    // Switch the toggles
+    const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+    for (let i=0; i < toggles.length; i++) {
+      const toggle = toggles[i];
+      if (toggle) {
+        if (alternate) {
+          toggle.classList.add("alternate");     
+        } else {
+          toggle.classList.remove("alternate");
+        }
+      }
+    }
+    // Hack to workaround the fact that safari doesn't
+    // properly recolor the scrollbar when toggling (#1455)
+    if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+      manageTransitions("body", false);
+      window.scrollTo(0, 1);
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+        manageTransitions("body", true);
+      }, 40);  
+    }
+  }
+  const isFileUrl = () => { 
+    return window.location.protocol === 'file:';
+  }
+  const hasAlternateSentinel = () => {  
+    let styleSentinel = getColorSchemeSentinel();
+    if (styleSentinel !== null) {
+      return styleSentinel === "alternate";
+    } else {
+      return false;
+    }
+  }
+  const setStyleSentinel = (alternate) => {
+    const value = alternate ? "alternate" : "default";
+    if (!isFileUrl()) {
+      window.localStorage.setItem("quarto-color-scheme", value);
+    } else {
+      localAlternateSentinel = value;
+    }
+  }
+  const getColorSchemeSentinel = () => {
+    if (!isFileUrl()) {
+      const storageValue = window.localStorage.getItem("quarto-color-scheme");
+      return storageValue != null ? storageValue : localAlternateSentinel;
+    } else {
+      return localAlternateSentinel;
+    }
+  }
+  let localAlternateSentinel = 'default';
+  // Dark / light mode switch
+  window.quartoToggleColorScheme = () => {
+    // Read the current dark / light value 
+    let toAlternate = !hasAlternateSentinel();
+    toggleColorMode(toAlternate);
+    setStyleSentinel(toAlternate);
+  };
+  // Ensure there is a toggle, if there isn't float one in the top right
+  if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+    const a = window.document.createElement('a');
+    a.classList.add('top-right');
+    a.classList.add('quarto-color-scheme-toggle');
+    a.href = "";
+    a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+    const i = window.document.createElement("i");
+    i.classList.add('bi');
+    a.appendChild(i);
+    window.document.body.appendChild(a);
+  }
+  // Switch to dark mode if need be
+  if (hasAlternateSentinel()) {
+    toggleColorMode(true);
+  } else {
+    toggleColorMode(false);
+  }
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./chapter_4_lesson_3.html" class="pagination-link">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Autoregressive Models: Part 1 (MAYBE RECOMBINE)</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./chapter_4_lesson_5.html" class="pagination-link">
+        <span class="nav-page-text">Fitted Models</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+</body></html>
