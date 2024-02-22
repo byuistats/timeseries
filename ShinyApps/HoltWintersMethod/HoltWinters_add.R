@@ -521,14 +521,14 @@ server <- function(input, output, session) {
     selected_val <- input$value
 
     # Rename the dynamically selected column to a fixed name, e.g., "target"
-    data <- data %>%
-      mutate(target = data[[selected_val]],
-             dates = as.Date(dates)) %>%
-      as_tsibble(index = dates)
+    # data <- data %>%
+    #   mutate(target = data[[selected_val]],
+    #          dates = as.Date(dates)) %>%
+    #   as_tsibble(index = dates)
 
     # Now, you can use a fixed formula since the target column name is known
     season_type <- if (input$season == "Additive") "A" else "M"
-    formula <- paste0("target ~ trend('A') + error('A') + season('", season_type, "')")
+    formula <- paste0("value ~ trend('A') + error('A') + season('", season_type, "')")
 
     data_hw <- data |>
       model(ExploreModel = ETS(!!as.formula(formula), opt_crit = "amse", nmse = 1))
