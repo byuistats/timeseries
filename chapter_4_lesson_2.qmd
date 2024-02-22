@@ -44,7 +44,7 @@ source("common_functions.R")
 
 ## Preparation
 
--   Read Sections 4.3.3-4.3.7, 4.4.1, and 4.4.3; (skip 4.4.2)
+-   Read Sections 4.3.3-4.3.7 and 4.4
 
 
 
@@ -815,6 +815,71 @@ Modify the <a href="#differencing">code used to get the prices of `r company` st
 
 
 
+## Class Activity: Integrated Autoregressive Model (Section 4.4.2) (15 min)
+
+```{r}
+#| echo: false
+
+# Set symbol and date range
+symbol <- "BAC"
+company <- "Bank of America"
+date_start <- "2021-01-01"
+date_end <- "2024-01-01"
+```
+
+This is a time plot of the daily closing price of `r company` stock (symbol: `r symbol`) from `r format(ymd(date_start), "%d %b %Y")` to `r format(ymd(date_end), "%d %b %Y")`.
+
+```{r}
+#| echo: false
+
+# Fetch stock prices (can be used to get new data)
+stock_df <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
+
+# Transform data into tibble
+stock_ts <- stock_df %>%
+  mutate(
+    dates = date, 
+    value = adjusted
+  ) %>%
+  dplyr::select(dates, value) %>%
+  as_tibble() %>% 
+  arrange(dates) |>
+  mutate(diff = value - lag(value)) |>
+  as_tsibble(index = dates, key = NULL)
+
+stock_ts |>
+  autoplot(.vars = value) + 
+    labs(
+      title = paste("Time Plot of", company, "Stock Prices"),
+      subtitle = 
+        paste0(
+          format(min(stock_ts$dates), "%d %b %Y"),
+            " - ",
+          format(max(stock_ts$dates), "%d %b %Y")
+          ),
+      x = "Date",
+      y = "Daily Closing Price",
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+```
+
+Consider the correlogram of the first differences in the stock prices.
+
+```{r}
+#| echo: false
+
+acf(stock_ts$diff |> na.omit(), main = paste("ACF of First Difference of" ,company, "Stock Prices"))
+```
+
+Notice that for a lag of $k=1$, there is still a significant autocorrelation in the differences. This suggests that a more sophisticated model might be necessary. Note that for $k>1$, the autocorrelations in the differences are not significant. So, a random walk might be a good model for the differences. 
+
+We can add an additional terms to the random walk model using the slope estimate from Holt-Winters. We will constrain $\alpha=1$ and $\gamma=0$, and we will fit $\beta$ using Holt-Winters.
+
+
+
 ## Class Activity: Random Walk with Drift (15 min)
 
 ```{r}
@@ -824,7 +889,7 @@ date_end <- "2024-01-01"
 ```
 
 We will now consider the daily closing price of Abercrombie & Fitch stock (Symbol = ANF). Here is a time series plot of the closing stock prices from 
-`r format(ymd(date_start), "% d %b %Y")` to `r format(ymd(date_end), "%d %b %Y")`.
+`r format(ymd(date_start), "%d %b %Y")` to `r format(ymd(date_end), "%d %b %Y")`.
 
 ```{r}
 # Set symbol 
@@ -1399,7 +1464,6 @@ This confidence interval contains 0, so we cannot conclude that there is evidenc
 
 
 :::
-
 
 
 
