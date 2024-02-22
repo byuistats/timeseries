@@ -15,6 +15,22 @@ library(shinyWidgets)
 # Define UI for application that draws a histogram
 
 ui <- fluidPage(
+  tags$head(
+    tags$link(rel="stylesheet",
+              href="https://cdn.jsdelivr.net/npm/katex@0.10.1/dist/katex.min.css",
+              integrity="sha384-dbVIfZGuN1Yq7/1Ocstc1lUEm+AT+/rCkibIcC/OmWo5f0EA48Vf8CytHzGrSwbQ",
+              crossorigin="anonymous"),
+    HTML('<script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.1/dist/katex.min.js" integrity="sha384-2BKqo+exmr9su6dir+qCw08N2ZKRucY4PrGQPPWU1A7FtlCGjmEGFqXCv5nyM5Ij" crossorigin="anonymous"></script>'),
+    HTML('<script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.1/dist/contrib/auto-render.min.js" integrity="sha384-kWPLUVMOks5AQFrykwIup5lo0m3iMkkHrD0uJ4H5cjeGihAutqP0yW0J6dpFiVkI" crossorigin="anonymous"></script>'),
+    HTML('
+    <script>
+      document.addEventListener("DOMContentLoaded", function(){
+        renderMathInElement(document.body, {
+          delimiters: [{left: "$", right: "$", display: false}]
+        });
+      })
+    </script>')
+  ),
   useShinyjs(),
   withMathJax(),
   tags$head(
@@ -22,9 +38,9 @@ ui <- fluidPage(
   ),
   titlePanel("Fitted Models"),
   fluidRow(
-    column(5, offset = 1, sliderInput("sigma", "Standard Deviation", min = 0, max = 10, value = 1, step = 0.1)),
-    column(5, sliderInput("n_points", "Number of Points", min = 0, max = 500, value = 100, step = 10))
-  ),
+    column(5, offset = 2, sliderInput("n_points", "Number of Points", min = 0, max = 500, value = 100, step = 10)),
+    column(5, sliderInput("sigma", "Standard Deviation", min = 0, max = 10, value = 1, step = 0.1))
+    ),
   fluidRow(
     column(12, h4(""))
   ),
@@ -34,7 +50,7 @@ ui <- fluidPage(
     tabPanel(
       title = "AR 1",
       fluidRow(
-        column(3, offset = 1, numericInput("alpha_1", "$$ \\alpha_1 $$", min = -500, max = 500, value = 0.7, step = 0.02)),
+        column(3, offset = 1, numericInput("alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.7, step = 0.02)),
       ),
       fluidRow(
 
@@ -43,7 +59,10 @@ ui <- fluidPage(
           condition = "input.go1",
           div(id = "outputs1",
               fluidRow(
-                column(12, h6("$$ x_t = \\alpha_1 x_{t-1} + w_t $$")),
+                column(12, h6("")),
+                column(12,  div(style = "display: flex; justify-content: center; align-items: center;",
+                                uiOutput("formula1")
+                )),
                 column(12, h4("Series")),
                 column(12, plotOutput("plot1")),
                 column(12, h4("ACF of Simulated AR(1) Process")),
@@ -66,8 +85,8 @@ ui <- fluidPage(
     tabPanel(
       title = "AR 2",
       fluidRow(
-        column(3, offset = 1, numericInput("alpha_1", "$$ \\alpha_1 $$", min = -500, max = 500, value = 0.5, step = 0.02)),
-        column(3, numericInput("alpha_2", "$$ \\alpha_2 $$", min = -500, max = 500, value = 0.5, step = 0.02))
+        column(3, offset = 1, numericInput("alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.5, step = 0.02)),
+        column(3, numericInput("alpha_2", "$ \\alpha_2 $", min = -500, max = 500, value = 0.5, step = 0.02))
       ),
       fluidRow(
         column(4, offset = 5, actionButton("go2", "Simulate!")),
@@ -75,7 +94,10 @@ ui <- fluidPage(
           condition = "input.go2",
           div(id = "outputs2",
               fluidRow(
-                column(12, h6("$$ x_t = \\alpha_1 x_{t-1} + \\alpha_2 x_{t-2} + w_t $$")),
+                column(12, h6("")),
+                column(12,  div(style = "display: flex; justify-content: center; align-items: center;",
+                                uiOutput("formula2")
+                )),
                 column(12, h4("Series")),
                 column(12, plotOutput("plot2")),
                 column(12, h4("ACF of Simulated AR(2) Process")),
@@ -98,9 +120,9 @@ ui <- fluidPage(
     tabPanel(
       title = "AR 3",
       fluidRow(
-        column(3, offset = 1, numericInput("alpha_1", "$$ \\alpha_1 $$", min = -500, max = 500, value = 0.25, step = 0.02)),
-        column(3, numericInput("alpha_2", "$$ \\alpha_2 $$", min = -500, max = 500, value = 0.2, step = 0.02)),
-        column(3, numericInput("alpha_3", "$$ \\alpha_3 $$", min = -500, max = 500, value = 0.15, step = 0.02))
+        column(3, offset = 1, numericInput("alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.25, step = 0.02)),
+        column(3, numericInput("alpha_2", "$ \\alpha_2 $", min = -500, max = 500, value = 0.2, step = 0.02)),
+        column(3, numericInput("alpha_3", "$ \\alpha_3 $", min = -500, max = 500, value = 0.15, step = 0.02))
       ),
       fluidRow(
         column(4, offset = 5, actionButton("go3", "Simulate!")),
@@ -108,7 +130,10 @@ ui <- fluidPage(
           condition = "input.go3",
           div(id = "outputs3",
               fluidRow(
-                column(12, h6("$$ x_t = \\alpha_1 x_{t-1} + \\alpha_2 x_{t-2} + \\alpha_3 x_{t-3} + w_t $$")),
+                column(12, h6("")),
+                column(12,  div(style = "display: flex; justify-content: center; align-items: center;",
+                                uiOutput("formula3")
+                )),
                 column(12, h4("Series")),
                 column(12, plotOutput("plot3")),
                 column(12, h4("ACF of Simulated AR(3) Process")),
@@ -332,7 +357,36 @@ server <- function(input, output, session) {
   output$pacf_plot3 <- renderPlot({
     sim_data3()$pacf_plot
   })
+
+  output$formula1 <- renderUI({
+    a1 <- input$alpha_1
+    tagList(
+      paste0("$x_t = ",a1, "x_{t-1} + w_t$"),
+      tags$script('renderMathInElement(document.getElementById("formula1"), {delimiters: [{left: "$", right: "$", display: false}]});')
+    )
+  })
+
+  output$formula2 <- renderUI({
+    a1 <- input$alpha_1
+    a2 <- input$alpha_2
+    tagList(
+      paste0("$x_t = ",a1, "x_{t-1} + ",a2,"x_{t-2} + w_t$"),
+      tags$script('renderMathInElement(document.getElementById("formula2"), {delimiters: [{left: "$", right: "$", display: false}]});')
+    )
+  })
+
+  output$formula3 <- renderUI({
+    a1 <- input$alpha_1
+    a2 <- input$alpha_2
+    a3 <- input$alpha_3
+    tagList(
+      paste0("$x_t = ",a1, "x_{t-1} + ",a2,"x_{t-2} + ",a3," x_{t-3} + w_t$"),
+      tags$script('renderMathInElement(document.getElementById("formula3"), {delimiters: [{left: "$", right: "$", display: false}]});')
+    )
+  })
 }
+
+
 
 
 
