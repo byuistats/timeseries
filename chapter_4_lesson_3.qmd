@@ -1,5 +1,5 @@
 ---
-title: "Autoregressive Models: Part 1"
+title: "Autoregressive Models"
 subtitle: "Chapter 4: Lesson 3"
 format: html
 editor: source
@@ -44,7 +44,7 @@ source("common_functions.R")
 
 ## Preparation
 
--   Read Section 4.5.1 and 4.5.2
+-   Read Section 4.5
 
 
 
@@ -303,6 +303,236 @@ For each of the following AR processes, do the following:
 
 
 
+
+
+
+
+
+## Class Activity: Exploring $AR(1)$ Models (20 min)
+
+### Recall the Definition
+
+Recall that an $AR(p)$ model is of the form
+$$
+  x_t = \alpha_1 x_{t-1} + \alpha_2 x_{t-2} + \alpha_3 x_{t-3} + \cdots + \alpha_{p-1} x_{t-(p-1)} + \alpha_p x_{t-p} + w_t
+$$
+So, an $AR(1)$ model is expressed as
+$$
+  x_t = \alpha x_{t-1} + w_t
+$$
+where $\{w_t\}$ is a white noise series with mean zero and variance $\sigma^2$. 
+
+### Second-Order Properties of an $AR(1)$ Model
+
+We now explore the second-order properties of this model. 
+
+::: {.callout-note icon=false title="Second-Order Properties of an $AR(1)$ Model"}
+
+If $\{x_t\}_{t=1}^n$ is an $AR(1)$ prcess, then its the first- and second-order properties are summarized below.
+
+$$
+\begin{align*}
+  \mu_x &= 0 \\  
+  \gamma_k = cov(x_t, x_{t+k}) &= \frac{\alpha^k \sigma^2}{1-\alpha^2}
+\end{align*}
+$$
+
+::: {.callout-tip title="Click here for a proof of the equation for $cov(x_t,x_{t+k})$" collapse=true}
+
+Why is $cov(x_t, x_{t+k}) = \dfrac{\alpha^k \sigma^2}{1-\alpha^2}$?
+
+If $\{x_t\}$ is a stable $AR(1)$ process (which means that $|\alpha|<1) can be written as:
+
+\begin{align*}
+  (1-\alpha \mathbf{B}) x_t &= w_t \\
+  \implies x_t &= (1-\alpha \mathbf{B})^{-1} w_t \\
+    &= w_t + \alpha w_{t-1} + \alpha^2 w_{t-2} + \alpha^3 w_{t-3} + \cdots \\
+    &= \sum\limits_{i=0}^\infty \alpha^i w_{t-i}
+\end{align*}
+
+From this, we can deduce that the mean is 
+
+$$
+  E(x_t) 
+    = E\left( \sum\limits_{i=0}^\infty \alpha^i w_{t-i} \right)
+    = \sum\limits_{i=0}^\infty \alpha^i E\left( w_{t-i} \right)
+    = 0
+$$
+
+The autocovariance is computed similarly as:
+
+\begin{align*}
+  \gamma_k = cov(x_t, x_{t+k}) 
+    &= cov \left( 
+      \sum\limits_{i=0}^\infty \alpha^i w_{t-i}, \\
+      \sum\limits_{j=0}^\infty \alpha^j w_{t+k-j} \right) \\
+    &= \sum\limits_{j=k+i} \alpha^i \alpha^j cov ( w_{t-i}, w_{t+k-j} ) \\
+    &= \alpha^k \sigma^2 \sum\limits_{i=0}^\infty \alpha^{2i} \\
+    &= \frac{\alpha^k \sigma^2}{1-\alpha^2}
+\end{align*}
+
+See Equations (2.15) and (4.2).
+
+:::
+
+:::
+
+
+
+### Correlogram of an $AR(1)$ process
+
+::: {.callout-note icon=false title="Correlogram of an AR(1) Process"}
+
+The autocorrelation function for an AR(1) process is
+
+$$
+  \rho_k = \alpha^k ~~~~~~ (k \ge 0)
+$$
+where $|\alpha| \le 1$. 
+
+:::
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Use the equation for the autocovariance function, $\gamma_k$, to show that 
+$$
+  \rho_k = \alpha^k
+$$
+for $k \ge 0$ when $|\alpha|<1$.
+
+-   Use this to explain why the correlogram decays to zero more quickly when $\alpha$ is small.
+
+:::
+
+### Small Group Activity: Simulation of an $AR(1)$ Process
+
+```{=html}
+ <iframe id="AR1_app" src="https://posit.byui.edu/content/be8ec2cd-6209-4b53-a5c6-be11464b86de" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe>
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+In each of the following cases, what do you observe in the correlogram? (If you expect to see significant results and you do not, try increasing the number of points.)
+
+-   $\alpha = 1$
+-   $\alpha = 0.5$
+-   $\alpha = 0.1$
+-   $\alpha = 0$   
+-   $\alpha = -0.1$
+-   $\alpha = -0.5$
+-   $\alpha = -1$
+
+:::
+
+
+## Class Activity: Partial Autocorrelation (10 min)
+
+### Definition of Partial Autocorrelation
+
+::: {.callout-note icon=false title="Partial Autocorrleation"}
+
+The **partial autocorrelation** at lag $k$ is defined as the portion of the correlation that is not explained by shorter lags.
+
+:::
+
+For example, the partial correlation for lag 4 is the correlation not explained by lags 1, 2, or 3.
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What is the value of the partial autocorrelation function for an $AR(2)$ process for all lags greater than 2?
+<!-- Zero -->
+
+:::
+
+On page 81, the textbook states that in general, the partial autocorrelation at lag $k$ is the $k^{th}$ coefficient of a fitted $AR(k)$ model.
+This implies that if the underlying process is $AR(p)$, then all the coefficients $\alpha_k=0$ if $k>p$. So, an $AR(p)$ process will yeild partial correlations that are zero after lag $p$. So, a correlogram of partial autocorrelations can be helpful to determine the order of an appropriate $AR$ process to model a time series.
+
+### Example: McDonald's Stock Price
+
+Here is a partial autocorrelation plot for the McDonald's stock price data:
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Set symbol and date range
+symbol <- "MCD"
+company <- "McDonald's"
+
+# Retrieve static file
+stock_df <- rio::import("data/stock_price_mcd.parquet")
+
+# Transform data into tibble
+stock_ts <- stock_df %>%
+  mutate(
+    dates = date, 
+    value = adjusted
+  ) %>%
+  select(dates, value) %>%
+  as_tibble() %>% 
+  arrange(dates) |>
+  mutate(diff = value - lag(value)) |>
+  as_tsibble(index = dates, key = NULL) 
+
+pacf(stock_ts$value, plot=TRUE, lag.max = 25)
+```
+
+The only significant partial correlation is at lag $k=1$. This suggests that an $AR(1)$ process could be used to model the McDonald's stock prices.
+
+### Partial Autocorrelation Plots of Various $AR(p)$ Processes
+
+Here are some time plots, correlograms, and partial correlograms for $AR(p)$ processes with various values of $p$.
+
+### Shiny App
+
+```{=html}
+ <iframe id="FittedModels_app" src="https://posit.byui.edu/content/6c451298-48a0-43a4-b8e2-52d9adc6baeb" style="border: none; width: 100%; height: 1400px" frameborder="0"></iframe>
+```
+
+<!-- ### google sheets test -->
+
+<!-- ```{=html} -->
+<!--  <iframe id="googlesheets" src="https://docs.google.com/spreadsheets/d/1K0yK3Ck08FBgPp8eDxw4aa7NhwDvuhTvb04U0ZjqB4A/edit?usp=sharing" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe> -->
+<!-- ``` -->
+
+<!-- ### Onedrive excel -->
+<!-- ```{=html} -->
+<!--  <iframe id="excel" src="https://1drv.ms/x/s!AmVxjPrpSKCjgv4ZsHYfXZJZ4ZasWw?e=jRJW5j" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe> -->
+<!-- ``` -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Homework Preview (5 min)
 
 -   Review upcoming homework assignment
@@ -381,7 +611,7 @@ style="font-size:.8em;">Check Your Understanding: Autoregressive Model Definitio
 
 <hr></hr> 
 
--   Show that the $AR(p)$ model is a regression of $x_t$ on past terms from the same series. (This is why it is called an "autoregressive model.") 
+-   Show that the $AR(p)$ model is a regression of $x_t$ on previous terms in the series. (This is why it is called an "autoregressive model.") 
 Hint: write the $AR(p)$ model in more familiar terms, letting 
   $$y_i = x_t, ~~ x_1 = x_{t-1}, ~~ x_2 = x_{t-2}, ~~ \ldots, ~~ x_p = x_{t-p}, ~~ \epsilon_i = w_t, ~~ \text{and} ~~ \beta_j = \alpha_j$$
 

@@ -353,7 +353,7 @@ We use the code below to obtain the daily closing stock prices for any publicly-
 # Set symbol and date range
 symbol <- "MCD"
 company <- "McDonald's"
-date_start <- "2021-01-01"
+date_start <- "2020-01-01"
 date_end <- "2024-01-01"
 
 # Fetch stock prices (can be used to get new data)
@@ -873,43 +873,178 @@ model_hw <- HoltWinters(stock_ts0, alpha = 1, gamma = FALSE)
 <!-- It's like there is no improvement in the fit of the model after doing Holt-Winters. -->
 
 
-<!-- ## Class Activity: Integrated Autoregressive Model (Section 4.4.2) (15 min) -->
+## Class Activity: Integrated Autoregressive Model (Section 4.4.2) (15 min)
+
+This is a time plot of the quarterly exchange rate (UK Pounds to NZ Dollars, 1991-2000). This is the data set given in the textbook.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+z <- read_table("data/pounds_nz.dat")
+date_seq <- seq(
+    lubridate::ymd("1991-01-01"),
+    by = "3 months",
+    length.out = nrow(z))
+z_ts <- z |>
+    mutate(
+        date = date_seq,
+        quarter = tsibble::yearquarter(date)) |>
+    as_tsibble(index = quarter)
+z_ts |>
+  autoplot(.vars = xrate) +
+    labs(
+      title = paste("Time Plot of Exchange Rates"),
+      subtitle = "(UK Pounds to NZ Dollars, 1991-2000)",
+      x = "Quarter",
+      y = "Exchange Rate"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+```
+
+Consider the correlogram of the first differences in the exchange rates.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+z_ts |>
+    mutate(diff = xrate - lag(xrate)) |>
+    ACF(diff) |>
+    autoplot() +
+    labs(
+      title = paste("Correlogram of First Differences of Exchange Rates"),
+      x = "Lag",
+      y = "Difference"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+Notice that for a lag of $k=1$, there is still a significant autocorrelation in the differences. This suggests that a more sophisticated model might be necessary. Note that for $k>1$, the autocorrelations in the differences are not significant. So, a random walk might be a good model for the differences.
+
+We can add an additional terms to the random walk model using the slope estimate from Holt-Winters. Assume the next term in the time series can be modeled as the previous term plus an estimated slope plus a white noise component. This gives us the first equation below. We will use the Holt-Winters update equation to estimate the slope. This is the second equation below.
+
+$$
+\begin{cases}
+~~~x_t     = x_{t-1} + b_{t-1} + w_t \\
+   b_{t-1} = \beta \left( x_{t-1} - x_{t-2} \right) + (1-\beta) b_{t-2}
+\end{cases}
+$$
+
+We can constrain the Holt-Winters parameters $\alpha=1$ and $\gamma=0$, and find the estimated value of $\beta$.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+z_model <- z_ts |>
+    model(Additive = ETS(xrate ~
+        trend("A", alpha = 1) +
+        error("A") + season("N", gamma = 0),
+        opt_crit = "amse", nmse = 1)) 
+
+z_model |>
+  coef()
+```
+
+```{r}
+#| include: false
+
+beta_value <- z_model |>
+  coef() |>
+  filter(term == "beta") |>
+  select(estimate) |>
+  pull()
+
+Z.ts <- ts(z, st = 1991, fr = 4)
+Z.hw <- HoltWinters(Z.ts, alpha = 1, gamma = FALSE) # changed from book
+```
+
+**Note**: The value of beta obtained using the feasts model() statement is `r beta_value |> round(3)`. This is slightly different than the value obtained using the base R HoltWinters() command: `r Z.hw$beta |> round(3)`. This is likely due to differences in the implementation of the Holt-Winters model, including the initial conditions.
+
+This leads to the system of equations:
+
+$$
+\begin{cases}
+~~~x_t     = x_{t-1} + b_{t-1} + w_t \\
+   b_{t-1} = `r beta_value |> round(3)` \left( x_{t-1} - x_{t-2} \right) + `r 1 - beta_value |> round(3)` ~ b_{t-2}
+\end{cases}
+$$
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Start with the fitted system of equations
+$$
+\begin{cases}
+~~~x_t     = x_{t-1} + b_{t-1} + w_t \\
+   b_{t-1} = `r beta_value |> round(3)` \left( x_{t-1} - x_{t-2} \right) + `r 1 - beta_value |> round(3)` ~ b_{t-2}
+\end{cases}
+$$
+Show that it can be written as
+$$
+  \left( 1 - \mathbf{B})^2 x_t = (1 - `r 1 - beta_value |> round(3)` \mathbf{B} \right) w_t
+$$
+by completing the following steps.
+
+-   Write the system of equations in terms of the backward shift operator.
+-   Solve for the term $\mathbf{B} b_t$ in the first equation and substitute the resulting expression into the second equation.
+-   Combine like terms and simplify.
+
+:::
+
+We will examine the residuals from the Holt-Winters model:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+z_hw <- z_model |>
+        residuals()
+
+ACF(z_hw, .resid) |>
+    autoplot() +
+    labs(
+      title = paste("Correlogram of Residuals from Holt-Winters Filtering"),
+      x = "Date",
+      y = "ACF"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+Notice that there are no significant autocorrelations, so we conclude that the Holt-Winters model yields reasonable estimates of the time series.
+
+
 
 <!-- ```{r} -->
-<!-- #| echo: false -->
-
-<!-- # Set symbol and date range -->
-<!-- symbol <- "BAC" -->
-<!-- company <- "Bank of America" -->
-<!-- date_start <- "2021-01-01" -->
-<!-- date_end <- "2024-01-01" -->
-<!-- ``` -->
-
-<!-- This is a time plot of the daily closing price of `r company` stock (symbol: `r symbol`) from `r format(ymd(date_start), "%d %b %Y")` to `r format(ymd(date_end), "%d %b %Y")`. -->
-
-<!-- ```{r} -->
-<!-- #| echo: false -->
-
-<!-- # Fetch stock prices (can be used to get new data) -->
-<!-- stock_df <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices") -->
+<!-- #| eval: false -->
 
 <!-- # Transform data into tibble -->
 <!-- stock_ts <- stock_df %>% -->
 <!--   mutate( -->
-<!--     dates = date,  -->
+<!--     dates = date, -->
 <!--     value = adjusted -->
 <!--   ) %>% -->
 <!--   dplyr::select(dates, value) %>% -->
-<!--   as_tibble() %>%  -->
+<!--   as_tibble() %>% -->
 <!--   arrange(dates) |> -->
 <!--   mutate(diff = value - lag(value)) |> -->
 <!--   as_tsibble(index = dates, key = NULL) -->
 
 <!-- stock_ts |> -->
-<!--   autoplot(.vars = value) +  -->
+<!--   autoplot(.vars = value) + -->
 <!--     labs( -->
 <!--       title = paste("Time Plot of", company, "Stock Prices"), -->
-<!--       subtitle =  -->
+<!--       subtitle = -->
 <!--         paste0( -->
 <!--           format(min(stock_ts$dates), "%d %b %Y"), -->
 <!--             " - ", -->
@@ -924,73 +1059,21 @@ model_hw <- HoltWinters(stock_ts0, alpha = 1, gamma = FALSE)
 <!--     ) -->
 <!-- ``` -->
 
-<!-- Consider the correlogram of the first differences in the stock prices. -->
 
-<!-- ```{r} -->
-<!-- #| echo: false -->
-
-<!-- acf(stock_ts$diff |> na.omit(), main = paste("ACF of First Difference of" ,company, "Stock Prices")) -->
-<!-- ``` -->
-
-<!-- Notice that for a lag of $k=1$, there is still a significant autocorrelation in the differences. This suggests that a more sophisticated model might be necessary. Note that for $k>1$, the autocorrelations in the differences are not significant. So, a random walk might be a good model for the differences.  -->
-
-<!-- We can add an additional terms to the random walk model using the slope estimate from Holt-Winters. Assume the next term in the time series can be modeled as the previous term plus an estimated slope plus a white noise component. This gives us the first equation below. We will use the Holt-Winters update equation to estimate the slope. This is the second equation below. -->
-
-<!-- $$ -->
-<!-- \begin{cases} -->
-<!-- ~~~x_t     = x_{t-1} + b_{t-1} + w_t \\ -->
-<!--    b_{t-1} = \beta \left( x_{t-1} - x_{t-2} \right) + (1-\beta) b_{t-2}  -->
-<!-- \end{cases} -->
-<!-- $$ -->
-
-<!-- We can constrain the Holt-Winters parameters $\alpha=1$ and $\gamma=0$, and fit $\beta$. (The time series of stock prices does not have values for weekends or holidays, so we will create a basic ts object and apply the base R HoltWinters() command.) -->
-
-<!-- ```{r} -->
-<!-- stock_ts0 <- ts(stock_ts$value) -->
-<!-- model_hw <- HoltWinters(stock_ts0, alpha = 1, gamma = FALSE) -->
-<!-- model_hw -->
-<!-- ``` -->
-
-<!-- This leads to the system of equations: -->
-
-<!-- $$ -->
-<!-- \begin{cases} -->
-<!-- ~~~x_t     = x_{t-1} + b_{t-1} + w_t \\ -->
-<!--    b_{t-1} = `r model_hw$beta |> round(3)` \left( x_{t-1} - x_{t-2} \right) + `r 1 - model_hw$beta |> round(3)` ~ b_{t-2}  -->
-<!-- \end{cases} -->
-<!-- $$ -->
-
-
-<!-- <!-- Check Your Understanding --> -->
-
-<!-- ::: {.callout-tip icon=false title="Check Your Understanding"} -->
-
-<!-- Start with the fitted system of equations -->
-<!-- $$ -->
-<!-- \begin{cases} -->
-<!-- ~~~x_t     = x_{t-1} + b_{t-1} + w_t \\ -->
-<!--    b_{t-1} = `r model_hw$beta |> round(3)` \left( x_{t-1} - x_{t-2} \right) + `r 1 - model_hw$beta |> round(3)` ~ b_{t-2}  -->
-<!-- \end{cases} -->
-<!-- $$ -->
-<!-- Show that it can be written as  -->
-<!-- $$ -->
-<!--   \left( 1 - \mathbf{B})^2 x_t = (1 - `r 1 - model_hw$beta |> round(3)` \mathbf{B} \right) w_t -->
-<!-- $$ -->
-<!-- by completing the following steps. -->
-
-<!-- -   Write the system of equations in terms of the backward shift operator. -->
-<!-- -   Solve for the term $\mathbf{B} b_t$ in the first equation and substitute the resulting expression into the second equation. -->
-<!-- -   Combine like terms and simplify. -->
-
-<!-- ::: -->
-
-<!-- We will examine the residuals from the Holt-Winters model: -->
-<!-- ```{r} -->
-<!-- acf(resid(model_hw)) -->
-<!-- ``` -->
-<!-- Notice that there are no significant autocorrelations, so we conclude that the Holt-Winters model yields reasonable estimates of the time series. -->
-
-
+<!-- x -->
+<!-- x -->
+<!-- x -->
+<!-- x -->
+<!-- x -->
+<!-- x -->
+<!-- x -->
+<!-- x -->
+<!-- x -->
+<!-- x -->
+<!-- x -->
+<!-- x -->
+<!-- x -->
+<!-- x -->
 
 
 
@@ -1049,7 +1132,7 @@ df_tsibble |>
   na.omit() |>
   autoplot(.vars = diff) + 
     labs(
-      title = "Time Plot of Differences in Daily ANF Stock Prices",
+      title = paste("Time Plot of Differences in Daily", symbol, "Stock Prices"),
       subtitle = 
         paste0(
           format(ymd(date_start), "%d %b %Y"),
@@ -1059,10 +1142,17 @@ df_tsibble |>
       x = "Date",
       y = "Difference",
     ) +
+    theme_minimal() +
     theme(
       plot.title = element_text(hjust = 0.5),
       plot.subtitle = element_text(hjust = 0.5)
     )
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 acf(df_tsibble$diff |> na.omit(), main = paste("ACF of First Difference of", symbol, "Stock Prices"))
 ```
 
@@ -1508,76 +1598,76 @@ df_cubic |>
 
 
 
-<!-- <!-- Solutions at the bottom of the page --> -->
+<!-- Solutions at the bottom of the page -->
 
-<!-- <a href="javascript:showhide('SolutionsHW')" -->
-<!-- style="font-size:.8em;">Integrated Autoregressive Model</a> -->
+<a href="javascript:showhide('SolutionsHW')"
+style="font-size:.8em;">Integrated Autoregressive Model</a>
 
-<!-- ::: {#SolutionsHW style="display:none;"} -->
+::: {#SolutionsHW style="display:none;"}
 
-<!-- <!-- Check Your Understanding --> -->
+<!-- Check Your Understanding -->
 
-<!-- ::: {.callout-tip icon=false title="Check Your Understanding"} -->
+::: {.callout-tip icon=false title="Check Your Understanding"}
 
-<!-- Start with this fitted system of equations. Show that it can be written as  -->
-<!-- $$ -->
-<!--   (1 - \mathbf{B})^2 x_t = (1 - `r 1 - model_hw$beta |> round(3)`) w_t -->
-<!-- $$ -->
-<!-- by completing the following steps. -->
+Start with this fitted system of equations. Show that it can be written as
+$$
+  (1 - \mathbf{B})^2 x_t = (1 - `r 1 - beta_value |> round(3)`) w_t
+$$
+by completing the following steps.
 
-<!-- -   Write the system of equations in terms of the backward shift operator. -->
-<!-- $$ -->
-<!-- \begin{cases} -->
-<!-- ~~~x_t     = x_{t-1} + b_{t-1} + w_t \\ -->
-<!--    b_{t-1} = `r model_hw$beta |> round(3)` \left( x_{t-1} - x_{t-2} \right) + `r 1 - model_hw$beta |> round(3)` ~ b_{t-2}  -->
-<!-- \end{cases} -->
-<!-- $$ -->
-<!-- $$ -->
-<!-- \begin{cases} -->
-<!-- ~~~x_t     = \mathbf{B} x_{t} + \mathbf{B} b_{t} + w_t \\ -->
-<!--    \mathbf{B} b_{t} = `r model_hw$beta |> round(3)` \left( \mathbf{B} x_{t} - \mathbf{B}^2 x_{t} \right) + `r 1 - model_hw$beta |> round(3)` ~ \mathbf{B}^2 b_{t}  -->
-<!-- \end{cases} -->
-<!-- $$ -->
+-   Write the system of equations in terms of the backward shift operator.
+$$
+\begin{cases}
+~~~x_t     = x_{t-1} + b_{t-1} + w_t \\
+   b_{t-1} = `r beta_value |> round(3)` \left( x_{t-1} - x_{t-2} \right) + `r 1 - beta_value |> round(3)` ~ b_{t-2}
+\end{cases}
+$$
+$$
+\begin{cases}
+~~~x_t     = \mathbf{B} x_{t} + \mathbf{B} b_{t} + w_t \\
+   \mathbf{B} b_{t} = `r beta_value |> round(3)` \left( \mathbf{B} x_{t} - \mathbf{B}^2 x_{t} \right) + `r 1 - beta_value |> round(3)` ~ \mathbf{B}^2 b_{t}
+\end{cases}
+$$
 
-<!-- -   Solve for the term $\mathbf{B}b_t$ in the first equation and substitute the resulting expression into the second equation. -->
+-   Solve for the term $\mathbf{B}b_t$ in the first equation and substitute the resulting expression into the second equation.
 
-<!-- Solving for $\mathbf{B} b_{t}$: -->
-<!-- $$ -->
-<!-- \mathbf{B} b_{t} = x_t -\mathbf{B} x_{t} - w_t = (1-\mathbf{B}) x_t - w_t -->
-<!-- $$ -->
-<!-- First, we simplify the second equation: -->
-<!-- \begin{align*} -->
-<!--   \mathbf{B} b_{t}  -->
-<!--     &= `r model_hw$beta |> round(3)` \left( \mathbf{B} x_{t} - \mathbf{B}^2 x_{t} \right) + `r 1 - model_hw$beta |> round(3)` ~ \mathbf{B}^2 b_{t}  \\ -->
-<!--     &= `r model_hw$beta |> round(3)` \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t}   + `r 1 - model_hw$beta |> round(3)` ~ \mathbf{B} \left[ \mathbf{B} b_{t} \right]   -->
-<!-- \end{align*} -->
-<!-- Substitutingthe expression for $\mathbf{B} b_{t}$ into the second equation: -->
-<!-- \begin{align*} -->
-<!--   (1-\mathbf{B}) x_t - w_t  -->
-<!--     &= `r model_hw$beta |> round(3)` \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t}   + `r 1 - model_hw$beta |> round(3)` ~ \mathbf{B} \left[ (1-\mathbf{B}) x_t - w_t \right]  \\ -->
-<!--     &= `r model_hw$beta |> round(3)` \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t}   + `r 1 - model_hw$beta |> round(3)` ~ \mathbf{B} (1-\mathbf{B}) x_t - `r 1 - model_hw$beta |> round(3)` ~ \mathbf{B} w_t \\ -->
-<!--     &= \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t} - `r 1 - model_hw$beta |> round(3)` ~ \mathbf{B} w_t   \\ -->
-<!-- \end{align*} -->
+Solving for $\mathbf{B} b_{t}$:
+$$
+\mathbf{B} b_{t} = x_t -\mathbf{B} x_{t} - w_t = (1-\mathbf{B}) x_t - w_t
+$$
+First, we simplify the second equation:
+\begin{align*}
+  \mathbf{B} b_{t}
+    &= `r beta_value |> round(3)` \left( \mathbf{B} x_{t} - \mathbf{B}^2 x_{t} \right) + `r 1 - beta_value |> round(3)` ~ \mathbf{B}^2 b_{t}  \\
+    &= `r beta_value |> round(3)` \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t}   + `r 1 - beta_value |> round(3)` ~ \mathbf{B} \left[ \mathbf{B} b_{t} \right]
+\end{align*}
+Substitutingthe expression for $\mathbf{B} b_{t}$ into the second equation:
+\begin{align*}
+  (1-\mathbf{B}) x_t - w_t
+    &= `r beta_value |> round(3)` \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t}   + `r 1 - beta_value |> round(3)` ~ \mathbf{B} \left[ (1-\mathbf{B}) x_t - w_t \right]  \\
+    &= `r beta_value |> round(3)` \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t}   + `r 1 - beta_value |> round(3)` ~ \mathbf{B} (1-\mathbf{B}) x_t - `r 1 - beta_value |> round(3)` ~ \mathbf{B} w_t \\
+    &= \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t} - `r 1 - beta_value |> round(3)` ~ \mathbf{B} w_t   \\
+\end{align*}
 
-<!-- -   Combine like terms and simplify. -->
+-   Combine like terms and simplify.
 
-<!-- Combining like terms: -->
-<!-- \begin{align*} -->
-<!--   (1-\mathbf{B}) x_t - w_t  -->
-<!--     &= \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t} - `r 1 - model_hw$beta |> round(3)` ~ \mathbf{B} w_t   \\ -->
-<!--   (1-\mathbf{B}) x_t - \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t} -->
-<!--     &=  w_t - `r 1 - model_hw$beta |> round(3)` ~ \mathbf{B} w_t   \\ -->
-<!--   \left( 1-\mathbf{B} \right) \left(  1 - \mathbf{B} \right) x_{t} -->
-<!--     &=  \left( 1 - `r 1 - model_hw$beta |> round(3)` ~ \mathbf{B} \right) w_t   \\ -->
-<!--   \left( 1-\mathbf{B} \right)^2 x_{t} -->
-<!--     &=  \left( 1 - `r 1 - model_hw$beta |> round(3)` ~ \mathbf{B} \right) w_t   \\ -->
-<!-- \end{align*} -->
+Combining like terms:
+\begin{align*}
+  (1-\mathbf{B}) x_t - w_t
+    &= \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t} - `r 1 - beta_value |> round(3)` ~ \mathbf{B} w_t   \\
+  (1-\mathbf{B}) x_t - \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t}
+    &=  w_t - `r 1 - beta_value |> round(3)` ~ \mathbf{B} w_t   \\
+  \left( 1-\mathbf{B} \right) \left(  1 - \mathbf{B} \right) x_{t}
+    &=  \left( 1 - `r 1 - beta_value |> round(3)` ~ \mathbf{B} \right) w_t   \\
+  \left( 1-\mathbf{B} \right)^2 x_{t}
+    &=  \left( 1 - `r 1 - beta_value |> round(3)` ~ \mathbf{B} \right) w_t   \\
+\end{align*}
 
-<!-- This is a special case of the ARIMA models in Chapter 7. -->
-<!-- ::: -->
+This is a special case of the ARIMA models in Chapter 7.
+:::
 
-<!-- ::: -->
-<!-- <!-- End of solution for Holt Winters Fitting --> -->
+:::
+<!-- End of solution for Holt Winters Fitting -->
 
 
 
@@ -1659,7 +1749,7 @@ $$
 
 -   Is there evidence to suggest that the time series can be modeled as a random walk with drift? Why or why not?
 
-This confidence interval contains 0, so we cannot conclude that there is evidence of a positive drift in the price of McDonald's stock over this period.
+If this confidence contains 0, we cannot conclude that there is evidence of a positive drift in the price of McDonald's stock over the period.
 
 :::
 
