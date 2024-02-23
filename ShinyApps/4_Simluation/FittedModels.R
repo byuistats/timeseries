@@ -38,7 +38,7 @@ ui <- fluidPage(
   ),
   titlePanel("Fitted Models"),
   fluidRow(
-    column(5, offset = 2, sliderInput("n_points", "Number of Points", min = 0, max = 500, value = 100, step = 10)),
+    column(5, offset = 2, sliderInput("n_points", "Number of Points", min = 0, max = 2000, value = 500, step = 50)),
     column(5, sliderInput("sigma", "Standard Deviation", min = 0, max = 10, value = 1, step = 0.1))
     ),
   fluidRow(
@@ -48,9 +48,9 @@ ui <- fluidPage(
     id = "main",
     type = "pills",
     tabPanel(
-      title = "AR 1",
+      title = "AR (1)",
       fluidRow(
-        column(3, offset = 1, numericInput("alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.7, step = 0.02)),
+        column(3, offset = 1, numericInput("AR1_alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.7, step = 0.02)),
       ),
       fluidRow(
 
@@ -83,10 +83,10 @@ ui <- fluidPage(
       )
     ),
     tabPanel(
-      title = "AR 2",
+      title = "AR (2)",
       fluidRow(
-        column(3, offset = 1, numericInput("alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.5, step = 0.02)),
-        column(3, numericInput("alpha_2", "$ \\alpha_2 $", min = -500, max = 500, value = 0.5, step = 0.02))
+        column(3, offset = 1, numericInput("AR2_alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.5, step = 0.02)),
+        column(3, numericInput("AR2_alpha_2", "$ \\alpha_2 $", min = -500, max = 500, value = 0.5, step = 0.02))
       ),
       fluidRow(
         column(4, offset = 5, actionButton("go2", "Simulate!")),
@@ -118,11 +118,11 @@ ui <- fluidPage(
       )
     ),
     tabPanel(
-      title = "AR 3",
+      title = "AR (3)",
       fluidRow(
-        column(3, offset = 1, numericInput("alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.25, step = 0.02)),
-        column(3, numericInput("alpha_2", "$ \\alpha_2 $", min = -500, max = 500, value = 0.2, step = 0.02)),
-        column(3, numericInput("alpha_3", "$ \\alpha_3 $", min = -500, max = 500, value = 0.15, step = 0.02))
+        column(3, offset = 1, numericInput("AR3_alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.25, step = 0.02)),
+        column(3, numericInput("AR3_alpha_2", "$ \\alpha_2 $", min = -500, max = 500, value = 0.2, step = 0.02)),
+        column(3, numericInput("AR3_alpha_3", "$ \\alpha_3 $", min = -500, max = 500, value = 0.15, step = 0.02))
       ),
       fluidRow(
         column(4, offset = 5, actionButton("go3", "Simulate!")),
@@ -197,27 +197,27 @@ server <- function(input, output, session) {
     }
   })
 
-  observe({ #needed this before I moved all the inputs into the indivdual tabs, this is code for updated inputs in the header.... but its still needed? because 'redefining' the input for alpha1/2 doesn't seem to overwrite the previously defined default value...
-    selected_tab <- input$main
-
-    if (selected_tab == "AR 1") {# Assuming "tab1" is the ID of the first tab
-      a1 <- 0.7
-      a2 <- 0
-      a3 <- 0
-    } else if (selected_tab == "AR 2") {
-      a1 <- 0.5
-      a2 <- 0.5
-      a3 <- 0
-    } else {
-      a1 <- 0.25
-      a2 <- 0.2
-      a3 <- 0.15
-    }
-
-    updateNumericInput(session, "alpha_1", value = a1)
-    updateNumericInput(session, "alpha_2", value = a2)
-    updateNumericInput(session, "alpha_3", value = a3)
-  })
+  # observe({ #needed this before I moved all the inputs into the indivdual tabs, this is code for updated inputs in the header.... but its still needed? because 'redefining' the input for alpha1/2 doesn't seem to overwrite the previously defined default value...
+  #   selected_tab <- input$main
+  #
+  #   if (selected_tab == "AR (1)") {# Assuming "tab1" is the ID of the first tab
+  #     a1 <- 0.7
+  #     a2 <- 0
+  #     a3 <- 0
+  #   } else if (selected_tab == "AR (2)") {
+  #     a1 <- 0.5
+  #     a2 <- 0.5
+  #     a3 <- 0
+  #   } else {
+  #     a1 <- 0.25
+  #     a2 <- 0.2
+  #     a3 <- 0.15
+  #   }
+  #
+  #   updateNumericInput(session, "alpha_1", value = a1)
+  #   updateNumericInput(session, "alpha_2", value = a2)
+  #   updateNumericInput(session, "alpha_3", value = a3)
+  # })
 
   # Simulate data Ar1
   sim_data1 <- eventReactive(input$go1, {
@@ -230,7 +230,7 @@ server <- function(input, output, session) {
                     by = "1 days")
 
     for (t in 2:n_days) {
-      x[t] <- input$alpha_1 * x[t-1] + w[t]
+      x[t] <- input$AR1_alpha_1 * x[t-1] + w[t]
     }
 
     sim_ts <- data.frame(dates = date_seq, x=x) |>
@@ -254,9 +254,9 @@ server <- function(input, output, session) {
                     start_date + days(n_days - 1),
                     by = "1 days")
 
-    x[2] <- input$alpha_1 * x[1] + w[2]
+    x[2] <- input$AR2_alpha_1 * x[1] + w[2]
     for (t in 3:n_days) {
-      x[t] <- input$alpha_1 * x[t-1] + input$alpha_2 * x[t-2] + w[t]
+      x[t] <- input$AR2_alpha_1 * x[t-1] + input$AR2_alpha_2 * x[t-2] + w[t]
     }
 
     sim_ts <- data.frame(dates = date_seq, x=x) |>
@@ -280,10 +280,10 @@ server <- function(input, output, session) {
                     start_date + days(n_days - 1),
                     by = "1 days")
 
-    x[2] <- input$alpha_1 * x[1] + w[2]
-    x[3] <- input$alpha_1 * x[2] + input$alpha_2 * x[1] + w[3]
+    x[2] <- input$AR3_alpha_1 * x[1] + w[2]
+    x[3] <- input$AR3_alpha_1 * x[2] + input$AR3_alpha_2 * x[1] + w[3]
     for (t in 4:n_days) {
-      x[t] <- input$alpha_1 * x[t-1] + input$alpha_2 * x[t-2] + input$alpha_3 * x[t-3] + w[t]
+      x[t] <- input$AR3_alpha_1 * x[t-1] + input$AR3_alpha_2 * x[t-2] + input$AR3_alpha_3 * x[t-3] + w[t]
     }
 
     sim_ts <- data.frame(dates = date_seq, x=x) |>
@@ -359,7 +359,7 @@ server <- function(input, output, session) {
   })
 
   output$formula1 <- renderUI({
-    a1 <- input$alpha_1
+    a1 <- input$AR1_alpha_1
     tagList(
       paste0("$x_t = ",a1, "x_{t-1} + w_t$"),
       tags$script('renderMathInElement(document.getElementById("formula1"), {delimiters: [{left: "$", right: "$", display: false}]});')
@@ -367,8 +367,8 @@ server <- function(input, output, session) {
   })
 
   output$formula2 <- renderUI({
-    a1 <- input$alpha_1
-    a2 <- input$alpha_2
+    a1 <- input$AR2_alpha_1
+    a2 <- input$AR2_alpha_2
     tagList(
       paste0("$x_t = ",a1, "x_{t-1} + ",a2,"x_{t-2} + w_t$"),
       tags$script('renderMathInElement(document.getElementById("formula2"), {delimiters: [{left: "$", right: "$", display: false}]});')
@@ -376,9 +376,9 @@ server <- function(input, output, session) {
   })
 
   output$formula3 <- renderUI({
-    a1 <- input$alpha_1
-    a2 <- input$alpha_2
-    a3 <- input$alpha_3
+    a1 <- input$AR3_alpha_1
+    a2 <- input$AR3_alpha_2
+    a3 <- input$AR3_alpha_3
     tagList(
       paste0("$x_t = ",a1, "x_{t-1} + ",a2,"x_{t-2} + ",a3," x_{t-3} + w_t$"),
       tags$script('renderMathInElement(document.getElementById("formula3"), {delimiters: [{left: "$", right: "$", display: false}]});')

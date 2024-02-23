@@ -19,9 +19,9 @@ ui <- fluidPage(
   # If the columns of a row add to more than 12 it will simply start to overflow into a new row
   # so 3 columns in 6 in a single fluid row will have form a 2x2 grid, with the bottom right section being empty
   fluidRow(
-    column(4, sliderInput("n_points", "Number of Points", min = 0, max = 500, value = 100, step = 10)),
-    column(4, sliderInput("sigma", "Standard Deviation", min = 0, max = 10, value = 1, step = 0.1)),
-    column(4, numericInput("alpha", "Alpha", min = -1, max = 1, value = 1, step= 0.02))
+    column(4, numericInput("alpha", "Alpha", value = 1, step= 0.02)),
+    column(4, sliderInput("n_points", "Number of Points", min = 0, max = 2000, value = 500, step = 50)),
+    column(4, sliderInput("sigma", "Standard Deviation", min = 0, max = 10, value = 1, step = 0.1))
   ),
   # the optional offset parameter allows you to adjust to position where the columns start
   div(id = "button",
