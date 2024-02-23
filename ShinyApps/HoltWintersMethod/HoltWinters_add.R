@@ -189,20 +189,21 @@ ui <- fluidPage(
   useShinyjs(),
     titlePanel("Exploration: Holt-Winters Additive Model"),
     fluidRow(
-      column(4, dateRangeInput("dateRange", "Select date range:",
+      column(3, selectInput("dataset_in", label = "Choose a Dataset",
+                            choices = c("Enrollment", "Baltimore Crimes", "Apple Revenue"))),
+      column(3, dateRangeInput("dateRange", "Select date range:",
                      start = "2000-01-01",  # Default start date
                      end = "2024-01-01",         # Default end date
                      min = "2000-01-01",       # Earliest date selectable
                      max = "2024-01-01")),
-      column(4, selectInput("dataset_in", label = "Choose a Dataset",
-                  choices = c("Enrollment", "Crimes", "Apple"))),
       column(2, materialSwitch(inputId = "toggle_advIn", value = FALSE, label = "Advanced Inputs")),
-      column(2, materialSwitch(inputId = "toggle_advOut", value = FALSE, label = "Advanced Outputs"))
+      column(2, materialSwitch(inputId = "toggle_advOut", value = FALSE, label = "Advanced Outputs")),
+      column(2, materialSwitch(inputId = "toggle_modelVals", value = FALSE, label = "Use Model Values"))
     ),
     fluidRow(
-      column(4, sliderInput("a", "Alpha", min = 0, max = 1, value = 0.2, step=0.1)),
-      column(4, sliderInput("b", "Beta", min = 0, max = 1, value = 0.2, step=0.1)),
-      column(4, sliderInput("g", "Gamma", min = 0, max = 1, value = 0.2, step=0.1))
+      column(4, numericInput("a", "Alpha", min = 0, max = 1, value = 0.2)),
+      column(4, numericInput("b", "Beta", min = 0, max = 1, value = 0.2)),
+      column(4, numericInput("g", "Gamma", min = 0, max = 1, value = 0.2))
     ),
   div(id = "DynInputs",
     fluidRow(
@@ -225,8 +226,8 @@ ui <- fluidPage(
   ),
   div(id = "Predict",
     fluidRow(
-      column(4, offset = 5, actionButton("go", "Predict!")),
-      column(4, offset = 5, actionButton("explore", "exp!")),
+      column(4, offset = 5, actionButton("explore", "Model Series")),
+      column(4, offset = 5, hidden(div(id = "secondButton", actionButton("go", "Predict Series")))), # Hide this initially
       column(12, textOutput("debug")),
     ),
   ),
@@ -260,6 +261,11 @@ ui <- fluidPage(
 # Define the server logic
 server <- function(input, output, session) {
   #### observe updates ####
+  observeEvent(input$explore, {
+    # Use shinyjs to show the second button when the first button is clicked
+    shinyjs::show("secondButton")
+  })
+
   observe({
     if(input$toggle_advIn) {
       show("AdvInputs")
@@ -294,6 +300,32 @@ server <- function(input, output, session) {
     updateNumericInput(session, "periods", max = datasetLength*10)
     updateSelectInput(session, "value", choices = datasetColumns)
     updateDateRangeInput(session, "dateRange",   start = data_dates()[[1]], end = data_dates()[[2]], min = data_dates()[[1]], max = data_dates()[[2]])
+  })
+
+  observe({
+    datasetLength <- nrow(sel_data())
+    if (input$toggle_modelVals == TRUE) {
+      model_p <- exp_data()[[1]][[1]][["fit"]][["spec"]][["period"]]
+      updateNumericInput(session, "p", max = datasetLength, value = model_p)
+    } else {
+      updateNumericInput(session, "p", max = datasetLength)
+    }
+  })
+
+  observe({
+    if (input$toggle_modelVals == TRUE) {
+      model <- exp_data()
+      mod_a <- model[[1]][[1]][["fit"]][["par"]][["estimate"]][[1]]
+      mod_b <- model[[1]][[1]][["fit"]][["par"]][["estimate"]][[2]]
+      mod_g <- model[[1]][[1]][["fit"]][["par"]][["estimate"]][[3]]
+      updateNumericInput(session, "a", value = mod_a)
+      updateNumericInput(session, "b", value = mod_b)
+      updateNumericInput(session, "g", value = mod_g)
+    } else {
+      updateNumericInput(session, "a", value = input$a)
+      updateNumericInput(session, "b", value = input$b)
+      updateNumericInput(session, "g", value = input$g)
+    }
   })
 
   #### import data ####
@@ -334,9 +366,9 @@ server <- function(input, output, session) {
     ) |>
     dplyr::select(dates, year, quarter, value)  |>
     arrange(dates) |>
-    mutate(index = tsibble::yearquarter(dates)) |>
-    as_tsibble(index = index) |>
-    dplyr::select(index, dates, year, quarter, value)
+    mutate(dates = tsibble::yearquarter(dates)) |>
+    as_tsibble(index = dates) |>
+    dplyr::select(dates, year, quarter, value)
 
   #### event reactives ####
   # list of defined s's
@@ -344,27 +376,33 @@ server <- function(input, output, session) {
     values <- input$S_list
     p <- input$p
     season_type <- input$season
-
-    tryCatch({
-      values <- as.numeric(strsplit(values, ",")[[1]])
-      if (length(values)==p){
-        S_initial_list <- values
-      } else {
+    model <- exp_data()[[1]][[1]][["fit"]]
+    if (input$toggle_modelVals){
+      initialStates <- model[["states"]][[model[["spec"]][["period"]]+3]][1:model[["spec"]][["period"]]]
+      S_initial_list <- rev(initialStates)
+    } else {
+      tryCatch({
+        values <- as.numeric(strsplit(values, ",")[[1]])
+        if (length(values)==p){
+          S_initial_list <- values
+        } else {
+          if (season_type == "Additive"){
+            S_initial_list <-rep(0, p)
+          } else{
+            S_initial_list <-rep(1, p)
+          }
+        }
+      }, error = function(error) {
         if (season_type == "Additive"){
           S_initial_list <-rep(0, p)
         } else{
           S_initial_list <-rep(1, p)
         }
-      }
-    }, error = function(error) {
-      if (season_type == "Additive"){
-        S_initial_list <-rep(0, p)
-      } else{
-        S_initial_list <-rep(1, p)
-      }
-    })
+      })
+    }
     S_initial_list
   })
+
   output$initial_list <- renderText({
     paste(S_initial_list())
   })
@@ -373,7 +411,7 @@ server <- function(input, output, session) {
   sel_data <- reactive({
     if (input$dataset_in == "Enrollment"){
       data <- enrollment_ts
-    } else if (input$dataset_in == "Apple"){
+    } else if (input$dataset_in == "Apple Revenue"){
       data <- apple_ts
     } else {
       data <- crime_summary
@@ -398,7 +436,7 @@ server <- function(input, output, session) {
     data <- sel_data()
 
     # Ensure the 'dates' column is of type Date
-    data <- data %>% mutate(dates = as.Date(dates))
+    #data <- data %>% mutate(dates = as.Date(dates))
 
     # Convert input dates from Shiny input to Date objects
     start_date <- as.Date(input$dateRange[1])
@@ -412,7 +450,6 @@ server <- function(input, output, session) {
 
   sim_data <- eventReactive(input$go,{
     data <- fil_data()
-
     forecast_dat <- holt_winters_forecast(data, "dates",input$value, alpha = input$a, input$b, gamma = input$g, p = input$p, predict_periods = input$periods,s_initial = S_initial_list(), round_to = "month", slope_type = "Additive", season_type = input$season)
     return(
       list(
@@ -426,8 +463,8 @@ server <- function(input, output, session) {
     value_col <- sym(input$value)
     if (input$season == "Additive"){
       ggplot(data, aes(x = dates)) +
-        geom_line(aes(y = !!value_col, color = "Base"),linetype=3, size = 1) +
-        geom_line(aes(y = a_t + s_t, color = "Components", alpha=0.7), size = 1) +
+        geom_line(aes(y = !!value_col, color = "Base"), size = 1) +
+        geom_line(aes(y = a_t + s_t, color = "Components", alpha=0.7),linetype=3, size = 1) +
         labs(
           x = "Date",
           y = "Value",
@@ -520,22 +557,18 @@ server <- function(input, output, session) {
     data <- fil_data()
     selected_val <- input$value
 
-    # Rename the dynamically selected column to a fixed name, e.g., "target"
-    # data <- data %>%
-    #   mutate(target = data[[selected_val]],
-    #          dates = as.Date(dates)) %>%
-    #   as_tsibble(index = dates)
+    #Rename the dynamically selected column to a fixed name, e.g., "target"
+    data <- data %>%
+      mutate(target = data[[selected_val]]) %>%
+      as_tsibble(index = dates)
 
     # Now, you can use a fixed formula since the target column name is known
     season_type <- if (input$season == "Additive") "A" else "M"
-    formula <- paste0("value ~ trend('A') + error('A') + season('", season_type, "')")
+    formula <- paste0("target ~ trend('A') + error('A') + season('", season_type, "')")
 
     data_hw <- data |>
       model(ExploreModel = ETS(!!as.formula(formula), opt_crit = "amse", nmse = 1))
-
-    report(data_hw)
-    names(data)
-    print(formula)
+    model <- report(data_hw)
   })
 
   output$preview <- renderPrint({

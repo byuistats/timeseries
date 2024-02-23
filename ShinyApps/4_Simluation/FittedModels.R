@@ -12,9 +12,9 @@ library(shinyjs)
 library(shinythemes)
 library(shinyWidgets)
 
-# Define UI for application that draws a histogram
-
+### UI  ####
 ui <- fluidPage(
+  #### Code and tags for LATEX and Dynamic UI ####
   tags$head(
     tags$link(rel="stylesheet",
               href="https://cdn.jsdelivr.net/npm/katex@0.10.1/dist/katex.min.css",
@@ -36,6 +36,7 @@ ui <- fluidPage(
   tags$head(
     tags$style(HTML(".nav-pills {display: flex; justify-content: center;}\n.nav-pills > li > a {padding: 8px 120px; font-size: 16px; }"))
   ),
+  #### Header ####
   titlePanel("Fitted Models"),
   fluidRow(
     column(5, offset = 2, sliderInput("n_points", "Number of Points", min = 0, max = 2000, value = 500, step = 50)),
@@ -47,6 +48,7 @@ ui <- fluidPage(
   tabsetPanel(
     id = "main",
     type = "pills",
+    #### AR1 Tab ####
     tabPanel(
       title = "AR (1)",
       fluidRow(
@@ -82,6 +84,7 @@ ui <- fluidPage(
         ))
       )
     ),
+    #### AR2 tab ####
     tabPanel(
       title = "AR (2)",
       fluidRow(
@@ -117,6 +120,7 @@ ui <- fluidPage(
         ))
       )
     ),
+    #### AR3 tab ####
     tabPanel(
       title = "AR (3)",
       fluidRow(
@@ -156,9 +160,10 @@ ui <- fluidPage(
   )
 )
 
-# Define server logic
+### Server ####
 server <- function(input, output, session) {
 
+  #### Hide/Show logic for UI ####
   # Observe for button clicks in each tab
   observeEvent(input$go1, {
     show("outputs1")
@@ -197,6 +202,7 @@ server <- function(input, output, session) {
     }
   })
 
+  # # old code from before i made each alpha from every tab a unique id, tried for a while to get shiny to let me overwrite them from tab to tab but didnt succeed. maybe need to use the isolate() but haven't used it before and don't fully understand the implications
   # observe({ #needed this before I moved all the inputs into the indivdual tabs, this is code for updated inputs in the header.... but its still needed? because 'redefining' the input for alpha1/2 doesn't seem to overwrite the previously defined default value...
   #   selected_tab <- input$main
   #
@@ -219,7 +225,7 @@ server <- function(input, output, session) {
   #   updateNumericInput(session, "alpha_3", value = a3)
   # })
 
-  # Simulate data Ar1
+  #### AR1 sim ####
   sim_data1 <- eventReactive(input$go1, {
     # AR(1) process
     n_days <- input$n_points
@@ -243,8 +249,7 @@ server <- function(input, output, session) {
 
     list(sim_data = sim_ts, acf_plot = acf_plot, pacf_plot = pacf_plot)
   })
-
-  # Simulate data Ar2
+  #### AR2 sim ####
   sim_data2 <- eventReactive(input$go2, {
     # AR(2) process
     n_days <- input$n_points
@@ -270,7 +275,7 @@ server <- function(input, output, session) {
     list(sim_data = sim_ts, acf_plot = acf_plot, pacf_plot = pacf_plot)
   })
 
-  # Simulate data Ar3
+  #### AR3 sim ####
   sim_data3 <- eventReactive(input$go3, {
     # AR(3) process
     n_days <- input$n_points
@@ -297,7 +302,7 @@ server <- function(input, output, session) {
     list(sim_data = sim_ts, acf_plot = acf_plot, pacf_plot = pacf_plot)
   })
 
-  # Render plots Ar1
+  #### AR1 Plots ####
   output$plot1 <- renderPlot({
     df <- sim_data1()$sim_data
 
@@ -318,7 +323,7 @@ server <- function(input, output, session) {
   })
 
 
-  # Render plots Ar2
+  #### AR2 Plots ####
   output$plot2 <- renderPlot({
     df <- sim_data2()$sim_data
 
@@ -337,8 +342,7 @@ server <- function(input, output, session) {
   output$pacf_plot2 <- renderPlot({
     sim_data2()$pacf_plot
   })
-
-  # Render plots Ar3
+  #### AR3 Plots ####
   output$plot3 <- renderPlot({
     df <- sim_data3()$sim_data
 
@@ -357,7 +361,7 @@ server <- function(input, output, session) {
   output$pacf_plot3 <- renderPlot({
     sim_data3()$pacf_plot
   })
-
+  #### Dynamic formulas ####
   output$formula1 <- renderUI({
     a1 <- input$AR1_alpha_1
     tagList(
