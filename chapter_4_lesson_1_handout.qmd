@@ -89,3 +89,58 @@ ggplot(data=df2, aes(x=x, y=y)) +
 
 
 :::
+
+
+
+<br>
+<br>
+
+
+#### Backward Shift Operator
+
+Let $\{x_t\}$ be a time series with the following values. 
+
+<center>
+```{r, results='asis'}
+#| echo: false
+
+set.seed(6)
+n <- 8
+d_operator <- data.frame(t = c(1:n), x = sample(1:15, n, replace = FALSE)) |>
+  mutate(diff = t - n)
+
+#cat( paste( paste0("$x_{t", ifelse(d_operator$t==n,"",d_operator$t-n), "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+
+cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+
+# Computes the value of the "power_on_d"^th difference from x_n
+d_value <- function(power_on_d = 0) {
+  out <- d_operator |> #### Note the use of this global variable
+    filter(diff == -power_on_d) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+
+
+ts_val <- function(t_value) {
+  out <- d_operator |> #### Note the use of this global variable
+    filter(t == t_value) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+```
+</center>
+Evaluate the following. 
+
+-   $\mathbf{B} x_8$
+-   $\mathbf{B}^5 x_8$
+-   $(\mathbf{B}^5 - \mathbf{B} ) x_8$
+-   $( \mathbf{B}^2 - 6 \mathbf{B} + 9 ) x_8$
+-   $( (\mathbf{B} - 6 )\mathbf{B} + 9 ) x_8$
+-   $( \mathbf{B} - 3 )^2 x_8 =  ( \mathbf{B} - 3 ) \left[ ( \mathbf{B} - 3 ) x_8 \right]$
+-   $( 1 - \frac{1}{2} \mathbf{B} - \frac{1}{4} \mathbf{B}^2 - \frac{1}{8} \mathbf{B}^3 ) x_8$
+
