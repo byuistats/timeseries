@@ -59,6 +59,42 @@ source("common_functions.R")
 -   Sign the Learning Journal review sheet for your peer
 
 
+## Class Activity: Global Warming (15 min)
+
+```{r}
+temps_ts <- rio::import("data/global_temparature.csv") |>
+  as_tsibble(index = year)
+
+temps_ts |> autoplot(.vars = change) +
+    labs(
+      x = "Year",
+      y = "Temperature (Celsius)",
+      title = "Change in Mean Annual Global Temperature"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+pacf(temps_ts$change)
+
+global_ar <- temps_ts |>
+    model(AR(change ~ order(1:9)))
+
+mean(temps_ts$change)
+
+tidy(global_ar) |> filter(str_detect(term, "ar")) |> nrow()
+
+tidy(global_ar) |> filter(str_detect(term, "ar")) |> pull(estimate)
+
+coeffs <- tidy(global_ar) |> filter(str_detect(term, "ar")) |> pull(estimate)
+coeffs[1]
+
+residuals(global_ar) |> ACF(lag_max = 50) |> autoplot(.vars = .resid)
+```
+
+
+
 ## Small Group Activity: SectionTitle (xxx min)
 ## Class Activity: SectionTitle (xxx min)
 

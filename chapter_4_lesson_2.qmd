@@ -60,114 +60,8 @@ source("common_functions.R")
 
 
 
-## Class Activity: Random Walks Continued (15 min)
+## Class Activity: Differencing a Time Series (15 min)
 
-Recall the definition of a random walk:
-
-$\{x_t\}$ is a **random walk** if it can be expressed as
-$$
-  x_{t} = x_{t-1} + w_{t}
-$$
-where $\{w_t\}$ is a white noise series.
-
-There are other ways to represent this expression.
-
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   Notice that $x_{t-1} = x_{t-2} + w_{t-1}$ and $x_{t-2} = x_{t-3} + w_{t-2}$. Use this to explain why it is possible to write $x_t$ as
-    $$
-      x_{t} = \sum\limits_{i=-\infty}^{t} w_{i} = \cdots + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} 
-    $$
-    where $\{w_t\}$ is a DWN time series.
-    
-    If the time series is finite, we can write $x_t$ as:
-    $$
-      x_{t} = w_1 + w_2 + w_3 + \cdots + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} 
-    $$
-    
-:::
-
-
-<!-- Note that this implies that: -->
-<!-- \begin{align*} -->
-<!--   x_{t} &= x_{t-1} + w_{t} \\ -->
-<!--   x_{t-1} &= x_{t-2} + w_{t-1} \\ -->
-<!--   x_{t-2} &= x_{t-3} + w_{t-2} \\ -->
-<!--   x_{t-3} &= x_{t-4} + w_{t-3} \\ -->
-<!--   \vdots ~~ &= ~~~~~~~~~~~~ \vdots \\ -->
-<!--   x_{4} &= x_{3} + w_{4} \\ -->
-<!--   x_{3} &= x_{2} + w_{3} \\ -->
-<!--   x_{2} &= x_{1} + w_{2} \\ -->
-<!--   x_{1} &= w_{1}  -->
-<!-- \end{align*} -->
-
-<!-- We can write this as -->
-
-<!-- \begin{align*} -->
-<!--   x_{t}  -->
-<!--     &= x_{t-1} + w_{t} \\ -->
-<!--     &= \underbrace{x_{t-2} + w_{t-1}} + w_{t} \\ -->
-<!--     &= \underbrace{x_{t-3} + w_{t-2}} + w_{t-1} + w_{t} \\ -->
-<!--     &= \underbrace{x_{t-4} + w_{t-3}} + w_{t-2} + w_{t-1} + w_{t} \\ -->
-<!--     &= ~~~~ \vdots \\ -->
-<!--     &= \underbrace{x_3 + w_4} + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
-<!--     &= \underbrace{x_2 + w_3} + w_4 + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
-<!--     &= \underbrace{x_1 + w_2} + w_3 + w_4 + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
-<!--     &= w_1 + w_2 + w_3 + w_4 + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t}  -->
-<!-- \end{align*} -->
-
-
-### Definition of the Backward Shift Operator
-
-This process of *back substitution* is so common, we define notation to handle it.
-
-::: {.callout-note icon=false title="Definition of the Backward Shift Operator"}
-
-We define the **backward shift operator** or the **lag operator**, $\mathbf{B}$, as:
-$$
-  \mathbf{B} x_t = x_{t-1}
-$$
-where $\{x_t\}$ is any time series.
-
-We can apply this operator repeatedly. We will use exponential notation to indicate this.
-
-$$
-  \mathbf{B}^2 x_t = \mathbf{B} \mathbf{B} x_t = \mathbf{B} ( \mathbf{B} x_t ) x_t = \mathbf{B} x_{t-1} = \mathbf{B} x_{t-2}
-$$
-
-In general, 
-$$
-  \mathbf{B}^n x_t = \underbrace{\mathbf{B} \cdot \mathbf{B} \cdot \cdots \cdot \mathbf{B}}_{n ~ \text{terms}} x_t = \mathbf{B}^{n-1} ( \mathbf{B} x_t ) = \mathbf{B}^{n-1} ( x_{t-1} ) = \mathbf{B}^{n-2} ( x_{t-2} ) = \cdots = \mathbf{B} x_{t-(n-1)} = x_{t-n}
-$$
-
-:::
-
-Note that we can use the backwards shift operator to write a random walk in terms of the realizations of a white noise process. Consider the following process:
-\begin{align*}
-  x_t 
-    &= \frac{1}{5} w_{t-2} + \frac{1}{3} w_{t-1} + w_{t} \\
-    &= \frac{1}{5} \mathbf{B}^2 w_t + \frac{1}{3} \mathbf{B} w_t + w_{t} \\
-    &= \left( \frac{1}{5} \mathbf{B}^2 + \frac{1}{3} \mathbf{B} + 1 \right) w_{t} \\
-\end{align*}
-<!-- Or more generally, -->
-<!-- \begin{align*} -->
-<!--   x_t  -->
-<!--     &= w_1 + w_2 + w_3 + \cdots + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
-<!--     &= \mathbf{B}^{t-1} w_t + \mathbf{B}^{t-2} w_t + \mathbf{B}^{t-3} w_t + \cdots + \mathbf{B}^3 w_t + \mathbf{B}^2 w_t + \mathbf{B} w_t + w_{t} \\ -->
-<!--     &= \left( \mathbf{B}^{t-1} + \mathbf{B}^{t-2} + \mathbf{B}^{t-3} + \cdots + \mathbf{B}^3 + \mathbf{B}^2 + \mathbf{B} + 1 \right) w_{t} \\ -->
-<!-- \end{align*} -->
-
-We will practice applying this operator.
-
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
-Let $\{x_t\}$ be a time series with the following values. 
-
-<center>
 ```{r, results='asis'}
 #| echo: false
 
@@ -175,10 +69,6 @@ set.seed(6)
 n <- 8
 d_operator <- data.frame(t = c(1:n), x = sample(1:15, n, replace = FALSE)) |>
   mutate(diff = t - n)
-
-#cat( paste( paste0("$x_{t", ifelse(d_operator$t==n,"",d_operator$t-n), "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
-
-cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
 
 # Computes the value of the "power_on_d"^th difference from x_n
 d_value <- function(power_on_d = 0) {
@@ -190,7 +80,6 @@ d_value <- function(power_on_d = 0) {
   return(out)
 }
 
-
 ts_val <- function(t_value) {
   out <- d_operator |> #### Note the use of this global variable
     filter(t == t_value) |>
@@ -200,151 +89,19 @@ ts_val <- function(t_value) {
   return(out)
 }
 ```
-</center>
-Evaluate the following. 
-
--   $\mathbf{B} x_8$
--   $\mathbf{B}^5 x_8$
--   $(\mathbf{B}^5 - \mathbf{B} ) x_8$
--   $( \mathbf{B}^2 - 6 \mathbf{B} + 9 ) x_8$
--   $( (\mathbf{B} - 6 )\mathbf{B} + 9 ) x_8$
--   $( \mathbf{B} - 3 )^2 x_8 =  ( \mathbf{B} - 3 ) \left[ ( \mathbf{B} - 3 ) x_8 \right]$
--   $( 1 - \frac{1}{2} \mathbf{B} - \frac{1}{4} \mathbf{B}^2 - \frac{1}{8} \mathbf{B}^3 ) x_8$
-
-:::
 
 
+### Example: McDonald's Stock Prices
 
+Computing the difference between successive terms of a random walk leads to a discrete white noise series. 
 
-### Simulation
-
-The following simulation illustrates a random walk.
-
-```{=html}
- <iframe id="Randomwalk" src="https://posit.byui.edu/content/f9a0690a-87ce-423c-9d9c-4dfd0188dd86" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe>
-```
-
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   What do you notice about this time series?
--   What characteristics do you observe in the correlogram?
--   How does this compare to the time series and correlogram for the DWN process?
-
-:::
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-<!-- Move the stuff above this line into 4-1 -->
-
-### Second-Order Properties of a Random Walk
-
-The second-order properties of a random walk are summarized below. 
-
-::: {.callout-note icon=false title="Second-Order Properties of a Random Walk"}
-If $\{x_t\}_{t=1}^n$ is a random walk, then the population has the following properties. 
-
-$$ \mu_x = 0 $$
-and
-$$
-  cov(x_t, x_{t+k}) = t \sigma^2
-$$
-
-::: {.callout-tip title="Click here for a proof of the equation for $cov(x_t,x_{t+k})$" collapse=true}
-
-Why is $cov(x_t, x_{t+k}) = t \sigma^2$?
-
-First, note that that since the terms in the white noise series are independent, 
-
-$$
-cov ( w_i, w_j ) = 
-  \begin{cases}
-    \sigma^2, & \text{if } ~ i=j \\
-    0, & \text{otherwise}
-  \end{cases}
-$$
-
-Also, when random variables are independent, the covariance of a sum is the sum of the covariance.
-
-Hence,
 \begin{align*}
-  cov(x_t, x_{t+k})
-    &= cov ( \sum_{i=1}^t w_i, \sum_{j=1}^{t+K} w_j ) \\
-    &= \sum_{i=j} cov ( w_i, w_j ) \\
-    &= \sum_{i=1}^t \sigma^2 \\
-    &= t \sigma^2
+x_t &= x_{t-1} + w_t \\
+x_t - x_{t-1} &= w_t
 \end{align*}
 
-:::
-
-If $k>0$ and $t>0$, the correlation function is
-
-$$
-  \rho_k 
-  = 
-    \frac{
-            cov(x_t, x_{t+k})
-          }{
-            \sqrt{var(x_t)} \sqrt{var(x_{t+k})}
-          }
-  =
-    \frac{t \sigma^2}{\sqrt{t \sigma^2} \sqrt{(t+k) \sigma^2}}
-  =
-    \frac{1}{\sqrt{1+\frac{k}{t}}}
-$$
-
-:::
-
-Note that the covariance of a random walk process depends on $t$. Hence, random walks are non-stationary. The variance is unbounded as $t$ increases. That implies a random walk will not provide good predictions in the long term.
-
-Note that if $0 < k \ll t$, then $\rho_k \approx 1$. Because of this, a correlogram for a random walk will typically demonstrate positive autocorrelations that start near 1 and slowly decrease as $k$ increases.
-
-
-### Differencing a Time Series 
-
-<a id="differencing">Computing</a> the difference between successive terms of a random walk leads to a discrete white noise series. In many cases, differencing sequential terms of a non-stationary process can lead to a stationary process of differences.
-We use the code below to obtain the daily closing stock prices for any publicly-traded company. 
+In many cases, differencing sequential terms of a non-stationary process can lead to a stationary process of differences.
+We can use the code below to obtain the daily closing stock prices for any publicly-traded company. 
 
 ```{r}
 #| code-fold: true
@@ -353,7 +110,7 @@ We use the code below to obtain the daily closing stock prices for any publicly-
 # Set symbol and date range
 symbol <- "MCD"
 company <- "McDonald's"
-date_start <- "2020-01-01"
+date_start <- "2020-07-01"
 date_end <- "2024-01-01"
 
 # Fetch stock prices (can be used to get new data)
@@ -378,7 +135,7 @@ stock_ts <- stock_df %>%
   as_tsibble(index = dates, key = NULL)
 ```
 
-Consider the closing price of `r company` stock illustrated in the time plot in @fig-example-stock-price-plot. 
+The time plot in @fig-example-stock-price-plot presents the closing price of `r company` stock from `r format(ymd(date_start), "%d/%m/%Y")` to `r format(ymd(date_end), "%d/%m/%Y")`.
 @fig-example-stock-difference-plot gives the differences in the closing prices of the stock as a time series.
 
 
@@ -479,6 +236,16 @@ On the right, we give the variance of the differences in the stock prices. This 
 ::: columns
 ::: {.column width="45%"}
 
+<!-- Nothing in column 1 -->
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -487,7 +254,7 @@ On the right, we give the variance of the differences in the stock prices. This 
 #| warning: false
 #| fig.asp: 0.61
 
-# Hisogram of differences in stock prices
+# Histogram of differences in stock prices
 stock_ts |>
   mutate(
     density = dnorm(diff, mean(stock_ts$diff, na.rm = TRUE), sd(stock_ts$diff, na.rm = TRUE))
@@ -507,14 +274,6 @@ stock_ts |>
     )
 ```
 
-:::
-
-::: {.column width="10%"}
-<!-- empty column to create gap -->
-:::
-
-::: {.column width="45%"}
-
 The variance of the differences is `r var(stock_ts$diff, na.rm = TRUE)|> round(3)`.
 
 :::
@@ -524,7 +283,7 @@ The variance of the differences is `r var(stock_ts$diff, na.rm = TRUE)|> round(3
 
 
 
-Notice that the values in the correlogram start at 1 and slowly decay as $k$ increases. This is exactly what we would expect from a random walk. It is also interesting that the differences are nearly normally distributed.
+Notice that the values in the correlogram of the stock prices start at 1 and slowly decay as $k$ increases. There are no significant autocorrelations in the differenced values. This is exactly what we would expect from a random walk. It is also interesting that the differences are nearly normally distributed.
 
 ### Defintion of the Difference Operator
 
@@ -834,7 +593,85 @@ In this activity, you will apply what you have learned to a new stock.
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
-Modify the <a href="#differencing">code used to get the prices of `r company` stock</a> to download closing stock prices for a different publicly-traded company over a time period of your choice. Do the following.
+Modify the code used to get the prices of `r company` stock</a> to download closing stock prices for a different publicly-traded company over a time period of your choice. 
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| eval: false
+
+# Set symbol and date range
+symbol <- "MCD"               # Stock trading symbol for McDonald's
+date_start <- "2020-07-01"
+date_end <- "2024-01-01"
+
+# Fetch stock prices (can be used to get new data)
+stock_df <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
+
+# Store data in a static file
+stock_df |> rio::export("data/stock_price_mcd.parquet")
+
+# Retrieve static file
+# stock_df <- rio::import("data/stock_price_mcd.parquet")
+
+# Transform data into tibble
+stock_ts <- stock_df %>%
+  mutate(
+    dates = date, 
+    value = adjusted
+  ) %>%
+  dplyr::select(dates, value) %>%
+  as_tibble() %>% 
+  arrange(dates) |>
+  mutate(diff = value - lag(value)) |>
+  as_tsibble(index = dates, key = NULL)
+
+
+plot_ly(stock_ts, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') %>%
+  layout(
+    xaxis = list(title = paste0("Dates (", format(ymd(date_start), "%d/%m/%Y"), " to ", format(ymd(date_end), "%d/%m/%Y"), ")" ) ),
+    yaxis = list(title = "Closing Price (US$)"),
+    title = paste0("Time Plot of ", symbol, " Daily Closing Price")
+  )
+
+# Generate time series plot using plot_ly
+plot_ly(stock_ts, x = ~dates, y = ~diff, type = 'scatter', mode = 'lines') %>%
+  layout(
+    xaxis = list(title = paste0("Dates (", format(ymd(date_start), "%d/%m/%Y"), " to ", format(ymd(date_end), "%d/%m/%Y"), ")" ) ),
+    yaxis = list(title = "Closing Price (US$)"),
+    title = paste0("Difference of ", symbol, " Daily Closing Price")
+)
+
+# Autocorrelation function for stock prices
+acf(stock_ts$value, plot=TRUE, type = "correlation", lag.max = 25)
+
+# Autocorrelation function for differences
+acf(stock_ts$diff |> na.omit(), plot=TRUE, type = "correlation", lag.max = 25)
+
+# Histogram of differences in stock prices
+stock_ts |>
+  mutate(
+    density = dnorm(diff, mean(stock_ts$diff, na.rm = TRUE), sd(stock_ts$diff, na.rm = TRUE))
+  ) |>
+  ggplot(aes(x = diff)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 color = "white", fill = "#56B4E9", binwidth = 1) +
+  geom_line(aes(x = diff, y = density)) +
+  theme_bw() +
+  labs(
+    x = "Difference",
+    y = "Frequency",
+    title = "Histogram of Difference in the Closing Stock Prices"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+# Variance of the differences
+var(stock_ts$diff, na.rm = TRUE)|> round(3)
+```
+
+Do the following.
 
 -   Indicate which company you have chosen, the stock symbol, and the time period.
 -   Create a time plot of the daily closing stock prices.
@@ -848,22 +685,12 @@ Modify the <a href="#differencing">code used to get the prices of `r company` st
 :::
 
 
-```{r}
-#| echo: false
-
-# This is here so it will compile
-# With the values commented out below, it would not compile without a model_hw object.
-stock_ts0 <- ts(rnorm(50))
-model_hw <- HoltWinters(stock_ts0, alpha = 1, gamma = FALSE)
-```
-
-
 
 <!-- This should be a stock where the ACF of the first differences is significant for k=1, but not for k>1. -->
 <!-- This should be a stock where the ACF of the first differences is significant for k=1, but not for k>1. -->
 <!-- This should be a stock where the ACF of the first differences is significant for k=1, but not for k>1. -->
 <!-- ~~~ -->
-<!--                                 This can be a little hard to find                                      -->
+<!--                                     This is very hard to find                                          -->
 <!-- ~~~ -->
 <!-- The correlogram for the residuals from the Holt-Winters model match the correlogram for the differences. Why?  -->
 <!-- The correlogram for the residuals from the Holt-Winters model match the correlogram for the differences. Why?  -->
@@ -1230,33 +1057,6 @@ Use the McDonald's stock price data to do the following.
 :::
 
 
-
-
-
-<a href="javascript:showhide('Solutions2')"
-style="font-size:.8em;">Backward Shift Operator</a>
-  
-::: {#Solutions2 style="display:none;"}
-
-<center>
-```{r, results='asis'}
-#| echo: false
-
-cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
-```
-</center>
-
-Check Your Understanding Solutions:
-
--   $\mathbf{B} x_8 = x_7 = `r ts_val(7)`$
--   $\mathbf{B}^5 x_8 = x_3 = `r ts_val(3)`$
--   $(\mathbf{B}^5 - \mathbf{B} ) x_8 = x_3 - x_7 = `r ts_val(3)` - `r ts_val(7)` = `r ts_val(4) - ts_val(7)`$
--   $( \mathbf{B}^2 - 6 \mathbf{B} + 9 ) x_8 = x_6 - 6 (x_7) + 9 (x_{t}) = `r ts_val(6)` - 6 (`r ts_val(7)`) + 9 (`r ts_val(8)`) = `r ts_val(6) - 6 * ts_val(7) + 9 * ts_val(8)`$
--   $( (\mathbf{B} - 6) \mathbf{B} + 9 ) x_8 = `r ts_val(6) - 6 * ts_val(7) + 9 * ts_val(8)`$
--   $( \mathbf{B} - 3 )^2 x_8 = `r ts_val(6) - 6 * ts_val(7) + 9 * ts_val(8)`$
--   $( 1 - \frac{1}{2} B - \frac{1}{4} B^2 - \frac{1}{8} B^3 ) x_8 = x_8 - \frac{1}{2} x_7 - \frac{1}{4} x_6 - \frac{1}{8} x_5 = `r ts_val(8)` - \frac{1}{2} (`r ts_val(7)`) - \frac{1}{4} (`r ts_val(6)`) - \frac{1}{8} (`r ts_val(5)`) = `r ts_val(8) - ts_val(7) / 2 - ts_val(6) / 4 - ts_val(5) / 8`$
-
-:::
 
 
 

@@ -60,7 +60,7 @@ source("common_functions.R")
 
 
 
-## Class Activity: White Noise (25 min)
+## Class Activity: White Noise (15 min)
 
 ### Definition
 
@@ -211,7 +211,7 @@ Notice that the values follow a normal distribution. This suggests the data are 
 
 
 
-### Second-Order Properties
+### Second-Order Properties of Discrete White Noise
 
 When we refer to the second-order properties of a time series, we are talking about its variance and covariance. The mean is a first-order property, the covariance is a second-order property.
 
@@ -276,7 +276,7 @@ Since the mean of a DWN time series is zero, the only parameter we need to fit i
 
 
 
-## Class Activity: Random Walks (20 min)
+## Class Activity: Random Walks (15 min)
 
 ### Definitions
 
@@ -362,6 +362,320 @@ ggplot(data=df, aes(x=x, y=y)) +
 :::
 
 
+
+### Representations for a Random Walk
+
+
+Recall the definition of a random walk:
+
+$\{x_t\}$ is a **random walk** if it can be expressed as
+$$
+  x_{t} = x_{t-1} + w_{t}
+$$
+where $\{w_t\}$ is a white noise series.
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+There are other ways to represent a random walk.
+
+-   Notice that 
+    \begin{align*}
+      x_{t} &= x_{t-1} + w_{t} \\
+      x_{t-1} &= x_{t-2} + w_{t-1} \\
+      ⋮ ~~~ & ~~~~~~~~~~~~~~~ ⋮
+    \end{align*}
+    Use this to write $x_t$ in terms of $x_{t-2}$, $w_t$, and $w_{t-1}$.
+    
+-   Write $x_t$ in terms of $x_{t-3}$, $w_t$, $w_{t-1}$, and $w_{t-2}$.
+    
+-   Explain why it is possible to write $x_t$ as
+    $$
+      x_{t} = \sum\limits_{i=-\infty}^{t} w_{i} = w_{t} + w_{t-1} + w_{t-2} + w_{t-3} + \cdots
+    $$
+    where $\{w_t\}$ is a DWN time series.
+    
+    Note that if the random walk is finite, we can write $x_t$ as:
+    $$
+      x_{t} = w_1 + w_2 + w_3 + \cdots + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} 
+    $$
+    where $x_1=w_1$.
+    
+:::
+
+
+<!-- Note that this implies that: -->
+<!-- \begin{align*} -->
+<!--   x_{t} &= x_{t-1} + w_{t} \\ -->
+<!--   x_{t-1} &= x_{t-2} + w_{t-1} \\ -->
+<!--   x_{t-2} &= x_{t-3} + w_{t-2} \\ -->
+<!--   x_{t-3} &= x_{t-4} + w_{t-3} \\ -->
+<!--   \vdots ~~ &= ~~~~~~~~~~~~ \vdots \\ -->
+<!--   x_{4} &= x_{3} + w_{4} \\ -->
+<!--   x_{3} &= x_{2} + w_{3} \\ -->
+<!--   x_{2} &= x_{1} + w_{2} \\ -->
+<!--   x_{1} &= w_{1}  -->
+<!-- \end{align*} -->
+
+<!-- We can write this as -->
+
+<!-- \begin{align*} -->
+<!--   x_{t}  -->
+<!--     &= x_{t-1} + w_{t} \\ -->
+<!--     &= \underbrace{x_{t-2} + w_{t-1}} + w_{t} \\ -->
+<!--     &= \underbrace{x_{t-3} + w_{t-2}} + w_{t-1} + w_{t} \\ -->
+<!--     &= \underbrace{x_{t-4} + w_{t-3}} + w_{t-2} + w_{t-1} + w_{t} \\ -->
+<!--     &= ~~~~ \vdots \\ -->
+<!--     &= \underbrace{x_3 + w_4} + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
+<!--     &= \underbrace{x_2 + w_3} + w_4 + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
+<!--     &= \underbrace{x_1 + w_2} + w_3 + w_4 + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
+<!--     &= w_1 + w_2 + w_3 + w_4 + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t}  -->
+<!-- \end{align*} -->
+
+
+
+
+## Class Activity: Backward Shift Operator (10 min)
+
+### Definition of the Backward Shift Operator
+
+This process of *back substitution* is so common, we define notation to handle it.
+
+::: {.callout-note icon=false title="Definition of the Backward Shift Operator"}
+
+We define the **backward shift operator** or the **lag operator**, $\mathbf{B}$, as:
+$$
+  \mathbf{B} x_t = x_{t-1}
+$$
+where $\{x_t\}$ is any time series.
+
+We can apply this operator repeatedly. We will use exponential notation to indicate this.
+
+$$
+  \mathbf{B}^2 x_t = \mathbf{B} \mathbf{B} x_t = \mathbf{B} ( \mathbf{B} x_t ) x_t = \mathbf{B} x_{t-1} = \mathbf{B} x_{t-2}
+$$
+
+In general, 
+$$
+  \mathbf{B}^n x_t = \underbrace{\mathbf{B} \cdot \mathbf{B} \cdot \cdots \cdot \mathbf{B}}_{n ~ \text{terms}} x_t = \mathbf{B}^{n-1} ( \mathbf{B} x_t ) = \mathbf{B}^{n-1} ( x_{t-1} ) = \mathbf{B}^{n-2} ( x_{t-2} ) = \cdots = \mathbf{B} x_{t-(n-1)} = x_{t-n}
+$$
+
+:::
+
+### Properties of the Backshift Operator 
+
+The backwards shift operator is a linear operator. So, if $a$, $b$, $c$, and $d$ are constants, then
+$$
+(a \mathbf{B} + b)x_t = a \mathbf{B} x_t + b x_t
+$$
+The distributive property also holds.
+\begin{align*}
+(a \mathbf{B} + b)(c \mathbf{B} + d) x_t 
+  &= c (a \mathbf{B} + b) \mathbf{B} x_t  + d(a \mathbf{B} + b) x_t \\
+  &= a \mathbf{B} (c \mathbf{B} + d) x_t + b (c \mathbf{B} + d) x_t \\
+  &= \left( ac \mathbf{B}^2 + (ad+bc) \mathbf{B} + bd \right) x_t \\
+  &= ac \mathbf{B}^2 x_t + (ad+bc) \mathbf{B} x_t + (bd) x_t
+\end{align*}
+
+We will practice applying this operator.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Let $\{x_t\}$ be a time series with the following values. 
+
+<center>
+```{r, results='asis'}
+#| echo: false
+
+set.seed(6)
+n <- 8
+d_operator <- data.frame(t = c(1:n), x = sample(1:15, n, replace = FALSE)) |>
+  mutate(diff = t - n)
+
+#cat( paste( paste0("$x_{t", ifelse(d_operator$t==n,"",d_operator$t-n), "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+
+cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+
+# Computes the value of the "power_on_d"^th difference from x_n
+d_value <- function(power_on_d = 0) {
+  out <- d_operator |> #### Note the use of this global variable
+    filter(diff == -power_on_d) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+
+
+ts_val <- function(t_value) {
+  out <- d_operator |> #### Note the use of this global variable
+    filter(t == t_value) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+```
+</center>
+Evaluate the following. 
+
+-   $\mathbf{B} x_8$
+-   $\mathbf{B}^5 x_8$
+-   $(\mathbf{B}^5 - \mathbf{B} ) x_8$
+-   $( \mathbf{B}^2 - 6 \mathbf{B} + 9 ) x_8$
+-   $( (\mathbf{B} - 6 )\mathbf{B} + 9 ) x_8$
+-   $( \mathbf{B} - 3 )^2 x_8 =  ( \mathbf{B} - 3 ) \left[ ( \mathbf{B} - 3 ) x_8 \right]$
+-   $( 1 - \frac{1}{2} \mathbf{B} - \frac{1}{4} \mathbf{B}^2 - \frac{1}{8} \mathbf{B}^3 ) x_8$
+
+:::
+
+
+
+
+
+
+## Class Activity: Properties of Random Walks (5 min)
+
+### Simulation
+
+The following simulation illustrates a random walk.
+
+```{=html}
+ <iframe id="Randomwalk" src="https://posit.byui.edu/content/f9a0690a-87ce-423c-9d9c-4dfd0188dd86" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe>
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you notice about this time series?
+-   What characteristics do you observe in the correlogram?
+-   How does this compare to the time series and correlogram for the DWN process?
+
+:::
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+<!-- Move the stuff above this line into 4-1 -->
+
+### Second-Order Properties of a Random Walk
+
+The second-order properties of a random walk are summarized below. 
+
+::: {.callout-note icon=false title="Second-Order Properties of a Random Walk"}
+If $\{x_t\}_{t=1}^n$ is a random walk, then the population has the following properties. 
+
+$$ \mu_x = 0 $$
+and
+$$
+  cov(x_t, x_{t+k}) = t \sigma^2
+$$
+
+::: {.callout-tip title="Click here for a proof of the equation for $cov(x_t,x_{t+k})$" collapse=true}
+
+Why is $cov(x_t, x_{t+k}) = t \sigma^2$?
+
+First, note that that since the terms in the white noise series are independent, 
+
+$$
+cov ( w_i, w_j ) = 
+  \begin{cases}
+    \sigma^2, & \text{if } ~ i=j \\
+    0, & \text{otherwise}
+  \end{cases}
+$$
+
+Also, when random variables are independent, the covariance of a sum is the sum of the covariance.
+
+Hence,
+\begin{align*}
+  cov(x_t, x_{t+k})
+    &= cov ( \sum_{i=1}^t w_i, \sum_{j=1}^{t+K} w_j ) \\
+    &= \sum_{i=j} cov ( w_i, w_j ) \\
+    &= \sum_{i=1}^t \sigma^2 \\
+    &= t \sigma^2
+\end{align*}
+
+:::
+
+If $k>0$ and $t>0$, the correlation function is
+
+$$
+  \rho_k 
+  = 
+    \frac{
+            cov(x_t, x_{t+k})
+          }{
+            \sqrt{var(x_t)} \sqrt{var(x_{t+k})}
+          }
+  =
+    \frac{t \sigma^2}{\sqrt{t \sigma^2} \sqrt{(t+k) \sigma^2}}
+  =
+    \frac{1}{\sqrt{1+\frac{k}{t}}}
+$$
+
+:::
+
+Note that the covariance of a random walk process depends on $t$. Hence, random walks are non-stationary. The variance is unbounded as $t$ increases. That implies a random walk will not provide good predictions in the long term.
+
+Note that if $0 < k \ll t$, then $\rho_k \approx 1$. Because of this, a correlogram for a random walk will typically demonstrate positive autocorrelations that start near 1 and slowly decrease as $k$ increases. This is exactly what we observed in the simulation above.
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Homework Preview (5 min)
 
 -   Review upcoming homework assignment
@@ -385,4 +699,36 @@ style="font-size:.8em;">White Noise</a>
 The sample variance of the DWN data is computed using the R command `var(white_noise_df$x)` as `r var(white_noise_df$x) |> round(2)`.
     
 :::
+
+
+
+
+
+
+
+<a href="javascript:showhide('SolutionsBackwardShift')"
+style="font-size:.8em;">Backward Shift Operator</a>
+  
+::: {#SolutionsBackwardShift style="display:none;"}
+
+<center>
+```{r, results='asis'}
+#| echo: false
+
+cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+```
+</center>
+
+Check Your Understanding Solutions:
+
+-   $\mathbf{B} x_8 = x_7 = `r ts_val(7)`$
+-   $\mathbf{B}^5 x_8 = x_3 = `r ts_val(3)`$
+-   $(\mathbf{B}^5 - \mathbf{B} ) x_8 = x_3 - x_7 = `r ts_val(3)` - `r ts_val(7)` = `r ts_val(4) - ts_val(7)`$
+-   $( \mathbf{B}^2 - 6 \mathbf{B} + 9 ) x_8 = x_6 - 6 (x_7) + 9 (x_{t}) = `r ts_val(6)` - 6 (`r ts_val(7)`) + 9 (`r ts_val(8)`) = `r ts_val(6) - 6 * ts_val(7) + 9 * ts_val(8)`$
+-   $( (\mathbf{B} - 6) \mathbf{B} + 9 ) x_8 = `r ts_val(6) - 6 * ts_val(7) + 9 * ts_val(8)`$
+-   $( \mathbf{B} - 3 )^2 x_8 = `r ts_val(6) - 6 * ts_val(7) + 9 * ts_val(8)`$
+-   $( 1 - \frac{1}{2} B - \frac{1}{4} B^2 - \frac{1}{8} B^3 ) x_8 = x_8 - \frac{1}{2} x_7 - \frac{1}{4} x_6 - \frac{1}{8} x_5 = `r ts_val(8)` - \frac{1}{2} (`r ts_val(7)`) - \frac{1}{4} (`r ts_val(6)`) - \frac{1}{8} (`r ts_val(5)`) = `r ts_val(8) - ts_val(7) / 2 - ts_val(6) / 4 - ts_val(5) / 8`$
+
+:::
+
 
