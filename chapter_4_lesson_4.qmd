@@ -59,6 +59,79 @@ source("common_functions.R")
 -   Sign the Learning Journal review sheet for your peer
 
 
+
+## Class Activity: Fitting Simulated AR Models
+
+### Fitting a Simulated $AR(1)$ Model
+
+```{r}
+set.seed(1)
+dat <- tibble(w = rnorm(100)) |>
+    mutate(
+        index = 1:n(),
+         x = purrr::accumulate2(
+            lag(w), w, 
+            \(acc, nxt, w) 0.7 * acc + w,
+            .init = 0)[-1]) |>
+    tsibble::as_tsibble(index = index)
+
+# Fit the AR(1) model
+fit_ar <- dat |>
+    model(AR(x ~ order(1)))
+
+tidy(fit_ar) |>
+    filter(str_detect(term, "ar")) |>
+    pull("estimate")
+
+tidy(fit_ar) |>
+    mutate(
+        lb = estimate - 2 * std.error,
+        ub = estimate + 2 * std.error
+    )
+```
+
+
+### Fitting a Simulated $AR(2)$ Model
+
+
+```{r}
+set.seed(1)
+n_rep <- 1000
+alpha1 <- 0.5
+alpha2 <- 0.4
+
+dat <- tibble(w = rnorm(n_rep)) |>
+    mutate(
+      index = 1:n(),
+      x = 0
+    ) |>
+    tsibble::as_tsibble(index = index)
+
+# Simulate x values
+dat$x[1] <- dat$w[1]
+dat$x[2] <- alpha1 * dat$x[1] + dat$w[2]
+for (i in 3:nrow(dat)) {
+  dat$x[i] <- alpha1 * dat$x[i-1] + alpha2 * dat$x[i-2] + dat$w[i]
+}
+
+# Fit the AR(2) model
+fit_ar <- dat |>
+    model(AR(x ~ order(2)))
+
+tidy(fit_ar) |>
+    filter(str_detect(term, "ar")) |>
+    pull("estimate")
+
+tidy(fit_ar) |>
+    mutate(
+        lb = estimate - 2 * std.error,
+        ub = estimate + 2 * std.error
+    )
+```
+
+
+
+
 ## Class Activity: Global Warming (15 min)
 
 ```{r}

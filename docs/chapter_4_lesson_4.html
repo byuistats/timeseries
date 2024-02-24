@@ -305,6 +305,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#learning-outcomes" id="toc-learning-outcomes" class="nav-link active" data-scroll-target="#learning-outcomes">Learning Outcomes</a></li>
   <li><a href="#preparation" id="toc-preparation" class="nav-link" data-scroll-target="#preparation">Preparation</a></li>
   <li><a href="#learning-journal-exchange-10-mins" id="toc-learning-journal-exchange-10-mins" class="nav-link" data-scroll-target="#learning-journal-exchange-10-mins">Learning Journal Exchange (10 mins)</a></li>
+  <li><a href="#class-activity-fitting-simulated-ar-models" id="toc-class-activity-fitting-simulated-ar-models" class="nav-link" data-scroll-target="#class-activity-fitting-simulated-ar-models">Class Activity: Fitting Simulated AR Models</a>
+  <ul class="collapse">
+  <li><a href="#fitting-a-simulated-ar1-model" id="toc-fitting-a-simulated-ar1-model" class="nav-link" data-scroll-target="#fitting-a-simulated-ar1-model">Fitting a Simulated <span class="math inline">\(AR(1)\)</span> Model</a></li>
+  <li><a href="#fitting-a-simulated-ar2-model" id="toc-fitting-a-simulated-ar2-model" class="nav-link" data-scroll-target="#fitting-a-simulated-ar2-model">Fitting a Simulated <span class="math inline">\(AR(2)\)</span> Model</a></li>
+  </ul></li>
   <li><a href="#class-activity-global-warming-15-min" id="toc-class-activity-global-warming-15-min" class="nav-link" data-scroll-target="#class-activity-global-warming-15-min">Class Activity: Global Warming (15 min)</a></li>
   <li><a href="#small-group-activity-sectiontitle-xxx-min" id="toc-small-group-activity-sectiontitle-xxx-min" class="nav-link" data-scroll-target="#small-group-activity-sectiontitle-xxx-min">Small Group Activity: SectionTitle (xxx min)</a></li>
   <li><a href="#class-activity-sectiontitle-xxx-min" id="toc-class-activity-sectiontitle-xxx-min" class="nav-link" data-scroll-target="#class-activity-sectiontitle-xxx-min">Class Activity: SectionTitle (xxx min)</a></li>
@@ -391,55 +396,141 @@ Check model adequacy using diagnostic plots like correlograms of residuals
 <li><p>Sign the Learning Journal review sheet for your peer</p></li>
 </ul>
 </section>
+<section id="class-activity-fitting-simulated-ar-models" class="level2">
+<h2 class="anchored" data-anchor-id="class-activity-fitting-simulated-ar-models">Class Activity: Fitting Simulated AR Models</h2>
+<section id="fitting-a-simulated-ar1-model" class="level3">
+<h3 class="anchored" data-anchor-id="fitting-a-simulated-ar1-model">Fitting a Simulated <span class="math inline">\(AR(1)\)</span> Model</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">w =</span> <span class="fu">rnorm</span>(<span class="dv">100</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">index =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>(),</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>         <span class="at">x =</span> purrr<span class="sc">::</span><span class="fu">accumulate2</span>(</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>            <span class="fu">lag</span>(w), w, </span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            \(acc, nxt, w) <span class="fl">0.7</span> <span class="sc">*</span> acc <span class="sc">+</span> w,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>            <span class="at">.init =</span> <span class="dv">0</span>)[<span class="sc">-</span><span class="dv">1</span>]) <span class="sc">|&gt;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    tsibble<span class="sc">::</span><span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Fit the AR(1) model</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>fit_ar <span class="ot">&lt;-</span> dat <span class="sc">|&gt;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(<span class="fu">AR</span>(x <span class="sc">~</span> <span class="fu">order</span>(<span class="dv">1</span>)))</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(fit_ar) <span class="sc">|&gt;</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="fu">str_detect</span>(term, <span class="st">"ar"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pull</span>(<span class="st">"estimate"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.6015796</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(fit_ar) <span class="sc">|&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">lb =</span> estimate <span class="sc">-</span> <span class="dv">2</span> <span class="sc">*</span> std.error,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">ub =</span> estimate <span class="sc">+</span> <span class="dv">2</span> <span class="sc">*</span> std.error</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 2 × 8
+  .model           term     estimate std.error statistic  p.value      lb    ub
+  &lt;chr&gt;            &lt;chr&gt;       &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;
+1 AR(x ~ order(1)) constant    0.157    0.0955      1.65 1.03e- 1 -0.0339 0.348
+2 AR(x ~ order(1)) ar1         0.602    0.0814      7.39 5.03e-11  0.439  0.764</code></pre>
+</div>
+</div>
+</section>
+<section id="fitting-a-simulated-ar2-model" class="level3">
+<h3 class="anchored" data-anchor-id="fitting-a-simulated-ar2-model">Fitting a Simulated <span class="math inline">\(AR(2)\)</span> Model</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>n_rep <span class="ot">&lt;-</span> <span class="dv">1000</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>alpha1 <span class="ot">&lt;-</span> <span class="fl">0.5</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>alpha2 <span class="ot">&lt;-</span> <span class="fl">0.4</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">w =</span> <span class="fu">rnorm</span>(n_rep)) <span class="sc">|&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">index =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>(),</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="dv">0</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    tsibble<span class="sc">::</span><span class="fu">as_tsibble</span>(<span class="at">index =</span> index)</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Simulate x values</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>dat<span class="sc">$</span>x[<span class="dv">1</span>] <span class="ot">&lt;-</span> dat<span class="sc">$</span>w[<span class="dv">1</span>]</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>dat<span class="sc">$</span>x[<span class="dv">2</span>] <span class="ot">&lt;-</span> alpha1 <span class="sc">*</span> dat<span class="sc">$</span>x[<span class="dv">1</span>] <span class="sc">+</span> dat<span class="sc">$</span>w[<span class="dv">2</span>]</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">3</span><span class="sc">:</span><span class="fu">nrow</span>(dat)) {</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  dat<span class="sc">$</span>x[i] <span class="ot">&lt;-</span> alpha1 <span class="sc">*</span> dat<span class="sc">$</span>x[i<span class="dv">-1</span>] <span class="sc">+</span> alpha2 <span class="sc">*</span> dat<span class="sc">$</span>x[i<span class="dv">-2</span>] <span class="sc">+</span> dat<span class="sc">$</span>w[i]</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Fit the AR(2) model</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>fit_ar <span class="ot">&lt;-</span> dat <span class="sc">|&gt;</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(<span class="fu">AR</span>(x <span class="sc">~</span> <span class="fu">order</span>(<span class="dv">2</span>)))</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(fit_ar) <span class="sc">|&gt;</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="fu">str_detect</span>(term, <span class="st">"ar"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pull</span>(<span class="st">"estimate"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.4679990 0.3976547</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(fit_ar) <span class="sc">|&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">lb =</span> estimate <span class="sc">-</span> <span class="dv">2</span> <span class="sc">*</span> std.error,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">ub =</span> estimate <span class="sc">+</span> <span class="dv">2</span> <span class="sc">*</span> std.error</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 2 × 8
+  .model           term  estimate std.error statistic  p.value    lb    ub
+  &lt;chr&gt;            &lt;chr&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+1 AR(x ~ order(2)) ar1      0.468    0.0290      16.1 4.34e-52 0.410 0.526
+2 AR(x ~ order(2)) ar2      0.398    0.0291      13.7 3.42e-39 0.340 0.456</code></pre>
+</div>
+</div>
+</section>
+</section>
 <section id="class-activity-global-warming-15-min" class="level2">
 <h2 class="anchored" data-anchor-id="class-activity-global-warming-15-min">Class Activity: Global Warming (15 min)</h2>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>temps_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"data/global_temparature.csv"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> year)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>temps_ts <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(<span class="at">.vars =</span> change) <span class="sc">+</span></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Year"</span>,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Temperature (Celsius)"</span>,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Change in Mean Annual Global Temperature"</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>temps_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"data/global_temparature.csv"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> year)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>temps_ts <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(<span class="at">.vars =</span> change) <span class="sc">+</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Year"</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Temperature (Celsius)"</span>,</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Change in Mean Annual Global Temperature"</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="chapter_4_lesson_4_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_4_lesson_4_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pacf</span>(temps_ts<span class="sc">$</span>change)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">pacf</span>(temps_ts<span class="sc">$</span>change)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="chapter_4_lesson_4_files/figure-html/unnamed-chunk-2-2.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_4_lesson_4_files/figure-html/unnamed-chunk-4-2.png" class="img-fluid" width="672"></p>
 </div>
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>global_ar <span class="ot">&lt;-</span> temps_ts <span class="sc">|&gt;</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(<span class="fu">AR</span>(change <span class="sc">~</span> <span class="fu">order</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">9</span>)))</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(temps_ts<span class="sc">$</span>change)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>global_ar <span class="ot">&lt;-</span> temps_ts <span class="sc">|&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(<span class="fu">AR</span>(change <span class="sc">~</span> <span class="fu">order</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">9</span>)))</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(temps_ts<span class="sc">$</span>change)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.06923611</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(global_ar) <span class="sc">|&gt;</span> <span class="fu">filter</span>(<span class="fu">str_detect</span>(term, <span class="st">"ar"</span>)) <span class="sc">|&gt;</span> <span class="fu">nrow</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(global_ar) <span class="sc">|&gt;</span> <span class="fu">filter</span>(<span class="fu">str_detect</span>(term, <span class="st">"ar"</span>)) <span class="sc">|&gt;</span> <span class="fu">nrow</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 6</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(global_ar) <span class="sc">|&gt;</span> <span class="fu">filter</span>(<span class="fu">str_detect</span>(term, <span class="st">"ar"</span>)) <span class="sc">|&gt;</span> <span class="fu">pull</span>(estimate)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(global_ar) <span class="sc">|&gt;</span> <span class="fu">filter</span>(<span class="fu">str_detect</span>(term, <span class="st">"ar"</span>)) <span class="sc">|&gt;</span> <span class="fu">pull</span>(estimate)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1]  0.65592918 -0.06617426  0.14020403  0.26537444 -0.16279106  0.20569242</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>coeffs <span class="ot">&lt;-</span> <span class="fu">tidy</span>(global_ar) <span class="sc">|&gt;</span> <span class="fu">filter</span>(<span class="fu">str_detect</span>(term, <span class="st">"ar"</span>)) <span class="sc">|&gt;</span> <span class="fu">pull</span>(estimate)</span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>coeffs[<span class="dv">1</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>coeffs <span class="ot">&lt;-</span> <span class="fu">tidy</span>(global_ar) <span class="sc">|&gt;</span> <span class="fu">filter</span>(<span class="fu">str_detect</span>(term, <span class="st">"ar"</span>)) <span class="sc">|&gt;</span> <span class="fu">pull</span>(estimate)</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>coeffs[<span class="dv">1</span>]</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.6559292</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">residuals</span>(global_ar) <span class="sc">|&gt;</span> <span class="fu">ACF</span>(<span class="at">lag_max =</span> <span class="dv">50</span>) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(<span class="at">.vars =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">residuals</span>(global_ar) <span class="sc">|&gt;</span> <span class="fu">ACF</span>(<span class="at">lag_max =</span> <span class="dv">50</span>) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(<span class="at">.vars =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
 <pre><code>Response variable not specified, automatically selected `var = .resid`</code></pre>
 </div>
 <div class="cell-output-display">
-<p><img src="chapter_4_lesson_4_files/figure-html/unnamed-chunk-2-3.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_4_lesson_4_files/figure-html/unnamed-chunk-4-3.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
