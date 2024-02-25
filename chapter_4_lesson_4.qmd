@@ -62,45 +62,142 @@ source("common_functions.R")
 
 ## Class Activity: Fitting Simulated AR Models
 
+We will demonstrate how AR models are fitted via simulation. We will fit both an $AR(1)$ and an $AR(2)$ model.
+
 ### Fitting a Simulated $AR(1)$ Model
 
+#### Simulate an $AR(1)$ Time Series
+
+In this simulation, we first simulate data from the $AR(1)$ model
+$$
+  x_t = 0.75 ~ x_{t-1} + w_t
+$$
+where $w_t$ is a white noise process with variance 1.
+
 ```{r}
-set.seed(1)
-dat <- tibble(w = rnorm(100)) |>
-    mutate(
-        index = 1:n(),
-         x = purrr::accumulate2(
-            lag(w), w, 
-            \(acc, nxt, w) 0.7 * acc + w,
-            .init = 0)[-1]) |>
-    tsibble::as_tsibble(index = index)
+#| code-fold: true
+#| code-summary: "Show the code"
 
-# Fit the AR(1) model
-fit_ar <- dat |>
-    model(AR(x ~ order(1)))
+set.seed(123)
+n_rep <- 1000
+alpha1 <- 0.75
 
-tidy(fit_ar) |>
-    filter(str_detect(term, "ar")) |>
-    pull("estimate")
+dat_ts <- tibble(w = rnorm(n_rep)) |>
+  mutate(
+    index = 1:n(),
+    x = purrr::accumulate2(
+      lag(w), w, 
+      \(acc, nxt, w) alpha1 * acc + w,
+      .init = 0)[-1]) |>
+  tsibble::as_tsibble(index = index)
 
-tidy(fit_ar) |>
-    mutate(
-        lb = estimate - 2 * std.error,
-        ub = estimate + 2 * std.error
+dat_ts |> 
+  autoplot(.vars = x) +
+    labs(
+      x = "Time",
+      y = "Simulated Time Series",
+      title = "Simulated values from an AR(1) Process"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
     )
 ```
 
 
-### Fitting a Simulated $AR(2)$ Model
-
+#### Fit an $AR(1)$ Model 
 
 ```{r}
-set.seed(1)
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Fit the AR(1) model
+fit_ar <- dat_ts |>
+    model(AR(x ~ order(1)))
+```
+
+The estimate of the parameter value (i.e. the fitted value of the parameter) equals `r tidy(fit_ar) |> select(estimate) |> pull() |> round(3)`. This means that our fitted model can be expressed as:
+
+$$
+  \hat x_t = `r tidy(fit_ar) |> select(estimate) |> pull() |> round(3)` ~ x_{t-1} + w_t
+$$
+
+
+#### Confidence Interval for the model Parameters
+
+We can compute an approximate 95% confidence interval for $\alpha_1$ as:
+$$
+  \left( 
+    \hat \alpha_1 - 2 \cdot SE_{\hat \alpha_1}
+    , ~ 
+    \hat \alpha_1 + 2 \cdot SE_{\hat \alpha_1}
+  \right)
+$$
+where $\hat \alpha_1$ is our parameter estimate and $SE_{\hat \alpha_1}$ is the standard error of the estimate. Both of these values are given in the R output.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+ci_summary <- tidy(fit_ar) |>
+    mutate(
+        lb = estimate - 2 * std.error,
+        ub = estimate + 2 * std.error
+    )
+ci_summary
+```
+
+So, our 95% confidence interval for $\alpha_1$ is:
+$$
+  \left(
+  `r ci_summary |> select(estimate) |> pull() |> round(3)` - 2 \cdot `r ci_summary |> select(std.error) |> pull() |> round(3)`
+  , ~
+  `r ci_summary |> select(estimate) |> pull() |> round(3)` + 2 \cdot `r ci_summary |> select(std.error) |> pull() |> round(3)`
+  \right)
+$$
+or
+$$
+  \left(
+  `r ((ci_summary |> select(estimate) |> pull()) - 2 * (ci_summary |> select(std.error) |> pull())) |> round(3)`
+  , ~
+  `r ((ci_summary |> select(estimate) |> pull()) + 2 * (ci_summary |> select(std.error) |> pull())) |> round(3)`
+  \right)
+$$
+Note that the confidence interval contains $\alpha_1 = `r alpha1`$, the value of the parameter we used in our simulation. This demonstrates that R is capable of estimating this parameter.
+
+#### Discussion of Residuals
+# Working here
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+fit_ar |> residuals()
+```
+
+
+
+
+### Fitting a Simulated $AR(2)$ Model
+
+#### Simulate an $AR(2)$ Time Series
+
+In this simulation, we first simulate data from the $AR(1)$ model
+$$
+  x_t = 0.5 ~ x_{t-1} + 0.4 ~ x_{t-2} + w_t
+$$
+where $w_t$ is a white noise process with variance 1.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+set.seed(123)
 n_rep <- 1000
 alpha1 <- 0.5
 alpha2 <- 0.4
 
-dat <- tibble(w = rnorm(n_rep)) |>
+dat_ts <- tibble(w = rnorm(n_rep)) |>
     mutate(
       index = 1:n(),
       x = 0
@@ -108,26 +205,149 @@ dat <- tibble(w = rnorm(n_rep)) |>
     tsibble::as_tsibble(index = index)
 
 # Simulate x values
-dat$x[1] <- dat$w[1]
-dat$x[2] <- alpha1 * dat$x[1] + dat$w[2]
-for (i in 3:nrow(dat)) {
-  dat$x[i] <- alpha1 * dat$x[i-1] + alpha2 * dat$x[i-2] + dat$w[i]
+dat_ts$x[1] <- dat_ts$w[1]
+dat_ts$x[2] <- alpha1 * dat_ts$x[1] + dat_ts$w[2]
+for (i in 3:nrow(dat_ts)) {
+  dat_ts$x[i] <- alpha1 * dat_ts$x[i-1] + alpha2 * dat_ts$x[i-2] + dat_ts$w[i]
 }
 
+dat_ts |> 
+  autoplot(.vars = x) +
+    labs(
+      x = "Time",
+      y = "Simulated Time Series",
+      title = "Simulated values from an AR(2) Process"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+
+#### Fit an $AR(2)$ Model 
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 # Fit the AR(2) model
-fit_ar <- dat |>
+fit_ar <- dat_ts |>
     model(AR(x ~ order(2)))
+tidy(fit_ar)
+```
 
-tidy(fit_ar) |>
-    filter(str_detect(term, "ar")) |>
-    pull("estimate")
+The estimates of the parameter values (i.e. the fitted values of the parameters) are 
+$\hat \alpha_1 = `r tidy(fit_ar) |> filter(term == "ar1") |> select(estimate) |> pull() |> round(3)`$ and $\hat \alpha_2 = `r tidy(fit_ar) |> filter(term == "ar2") |> select(estimate) |> pull() |> round(3)`$ . This means that our fitted model can be expressed as:
 
-tidy(fit_ar) |>
+$$
+  \hat x_t = 
+    `r tidy(fit_ar) |> filter(term == "ar1") |> select(estimate) |> pull() |> round(3)` ~ x_{t-1} 
+    + 
+    `r tidy(fit_ar) |> filter(term == "ar2") |> select(estimate) |> pull() |> round(3)` ~ x_{t-2} 
+    + 
+    w_t
+$$
+
+
+#### Confidence Interval for the model Parameters
+
+We can compute an approximate 95% confidence interval for $\alpha_i$ as:
+$$
+  \left( 
+    \hat \alpha_i - 2 \cdot SE_{\hat \alpha_i}
+    , ~ 
+    \hat \alpha_i + 2 \cdot SE_{\hat \alpha_i}
+  \right)
+$$
+where $\hat \alpha_i$ is our estimate of the $i^{th}$ parameter and $SE_{\hat \alpha_i}$ is the standard error of the respective estimate. These values are given in the R output.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+ci_summary <- tidy(fit_ar) |>
     mutate(
         lb = estimate - 2 * std.error,
         ub = estimate + 2 * std.error
     )
+ci_summary
 ```
+
+
+
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+95% confidence interval for $\alpha_1$:
+$$
+  \left( 
+    \hat \alpha_1 - 2 \cdot SE_{\hat \alpha_1}
+    , ~ 
+    \hat \alpha_1 + 2 \cdot SE_{\hat \alpha_1}
+  \right)
+$$
+$$
+  \left(
+  `r tidy(fit_ar) |> filter(term == "ar1") |> select(estimate) |> pull() |> round(3)` - 2 \cdot `r tidy(fit_ar) |> filter(term == "ar1") |> select(std.error) |> pull() |> round(3)`
+  , ~
+  `r tidy(fit_ar) |> filter(term == "ar1") |> select(estimate) |> pull() |> round(3)` + 2 \cdot `r tidy(fit_ar) |> filter(term == "ar1") |> select(std.error) |> pull() |> round(3)`
+  \right)
+$$
+$$
+  \left(
+  `r ((tidy(fit_ar) |> filter(term == "ar1") |> select(estimate) |> pull()) - 2 * (tidy(fit_ar) |> filter(term == "ar1") |> select(std.error) |> pull())) |> round(3)`
+  , ~
+  `r ((tidy(fit_ar) |> filter(term == "ar1") |> select(estimate) |> pull()) + 2 * (tidy(fit_ar) |> filter(term == "ar1") |> select(std.error) |> pull())) |> round(3)`
+  \right)
+$$
+This confidence interval contains $\alpha_1 = `r alpha1`$.
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+95% confidence interval for $\alpha_2$:
+$$
+  \left( 
+    \hat \alpha_2 - 2 \cdot SE_{\hat \alpha_2}
+    , ~ 
+    \hat \alpha_2 + 2 \cdot SE_{\hat \alpha_2}
+  \right)
+$$
+$$
+  \left(
+  `r tidy(fit_ar) |> filter(term == "ar2") |> select(estimate) |> pull() |> round(3)` - 2 \cdot `r tidy(fit_ar) |> filter(term == "ar2") |> select(std.error) |> pull() |> round(3)`
+  , ~
+  `r tidy(fit_ar) |> filter(term == "ar2") |> select(estimate) |> pull() |> round(3)` + 2 \cdot `r tidy(fit_ar) |> filter(term == "ar2") |> select(std.error) |> pull() |> round(3)`
+  \right)
+$$
+$$
+  \left(
+  `r ((tidy(fit_ar) |> filter(term == "ar2") |> select(estimate) |> pull()) - 2 * (tidy(fit_ar) |> filter(term == "ar2") |> select(std.error) |> pull())) |> round(3)`
+  , ~
+  `r ((tidy(fit_ar) |> filter(term == "ar2") |> select(estimate) |> pull()) + 2 * (tidy(fit_ar) |> filter(term == "ar2") |> select(std.error) |> pull())) |> round(3)`
+  \right)
+$$
+This confidence interval contains $\alpha_2 = `r alpha2`$.
+
+:::
+:::
+<!-- End of two columns -->
+
+Both confidence intervals contain the true parameter values we used for the simulation.
+
+
+#### Discussion of Residuals
+# Working here - STUFF GOES HERE
+
+
 
 
 
@@ -156,16 +376,25 @@ global_ar <- temps_ts |>
 
 mean(temps_ts$change)
 
-tidy(global_ar) |> filter(str_detect(term, "ar")) |> nrow()
+tidy(global_ar) |> filter(str_detect(term, "ar1")) |> nrow()
 
-tidy(global_ar) |> filter(str_detect(term, "ar")) |> pull(estimate)
+tidy(global_ar) |> filter(str_detect(term, "ar1")) |> pull(estimate)
 
-coeffs <- tidy(global_ar) |> filter(str_detect(term, "ar")) |> pull(estimate)
+coeffs <- tidy(global_ar) |> filter(str_detect(term, "ar1")) |> pull(estimate)
 coeffs[1]
 
 residuals(global_ar) |> ACF(lag_max = 50) |> autoplot(.vars = .resid)
 ```
 
+### Fitting Models (Dynamic Number of Parameters)
+
+### Fitting an $AR(3)$ Model
+
+### Conclusion
+
+No significant values in residuals suggests that the model accounts for variation...but what about the visual and logical argument? Is there an exponential relationship?
+
+-   Bias introduced by the choice of the model -- must be very careful
 
 
 ## Small Group Activity: SectionTitle (xxx min)
