@@ -331,6 +331,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#using-the-pacf-to-choose-p-for-an-arp-process" id="toc-using-the-pacf-to-choose-p-for-an-arp-process" class="nav-link" data-scroll-target="#using-the-pacf-to-choose-p-for-an-arp-process">Using the PACF to Choose <span class="math inline">\(p\)</span> for an <span class="math inline">\(AR(p)\)</span> Process</a></li>
   <li><a href="#fitting-models-dynamic-number-of-parameters" id="toc-fitting-models-dynamic-number-of-parameters" class="nav-link" data-scroll-target="#fitting-models-dynamic-number-of-parameters">Fitting Models (Dynamic Number of Parameters)</a></li>
   <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion">Conclusion</a></li>
+  <li><a href="#comparison-to-the-results-in-section-4.6.3-of-the-book" id="toc-comparison-to-the-results-in-section-4.6.3-of-the-book" class="nav-link" data-scroll-target="#comparison-to-the-results-in-section-4.6.3-of-the-book">Comparison to the Results in Section 4.6.3 of the Book</a></li>
   </ul></li>
   <li><a href="#class-activity-forecasting-with-an-arp-model-5-min" id="toc-class-activity-forecasting-with-an-arp-model-5-min" class="nav-link" data-scroll-target="#class-activity-forecasting-with-an-arp-model-5-min">Class Activity: Forecasting with an <span class="math inline">\(AR(p)\)</span> Model (5 min)</a></li>
   <li><a href="#homework-preview-5-min" id="toc-homework-preview-5-min" class="nav-link" data-scroll-target="#homework-preview-5-min">Homework Preview (5 min)</a></li>
@@ -479,7 +480,7 @@ Check model adequacy using diagnostic plots like correlograms of residuals
 <p>When R fits an AR model, the mean of the time series is subtracted from the data before the parameter values are estimated. If R detects that the mean of the time series is not significantly different from zero, it is omitted from the output.</p>
 <p>Because the mean is subtracted from the time series before the parameter values are estimated, R is using the model <span class="math display">\[
   z_t = \alpha_1 ~ z_{t-1} + w_t
-\]</span> where <span class="math inline">\(z_t = x_t - \alpha_0\)</span> and <span class="math inline">\(\alpha_0\)</span> is the mean of the time series.</p>
+\]</span> where <span class="math inline">\(z_t = x_t - \mu\)</span> and <span class="math inline">\(\mu\)</span> is the mean of the time series.</p>
 <!-- Check Your Understanding -->
 <div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
 <div class="callout-header d-flex align-content-center">
@@ -493,13 +494,13 @@ Check Your Understanding
 <div class="callout-body-container callout-body">
 <p>Answer the following questions with your partner.</p>
 <ul>
-<li>Use the expression for <span class="math inline">\(z_t\)</span> above to solve for <span class="math inline">\(x_t\)</span> in terms of <span class="math inline">\(x_{t-1}\)</span>, <span class="math inline">\(\alpha_0\)</span>, <span class="math inline">\(\alpha_1\)</span>, and <span class="math inline">\(w_t\)</span>.</li>
-<li>What does your model reduce to when <span class="math inline">\(\alpha_0 = 0\)</span>?</li>
-<li>Explain to your partner why this correctly models a time series with mean <span class="math inline">\(\alpha_0\)</span>.</li>
+<li>Use the expression for <span class="math inline">\(z_t\)</span> above to solve for <span class="math inline">\(x_t\)</span> in terms of <span class="math inline">\(x_{t-1}\)</span>, <span class="math inline">\(\mu\)</span>, <span class="math inline">\(\alpha_1\)</span>, and <span class="math inline">\(w_t\)</span>.</li>
+<li>What does your model reduce to when <span class="math inline">\(\mu = 0\)</span>?</li>
+<li>Explain to your partner why this correctly models a time series with mean <span class="math inline">\(\mu\)</span>.</li>
 </ul>
 </div>
 </div>
-<p>We replace the parameter <span class="math inline">\(\alpha_0\)</span> with its estimator <span class="math inline">\(\hat \alpha_0 = \bar x\)</span>. We also replace <span class="math inline">\(\alpha_1\)</span> with the fitted value from the output <span class="math inline">\(\hat \alpha_1\)</span>. This gives us the fitted model: <span class="math display">\[
+<p>We replace the parameter <span class="math inline">\(\mu\)</span> with its estimator <span class="math inline">\(\hat \mu = \bar x\)</span>. We also replace <span class="math inline">\(\alpha_1\)</span> with the fitted value from the output <span class="math inline">\(\hat \alpha_1\)</span>. This gives us the fitted model: <span class="math display">\[
   \hat x_t = \bar x + \hat \alpha_1 ~ (x_{t-1} - \bar x)
 \]</span></p>
 <p>The fitted model can be expressed as:</p>
@@ -509,7 +510,7 @@ Check Your Understanding
     &amp;= 0.067 - 0.72 ~ (0.067) + 0.72 ~ \left( x_{t-1} \right) \\
     &amp;= 0.019 + 0.72 ~ x_{t-1}
 \end{align*}\]</span></p>
-<p>Even though R does not report the parameter for the mean of the process, <span class="math inline">\(\hat \alpha_0 = 0.019\)</span>, it is not significantly different from zero. One could argue that we should not use a model that contains the mean and instead focus on a simple fitted model that has only one parameter:</p>
+<p>Even though R does not report the parameter for the mean of the process, <span class="math inline">\(\hat \mu = 0.019\)</span>, it is not significantly different from zero. One could argue that we should not use a model that contains the mean and instead focus on a simple fitted model that has only one parameter:</p>
 <p><span class="math display">\[
   \hat x_t = 0.72 ~ x_{t-1}
 \]</span></p>
@@ -566,15 +567,15 @@ Check Your Understanding
 <section id="simulate-an-ar1-time-series-1" class="level3">
 <h3 class="anchored" data-anchor-id="simulate-an-ar1-time-series-1">Simulate an <span class="math inline">\(AR(1)\)</span> Time Series</h3>
 <p>It is easy to conceive situations where the mean of an AR model is not zero. The model we have been fitting is <span class="math display">\[
-  x_t = \alpha_0 + \alpha_1 ~ \left( x_{t-1} - \alpha_0 \right) + w_t
-\]</span> where <span class="math inline">\(\alpha_0\)</span> and <span class="math inline">\(\alpha_1\)</span> are constants, and <span class="math inline">\(w_t\)</span> is a white noise process with variance <span class="math inline">\(\sigma^2\)</span>.</p>
+  x_t = \mu + \alpha_1 ~ \left( x_{t-1} - \mu \right) + w_t
+\]</span> where <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\alpha_1\)</span> are constants, and <span class="math inline">\(w_t\)</span> is a white noise process with variance <span class="math inline">\(\sigma^2\)</span>.</p>
 <p>This model can be simplified by combining like terms. <span class="math display">\[\begin{align*}
 x_t
-  &amp;= \alpha_0 + \alpha_1 ~ \left( x_{t-1} - \alpha_0 \right) + w_t \\
-  &amp;= \underbrace{\alpha_0 - \alpha_1 ~ (\alpha_0)}_{\alpha_0'} + \alpha_1 ~ \left( x_{t-1} \right) + w_t \\
-  &amp;= \alpha_0' + \alpha_1 ~ \left( x_{t-1} \right) + w_t
+  &amp;= \mu + \alpha_1 ~ \left( x_{t-1} - \mu \right) + w_t \\
+  &amp;= \underbrace{\mu - \alpha_1 ~ (\mu)}_{\alpha_0} + \alpha_1 ~ \left( x_{t-1} \right) + w_t \\
+  &amp;= \alpha_0 + \alpha_1 ~ \left( x_{t-1} \right) + w_t
 \end{align*}\]</span></p>
-<p>Suppose the mean of the <span class="math inline">\(AR(1)\)</span> process is <span class="math inline">\(\alpha_0 = 50\)</span>. We will set <span class="math inline">\(\alpha_1 = 0.75\)</span>, and <span class="math inline">\(\sigma^2 = 5\)</span> for this simulation. After specifying these numbers, the model becomes: <span class="math display">\[\begin{align*}
+<p>Suppose the mean of the <span class="math inline">\(AR(1)\)</span> process is <span class="math inline">\(\mu = 50\)</span>. We will set <span class="math inline">\(\alpha_1 = 0.75\)</span>, and <span class="math inline">\(\sigma^2 = 5\)</span> for this simulation. After specifying these numbers, the model becomes: <span class="math display">\[\begin{align*}
   x_t
     &amp;= 50 + 0.75 ~ ( x_{t-1} - 50 ) + w_t \\
     &amp;= 50 - 0.75 ~ ( 50 ) + 0.75 ~ x_{t-1} + w_t \\
@@ -635,13 +636,13 @@ x_t
 2 AR(x ~ order(1)) ar1         0.719    0.0220      32.7 5.95e-160</code></pre>
 </div>
 </div>
-<p>The estimate of the parameter for the constant (mean) term <span class="math inline">\(\alpha_0'\)</span> is <span class="math inline">\(\hat \alpha_0' = 14.091\)</span>. The estimate of the parameter <span class="math inline">\(\alpha_1\)</span> (i.e.&nbsp;the fitted value of the parameter <span class="math inline">\(\alpha_1\)</span>) is <span class="math inline">\(\hat \alpha_1 = 0.719\)</span>.</p>
+<p>The estimate of the parameter for the constant (mean) term <span class="math inline">\(\alpha_0\)</span> is <span class="math inline">\(\hat \alpha_0 = 14.091\)</span>. The estimate of the parameter <span class="math inline">\(\alpha_1\)</span> (i.e.&nbsp;the fitted value of the parameter <span class="math inline">\(\alpha_1\)</span>) is <span class="math inline">\(\hat \alpha_1 = 0.719\)</span>.</p>
 <!-- Recall that the mean of the time series is subtracted from the data before the parameter values are estimated. To estimate the time series, start with the mean and then add the coefficient $\hat \alpha_1$ multiplied by the difference between $x_{t-1}$ and the mean. -->
 <p>Fitting the model <span class="math display">\[
-  x_t = \alpha_0' + \alpha_1 ~ x_{t-1} + w_t
+  x_t = \alpha_0 + \alpha_1 ~ x_{t-1} + w_t
 \]</span> we get <span class="math display">\[\begin{align*}
   \hat x_t
-    &amp;= \hat \alpha_0' + \hat \alpha_1 ~ x_{t-1} \\
+    &amp;= \hat \alpha_0 + \hat \alpha_1 ~ x_{t-1} \\
     &amp;= 14.091 +
       0.719
          ~ x_{t-1}
@@ -649,7 +650,7 @@ x_t
 </section>
 <section id="confidence-intervals-for-the-model-parameters" class="level3">
 <h3 class="anchored" data-anchor-id="confidence-intervals-for-the-model-parameters">Confidence Intervals for the Model Parameters</h3>
-<p>We can compute approximate 95% confidence intervals for <span class="math inline">\(\alpha_0'\)</span> and <span class="math inline">\(\alpha_1\)</span>:</p>
+<p>We can compute approximate 95% confidence intervals for <span class="math inline">\(\alpha_0\)</span> and <span class="math inline">\(\alpha_1\)</span>:</p>
 <p><span class="math display">\[
   \left(
     \hat \alpha_i - 2 \cdot SE_{\hat \alpha_i}
@@ -670,11 +671,11 @@ x_t
 <!-- Beginning of two columns -->
 <div class="columns">
 <div class="column" style="width:45%;">
-<p>95% Confidence Interval for <span class="math inline">\(\alpha_0'\)</span>: <span class="math display">\[
+<p>95% Confidence Interval for <span class="math inline">\(\alpha_0\)</span>: <span class="math display">\[
   \left(
-    \hat \alpha_0' - 2 \cdot SE_{\hat \alpha_0'}
+    \hat \alpha_0 - 2 \cdot SE_{\hat \alpha_0}
     , ~
-    \hat \alpha_0' + 2 \cdot SE_{\hat \alpha_0'}
+    \hat \alpha_0 + 2 \cdot SE_{\hat \alpha_0}
   \right)
 \]</span></p>
 <p><span class="math display">\[
@@ -690,7 +691,7 @@ x_t
   , ~
   16.301
   \right)
-\]</span> The confidence interval for <span class="math inline">\(\alpha_0'\)</span> contains <span class="math display">\[\alpha_0' = \alpha_0 - \alpha_1 ~ (\alpha_0) = 12.5\]</span></p>
+\]</span> The confidence interval for <span class="math inline">\(\alpha_0\)</span> contains <span class="math display">\[\alpha_0 = \mu - \alpha_1 ~ (\mu) = 12.5\]</span></p>
 </div><div class="column" style="width:10%;">
 <!-- empty column to create gap -->
 </div><div class="column" style="width:45%;">
@@ -757,8 +758,8 @@ Check Your Understanding
 <ul>
 <li>Is this <span class="math inline">\(AR(2)\)</span> process stationary? (Hint: The characteristic polynomial only includes terms that involve <span class="math inline">\(x_t\)</span>.)</li>
 <li>Rewrite the model in the form <span class="math display">\[
-  x_t = \alpha_0 + \alpha_1 ~ ( x_{t-1} - \alpha_0) + \alpha_2 ~ ( x_{t-2} - \alpha_0) + w_t
-\]</span> Identify the value of each of the coefficients (<span class="math inline">\(\alpha_0\)</span>, <span class="math inline">\(\alpha_1\)</span>, and <span class="math inline">\(\alpha_2\)</span>). <!-- Solution Solution Solution Solution Solution Solution --> <!-- \begin{align*} --> <!--   x_t  --> <!--     &= 20 + 0.5 ~ ( x_{t-1} - 20) + 0.4 ~ ( x_{t-2} - 20) + w_t \\ --> <!--     &= 2 + 0.5 ~ x_{t-1} + 0.4 ~ x_{t-2} + w_t --> <!-- \end{align*} --></li>
+  x_t = \mu + \alpha_1 ~ ( x_{t-1} - \mu) + \alpha_2 ~ ( x_{t-2} - \mu) + w_t
+\]</span> Identify the value of each of the coefficients (<span class="math inline">\(\mu\)</span>, <span class="math inline">\(\alpha_1\)</span>, and <span class="math inline">\(\alpha_2\)</span>). <!-- Solution Solution Solution Solution Solution Solution --> <!-- \begin{align*} --> <!--   x_t  --> <!--     &= 20 + 0.5 ~ ( x_{t-1} - 20) + 0.4 ~ ( x_{t-2} - 20) + w_t \\ --> <!--     &= 2 + 0.5 ~ x_{t-1} + 0.4 ~ x_{t-2} + w_t --> <!-- \end{align*} --></li>
 <li>What is the mean of this <span class="math inline">\(AR(2)\)</span> process?</li>
 </ul>
 </div>
@@ -827,11 +828,11 @@ Check Your Understanding
 </div>
 </div>
 <p>The estimates of the parameter values (i.e.&nbsp;the fitted values of the parameters) are:<br>
-<span class="math inline">\(\hat \alpha_0' = 2.295\)</span>, <span class="math inline">\(\hat \alpha_1 = 0.478\)</span>, and <span class="math inline">\(\hat \alpha_2 = 0.408\)</span>. This means that our fitted model can be expressed as:</p>
+<span class="math inline">\(\hat \alpha_0 = 2.295\)</span>, <span class="math inline">\(\hat \alpha_1 = 0.478\)</span>, and <span class="math inline">\(\hat \alpha_2 = 0.408\)</span>. This means that our fitted model can be expressed as:</p>
 <p><span class="math display">\[\begin{align*}
   \hat x_t
   &amp;=
-    \hat \alpha_0'
+    \hat \alpha_0
     + \hat \alpha_1 ~ x_{t-1}
     + \hat \alpha_2 ~ x_{t-2}
     \\
@@ -867,11 +868,11 @@ Check Your Understanding
 <!-- Beginning of three columns -->
 <div class="columns">
 <div class="column" style="width:30%;">
-<p>95% confidence interval for <span class="math inline">\(\alpha_0'\)</span>: <span class="math display">\[
+<p>95% confidence interval for <span class="math inline">\(\alpha_0\)</span>: <span class="math display">\[
   \left(
-    \hat \alpha_0' - 2 \cdot SE_{\hat \alpha_0'}
+    \hat \alpha_0 - 2 \cdot SE_{\hat \alpha_0}
     , ~
-    \hat \alpha_0' + 2 \cdot SE_{\hat \alpha_0'}
+    \hat \alpha_0 + 2 \cdot SE_{\hat \alpha_0}
   \right)
 \]</span> <span class="math display">\[
   \left(
@@ -879,8 +880,8 @@ Check Your Understanding
   ,
   \right.
   ~~~~~~~~~~~~~~~~~~~
-  \]</span> <span class="math display">\[
-  ~~~~~~~~~~~~~~~~~~~~~~
+\]</span> <span class="math display">\[
+  ~~~~~~~~~~~~~~~~~~~
   \left.
   2.295 + 2 \cdot 0.363
   \right)
@@ -890,7 +891,7 @@ Check Your Understanding
   , ~
   3.021
   \right)
-\]</span> This confidence interval contains <span class="math inline">\(\alpha_0' = 2\)</span>.</p>
+\]</span> This confidence interval contains <span class="math inline">\(\alpha_0 = 2\)</span>.</p>
 </div><div class="column" style="width:5%;">
 <!-- empty column to create gap -->
 </div><div class="column" style="width:30%;">
@@ -907,7 +908,7 @@ Check Your Understanding
   \right.
   ~~~~~~~~~~~~~~~~~~~
   \]</span> <span class="math display">\[
-  ~~~~~~~~~~~~~~~~~~~~~~
+  ~~~~~~~~~~~~~~~~~~~
   \left.
   0.478 + 2 \cdot 0.029
   \right)
@@ -934,7 +935,7 @@ Check Your Understanding
   \right.
   ~~~~~~~~~~~~~~~~~~~
   \]</span> <span class="math display">\[
-  ~~~~~~~~~~~~~~~~~~~~~~
+  ~~~~~~~~~~~~~~~~~~~
   \left.
   0.408 + 2 \cdot 0.029
   \right)
@@ -1163,31 +1164,36 @@ Check Your Understanding
 <div class="callout-body-container callout-body">
 <ul>
 <li>Write the characteristic equation for the <span class="math inline">\(AR(6)\)</span> model you developed.</li>
-<li>Click on the link below to obtain a more precise version of the characteristic equation, then solve the characteristic equation by any method. <a href="javascript:showhide('CharacteristicEquation')" style="font-size:.8em;">Class Activity</a></li>
+<li>Click on the link below to obtain a more precise version of the characteristic equation, then solve the characteristic equation by any method.</li>
 </ul>
+<p><a href="javascript:showhide('CharacteristicEquation')" style="font-size:.8em;">Characteristic Equation</a></p>
 <div id="CharacteristicEquation" style="display:none;">
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># alphas[p&gt;0]</span></span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>alphas <span class="ot">&lt;-</span> global_ar <span class="sc">%&gt;%</span> <span class="fu">coefficients</span>() <span class="sc">%&gt;%</span> <span class="fu">tail</span>(<span class="sc">-</span><span class="dv">1</span>) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">select</span>(estimate) <span class="sc">%&gt;%</span> <span class="fu">pull</span>()</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(</span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">"0 = 1"</span>, </span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">1</span>], <span class="st">") * x"</span>,</span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">2</span>], <span class="st">") * x^2"</span>,</span>
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>alphas <span class="ot">&lt;-</span> global_ar <span class="sc">|&gt;</span> <span class="fu">coefficients</span>() <span class="sc">|&gt;</span> <span class="fu">tail</span>(<span class="sc">-</span><span class="dv">1</span>) <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">select</span>(estimate) <span class="sc">|&gt;</span> <span class="fu">pull</span>()</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"0 = 1"</span>, </span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">1</span>], <span class="st">") * x"</span>,</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">2</span>], <span class="st">") * x^2"</span>,</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">3</span>], <span class="st">") * x^3"</span>,</span>
 <span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>        <span class="st">"</span><span class="sc">\n</span><span class="st">     "</span>,</span>
-<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">3</span>], <span class="st">") * x^3"</span>,</span>
-<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">4</span>], <span class="st">") * x^4"</span>,</span>
-<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">"</span><span class="sc">\n</span><span class="st">     "</span>,</span>
-<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">5</span>], <span class="st">") * x^5"</span>,</span>
-<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">6</span>], <span class="st">") * x^6"</span></span>
-<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">4</span>], <span class="st">") * x^4"</span>,</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">5</span>], <span class="st">") * x^5"</span>,</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">6</span>], <span class="st">") * x^6"</span></span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output cell-output-stdout">
-<pre><code>0 = 1 - ( 0.6559292 ) * x - ( -0.06617426 ) * x^2 
-      - ( 0.140204 ) * x^3 - ( 0.2653744 ) * x^4 
-      - ( -0.1627911 ) * x^5 - ( 0.2056924 ) * x^6</code></pre>
+<pre><code>0 = 1 - ( 0.6559292 ) * x - ( -0.06617426 ) * x^2 - ( 0.140204 ) * x^3 
+      - ( 0.2653744 ) * x^4 - ( -0.1627911 ) * x^5 - ( 0.2056924 ) * x^6</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">polyroot</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="sc">-</span>alphas))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>alphas <span class="ot">&lt;-</span> global_ar <span class="sc">|&gt;</span> <span class="fu">coefficients</span>() <span class="sc">|&gt;</span> <span class="fu">tail</span>(<span class="sc">-</span><span class="dv">1</span>) <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">select</span>(estimate) <span class="sc">|&gt;</span> <span class="fu">pull</span>()</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">polyroot</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="sc">-</span>alphas))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1]  0.9838806+0.000000i -1.2890454+0.000000i -0.3076674-1.277838i
 [4]  0.8559646-1.219125i -0.3076674+1.277838i  0.8559646+1.219125i</code></pre>
@@ -1195,7 +1201,7 @@ Check Your Understanding
 </div>
 </div>
 <ul>
-<li>Is the <span class="math inline">\(AR(6)\)</span> model stationary?</li>
+<li>Is our <span class="math inline">\(AR(6)\)</span> model stationary?</li>
 </ul>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Solution</span></span>
@@ -1223,49 +1229,128 @@ Check Your Understanding
 </div>
 </div>
 </section>
-</section>
-<section id="class-activity-forecasting-with-an-arp-model-5-min" class="level2">
-<h2 class="anchored" data-anchor-id="class-activity-forecasting-with-an-arp-model-5-min">Class Activity: Forecasting with an <span class="math inline">\(AR(p)\)</span> Model (5 min)</h2>
+<section id="comparison-to-the-results-in-section-4.6.3-of-the-book" class="level3">
+<h3 class="anchored" data-anchor-id="comparison-to-the-results-in-section-4.6.3-of-the-book">Comparison to the Results in Section 4.6.3 of the Book</h3>
+<p>In Sections 1.4.5 and 4.6.3 of the textbook, the authors present a similar dataset on the mean annual temperatures on Earth through 2005. Here is a time plot of their data:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>temps_forecast <span class="ot">&lt;-</span> global_ar <span class="sc">%&gt;%</span> <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"20 years"</span>)</span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>temps_forecast <span class="sc">|&gt;</span></span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(temps_ts, <span class="at">level =</span> <span class="dv">95</span>) <span class="sc">+</span></span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># coord_cartesian(ylim = c(0,5500)) +</span></span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> .fitted, <span class="at">color =</span> <span class="st">"Fitted"</span>),</span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> <span class="fu">augment</span>(global_ar)) <span class="sc">+</span></span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_discrete</span>(<span class="at">name =</span> <span class="st">""</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>global_ts <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">x =</span> <span class="fu">scan</span>(<span class="st">"data/global.dat"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">date =</span> <span class="fu">seq</span>(</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>            <span class="fu">ymd</span>(<span class="st">"1856-01-01"</span>),</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">by =</span> <span class="st">"1 months"</span>,</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">length.out =</span> <span class="fu">n</span>()),</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">year =</span> <span class="fu">year</span>(date),</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">year_month =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(date)</span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">x =</span> <span class="fu">mean</span>(x), <span class="at">.by =</span> year) <span class="sc">|&gt;</span></span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> year) </span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>global_ts <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(<span class="at">.vars =</span> x) <span class="sc">+</span></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Year"</span>,</span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Temperature Change (Celsius)"</span>,</span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Change in Mean Annual Global Temperature"</span>,</span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">subtitle =</span> <span class="st">"Data from Textbook"</span></span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb30-23"><a href="#cb30-23" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output-display">
 <p><img src="chapter_4_lesson_4_files/figure-html/unnamed-chunk-26-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
+<p>The fitted <span class="math inline">\(AR(4)\)</span> model is given below.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># constant terms</span></span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>alpha0 <span class="ot">&lt;-</span> global_ar <span class="sc">%&gt;%</span> <span class="fu">coefficients</span>() <span class="sc">%&gt;%</span> <span class="fu">head</span>(<span class="dv">1</span>) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">select</span>(estimate) <span class="sc">%&gt;%</span> <span class="fu">pull</span>()</span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="co"># other alphas</span></span>
-<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>alphas <span class="ot">&lt;-</span> global_ar <span class="sc">%&gt;%</span> <span class="fu">coefficients</span>() <span class="sc">%&gt;%</span> <span class="fu">tail</span>(<span class="sc">-</span><span class="dv">1</span>) <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">select</span>(estimate) <span class="sc">%&gt;%</span> <span class="fu">pull</span>()</span>
-<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a><span class="fu">paste0</span>(</span>
-<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"0 = 1 "</span>, </span>
-<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>        <span class="st">" - ("</span>, alphas[<span class="dv">1</span>], <span class="st">") * x"</span>,</span>
-<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>        <span class="st">" - ("</span>, alphas[<span class="dv">2</span>], <span class="st">") * x^2"</span>,</span>
-<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>        <span class="st">" - ("</span>, alphas[<span class="dv">3</span>], <span class="st">") * x^3"</span>,</span>
-<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">" - ("</span>, alphas[<span class="dv">4</span>], <span class="st">") * x^4"</span>,</span>
-<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>        <span class="st">" - ("</span>, alphas[<span class="dv">5</span>], <span class="st">") * x^5"</span>,</span>
-<span id="cb31-12"><a href="#cb31-12" aria-hidden="true" tabindex="-1"></a>        <span class="st">" - ("</span>, alphas[<span class="dv">6</span>], <span class="st">") * x^6"</span></span>
-<span id="cb31-13"><a href="#cb31-13" aria-hidden="true" tabindex="-1"></a>      )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>global_ar_book <span class="ot">&lt;-</span> global_ts <span class="sc">|&gt;</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">AR</span>(x <span class="sc">~</span> <span class="fu">order</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">9</span>)))</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(global_ar_book)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] "0 = 1  - (0.655929182472401) * x - (-0.0661742561340635) * x^2 - (0.140204028438433) * x^3 - (0.265374438296396) * x^4 - (-0.1627910647788) * x^5 - (0.205692419305318) * x^6"</code></pre>
+<pre><code># A tibble: 4 × 6
+  .model             term  estimate std.error statistic  p.value
+  &lt;chr&gt;              &lt;chr&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+1 AR(x ~ order(1:9)) ar1     0.582     0.0791     7.36  1.24e-11
+2 AR(x ~ order(1:9)) ar2     0.0216    0.0919     0.236 8.14e- 1
+3 AR(x ~ order(1:9)) ar3     0.107     0.0917     1.17  2.43e- 1
+4 AR(x ~ order(1:9)) ar4     0.267     0.0791     3.38  9.43e- 4</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(</span>
-<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="st">"0 = 1"</span>, </span>
-<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">1</span>], <span class="st">") * x"</span>,</span>
-<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">2</span>], <span class="st">") * x^2"</span>,</span>
-<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"</span><span class="sc">\n</span><span class="st">     "</span>,</span>
+</div>
+<p>Let’s check the stationarity of this model. The characteristic equation is:</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>alphas <span class="ot">&lt;-</span> global_ar_book <span class="sc">|&gt;</span> <span class="fu">coefficients</span>() <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">select</span>(estimate) <span class="sc">|&gt;</span> <span class="fu">pull</span>()</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">"0 = 1"</span>, </span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">1</span>], <span class="st">") * x"</span>,</span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">2</span>], <span class="st">") * x^2"</span>,</span>
 <span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">3</span>], <span class="st">") * x^3"</span>,</span>
-<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">4</span>], <span class="st">") * x^4"</span>,</span>
-<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>        <span class="st">"</span><span class="sc">\n</span><span class="st">     "</span>,</span>
-<span id="cb33-9"><a href="#cb33-9" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">5</span>], <span class="st">") * x^5"</span>,</span>
-<span id="cb33-10"><a href="#cb33-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">6</span>], <span class="st">") * x^6"</span></span>
-<span id="cb33-11"><a href="#cb33-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb33-7"><a href="#cb33-7" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">4</span>], <span class="st">") * x^4"</span></span>
+<span id="cb33-8"><a href="#cb33-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>0 = 1 - ( 0.5817607 ) * x - ( 0.02164876 ) * x^2 - ( 0.1074731 ) * x^3 - ( 0.2670716 ) * x^4</code></pre>
+</div>
+</div>
+<p>The solutions of the characteristic equation are:</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">polyroot</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="sc">-</span>alphas)) <span class="sc">|&gt;</span> <span class="fu">round</span>(<span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1]  1.011+0.000i -1.755+0.000i  0.171-1.443i  0.171+1.443i</code></pre>
+</div>
+</div>
+<p>The absolute value of the solutions of the characteristic equation are:</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">polyroot</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="sc">-</span>alphas)) <span class="sc">|&gt;</span> <span class="fu">abs</span>() <span class="sc">|&gt;</span> <span class="fu">round</span>(<span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 1.011 1.755 1.453 1.453</code></pre>
+</div>
+</div>
+</section>
+</section>
+<section id="class-activity-forecasting-with-an-arp-model-5-min" class="level2">
+<h2 class="anchored" data-anchor-id="class-activity-forecasting-with-an-arp-model-5-min">Class Activity: Forecasting with an <span class="math inline">\(AR(p)\)</span> Model (5 min)</h2>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>temps_forecast <span class="ot">&lt;-</span> global_ar <span class="sc">|&gt;</span> <span class="fu">forecast</span>(<span class="at">h =</span> <span class="st">"20 years"</span>)</span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>temps_forecast <span class="sc">|&gt;</span></span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(temps_ts, <span class="at">level =</span> <span class="dv">95</span>) <span class="sc">+</span></span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>  <span class="co"># coord_cartesian(ylim = c(0,5500)) +</span></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> .fitted, <span class="at">color =</span> <span class="st">"Fitted"</span>),</span>
+<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> <span class="fu">augment</span>(global_ar)) <span class="sc">+</span></span>
+<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_discrete</span>(<span class="at">name =</span> <span class="st">""</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_4_lesson_4_files/figure-html/unnamed-chunk-31-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># constant terms</span></span>
+<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a>alpha0 <span class="ot">&lt;-</span> global_ar <span class="sc">|&gt;</span> <span class="fu">coefficients</span>() <span class="sc">|&gt;</span> <span class="fu">head</span>(<span class="dv">1</span>) <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">select</span>(estimate) <span class="sc">|&gt;</span> <span class="fu">pull</span>()</span>
+<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a><span class="co"># other alphas</span></span>
+<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a>alphas <span class="ot">&lt;-</span> global_ar <span class="sc">|&gt;</span> <span class="fu">coefficients</span>() <span class="sc">|&gt;</span> <span class="fu">tail</span>(<span class="sc">-</span><span class="dv">1</span>) <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">select</span>(estimate) <span class="sc">|&gt;</span> <span class="fu">pull</span>()</span>
+<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(</span>
+<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a>  <span class="st">"0 = 1"</span>, </span>
+<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">1</span>], <span class="st">") * x"</span>,</span>
+<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">2</span>], <span class="st">") * x^2"</span>,</span>
+<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a>        <span class="st">"</span><span class="sc">\n</span><span class="st">     "</span>,</span>
+<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">3</span>], <span class="st">") * x^3"</span>,</span>
+<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">4</span>], <span class="st">") * x^4"</span>,</span>
+<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a>        <span class="st">"</span><span class="sc">\n</span><span class="st">     "</span>,</span>
+<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">5</span>], <span class="st">") * x^5"</span>,</span>
+<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a>        <span class="st">"- ("</span>, alphas[<span class="dv">6</span>], <span class="st">") * x^6"</span></span>
+<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>0 = 1 - ( 0.6559292 ) * x - ( -0.06617426 ) * x^2 
       - ( 0.140204 ) * x^3 - ( 0.2653744 ) * x^4 
@@ -1273,7 +1358,7 @@ Check Your Understanding
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>global_ar <span class="sc">%&gt;%</span> <span class="fu">coefficients</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>global_ar <span class="sc">|&gt;</span> <span class="fu">coefficients</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 7 × 6
   .model                  term     estimate std.error statistic  p.value
@@ -1351,9 +1436,9 @@ Check Your Understanding
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>global_ar <span class="ot">&lt;-</span> temps_ts <span class="sc">|&gt;</span></span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(<span class="fu">AR</span>(change <span class="sc">~</span> <span class="fu">order</span>(<span class="dv">3</span>)))</span>
-<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(global_ar)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>global_ar <span class="ot">&lt;-</span> temps_ts <span class="sc">|&gt;</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">model</span>(<span class="fu">AR</span>(change <span class="sc">~</span> <span class="fu">order</span>(<span class="dv">3</span>)))</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(global_ar)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 3 × 6
@@ -1385,7 +1470,7 @@ Check Your Understanding
 \end{align*}\]</span></p>
 <p>If we want to incorporate the constant term in the model, then we need to find the mean of the time series. The mean of the time series is:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(temps_ts<span class="sc">$</span>change)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">mean</span>(temps_ts<span class="sc">$</span>change)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.06923611</code></pre>
 </div>
@@ -1394,21 +1479,21 @@ Check Your Understanding
 <p><span class="math display">\[\begin{align*}
   \hat x_t
   &amp;=
-    \hat \alpha_0
-    + \hat \alpha_1 ~ (x_{t-1} - \alpha_0)
-    + \hat \alpha_2 ~ (x_{t-2} - \alpha_0)
-    + \hat \alpha_3 ~ (x_{t-3} - \alpha_0)
+    \hat \mu
+    + \hat \alpha_1 ~ (x_{t-1} - \mu)
+    + \hat \alpha_2 ~ (x_{t-2} - \mu)
+    + \hat \alpha_3 ~ (x_{t-3} - \mu)
     \\
   &amp;=
     \underbrace{
-    \hat \alpha_0 - \hat \alpha_1 (\hat \alpha_0) - \hat \alpha_2 (\hat \alpha_0) - \hat \alpha_3 (\hat \alpha_0)
-    }_{\hat \alpha_0'}
+    \hat \mu - \hat \alpha_1 (\hat \mu) - \hat \alpha_2 (\hat \mu) - \hat \alpha_3 (\hat \mu)
+    }_{\hat \alpha_0}
     + \hat \alpha_1 ~ x_{t-1}
     + \hat \alpha_2 ~ x_{t-2}
     + \hat \alpha_3 ~ x_{t-3}
     \\
   &amp;=
-    \hat \alpha_0'
+    \hat \alpha_0
     + \hat \alpha_1 ~ x_{t-1}
     + \hat \alpha_2 ~ x_{t-2}
     + \hat \alpha_3 ~ x_{t-3}
@@ -1446,11 +1531,11 @@ Check Your Understanding
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb41"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb41-1"><a href="#cb41-1" aria-hidden="true" tabindex="-1"></a>ci_summary <span class="ot">&lt;-</span> <span class="fu">tidy</span>(global_ar) <span class="sc">|&gt;</span></span>
-<span id="cb41-2"><a href="#cb41-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
-<span id="cb41-3"><a href="#cb41-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">lower =</span> estimate <span class="sc">-</span> <span class="dv">2</span> <span class="sc">*</span> std.error,</span>
-<span id="cb41-4"><a href="#cb41-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">upper =</span> estimate <span class="sc">+</span> <span class="dv">2</span> <span class="sc">*</span> std.error</span>
-<span id="cb41-5"><a href="#cb41-5" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb48"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb48-1"><a href="#cb48-1" aria-hidden="true" tabindex="-1"></a>ci_summary <span class="ot">&lt;-</span> <span class="fu">tidy</span>(global_ar) <span class="sc">|&gt;</span></span>
+<span id="cb48-2"><a href="#cb48-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb48-3"><a href="#cb48-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">lower =</span> estimate <span class="sc">-</span> <span class="dv">2</span> <span class="sc">*</span> std.error,</span>
+<span id="cb48-4"><a href="#cb48-4" aria-hidden="true" tabindex="-1"></a>        <span class="at">upper =</span> estimate <span class="sc">+</span> <span class="dv">2</span> <span class="sc">*</span> std.error</span>
+<span id="cb48-5"><a href="#cb48-5" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <p>The confidence intervals are: <span class="math display">\[\begin{align*}
@@ -1483,10 +1568,10 @@ The parameters <span class="math inline">\(\alpha_1\)</span> and <span class="ma
 </ul>
 <p><strong>Solution:</strong></p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>global_ar <span class="sc">|&gt;</span> </span>
-<span id="cb42-2"><a href="#cb42-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
-<span id="cb42-3"><a href="#cb42-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">na.omit</span>() <span class="sc">|&gt;</span></span>
-<span id="cb42-4"><a href="#cb42-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>global_ar <span class="sc">|&gt;</span> </span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">na.omit</span>() <span class="sc">|&gt;</span></span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tsibble: 3 x 3 [1Y]
 # Key:       .model [1]
@@ -1506,10 +1591,10 @@ The parameters <span class="math inline">\(\alpha_1\)</span> and <span class="ma
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>resid_df <span class="ot">&lt;-</span> global_ar <span class="sc">|&gt;</span> </span>
-<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
-<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>()</span>
-<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span>(resid_df<span class="sc">$</span>.resid, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>resid_df <span class="ot">&lt;-</span> global_ar <span class="sc">|&gt;</span> </span>
+<span id="cb51-2"><a href="#cb51-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb51-3"><a href="#cb51-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>()</span>
+<span id="cb51-4"><a href="#cb51-4" aria-hidden="true" tabindex="-1"></a><span class="fu">var</span>(resid_df<span class="sc">$</span>.resid, <span class="at">na.rm =</span> <span class="cn">TRUE</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1] 0.01114332</code></pre>
@@ -1524,13 +1609,13 @@ The parameters <span class="math inline">\(\alpha_1\)</span> and <span class="ma
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb46"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb46-1"><a href="#cb46-1" aria-hidden="true" tabindex="-1"></a><span class="fu">residuals</span>(global_ar) <span class="sc">|&gt;</span> <span class="fu">ACF</span>(<span class="at">lag_max =</span> <span class="dv">50</span>) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(<span class="at">.vars =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a><span class="fu">residuals</span>(global_ar) <span class="sc">|&gt;</span> <span class="fu">ACF</span>(<span class="at">lag_max =</span> <span class="dv">50</span>) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(<span class="at">.vars =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stderr">
 <pre><code>Response variable not specified, automatically selected `var = .resid`</code></pre>
 </div>
 <div class="cell-output-display">
-<p><img src="chapter_4_lesson_4_files/figure-html/unnamed-chunk-35-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_4_lesson_4_files/figure-html/unnamed-chunk-40-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>There is still a significant autocorrelation at lag <span class="math inline">\(k=3\)</span>. This suggests a more sophisticated model may be necessary.</p>
