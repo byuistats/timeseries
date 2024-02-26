@@ -764,7 +764,8 @@ Working with a partner, do the following
 -   Find the residuals of this sequence using your expression.
 -   Here are the first few residuals. Compare these to the values you computed.
 ```{r}
-#| echo: false
+#| code-fold: true
+#| code-summary: "Show the code"
 
 fit_ar |>
   residuals()
@@ -796,7 +797,7 @@ temps_ts |> autoplot(.vars = change) +
     labs(
       x = "Year",
       y = "Temperature Change (Celsius)",
-      title = "Change in Mean Annual Global Temperature"
+      title = paste0("Change in Mean Annual Global Temperature (", min(temps_ts$year), "-", max(temps_ts$year), ")")
     ) +
     theme_minimal() +
     theme(
@@ -867,23 +868,16 @@ Working with your partner, do the following:
 -   State the fitted $AR(p)$ model in the form 
 $$\hat x_t = \cdots$$
 -   Obtain 95% confidence intervals for each of the parameters. Which are significantly different from zero?
--   Give the first three residual values (skipping the NAs).
--   What is the estimate of $\sigma^2$?
--   Make a correlogram for the residuals. Does it appear that your model has fully explained the variation in the temperatures? Justify your answer.
 
-:::
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 
-tidy(global_ar) |> filter(str_detect(term, "ar1")) |> pull(estimate)
-```
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
+# ANSWER
+# ANSWER
+# ANSWER
+# ANSWER
 ci_summary <- tidy(global_ar) |>
     mutate(
         lower = estimate - 2 * std.error,
@@ -892,15 +886,31 @@ ci_summary <- tidy(global_ar) |>
 ci_summary
 ```
 
+-   Give the first three residual values (skipping the NAs).
+-   What is the estimate of $\sigma^2$?
+-   Make a correlogram for the residuals. Does it appear that your model has fully explained the variation in the temperatures? Justify your answer.
+
+:::
+
+
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 
-residuals(global_ar) |> ACF(lag_max = 50) |> autoplot(.vars = .resid)
+residuals(global_ar) |> 
+  ACF(lag_max = 50) |> 
+  autoplot(.vars = .resid) +
+    labs(
+      title = paste0("ACF of the Residuals from the AR(", tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1), ") Model")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
 ```
 
-### Conclusion
+### Stationarity of the $AR(p)$ Model
 
 With the exception of a lone seemingly spurious autocorrelation, there are no significant values of the acf of the residuals in the 
 $AR(`r tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1)`)$ 
@@ -959,21 +969,52 @@ model stationary?
 abs(polyroot(c(1, -alphas)))
 ```
 
+:::
 
--   THE GLOBAL WARMING TIME SERIES GIVEN IN THE BOOK IS STATIONARY!!!
-    -   IT WOULD BE FUN TO EXPLORE THE IDEAS ASSOICATED WITH THAT: 
-    -   SMALLER SAMPLE SIZE, ESPECIALLY IN THE AREA WHERE THE ACTION IS...
-    -   DIFFERENT CONCLUSIONS BASED ON DIFFERENT DATA...
-    -   DATA NOT THE SAME, DIFFERENT WAYS OF ESTIMATING THE SAME THING
-    -   LOTS OF FUN IMPLICATIONS
 
--   Explain how the choice of a model can bias the results.
--   Why is it important to carefully consider our model selection, including factors that might affect the results?
+
+## Class Activity: Forecasting with an $AR(p)$ Model (5 min)
+
+We now use the model to forecast the mean temperature difference for the next 50 years.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+temps_forecast <- global_ar |> forecast(h = "50 years")
+temps_forecast |>
+  autoplot(temps_ts, level = 95) +
+  geom_line(aes(y = .fitted, color = "Fitted"),
+    data = augment(global_ar)) +
+  scale_color_discrete(name = "") +
+  labs(
+    x = "Year",
+    y = "Temperature Change (Celsius)",
+    title = paste0("Change in Mean Annual Global Temperature (", min(temps_ts$year), "-", max(temps_ts$year), ")"),
+    subtitle = paste0("Forecast based on our AR(", tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1), ") Model")
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+
+<!-- Check your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Does this forecast seem appropriate for the data? Why or why not?
 
 :::
 
 
-### Comparison to the Results in Section 4.6.3 of the Book
+
+
+
+### Class Activity: Comparison to the Results in Section 4.6.3 of the Book (5 min)
 
 In Sections 1.4.5 and 4.6.3 of the textbook, the authors present a similar dataset on the mean annual temperatures on Earth through 2005. Here is a time plot of their data:
 
@@ -996,8 +1037,8 @@ global_ts |> autoplot(.vars = x) +
     labs(
       x = "Year",
       y = "Temperature Change (Celsius)",
-      title = "Change in Mean Annual Global Temperature",
-      subtitle = "Data from Textbook"
+      title = paste0("Change in Mean Annual Global Temperature (", min(global_ts$year), "-", max(global_ts$year), ")"),
+      subtitle = "Data from Textbook Sections 1.4.5 and 4.6.3"
     ) +
     theme_minimal() +
     theme(
@@ -1051,63 +1092,62 @@ The absolute value of the solutions of the characteristic equation are:
 polyroot(c(1, -alphas)) |> abs() |> round(3)
 ```
 
-
-
-
-
-## Class Activity: Forecasting with an $AR(p)$ Model (5 min)
-
-
-```{r}
-#| warning: false
-
-temps_forecast <- global_ar |> forecast(h = "20 years")
-temps_forecast |>
-  autoplot(temps_ts, level = 95) +
-  # coord_cartesian(ylim = c(0,5500)) +
-  geom_line(aes(y = .fitted, color = "Fitted"),
-    data = augment(global_ar)) +
-  scale_color_discrete(name = "")
-```
-
-```{r}
-# constant terms
-alpha0 <- global_ar |> coefficients() |> head(1) |> dplyr::select(estimate) |> pull()
-# other alphas
-alphas <- global_ar |> coefficients() |> tail(-1) |> dplyr::select(estimate) |> pull()
-
-cat(
-  "0 = 1", 
-        "- (", alphas[1], ") * x",
-        "- (", alphas[2], ") * x^2",
-        "\n     ",
-        "- (", alphas[3], ") * x^3",
-        "- (", alphas[4], ") * x^4",
-        "\n     ",
-        "- (", alphas[5], ") * x^5",
-        "- (", alphas[6], ") * x^6"
-)
-```
-
-
-```{r}
-global_ar |> coefficients()
-```
-
-```{r}
-
-```
-
-
-
-<!-- Check your Understanding -->
+<!-- Check Your Understanding -->
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Question1
--   Question2
+-   Is the textbook's model stationary?
+-   In the textbook, the author stated, 
+"The correlogram of the residuals has only one (marginally) significant value
+at lag 27, so the underlying residual series could be white noise (Fig. 4.14).
+Thus the fitted AR(4) model (Equation (4.24)) provides a good fit to the
+data. As the AR model has no deterministic trend component, the trends in
+the data can be explained by serial correlation and random variation, implying
+that it is possible that these trends are stochastic (or could arise from a purely
+stochastic process). Again we emphasise that this does not imply that there is
+no underlying reason for the trends. If a valid scientific explanation is known,
+such as a link with the increased use of fossil fuels, then this information would
+clearly need to be included in any future forecasts of the series."
+
+What is the author saying?
 
 :::
+
+Here is a plot of the forecasted values for the next 100 years, based on the textbook's model:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+# global_ar_book <- global_ts |>
+#   model(AR(x ~ order(4)))
+temps_forecast_book <- global_ar_book |> forecast(h = "100 years")
+temps_forecast_book |>
+  autoplot(global_ts, level = 95) +
+#   geom_line(aes(y = .mean, color = "Fitted"),
+#     data = augment(global_ar_book)) +
+#   scale_color_discrete(name = "")
+  theme_minimal()
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Compare and contrast the results you observed in the two time series.
+-   What conclusions do you draw?
+
+:::
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1335,7 +1375,16 @@ var(resid_df$.resid, na.rm = TRUE)
 #| code-fold: true
 #| code-summary: "Show the code"
 
-residuals(global_ar) |> ACF(lag_max = 50) |> autoplot(.vars = .resid)
+residuals(global_ar) |> 
+  ACF(lag_max = 50) |> 
+  autoplot(.vars = .resid) +
+    labs(
+      title = paste0("ACF of the Residuals from the AR(", tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1), ") Model")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
 ```
 
 There is still a significant autocorrelation at lag $k=3$. This suggests a more sophisticated model may be necessary.
