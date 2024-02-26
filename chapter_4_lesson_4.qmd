@@ -60,13 +60,13 @@ source("common_functions.R")
 
 
 
-## Class Activity: Fitting Simulated AR Models
 
-We will demonstrate how AR models are fitted via simulation. We will fit both an $AR(1)$ and an $AR(2)$ model.
 
-### Fitting a Simulated $AR(1)$ Model
+## Class Activity: Fitting a Simulated $AR(1)$ Model with Zero Mean (10 min)
 
-#### Simulate an $AR(1)$ Time Series
+We will demonstrate how AR models are fitted via simulation. We will fit two different $AR(1)$ models and an $AR(2)$ model. The advantage of using simulation is that we know how the time series was constructed. So, we know the model that was used and the actual values of the parameters in that model. We can then see how close our estimated parameter values are to the true values.
+
+### Simulate an $AR(1)$ Time Series
 
 In this simulation, we first simulate data from the $AR(1)$ model
 $$
@@ -96,7 +96,7 @@ dat_ts |>
     labs(
       x = "Time",
       y = "Simulated Time Series",
-      title = "Simulated values from an AR(1) Process"
+      title = "Simulated Values from an AR(1) Process"
     ) +
     theme_minimal() +
     theme(
@@ -104,8 +104,9 @@ dat_ts |>
     )
 ```
 
+The R command `mean(dat_ts$x)` gives the mean of the $x_t$ values as `r round(mean(dat_ts$x),3)`.
 
-#### Fit an $AR(1)$ Model 
+### Fit an $AR(1)$ Model with Zero Mean
 
 ```{r}
 #| code-fold: true
@@ -113,17 +114,56 @@ dat_ts |>
 
 # Fit the AR(1) model
 fit_ar <- dat_ts |>
-    model(AR(x ~ order(1)))
+  model(AR(x ~ order(1)))
+tidy(fit_ar)
 ```
 
-The estimate of the parameter value (i.e. the fitted value of the parameter) equals `r tidy(fit_ar) |> select(estimate) |> pull() |> round(3)`. This means that our fitted model can be expressed as:
+The estimate of the parameter $\alpha_1$ (i.e. the fitted value of the parameter $\alpha_1$) is $\hat \alpha_1 = `r tidy(fit_ar) |> select(estimate) |> pull() |> round(3)`$. 
+
+When R fits an AR model, the mean of the time series is subtracted from the data before the parameter values are estimated. 
+If R detects that the mean of the time series is not significantly different from zero, it is omitted from the output.
+
+Because the mean is subtracted from the time series before the parameter values are estimated, R is using the model
+$$
+  z_t = \alpha_1 ~ z_{t-1} + w_t
+$$
+where $z_t = x_t - \alpha_0$ and $\alpha_0$ is the mean of the time series.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Answer the following questions with your partner.
+
+-   Use the expression for $z_t$ above to solve for $x_t$ in terms of $x_{t-1}$, $\alpha_0$, $\alpha_1$, and $w_t$.
+-   What does your model reduce to when $\alpha_0 = 0$?
+-   Explain to your partner why this correctly models a time series with mean $\alpha_0$.
+
+:::
+
+We replace the parameter $\alpha_0$ with its estimator $\hat \alpha_0 = \bar x$. We also replace $\alpha_1$ with the fitted value from the output $\hat \alpha_1$. This gives us the fitted model:
+$$
+  \hat x_t = \bar x + \hat \alpha_1 ~ (x_{t-1} - \bar x)
+$$
+
+The fitted model can be expressed as:
+
+\begin{align*}
+  \hat x_t 
+    &= `r round(mean(dat_ts$x),3)` + `r tidy(fit_ar) |> select(estimate) |> pull() |> round(3)` \left( x_{t-1} - `r round(mean(dat_ts$x ),3)` \right) \\
+    &= `r round(mean(dat_ts$x),3)` - `r tidy(fit_ar) |> select(estimate) |> pull() |> round(3)` ~ (`r round(mean(dat_ts$x ),3)`) + `r tidy(fit_ar) |> select(estimate) |> pull() |> round(3)` ~ \left( x_{t-1} \right) \\
+    &= `r ( mean(dat_ts$x) - tidy(fit_ar) |> select(estimate) |> pull() * mean(dat_ts$x ) ) |> round(3)` + `r tidy(fit_ar) |> select(estimate) |> pull() |> round(3)` ~ x_{t-1} 
+\end{align*}
+
+Even though R does not report the parameter for the mean of the process, $\hat \alpha_0 = `r ( mean(dat_ts$x) - tidy(fit_ar) |> select(estimate) |> pull() * mean(dat_ts$x ) ) |> round(3)`$, it is not significantly different from zero. One could argue that we should not use a model that contains the mean and instead focus on a simple fitted model that has only one parameter:
 
 $$
-  \hat x_t = `r tidy(fit_ar) |> select(estimate) |> pull() |> round(3)` ~ x_{t-1} + w_t
+  \hat x_t = `r tidy(fit_ar) |> select(estimate) |> pull() |> round(3)` ~ x_{t-1}
 $$
 
+### Confidence Interval for the Model Parameter
 
-#### Confidence Interval for the model Parameters
+The P-value given above tests the hypothesis that $\alpha_1=0$. This is not helpful in this context. We are interested in the plausible values for $\alpha_1$, not whether or not it is different from zero. For this reason, we consider a confidence interval and disregard the P-value.
 
 We can compute an approximate 95% confidence interval for $\alpha_1$ as:
 $$
@@ -141,10 +181,9 @@ where $\hat \alpha_1$ is our parameter estimate and $SE_{\hat \alpha_1}$ is the 
 
 ci_summary <- tidy(fit_ar) |>
     mutate(
-        lb = estimate - 2 * std.error,
-        ub = estimate + 2 * std.error
+        lower = estimate - 2 * std.error,
+        upper = estimate + 2 * std.error
     )
-ci_summary
 ```
 
 So, our 95% confidence interval for $\alpha_1$ is:
@@ -163,30 +202,86 @@ $$
   `r ((ci_summary |> select(estimate) |> pull()) + 2 * (ci_summary |> select(std.error) |> pull())) |> round(3)`
   \right)
 $$
-Note that the confidence interval contains $\alpha_1 = `r alpha1`$, the value of the parameter we used in our simulation. This demonstrates that R is capable of estimating this parameter.
+Note that the confidence interval contains $\alpha_1 = `r alpha1`$, the value of the parameter we used in our simulation. The process of estimating the parameter worked well. In practice, we will not know the value of $\alpha_1$, but the confidence interval gives us a reasonable estimate of the value.
 
-#### Discussion of Residuals
-# Working here
+
+### Residuals
+
+For an $AR(1)$ model where the mean of the time series is not statistically significantly different from 0, the residuals are computed as
+\begin{align*}
+  r_t 
+    &= x_t - \hat x_t \\
+    &= x_t - \left[ `r tidy(fit_ar) |> select(estimate) |> pull() |> round(3)` ~ x_{t-1} \right] 
+\end{align*}
+
+```{r}
+#| include: false
+#| eval: false
+
+# Computing the residuals manually
+dat_ts |>
+  # Zero mean model
+  mutate(resid0 = x - ( (tidy(fit_ar) |> select(estimate) |> pull()) * lag(x) ) ) |>
+  # Non-zero mean model
+  mutate(resid1 = x - (mean(x) + (tidy(fit_ar) |> select(estimate) |> pull()) * (lag(x) - mean(x)) ) )
+```
+
+We can easily obtain these residual values in R:
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
+#| include: false
 
 fit_ar |> residuals()
 ```
 
+The variance of the residuals is $`r fit_ar |> residuals() |> as_tibble() |> select(.resid) |> pull() |> var(na.rm = TRUE) |> round(3)`$.
+This is very close to the actual value used in the simulation: $\sigma^2 = 1$.
 
 
 
-### Fitting a Simulated $AR(2)$ Model
 
-#### Simulate an $AR(2)$ Time Series
 
-In this simulation, we first simulate data from the $AR(1)$ model
+<!-- Start of the next section -->
+<!-- These parameters are used in the simulation below -->
+
+```{r}
+#| echo: false
+
+alpha0 <- 50
+alpha1 <- 0.75
+sigma_sqr <- 5
+```
+
+## Class Activity: Fitting a Simulated $AR(1)$ Model with Non-Zero Mean (10 min)
+
+### Simulate an $AR(1)$ Time Series
+
+It is easy to conceive situations where the mean of an AR model is not zero. 
+The model we have been fitting is
 $$
-  x_t = 0.5 ~ x_{t-1} + 0.4 ~ x_{t-2} + w_t
+  x_t = \alpha_0 + \alpha_1 ~ \left( x_{t-1} - \alpha_0 \right) + w_t
 $$
-where $w_t$ is a white noise process with variance 1.
+where $\alpha_0$ and $\alpha_1$ are constants, and $w_t$ is a white noise process with variance $\sigma^2$.
+
+This model can be simplified by combining like terms.
+\begin{align*}
+x_t 
+  &= \alpha_0 + \alpha_1 ~ \left( x_{t-1} - \alpha_0 \right) + w_t \\
+  &= \underbrace{\alpha_0 - \alpha_1 ~ (\alpha_0)}_{\alpha_0'} + \alpha_1 ~ \left( x_{t-1} \right) + w_t \\
+  &= \alpha_0' + \alpha_1 ~ \left( x_{t-1} \right) + w_t 
+\end{align*}
+
+Suppose the mean of the $AR(1)$ process is $\alpha_0 = `r alpha0`$. We will set $\alpha_1 = `r alpha1`$, and $\sigma^2 = `r sigma_sqr`$ for this simulation.
+After specifying these numbers, the model becomes:
+\begin{align*}
+  x_t 
+    &= `r alpha0` + `r alpha1` ~ ( x_{t-1} - `r alpha0` ) + w_t \\
+    &= `r alpha0` - `r alpha1` ~ ( `r alpha0` ) + `r alpha1` ~ x_{t-1} + w_t \\
+    &= `r alpha0 - alpha1 * alpha0` + `r alpha1` ~ x_{t-1} + w_t 
+\end{align*}
+where $w_t$ is a white noise process with variance $\sigma^2 = `r sigma_sqr`$.
 
 ```{r}
 #| code-fold: true
@@ -194,6 +289,252 @@ where $w_t$ is a white noise process with variance 1.
 
 set.seed(123)
 n_rep <- 1000
+alpha1 <- 0.75
+sigma_sqr <- 5
+
+dat_ts <- tibble(w = rnorm(n = n_rep, sd = sqrt(sigma_sqr))) |>
+  mutate(
+    index = 1:n(),
+    x = purrr::accumulate2(
+      lag(w), w, 
+      \(acc, nxt, w) alpha1 * acc + w,
+      .init = 0)[-1]) |>
+  mutate(x = x + alpha0) |> 
+  tsibble::as_tsibble(index = index)
+
+dat_ts |> 
+  autoplot(.vars = x) +
+    labs(
+      x = "Time",
+      y = "Simulated Time Series",
+      title = "Simulated Values from an AR(1) Process"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+The R command `mean(dat_ts$x)` gives the mean of the $x_t$ values as `r round(mean(dat_ts$x),3)`.
+
+### Fit an $AR(1)$ Model with Non-Zero Mean
+
+We now use R to fit an $AR(1)$ model to the time series data. 
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Fit the AR(1) model
+fit_ar <- dat_ts |>
+  model(AR(x ~ order(1)))
+tidy(fit_ar)
+```
+
+The estimate of the parameter for the constant (mean) term $\alpha_0'$ is $\hat \alpha_0' = `r tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(estimate) |> pull() |> round(3)`$.
+The estimate of the parameter $\alpha_1$ (i.e. the fitted value of the parameter $\alpha_1$) is $\hat \alpha_1 = `r tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)`$. 
+
+<!-- Recall that the mean of the time series is subtracted from the data before the parameter values are estimated. To estimate the time series, start with the mean and then add the coefficient $\hat \alpha_1$ multiplied by the difference between $x_{t-1}$ and the mean. -->
+
+Fitting the model
+$$
+  x_t = \alpha_0' + \alpha_1 ~ x_{t-1} + w_t 
+$$
+we get
+\begin{align*}
+  \hat x_t 
+    &= \hat \alpha_0' + \hat \alpha_1 ~ x_{t-1} \\
+    &= `r tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(estimate) |> pull() |> round(3)` + 
+      `r tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)`
+         ~ x_{t-1}
+\end{align*}
+
+
+### Confidence Intervals for the Model Parameters
+
+We can compute approximate 95% confidence intervals for $\alpha_0'$ and $\alpha_1$:
+
+$$
+  \left( 
+    \hat \alpha_i - 2 \cdot SE_{\hat \alpha_i}
+    , ~ 
+    \hat \alpha_i + 2 \cdot SE_{\hat \alpha_i}
+  \right)
+$$
+where $\hat \alpha_i$ is our estimate of parameter $i \in \{0,1\}$, and $SE_{\hat \alpha_i}$ is the standard error of the respective estimates.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+ci_summary <- tidy(fit_ar) |>
+    mutate(
+        lower = estimate - 2 * std.error,
+        upper = estimate + 2 * std.error
+    )
+```
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+95% Confidence Interval for $\alpha_0'$:
+$$
+  \left( 
+    \hat \alpha_0' - 2 \cdot SE_{\hat \alpha_0'}
+    , ~ 
+    \hat \alpha_0' + 2 \cdot SE_{\hat \alpha_0'}
+  \right)
+$$
+
+$$
+  \left(
+  `r ci_summary |> filter(str_detect(term, "const")) |> select(estimate) |> pull() |> round(3)` - 2 \cdot `r ci_summary |> filter(str_detect(term, "const")) |> select(std.error) |> pull() |> round(3)`
+  , ~
+  `r ci_summary |> filter(str_detect(term, "const")) |> select(estimate) |> pull() |> round(3)` + 2 \cdot `r ci_summary |> filter(str_detect(term, "const")) |> select(std.error) |> pull() |> round(3)`
+  \right)
+$$
+
+$$
+  \left(
+  `r ((ci_summary |> filter(str_detect(term, "const")) |> select(estimate) |> pull()) - 2 * (ci_summary |> filter(str_detect(term, "const")) |> select(std.error) |> pull())) |> round(3)`
+  , ~
+  `r ((ci_summary |> filter(str_detect(term, "const")) |> select(estimate) |> pull()) + 2 * (ci_summary |> filter(str_detect(term, "const")) |> select(std.error) |> pull())) |> round(3)`
+  \right)
+$$
+The confidence interval for $\alpha_0'$ contains 
+$$\alpha_0' = \alpha_0 - \alpha_1 ~ (\alpha_0) = `r alpha0 * (1-alpha1)`$$
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+95% Confidence Interval for $\alpha_1$:
+$$
+  \left( 
+    \hat \alpha_1 - 2 \cdot SE_{\hat \alpha_1}
+    , ~ 
+    \hat \alpha_1 + 2 \cdot SE_{\hat \alpha_1}
+  \right)
+$$
+
+$$
+  \left(
+  `r ci_summary |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)` - 2 \cdot `r ci_summary |> filter(str_detect(term, "ar1")) |> select(std.error) |> pull() |> round(3)`
+  , ~
+  `r ci_summary |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)` + 2 \cdot `r ci_summary |> filter(str_detect(term, "ar1")) |> select(std.error) |> pull() |> round(3)`
+  \right)
+$$
+
+$$
+  \left(
+  `r ((ci_summary |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull()) - 2 * (ci_summary |> filter(str_detect(term, "ar1")) |> select(std.error) |> pull())) |> round(3)`
+  , ~
+  `r ((ci_summary |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull()) + 2 * (ci_summary |> filter(str_detect(term, "ar1")) |> select(std.error) |> pull())) |> round(3)`
+  \right)
+$$
+The confidence interval for $\alpha_1$ contains 
+$$\alpha_1 = `r alpha1`$$
+
+:::
+:::
+<!-- End of two columns -->
+
+Both intervals captured the true value used in the simulation. The process of estimating the parameter worked well. In practice, we will not know the value of $\alpha_1$, but the confidence interval gives us a reasonable estimate of the value.
+About 95% of the time, the confidence interval will capture the true parameter value.
+
+
+
+### Residuals
+
+The residuals in this model are computed as
+\begin{align*}
+  r_t 
+    &= x_t - \hat x_t \\
+    &= x_t - 
+      \left[ 
+        `r tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(estimate) |> pull() |> round(3)` + 
+      `r tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)`
+         ~ x_{t-1}
+      \right] 
+\end{align*}
+
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| include: false
+
+fit_ar |> residuals()
+```
+
+
+The variance of the residuals is $`r fit_ar |> residuals() |> as_tibble() |> select(.resid) |> pull() |> var(na.rm = TRUE) |> round(3)`$, which is near the actual parameter value: $\sigma^2 = `r sigma_sqr`$.
+
+
+
+
+
+
+
+## Class Activity: Fitting a Simulated $AR(2)$ Model (10 min)
+
+### Simulate an $AR(2)$ Time Series
+
+```{r}
+#| echo: false
+
+# Set parameters
+alpha0 <- 20
+alpha1 <- 0.5
+alpha2 <- 0.4
+sigma_sqr <- 9
+```
+
+
+In this section, we will simulate data from the following $AR(2)$ process:
+$$
+  x_t = `r alpha0 * (1 - alpha1 - alpha2)` + `r alpha1` ~ x_{t-1} + `r alpha2` ~ x_{t-2} + w_t
+$$
+where $w_t$ is a discrete white noise process with variance $\sigma^2 = `r sigma_sqr`$.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the $AR(2)$ process above to answer the following questions.
+
+-   Is this $AR(2)$ process stationary? (Hint: The characteristic polynomial only includes terms that involve $x_t$.)
+-   Rewrite the model in the form
+$$
+  x_t = \alpha_0 + \alpha_1 ~ ( x_{t-1} - \alpha_0) + \alpha_2 ~ ( x_{t-2} - \alpha_0) + w_t
+$$
+    Identify the value of each of the coefficients ($\alpha_0$, $\alpha_1$, and $\alpha_2$).
+<!-- Solution Solution Solution Solution Solution Solution -->
+<!-- \begin{align*} -->
+<!--   x_t  -->
+<!--     &= `r alpha0` + `r alpha1` ~ ( x_{t-1} - `r alpha0`) + `r alpha2` ~ ( x_{t-2} - `r alpha0`) + w_t \\ -->
+<!--     &= `r alpha0 - alpha1 * alpha0 - alpha2 * alpha0` + `r alpha1` ~ x_{t-1} + `r alpha2` ~ x_{t-2} + w_t -->
+<!-- \end{align*} -->
+-   What is the mean of this $AR(2)$ process?
+
+:::
+
+Here is a time plot of the simulated time series.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+set.seed(123)
+n_rep <- 1000
+alpha0 <- 20
 alpha1 <- 0.5
 alpha2 <- 0.4
 
@@ -205,10 +546,13 @@ dat_ts <- tibble(w = rnorm(n_rep)) |>
     tsibble::as_tsibble(index = index)
 
 # Simulate x values
-dat_ts$x[1] <- dat_ts$w[1]
-dat_ts$x[2] <- alpha1 * dat_ts$x[1] + dat_ts$w[2]
+dat_ts$x[1] <- alpha0 + dat_ts$w[1]
+dat_ts$x[2] <- alpha0 + alpha1 * ( dat_ts$x[1] - alpha0 ) + dat_ts$w[2]
 for (i in 3:nrow(dat_ts)) {
-  dat_ts$x[i] <- alpha1 * dat_ts$x[i-1] + alpha2 * dat_ts$x[i-2] + dat_ts$w[i]
+  dat_ts$x[i] <- alpha0 + 
+    alpha1 * ( dat_ts$x[i-1] - alpha0 ) + 
+    alpha2 * ( dat_ts$x[i-2] - alpha0 ) + 
+    dat_ts$w[i]
 }
 
 dat_ts |> 
@@ -216,7 +560,7 @@ dat_ts |>
     labs(
       x = "Time",
       y = "Simulated Time Series",
-      title = "Simulated values from an AR(2) Process"
+      title = paste("Simulated Values from an AR(2) Process with Mean", alpha0)
     ) +
     theme_minimal() +
     theme(
@@ -225,7 +569,7 @@ dat_ts |>
 ```
 
 
-#### Fit an $AR(2)$ Model 
+### Fit an $AR(2)$ Model 
 
 ```{r}
 #| code-fold: true
@@ -233,24 +577,36 @@ dat_ts |>
 
 # Fit the AR(2) model
 fit_ar <- dat_ts |>
-    model(AR(x ~ order(2)))
+    model(AR(x ~ order(2))) 
 tidy(fit_ar)
 ```
 
-The estimates of the parameter values (i.e. the fitted values of the parameters) are 
-$\hat \alpha_1 = `r tidy(fit_ar) |> filter(term == "ar1") |> select(estimate) |> pull() |> round(3)`$ and $\hat \alpha_2 = `r tidy(fit_ar) |> filter(term == "ar2") |> select(estimate) |> pull() |> round(3)`$ . This means that our fitted model can be expressed as:
+The estimates of the parameter values (i.e. the fitted values of the parameters) are:  
+$\hat \alpha_0' = `r tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(estimate) |> pull() |> round(3)`$, 
+$\hat \alpha_1 = `r tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)`$, 
+and 
+$\hat \alpha_2 = `r tidy(fit_ar) |> filter(str_detect(term, "ar2")) |> select(estimate) |> pull() |> round(3)`$. 
+This means that our fitted model can be expressed as:
 
-$$
-  \hat x_t = 
-    `r tidy(fit_ar) |> filter(term == "ar1") |> select(estimate) |> pull() |> round(3)` ~ x_{t-1} 
+\begin{align*}
+  \hat x_t 
+  &= 
+    \hat \alpha_0'
+    + \hat \alpha_1 ~ x_{t-1}
+    + \hat \alpha_2 ~ x_{t-2}
+    \\
+  &=
+    `r tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(estimate) |> pull() |> round(3)` 
     + 
-    `r tidy(fit_ar) |> filter(term == "ar2") |> select(estimate) |> pull() |> round(3)` ~ x_{t-2} 
+    `r tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)` 
+    ~ x_{t-1} 
     + 
-    w_t
-$$
+    `r tidy(fit_ar) |> filter(str_detect(term, "ar2")) |> select(estimate) |> pull() |> round(3)` 
+    ~ x_{t-2} 
+\end{align*}
 
 
-#### Confidence Interval for the model Parameters
+### Confidence Interval for the Model Parameters
 
 We can compute an approximate 95% confidence interval for $\alpha_i$ as:
 $$
@@ -268,18 +624,55 @@ where $\hat \alpha_i$ is our estimate of the $i^{th}$ parameter and $SE_{\hat \a
 
 ci_summary <- tidy(fit_ar) |>
     mutate(
-        lb = estimate - 2 * std.error,
-        ub = estimate + 2 * std.error
+        lower = estimate - 2 * std.error,
+        upper = estimate + 2 * std.error
     )
-ci_summary
 ```
 
 
 
 
-<!-- Beginning of two columns -->
+<!-- Beginning of three columns -->
 ::: columns
-::: {.column width="45%"}
+::: {.column width="30%"}
+
+95% confidence interval for $\alpha_0'$:
+$$
+  \left( 
+    \hat \alpha_0' - 2 \cdot SE_{\hat \alpha_0'}
+    , ~ 
+    \hat \alpha_0' + 2 \cdot SE_{\hat \alpha_0'}
+  \right)
+$$
+$$
+  \left(
+  `r tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(estimate) |> pull() |> round(3)` - 2 \cdot `r tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(std.error) |> pull() |> round(3)`
+  , 
+  \right.
+  ~~~~~~~~~~~~~~~~~~~
+  $$ 
+  $$ 
+  ~~~~~~~~~~~~~~~~~~~~~~
+  \left.
+  `r tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(estimate) |> pull() |> round(3)` + 2 \cdot `r tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(std.error) |> pull() |> round(3)`
+  \right)
+$$
+$$
+  \left(
+  `r ((tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(estimate) |> pull()) - 2 * (tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(std.error) |> pull())) |> round(3)`
+  , ~
+  `r ((tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(estimate) |> pull()) + 2 * (tidy(fit_ar) |> filter(str_detect(term, "const")) |> select(std.error) |> pull())) |> round(3)`
+  \right)
+$$
+This confidence interval contains $\alpha_0' = `r alpha0 * (1 - alpha1 - alpha2)`$.
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
 
 95% confidence interval for $\alpha_1$:
 $$
@@ -291,27 +684,33 @@ $$
 $$
 $$
   \left(
-  `r tidy(fit_ar) |> filter(term == "ar1") |> select(estimate) |> pull() |> round(3)` - 2 \cdot `r tidy(fit_ar) |> filter(term == "ar1") |> select(std.error) |> pull() |> round(3)`
-  , ~
-  `r tidy(fit_ar) |> filter(term == "ar1") |> select(estimate) |> pull() |> round(3)` + 2 \cdot `r tidy(fit_ar) |> filter(term == "ar1") |> select(std.error) |> pull() |> round(3)`
+  `r tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)` - 2 \cdot `r tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(std.error) |> pull() |> round(3)`
+  , 
+  \right.
+  ~~~~~~~~~~~~~~~~~~~
+  $$ 
+  $$ 
+  ~~~~~~~~~~~~~~~~~~~~~~
+  \left.
+  `r tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)` + 2 \cdot `r tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(std.error) |> pull() |> round(3)`
   \right)
 $$
 $$
   \left(
-  `r ((tidy(fit_ar) |> filter(term == "ar1") |> select(estimate) |> pull()) - 2 * (tidy(fit_ar) |> filter(term == "ar1") |> select(std.error) |> pull())) |> round(3)`
+  `r ((tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull()) - 2 * (tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(std.error) |> pull())) |> round(3)`
   , ~
-  `r ((tidy(fit_ar) |> filter(term == "ar1") |> select(estimate) |> pull()) + 2 * (tidy(fit_ar) |> filter(term == "ar1") |> select(std.error) |> pull())) |> round(3)`
+  `r ((tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull()) + 2 * (tidy(fit_ar) |> filter(str_detect(term, "ar1")) |> select(std.error) |> pull())) |> round(3)`
   \right)
 $$
 This confidence interval contains $\alpha_1 = `r alpha1`$.
 
 :::
 
-::: {.column width="10%"}
+::: {.column width="5%"}
 <!-- empty column to create gap -->
 :::
 
-::: {.column width="45%"}
+::: {.column width="30%"}
 
 95% confidence interval for $\alpha_2$:
 $$
@@ -323,82 +722,304 @@ $$
 $$
 $$
   \left(
-  `r tidy(fit_ar) |> filter(term == "ar2") |> select(estimate) |> pull() |> round(3)` - 2 \cdot `r tidy(fit_ar) |> filter(term == "ar2") |> select(std.error) |> pull() |> round(3)`
-  , ~
-  `r tidy(fit_ar) |> filter(term == "ar2") |> select(estimate) |> pull() |> round(3)` + 2 \cdot `r tidy(fit_ar) |> filter(term == "ar2") |> select(std.error) |> pull() |> round(3)`
+  `r tidy(fit_ar) |> filter(str_detect(term, "ar2")) |> select(estimate) |> pull() |> round(3)` - 2 \cdot `r tidy(fit_ar) |> filter(str_detect(term, "ar2")) |> select(std.error) |> pull() |> round(3)`
+  , 
+  \right.
+  ~~~~~~~~~~~~~~~~~~~
+  $$ 
+  $$ 
+  ~~~~~~~~~~~~~~~~~~~~~~
+  \left.
+  `r tidy(fit_ar) |> filter(str_detect(term, "ar2")) |> select(estimate) |> pull() |> round(3)` + 2 \cdot `r tidy(fit_ar) |> filter(str_detect(term, "ar2")) |> select(std.error) |> pull() |> round(3)`
   \right)
 $$
 $$
   \left(
-  `r ((tidy(fit_ar) |> filter(term == "ar2") |> select(estimate) |> pull()) - 2 * (tidy(fit_ar) |> filter(term == "ar2") |> select(std.error) |> pull())) |> round(3)`
+  `r ((tidy(fit_ar) |> filter(str_detect(term, "ar2")) |> select(estimate) |> pull()) - 2 * (tidy(fit_ar) |> filter(str_detect(term, "ar2")) |> select(std.error) |> pull())) |> round(3)`
   , ~
-  `r ((tidy(fit_ar) |> filter(term == "ar2") |> select(estimate) |> pull()) + 2 * (tidy(fit_ar) |> filter(term == "ar2") |> select(std.error) |> pull())) |> round(3)`
+  `r ((tidy(fit_ar) |> filter(str_detect(term, "ar2")) |> select(estimate) |> pull()) + 2 * (tidy(fit_ar) |> filter(str_detect(term, "ar2")) |> select(std.error) |> pull())) |> round(3)`
   \right)
 $$
 This confidence interval contains $\alpha_2 = `r alpha2`$.
 
 :::
+
 :::
-<!-- End of two columns -->
+<!-- End of three columns -->
 
-Both confidence intervals contain the true parameter values we used for the simulation.
-
-
-#### Discussion of Residuals
-# Working here - STUFF GOES HERE
+All three confidence intervals contain the true parameter values we used for the simulation.
 
 
+### Residuals
+
+We can compute the residuals in the same manner as we did for the other models.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Working with a partner, do the following
+
+-   Write the expression used to compute the residuals.
+-   Find the residuals of this sequence using your expression.
+-   Here are the first few residuals. Compare these to the values you computed.
+```{r}
+#| echo: false
+
+fit_ar |>
+  residuals()
+```
+-   Explain why there are no residuals for times $t=1$ and $t=2$.
+
+:::
 
 
 
 
-## Class Activity: Global Warming (15 min)
+
+
+
+## Small-Group Activity: Global Warming (20 min)
+
+The time plot below illustrates the change in global 
+surface temperature compared to the long-term average 
+observed from 1951 to 1980. (Source: NASA/GISS.)
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 temps_ts <- rio::import("data/global_temparature.csv") |>
   as_tsibble(index = year)
 
 temps_ts |> autoplot(.vars = change) +
     labs(
       x = "Year",
-      y = "Temperature (Celsius)",
+      y = "Temperature Change (Celsius)",
       title = "Change in Mean Annual Global Temperature"
     ) +
     theme_minimal() +
     theme(
       plot.title = element_text(hjust = 0.5)
     )
+```
+
+### Using the PACF to Choose $p$ for an $AR(p)$ Process
+
+In the [previous lesson](https://byuistats.github.io/timeseries/chapter_4_lesson_3.html#pacfTable), we noted that the partial correlogram can be used to assess the number of parameters in an AR model.
+Here is a partial correlogram for the change in the mean annual global temperature.
+
+<!-- pacf(stock_ts$value, plot=TRUE, lag.max = 25) -->
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 
 pacf(temps_ts$change)
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Working with your partner, do the following:
+
+-   What value of $p$ for an $AR(p)$ model was suggested by the pacf?
+-   Using the value of $p$ you identified, fit an $AR(p)$ model to the global temperature data. State the fitted $AR(p)$ model in the form 
+$$\hat x_t = \cdots$$
+-   Obtain 95% confidence intervals for each of the parameters. Which are significantly different from zero?
+-   Give the first three residual values (skipping the NAs).
+-   What is the estimate of $\sigma^2$?
+-   Make a correlogram for the residuals. Does it appear that your model has fully explained the variation in the temperatures?
+
+:::
+
+
+
+
+### Fitting Models (Dynamic Number of Parameters)
+
+You may have concluded that $p=3$ might be insufficient for modeling these data. 
+We now explore a technique that allows R to choose $p$ based on the significance of the parameters.
+
+If we specify `order(1:9)` in the model statement, R returns the largest $AR(p)$ model (up to $p=9$) for which the parameter $\alpha_p$ is significant.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 
 global_ar <- temps_ts |>
     model(AR(change ~ order(1:9)))
+tidy(global_ar)
+```
 
-mean(temps_ts$change)
 
-tidy(global_ar) |> filter(str_detect(term, "ar1")) |> nrow()
+R returned an 
+$AR(`r tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1)`)$ 
+model for this time series.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Working with your partner, do the following:
+
+-   State the fitted $AR(p)$ model in the form 
+$$\hat x_t = \cdots$$
+-   Obtain 95% confidence intervals for each of the parameters. Which are significantly different from zero?
+-   Give the first three residual values (skipping the NAs).
+-   What is the estimate of $\sigma^2$?
+-   Make a correlogram for the residuals. Does it appear that your model has fully explained the variation in the temperatures? Justify your answer.
+
+:::
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 
 tidy(global_ar) |> filter(str_detect(term, "ar1")) |> pull(estimate)
+```
 
-coeffs <- tidy(global_ar) |> filter(str_detect(term, "ar1")) |> pull(estimate)
-coeffs[1]
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+ci_summary <- tidy(global_ar) |>
+    mutate(
+        lower = estimate - 2 * std.error,
+        upper = estimate + 2 * std.error
+    )
+ci_summary
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 
 residuals(global_ar) |> ACF(lag_max = 50) |> autoplot(.vars = .resid)
 ```
 
-### Fitting Models (Dynamic Number of Parameters)
-
-### Fitting an $AR(3)$ Model
-
 ### Conclusion
 
-No significant values in residuals suggests that the model accounts for variation...but what about the visual and logical argument? Is there an exponential relationship?
+With the exception of a lone seemingly spurious autocorrelation, there are no significant values of the acf of the residuals in the 
+$AR(`r tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1)`)$ 
+model. This suggests that the model accounts for the variation in the time series. 
 
--   Bias introduced by the choice of the model -- must be very careful
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Write the characteristic equation for the $AR(`r tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1)`)$ 
+model you developed.
+-   Click on the link below to obtain a more precise version of the characteristic equation, then solve the characteristic equation by any method.
+<a href="javascript:showhide('CharacteristicEquation')"
+style="font-size:.8em;">Class Activity</a>
+
+::: {#CharacteristicEquation style="display:none;"}
+```{r}
+# alphas[p>0]
+alphas <- global_ar %>% coefficients() %>% tail(-1) %>% dplyr::select(estimate) %>% pull()
+cat(
+  "0 = 1", 
+        "- (", alphas[1], ") * x",
+        "- (", alphas[2], ") * x^2",
+        "\n     ",
+        "- (", alphas[3], ") * x^3",
+        "- (", alphas[4], ") * x^4",
+        "\n     ",
+        "- (", alphas[5], ") * x^5",
+        "- (", alphas[6], ") * x^6"
+)
+```
+
+```{r}
+polyroot(c(1, -alphas))
+```
 
 
-## Small Group Activity: SectionTitle (xxx min)
-## Class Activity: SectionTitle (xxx min)
+
+:::
+
+-   Is the $AR(`r tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1)`)$ 
+model stationary?
+
+
+```{r}
+# Solution
+# Solution
+# Solution
+# Solution
+# Solution
+abs(polyroot(c(1, -alphas)))
+```
+
+
+-   THE GLOBAL WARMING TIME SERIES GIVEN IN THE BOOK IS STATIONARY!!!
+    -   IT WOULD BE FUN TO EXPLORE THE IDEAS ASSOICATED WITH THAT: 
+    -   SMALLER SAMPLE SIZE, ESPECIALLY IN THE AREA WHERE THE ACTION IS...
+    -   DIFFERENT CONCLUSIONS BASED ON DIFFERENT DATA...
+    -   DATA NOT THE SAME, DIFFERENT WAYS OF ESTIMATING THE SAME THING
+    -   LOTS OF FUN IMPLICATIONS
+
+-   Explain how the choice of a model can bias the results.
+-   Why is it important to carefully consider our model selection, including factors that might affect the results?
+
+:::
+
+
+
+## Class Activity: Forecasting with an $AR(p)$ Model (5 min)
+
+
+```{r}
+#| warning: false
+
+temps_forecast <- global_ar %>% forecast(h = "20 years")
+temps_forecast |>
+  autoplot(temps_ts, level = 95) +
+  # coord_cartesian(ylim = c(0,5500)) +
+  geom_line(aes(y = .fitted, color = "Fitted"),
+    data = augment(global_ar)) +
+  scale_color_discrete(name = "")
+```
+
+```{r}
+# constant terms
+alpha0 <- global_ar %>% coefficients() %>% head(1) %>% dplyr::select(estimate) %>% pull()
+# other alphas
+alphas <- global_ar %>% coefficients() %>% tail(-1) %>% dplyr::select(estimate) %>% pull()
+paste0(
+        "0 = 1 ", 
+        " - (", alphas[1], ") * x",
+        " - (", alphas[2], ") * x^2",
+        " - (", alphas[3], ") * x^3",
+        " - (", alphas[4], ") * x^4",
+        " - (", alphas[5], ") * x^5",
+        " - (", alphas[6], ") * x^6"
+      )
+cat(
+  "0 = 1", 
+        "- (", alphas[1], ") * x",
+        "- (", alphas[2], ") * x^2",
+        "\n     ",
+        "- (", alphas[3], ") * x^3",
+        "- (", alphas[4], ") * x^4",
+        "\n     ",
+        "- (", alphas[5], ") * x^5",
+        "- (", alphas[6], ") * x^6"
+)
+```
+
+
+```{r}
+global_ar %>% coefficients()
+```
+
+```{r}
+
+```
+
 
 
 <!-- Check your Understanding -->
@@ -429,14 +1050,239 @@ No significant values in residuals suggests that the model accounts for variatio
 :::
 
 
-<a href="javascript:showhide('Solutions1')"
-style="font-size:.8em;">Class Activity</a>
+
+
+
+
+<a href="javascript:showhide('UsingPACFglobaltemps')"
+style="font-size:.8em;">Small-Group Activity: Global Warming--PACF</a>
   
-::: {#Solutions1 style="display:none;"}
+::: {#UsingPACFglobaltemps style="display:none;"}
     
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Working with your partner, do the following
+
+-   What value of $p$ for an $AR(p)$ model was suggested by the pacf?
+
+**Solution:**
+
+  $$p=3$$
+
+<hr></hr>
+
+
+-   Using the value of $p$ you identified, fit an $AR(p)$ model to the global temperature data. State the fitted $AR(p)$ model in the form 
+$$\hat x_t = \cdots$$
+
+**Solution:**
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+global_ar <- temps_ts |>
+    model(AR(change ~ order(3)))
+tidy(global_ar)
+```
+
+Note that the constant term is not statistically signficant. If we ignore this term, we get the fitted model:
+
+\begin{align*}
+  \hat x_t 
+  &= 
+    0
+    + \hat \alpha_1 ~ x_{t-1}
+    + \hat \alpha_2 ~ x_{t-2}
+    + \hat \alpha_3 ~ x_{t-3}
+    \\
+  &=
+    `r tidy(global_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)` 
+    ~ x_{t-1} 
+    + 
+    (`r tidy(global_ar) |> filter(str_detect(term, "ar2")) |> select(estimate) |> pull() |> round(3)`)
+    ~ x_{t-2} 
+    + 
+    `r tidy(global_ar) |> filter(str_detect(term, "ar3")) |> select(estimate) |> pull() |> round(3)` 
+    ~ x_{t-3} 
+\end{align*}
+
+If we want to incorporate the constant term in the model, then we need to find the mean of the time series. The mean of the time series is:
+
+```{r}
+mean(temps_ts$change)
+```
+
+The fitted AR model is
+
+\begin{align*}
+  \hat x_t 
+  &= 
+    \hat \alpha_0
+    + \hat \alpha_1 ~ (x_{t-1} - \alpha_0)
+    + \hat \alpha_2 ~ (x_{t-2} - \alpha_0)
+    + \hat \alpha_3 ~ (x_{t-3} - \alpha_0)
+    \\
+  &= 
+    \underbrace{
+    \hat \alpha_0 - \hat \alpha_1 (\hat \alpha_0) - \hat \alpha_2 (\hat \alpha_0) - \hat \alpha_3 (\hat \alpha_0)
+    }_{\hat \alpha_0'}
+    + \hat \alpha_1 ~ x_{t-1}
+    + \hat \alpha_2 ~ x_{t-2}
+    + \hat \alpha_3 ~ x_{t-3}
+    \\
+  &= 
+    \hat \alpha_0'
+    + \hat \alpha_1 ~ x_{t-1}
+    + \hat \alpha_2 ~ x_{t-2}
+    + \hat \alpha_3 ~ x_{t-3}
+\end{align*}
+Or, after substituting the fitted values:
+\begin{align*}
+  \hat x_t
+  &=
+    `r mean(temps_ts$change) |> round(3)` 
+    + 
+    `r tidy(global_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)` 
+    ~ ( x_{t-1} - `r mean(temps_ts$change) |> round(3)`)
+    + 
+    (`r tidy(global_ar) |> filter(str_detect(term, "ar2")) |> select(estimate) |> pull() |> round(3)`)
+    ~ ( x_{t-2} - `r mean(temps_ts$change) |> round(3)`) 
+    + 
+    `r tidy(global_ar) |> filter(str_detect(term, "ar3")) |> select(estimate) |> pull() |> round(3)` 
+    ~ ( x_{t-3} - `r mean(temps_ts$change) |> round(3)`) \\
+  &=
+    `r ( mean(temps_ts$change) *
+        (
+          1
+            - tidy(global_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull()
+            - tidy(global_ar) |> filter(str_detect(term, "ar2")) |> select(estimate) |> pull()
+            - tidy(global_ar) |> filter(str_detect(term, "ar3")) |> select(estimate) |> pull()
+        ) 
+      ) |> round(4)`
+    + 
+    `r tidy(global_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)` 
+    ~ x_{t-1} 
+    + 
+    (`r tidy(global_ar) |> filter(str_detect(term, "ar2")) |> select(estimate) |> pull() |> round(3)`)
+    ~ x_{t-2} 
+    + 
+    `r tidy(global_ar) |> filter(str_detect(term, "ar3")) |> select(estimate) |> pull() |> round(3)` 
+    ~ x_{t-3} 
+\end{align*}
+
+<hr></hr>
+
+
+-   Obtain 95% confidence intervals for each of the parameters. Which are significantly different from zero?
+
+**Solution:**
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+ci_summary <- tidy(global_ar) |>
+    mutate(
+        lower = estimate - 2 * std.error,
+        upper = estimate + 2 * std.error
+    )
+```
+
+The confidence intervals are:
+\begin{align*}
+  \alpha_1: &&&
+    ( 
+      `r ci_summary |> filter(str_detect(term, "ar1")) |> select(lower) |> pull() |> round(3)` 
+      ,~ 
+      `r ci_summary |> filter(str_detect(term, "ar1")) |> select(upper) |> pull() |> round(3)` 
+    )
+    \\
+  \alpha_2: &&&
+    ( 
+      `r ci_summary |> filter(str_detect(term, "ar2")) |> select(lower) |> pull() |> round(3)` 
+      ,~ 
+      `r ci_summary |> filter(str_detect(term, "ar2")) |> select(upper) |> pull() |> round(3)` 
+    )
+    \\
+  \alpha_3: &&&
+    ( 
+      `r ci_summary |> filter(str_detect(term, "ar3")) |> select(lower) |> pull() |> round(3)` 
+      ,~ 
+      `r ci_summary |> filter(str_detect(term, "ar3")) |> select(upper) |> pull() |> round(3)` 
+    )
+\end{align*}
+
+The parameters $\alpha_1$ and $\alpha_3$ are statistically significantly different from 0.
+<hr></hr>
+
+
+-   Give the first three residual values (skipping the NAs).
+
+**Solution:**
+
+```{r}
+global_ar |> 
+  residuals() |>
+  na.omit() |>
+  head(3)
+```
+
+
+<hr></hr>
+
+
+-   What is the estimate of $\sigma^2$?
+
+**Solution:**
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+resid_df <- global_ar |> 
+  residuals() |>
+  as_tibble()
+var(resid_df$.resid, na.rm = TRUE) 
+```
+
+<hr></hr>
+
+
+-   Make a correlogram for the residuals. Does it appear that your model has fully explained the variation in the temperatures?
+
+**Solution:**
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+residuals(global_ar) |> ACF(lag_max = 50) |> autoplot(.vars = .resid)
+```
+
+There is still a significant autocorrelation at lag $k=3$. This suggests a more sophisticated model may be necessary.
+
+<hr></hr>
 
 :::
+<!-- End of check your understanding -->
 
+:::
+<!-- End of UsingPACFglobaltemps solutions -->
+
+
+
+
+
+<a href="javascript:showhide('DynamicPglobaltemps')"
+style="font-size:.8em;">Small-Group Activity: Global Warming--Dynamic</a>
+  
+::: {#DynamicPglobaltemps style="display:none;"}
+  
+STUFF_GOES_HERE___STUFF_GOES_HERE___STUFF_GOES_HERE___STUFF_GOES_HERE
+
+:::
+<!-- End of DynamicPglobaltemps solutions -->
 
 
 
