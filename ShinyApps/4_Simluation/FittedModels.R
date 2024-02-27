@@ -50,21 +50,17 @@ ui <- fluidPage(
     type = "pills",
     #### AR1 Tab ####
     tabPanel(
-      title = "AR (1)",
+      title = "AR(1)",
       fluidRow(
-        column(3, offset = 1, numericInput("AR1_alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.7, step = 0.02)),
+        column(3, offset = 1, numericInput("AR1_alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.7, step = 0.02)), ######### WHY IS THIS 500?????
       ),
       fluidRow(
-
+        column(12,  div(style = "display: flex; justify-content: center; align-items: center;", uiOutput("formula1"))),
         column(4, offset = 5, actionButton("go1", "Simulate!")),
         column(12, conditionalPanel(
           condition = "input.go1",
           div(id = "outputs1",
               fluidRow(
-                column(12, h6("")),
-                column(12,  div(style = "display: flex; justify-content: center; align-items: center;",
-                                uiOutput("formula1")
-                )),
                 column(12, h4("Series")),
                 column(12, plotOutput("plot1")),
                 column(12, h4("ACF of Simulated AR(1) Process")),
@@ -86,21 +82,18 @@ ui <- fluidPage(
     ),
     #### AR2 tab ####
     tabPanel(
-      title = "AR (2)",
+      title = "AR(2)",
       fluidRow(
         column(3, offset = 1, numericInput("AR2_alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.5, step = 0.02)),
         column(3, numericInput("AR2_alpha_2", "$ \\alpha_2 $", min = -500, max = 500, value = 0.5, step = 0.02))
       ),
       fluidRow(
+        column(12,  div(style = "display: flex; justify-content: center; align-items: center;", uiOutput("formula2"))),
         column(4, offset = 5, actionButton("go2", "Simulate!")),
         column(12, conditionalPanel(
           condition = "input.go2",
           div(id = "outputs2",
               fluidRow(
-                column(12, h6("")),
-                column(12,  div(style = "display: flex; justify-content: center; align-items: center;",
-                                uiOutput("formula2")
-                )),
                 column(12, h4("Series")),
                 column(12, plotOutput("plot2")),
                 column(12, h4("ACF of Simulated AR(2) Process")),
@@ -122,22 +115,19 @@ ui <- fluidPage(
     ),
     #### AR3 tab ####
     tabPanel(
-      title = "AR (3)",
+      title = "AR(3)",
       fluidRow(
         column(3, offset = 1, numericInput("AR3_alpha_1", "$ \\alpha_1 $", min = -500, max = 500, value = 0.25, step = 0.02)),
         column(3, numericInput("AR3_alpha_2", "$ \\alpha_2 $", min = -500, max = 500, value = 0.2, step = 0.02)),
         column(3, numericInput("AR3_alpha_3", "$ \\alpha_3 $", min = -500, max = 500, value = 0.15, step = 0.02))
       ),
       fluidRow(
+        column(12,  div(style = "display: flex; justify-content: center; align-items: center;", uiOutput("formula3"))),
         column(4, offset = 5, actionButton("go3", "Simulate!")),
         column(12, conditionalPanel(
           condition = "input.go3",
           div(id = "outputs3",
               fluidRow(
-                column(12, h6("")),
-                column(12,  div(style = "display: flex; justify-content: center; align-items: center;",
-                                uiOutput("formula3")
-                )),
                 column(12, h4("Series")),
                 column(12, plotOutput("plot3")),
                 column(12, h4("ACF of Simulated AR(3) Process")),

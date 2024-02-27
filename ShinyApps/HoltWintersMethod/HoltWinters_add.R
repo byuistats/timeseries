@@ -266,6 +266,12 @@ server <- function(input, output, session) {
     shinyjs::show("secondButton")
   })
 
+  # observeEvent(input$dataset_in, {
+  #   updateMaterialSwitch(session,"toggle_advIn", FALSE)
+  #   updateMaterialSwitch(session,"toggle_advOut", FALSE)
+  #   updateMaterialSwitch(session,"toggle_modelVals", FALSE)
+  # })
+
   observe({
     if(input$toggle_advIn) {
       show("AdvInputs")

@@ -85,13 +85,17 @@ server <- function(input, output, session) {
 
   output$plot <- renderPlot({
     df <- sim_data()$sim_data
-
+    mean_val <- mean(df$x)
+    sd_val <- sd(df$x)
+    lower_bound <- mean_val - (sd_val * nrow(data) * 120 / 2000)
+    upper_bound <- mean_val + (sd_val * nrow(data) * 120 / 2000)
 
     ggplot(df, aes(x = seq, y = values)) +
       geom_line() +
       labs(title = NULL,
            x = "x",
-           y = "y")
+           y = "y")+
+      scale_y_continuous(c(lower_bound, upper_bound))
   })
 
   output$acf_plot <- renderPlot({
