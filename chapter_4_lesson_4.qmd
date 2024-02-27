@@ -62,7 +62,7 @@ source("common_functions.R")
 
 
 
-## Class Activity: Fitting a Simulated $AR(1)$ Model with Zero Mean (10 min)
+## Class Activity: Fitting a Simulated $AR(1)$ Model with Zero Mean (5 min)
 
 We will demonstrate how AR models are fitted via simulation. We will fit two different $AR(1)$ models and an $AR(2)$ model. The advantage of using simulation is that we know how the time series was constructed. So, we know the model that was used and the actual values of the parameters in that model. We can then see how close our estimated parameter values are to the true values.
 
@@ -254,7 +254,7 @@ alpha1 <- 0.75
 sigma_sqr <- 5
 ```
 
-## Class Activity: Fitting a Simulated $AR(1)$ Model with Non-Zero Mean (10 min)
+## Class Activity: Fitting a Simulated $AR(1)$ Model with Non-Zero Mean (5 min)
 
 ### Simulate an $AR(1)$ Time Series
 
@@ -877,24 +877,9 @@ $$\hat x_t = \cdots$$
 
 :::
 
-# NEED ANSWERS HERE xxxxxxxxxxxxxxxx
 
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-#| warning: false
 
-residuals(global_ar) |> 
-  ACF(lag_max = 50) |> 
-  autoplot(.vars = .resid) +
-    labs(
-      title = paste0("ACF of the Residuals from the AR(", tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1), ") Model")
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-```
+
 
 ### Stationarity of the $AR(p)$ Model
 
@@ -932,28 +917,10 @@ cat(
 )
 ```
 
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-alphas <- global_ar |> coefficients() |> tail(-1) |> dplyr::select(estimate) |> pull()
-polyroot(c(1, -alphas))
-```
-
 :::
 
 -   Is our $AR(`r tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1)`)$ 
 model stationary?
-
-
-```{r}
-# Solution
-# Solution
-# Solution
-# Solution
-# Solution
-abs(polyroot(c(1, -alphas)))
-```
 
 :::
 
@@ -1396,7 +1363,10 @@ There is still a significant autocorrelation at lag $k=3$. This suggests a more 
 
 
 
-# WORKING HERE xxxxxxxxxxxxxxxx
+
+
+
+
 
 <a href="javascript:showhide('DynamicPglobaltemps')"
 style="font-size:.8em;">Small-Group Activity: Global Warming--Dynamic</a>
@@ -1414,21 +1384,43 @@ $$\hat x_t = \cdots$$
 
 **Solution:**
 
-$$\hat x_t = \cdots$$
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+global_ar <- temps_ts |>
+    model(AR(change ~ order(1:9)))
+tidy(global_ar)
+```
+
+$$
+  \hat x_t = 
+    `r tidy(global_ar) |> filter(str_detect(term, "const")) |> select(estimate) |> pull() |> round(3)`
+    +
+    `r tidy(global_ar) |> filter(str_detect(term, "ar1")) |> select(estimate) |> pull() |> round(3)` ~ x_{t-1}
+    +
+    (`r tidy(global_ar) |> filter(str_detect(term, "ar2")) |> select(estimate) |> pull() |> round(3)`) ~ x_{t-2}
+    +
+    `r tidy(global_ar) |> filter(str_detect(term, "ar3")) |> select(estimate) |> pull() |> round(3)` ~ x_{t-3}
+    +
+    `r tidy(global_ar) |> filter(str_detect(term, "ar4")) |> select(estimate) |> pull() |> round(3)` ~ x_{t-4}
+    +
+    (`r tidy(global_ar) |> filter(str_detect(term, "ar5")) |> select(estimate) |> pull() |> round(3)`) ~ x_{t-5}
+    +
+    `r tidy(global_ar) |> filter(str_detect(term, "ar6")) |> select(estimate) |> pull() |> round(3)` ~ x_{t-6}
+$$
 
 <hr></hr>
 
 -   Obtain 95% confidence intervals for each of the parameters. Which are significantly different from zero?
 
+**Solution:**
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 
-# ANSWER
-# ANSWER
-# ANSWER
-# ANSWER
 ci_summary <- tidy(global_ar) |>
     mutate(
         lower = estimate - 2 * std.error,
@@ -1437,16 +1429,23 @@ ci_summary <- tidy(global_ar) |>
 ci_summary
 ```
 
-
-**Solution:**
-
+The constant term, $\alpha_1$, $\alpha_4$, and $\alpha_6$ are all statistically significantly different from zero.
 
 <hr></hr>
+
 
 -   Give the first three residual values (skipping the NAs).
 
 **Solution:**
 
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+residuals(global_ar) |>
+  na.omit() |>
+  head(3)
+```
 
 <hr></hr>
 
@@ -1454,6 +1453,21 @@ ci_summary
 
 **Solution:**
 
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+resid_var <- global_ar |>
+  residuals() |>
+  as.tibble() |>
+  dplyr::select(.resid) |>
+  pull() |>
+  na.omit() |>
+  var()
+resid_var
+```
+
+The estimate of $\sigma^2$ is $\hat \sigma^2 = `r resid_var |> round(3)`$.
 
 <hr></hr>
 
@@ -1461,6 +1475,24 @@ ci_summary
 
 **Solution:**
 
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+residuals(global_ar) |> 
+  ACF(lag_max = 50) |> 
+  autoplot(.vars = .resid) +
+    labs(
+      title = paste0("ACF of the Residuals from the AR(", tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1), ") Model")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+There is only one significant autocorrelation: $k=34$. This is probably a Type I error, which should occur 5% of the time. None of the other autocorrelations are significant--particularly among the smaller values of $k$. It appears that this model has fully explained the variation in the temperatures.
 
 <hr></hr>
 
@@ -1471,24 +1503,91 @@ ci_summary
 
 
 
-<a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Class Activity</a>
-  
-::: {#Solutions2 style="display:none;"}
-    
+
+
+
+
+
+
+<a href="javascript:showhide('CharacteristicFunction')"
+style="font-size:.8em;">Stationarity of the $AR(`r tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1)`)$ 
+model</a>
+
+::: {#CharacteristicFunction style="display:none;"}
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Write the characteristic equation for the $AR(`r tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1)`)$ 
+model you developed.
+
+
+**Solution:**
+
+```{r}
+#| echo: false
+
+alphas <- global_ar |> coefficients() |> tail(-1) |> dplyr::select(estimate) |> pull() |> round(3)
+cat(
+  "0 = 1", 
+        "- (", alphas[1], ") * x",
+        "- (", alphas[2], ") * x^2",
+        "- (", alphas[3], ") * x^3",
+        "\n     ",
+        "- (", alphas[4], ") * x^4",
+        "- (", alphas[5], ") * x^5",
+        "- (", alphas[6], ") * x^6"
+)
+```
+
+<hr></hr>
+
+
+-   Obtain a more precise version of the characteristic equation, then solve the characteristic equation by any method.
+
+**Solution:**
+
+```{r}
+#| echo: false
+
+alphas <- global_ar |> coefficients() |> tail(-1) |> dplyr::select(estimate) |> pull()
+cat(
+  "0 = 1", 
+        "- (", alphas[1], ") * x",
+        "- (", alphas[2], ") * x^2",
+        "- (", alphas[3], ") * x^3",
+        "\n     ",
+        "- (", alphas[4], ") * x^4",
+        "- (", alphas[5], ") * x^5",
+        "- (", alphas[6], ") * x^6"
+)
+```
+
+```{r}
+alphas <- global_ar |> coefficients() |> tail(-1) |> dplyr::select(estimate) |> pull()
+polyroot(c(1, -alphas))
+```
+
+<hr></hr>
+
+
+
+-   Is our $AR(`r tidy(global_ar) |> as_tibble() |> dplyr::select(term) |> tail(1) |> right(1)`)$ 
+model stationary?
+
+**Solution:**
+
+```{r}
+abs(polyroot(c(1, -alphas)))
+```
+
+Not all of the roots are greater than 1 in absolute value. So, this AR process is not stationary.
+
+<hr></hr>
 
 :::
 
 
-
-
-<a href="javascript:showhide('Solutions3')"
-style="font-size:.8em;">Class Activity</a>
-  
-::: {#Solutions3 style="display:none;"}
-    
-
 :::
-
-
 
