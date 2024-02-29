@@ -63,11 +63,14 @@ source("common_functions.R")
 
 ## Small Group Activity: Linear Models (xxx min)
 
+### Definition of Linear Models
 
 ::: {.callout-note icon=false title="Linear Model for a Time Series"}
-A model for a time series $\{x_t : t = 1 \ldots n \}$ is **linear** if it can be written in the form $$
-  x_t = \alpha_0 + \alpha_1 u_{1,t} + \alpha_2 u_{2,t} + \alpha_3 u_{3,t} + \ldots + \alpha_m u_{m,t} + z_t
+A model for a time series $\{x_t : t = 1 \ldots n \}$ is **linear** if it can be written in the form 
 $$
+x_t = \alpha_0 + \alpha_1 u_{1,t} + \alpha_2 u_{2,t} + \alpha_3 u_{3,t} + \ldots + \alpha_m u_{m,t} + z_t
+$$
+
 where $u_{i,t}$ represents the $i^{th}$ predictor variable observed at time $t$, $z_t$ is the value of the error time series at time $t$, the values $\{\alpha_0, \alpha_1, \alpha_2, \ldots, \alpha_m\}$ are model parameters, and $i = 1, 2, \ldots, n$ and $t = 1, 2, \ldots, m$.
 
 The error terms $z_t$ have mean 0, but they do not need to follow any particular distribution or be independent.
@@ -83,12 +86,12 @@ With a partner, practice determining which models are linear and which are non-l
 
     -   Model 1:
 $$
-  x_t = \alpha_0 + \alpha_1 sin(x_{t-1}) + \alpha_2 e^{x_{t-2}} + z_t
+  x_t = \alpha_0 + \alpha_1 \sin(x_{t-1}) + \alpha_2 e^{x_{t-2}} + z_t
 $$
 
     -   Model 2:
 $$
-  x_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2 + \alpha_3 t^3 + z_t
+  x_t = \sqrt{ \alpha_0 + \alpha_1 t + z_t }
 $$
 
     -   Model 3:
@@ -106,22 +109,297 @@ $$
   x_t = \frac{ \alpha_0 + \alpha_1 x_{t-1} }{ 1 + \alpha_2 x_{t-2} } + z_t
 $$
 
-
--   For each of the following models, is there a way to transform it into a linear model?
-
     -   Model 6:
 $$
-  x_t = \alpha_0 e^{ \alpha_1 t + \alpha_2 x_{t-1} + z_t }
+  x_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2 + \alpha_3 t^3 + z_t
 $$
 
     -   Model 7:
 $$
-  x_t = sin( \alpha_0 + \alpha_1 t + z_t )
+  x_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2 + \alpha_1 \alpha_2 t^3 + z_t
+$$
+
+
+-   For each of the following models, is there a way to transform it into a linear model? If so, apply the transformation.
+
+    -   Model 8:
+$$
+  x_t = \sqrt{ \alpha_0 + \alpha_1 t + z_t }
+$$
+
+    -   Model 9:
+$$
+  x_t = \sin( \alpha_0 + \alpha_1 t + z_t )
+$$
+
+    -   Model 10:
+$$
+  x_t = \alpha_0 e^{ \alpha_1 t + \alpha_2 x_{t-1} + z_t }
 $$
 
 :::
 
 
+### Stationarity of Linear Models
+
+<!-- Check your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Complete the following quotes from page 93 of the textbook:
+
+-   "Linear models for time series are non-stationary when they include functions of ______."
+-   ______________________ can often transform a non-stationary series with a deterministic trend to a stationary series.
+
+:::
+
+In <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_2.html#DifferenceOperator">Chapter 4 Lesson 2</a>, we established that taking the difference of a non-stationary time series with a stochastic trend can convert it to a stationary time series. Later in the <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_2.html#RepeatedDifferences">same lesson</a>, we learn that a linear deterministic trend can be removed by taking the first difference. A quadratic deterministic trend can be removed by taking the second differences, and so on. If there is an $m^{th}$ degree polynomial trend, we can remove it by taking $m$ differences.
+
+
+## Class Activity: Fitting Models (xxx min)
+
+### Simulation
+
+In Section 5.2.3, the textbook illustrates the time series 
+$$
+  x_t = 50 + 3t + z_t
+$$
+where $\{ z_t \}$ is the $AR(1)$ process $z_t = 0.8 z_{t-1} + w_t$ and $\{ w_t \}$ is a Gaussian white noise process with $\sigma = 20$. The code below simulates this time series and creates the resulting time plot. 
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+set.seed(1)
+
+dat <- tibble(w = rnorm(100, sd = 20)) |>
+    mutate(
+        Time = 1:n(),
+         z = purrr::accumulate2(
+            lag(w), w, 
+            \(acc, nxt, w) 0.8 * acc + w,
+            .init = 0)[-1],
+          x = 50 + 3 * Time + z
+            ) |>
+    tsibble::as_tsibble(index = Time)
+dat |> autoplot(.var = x) +
+  theme_minimal()
+```
+
+### Model Fitted to the Simulated Data
+
+When applying multiple regression, it is common to fit the model by minimizing the sum of squared errors:
+$$
+  \sum r_i^2 = \sum \left( x_t - \left[ \alpha_0 + \alpha_1 u_{1,t} + \alpha_2 u_{2,t} + \ldots + \alpha_m u_{m,t} \right] \right)^2
+$$
+In R, we accomplish this using the `lm` function.
+
+We assume that the simulated time series above follows the model
+$$
+  x_t = \alpha_0 + \alpha_1 t + z_t
+$$
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+dat_lm <- dat |>
+  model(lm = TSLM(x ~ Time))
+params <- tidy(dat_lm) |> pull(estimate)
+stderr <- tidy(dat_lm) |> pull(std.error)
+```
+
+This gives the fitted equation
+$$
+  \hat x_t = `r params[1] |> round(3)` + `r params[2] |> round(3)` t  
+$$
+
+```{r}
+#| echo: false
+
+# Make this number large when the document is ready to be compiled for the last time.
+n <- 1000
+```
+
+The standard errors of these estimated parameters tend to be underestimated by the ordinary least squares method. To illustrate this, a simulation of `n = `r n`` realizations of the time series above were generated.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+parameter_est <- data.frame(alpha0 = numeric(), alpha1 = numeric())
+for(count in 1:n) {
+  dat <- tibble(w = rnorm(100, sd = 20)) |>
+      mutate(
+          Time = 1:n(),
+           z = purrr::accumulate2(
+              lag(w), w, 
+              \(acc, nxt, w) 0.8 * acc + w,
+              .init = 0)[-1],
+            x = 50 + 3 * Time + z
+              ) |>
+      tsibble::as_tsibble(index = Time)
+  
+  dat_lm <- dat |>
+  model(lm = TSLM(x ~ Time))
+
+  params <- tidy(dat_lm) |> pull(estimate)
+  parameter_est <- parameter_est |>
+    bind_rows(data.frame(alpha0 = params[1], alpha1 = params[2])) 
+}
+
+standard_errors <- parameter_est |>
+  summarize(
+    alpha0 = sd(alpha0), 
+    alpha1 = sd(alpha1)
+  )
+```
+
+The parameter estimates and their standard errors are summarized in the table below. The "Computed SE" is the standard error reported by the `lm` function in R. The "Simulated SE" is the standard deviation of the parameter estimated obtained in the `r n` simulated realizations of this time series.
+
+| Parameter | Estimate | Computed SE | Simulated SE |
+|:---------:|:--------:|:---------:|:---------:|
+| $\alpha_0$ | `r params[1] |> round(3)` | `r stderr[1] |> round(3)` | `r standard_errors$alpha0 |> round(3)` |
+| $\alpha_1$ | `r params[2] |> round(3)` | `r stderr[2] |> round(3)` | `r standard_errors$alpha1 |> round(3)` |
+
+::: {.callout-warning}
+Note that the simulated standard errors are much larger than those obtained by the `lm` function in R. The standard errors reported by R will lead to unduly small confidence intervals. *This illustrates the problem of applying the standard least-squares estimates to time series data.*
+:::
+
+After fitting a regression model, it is appropriate to review the relevant diagnostic plots. Here are the correlogram and partial correlogram of the residuals.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| fig-asp: 0.5
+
+acf_plot <- residuals(dat_lm) |> feasts::ACF() |> autoplot()
+
+pacf_plot <- residuals(dat_lm) |> feasts::PACF() |> autoplot()
+
+acf_plot | pacf_plot
+```
+
+Recall that in our simulation, the residuals were modeled by an $AR(1)$ process. So, it is not surprising that the residuals are correlated and that the partial autocorrelation function is only significant for the first lag. 
+
+
+### Fitting a Regression Model to the Global Temperature Time Series
+
+
+```{r}
+#| echo: false
+
+temps_ts <- rio::import("data/global_temparature.csv") |>
+  as_tsibble(index = year)
+```
+
+In <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_2.html#GlobalWarming">Chapter 4 Lesson 2</a>, we fit AR models to data representing the change in the Earth's mean annual temperature from `r min(temps_ts$year)` to `r max(temps_ts$year)`. These values represent the deviation of the mean global surface temperature from the long-term average from 1951 to 1980. (Source: NASA/GISS.) We will consider the portion of the time series beginning in 1970.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+temps_ts <- rio::import("data/global_temparature.csv") |>
+  as_tsibble(index = year) |>
+  filter(year >= 1970)
+
+temps_ts |> autoplot(.vars = change) +
+    labs(
+      x = "Year",
+      y = "Temperature Change (Celsius)",
+      title = paste0("Change in Mean Annual Global Temperature (", min(temps_ts$year), "-", max(temps_ts$year), ")")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    ) + 
+  geom_smooth(method='lm', formula= y~x)
+```
+
+Visually, it is easy to spot a positive trend in these data. Nevertheless, the ordinary least squares technique underestimates the standard error of the constant and slope term. This can lead to errant conclusions that these values are statistically significant when they are not.
+
+```{r}
+global <- tibble(x = scan("data/global.dat")) |>
+    mutate(
+        date = seq(
+            ymd("1856-01-01"),
+            by = "1 months",
+            length.out = n()),
+        year = year(date),
+        year_month = tsibble::yearmonth(date),
+        stats_time = year + c(0:11)/12)
+
+global_ts <- global |>
+    as_tsibble(index = year_month)
+
+temp_tidy <- global_ts |> filter(year >= 1970)
+temp_lm <- temp_tidy |>
+  model(lm = TSLM(x ~ stats_time ))
+# tidy(temp_lm) |> pull(estimate)
+
+tidy(temp_lm) |>
+  mutate(
+    `2.5%` = estimate + qnorm(.025) * std.error,
+    `97.5%` = estimate + qnorm(.975) * std.error
+  )
+```
+
+The confidence interval for the slope does not contain zero. If the errors were independent, this would be conclusive evidence that there is a significant linear relationship between the year and the global temperature.
+
+Note that there is significant positive autocorrelation in the residual series for short lags. This implies that the standard errors will be underestimated, and the confidence interval is inappropriately narrow.
+
+```{r}
+#| include: false
+
+acf_lag1 <- residuals(temp_lm) |>
+  feasts::ACF(var = .resid) |> 
+  as_tibble() |> 
+  head(1) |> 
+  dplyr::select(acf) |> 
+  pull()
+```
+
+The autocorrelation for $k=1$ is `r acf_lag1 |> round(3)`. We will use this value when we apply the Generalized Least Squares method in the next section.
+
+  
+
+To get an intuitive idea of why ordinary least squares underestimates the standard errors of the estimates, the positive autocorrelation of adjacent observations leads to a series of data that have an effective record length that is shorter than the number of observations. This happens because similar observations tend to be clumped together, and the overall variation is thereby understated.
+
+
+
+## Generalized Least Squares (GLS)
+
+The autocorrelation in the data make ordinary least squares estimation inappropriate. What caped superhero comes to our rescue? None other than Captain GLS!
+
+This fitting procedure handles the autocorrelation by maximizing the likelihood of the data, given the autocorrelation in the residuals.
+This leads to much more appropriate standard errors for the parameter estimates.
+
+```{r}
+# Load additional packages
+pacman::p_load(tidymodels, multilevelmod,
+  nlme, broom.mixed)
+
+temp_spec <- linear_reg() |>
+  set_engine("gls", correlation = nlme::corAR1(0.7059143))
+
+temp_gls <- temp_spec |>
+  fit(x ~ stats_time, data = global_ts)
+
+tidy(temp_gls) |>
+  mutate(
+    `2.5%` = estimate + qnorm(.025) * std.error,
+    `97.5%` = estimate + qnorm(.975) * std.error
+  )
+```
+
+
+
+
+
+
+$\nabla$
 
 ## Class Activity: SectionTitle (xxx min)
 
