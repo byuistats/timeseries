@@ -219,7 +219,29 @@ $$
 #| echo: false
 
 # Make this number large when the document is ready to be compiled for the last time.
-n <- 1000
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+# Make this number large when the document is ready to be compiled for the last time.
+
+n <- 100
 ```
 
 The standard errors of these estimated parameters tend to be underestimated by the ordinary least squares method. To illustrate this, a simulation of `n = `r n`` realizations of the time series above were generated.
@@ -382,7 +404,7 @@ pacman::p_load(tidymodels, multilevelmod,
   nlme, broom.mixed)
 
 temp_spec <- linear_reg() |>
-  set_engine("gls", correlation = nlme::corAR1(0.7059143))
+  set_engine("gls", correlation = nlme::corAR1(0.706))
 
 temp_gls <- temp_spec |>
   fit(x ~ stats_time, data = global_ts)
@@ -409,9 +431,14 @@ $\nabla$
 
 ## Class Activity: Linear Models with Seasonal Variables (xxx min)
 
+
 ```{r}
 #| echo: false
 #| warning: false
+#| results: asis
+
+
+library(ggrepel)
 
 weather_monthly <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather_monthly.csv") |>
   mutate(
@@ -429,50 +456,78 @@ last_full_year <- weather_monthly |>
   summarize(year = max(year)) |>
   select(year) |>
   pull()
+last_full_year <- 2023 # Comment out this line, if there is a positive slope in future years. Otherwise, this assures that the positive slope from 2022 to 2023 is illustrated. Note that this overwrites the results of the last command
 
-last_year <- weather_monthly |>
-  filter(year == last_full_year)
-
-# library(ggplot2)
-library(ggrepel)
+last_2_years <- weather_monthly |>
+  filter(year == last_full_year | year == last_full_year - 1) |>
+  mutate(month_seq = 1:24)
 
 # Fit regression model
-model <- lm(avg_daily_high_temp ~ month, data = last_year)
+model <- lm(avg_daily_high_temp ~ month_seq, data = last_2_years)
 
 # Create data frame with line that goes through origin 
 # and is parallel to regression line
-line_df <- data.frame(month = c(0,12.5)) |>
-  mutate(avg_daily_high_temp = coef(model)[2] * month)
+line_df <- data.frame(month_seq = c(0,24.5)) |>
+  mutate(avg_daily_high_temp = coef(model)[2] * month_seq)
 
-arrow_df <- data.frame(
-  month = 1:12,
-  avg_daily_high_temp = coef(model)[2] * 1:12
-)
+arrow_df0 <- last_2_years |>
+  mutate(
+    arrow_start = coef(model)[2] * month_seq,
+    deviation = avg_daily_high_temp - arrow_start
+  ) 
 
-ggplot(last_year, aes(month, avg_daily_high_temp)) +
-  geom_point(color = "blue", size = 2) + 
-  geom_line(data = line_df, color = "orange") +
-  geom_segment(aes(x = month, xend = month, 
-                   y = arrow_df$avg_daily_high_temp, yend = avg_daily_high_temp-1), 
+arrow_df <- arrow_df0 |>
+  group_by(month) |>
+  summarize(
+    mean_deviation = mean(deviation),
+    .groups = 'drop'
+  ) %>%
+  right_join(arrow_df0, by = "month") |>
+  arrange(dates)
+
+
+ggplot(last_2_years, aes(month_seq, avg_daily_high_temp)) +
+  geom_point(color = "#56B4E9", size = 2) + 
+  geom_line(data = line_df, color = "#D55E00") +
+  geom_smooth(method='lm', formula= y~x, linetype = "dashed", color = "#F0E442", se = FALSE) +
+  geom_segment(aes(x = month_seq, xend = month_seq, 
+                   y = arrow_df$arrow_start, yend = arrow_df$arrow_start + arrow_df$mean_deviation), 
                arrow = arrow(length = unit(0.25, "cm")),
-                             color = "green") +
-  geom_segment(x = 0, xend = 12.5, y = 0, yend = 0, 
+                             color = "#009E73") +
+  geom_segment(x = 0, xend = 24.7, y = 0, yend = 0, 
                arrow = arrow(length = unit(0.25, "cm"))) +
   geom_segment(x = 0, xend = 0, y = 0, yend = 90,
                arrow = arrow(length = unit(0.25, "cm"))) +
-  geom_text(x = 12.75, y = 0, label = "x") +
-  geom_text(x = 0, y = 95, label = "y") +
-  scale_x_continuous(breaks = 1:12) +
-  labs(x = "Month", y = "Average Daily High Temperature (F)") +
-  theme_minimal()
-
-
-
-
+  geom_text(x = 24.75, y = 3, label = "x") +
+  geom_text(x = 0.375, y = 92, label = "y") +
+  scale_x_continuous(breaks = 1:24) +
+  labs(
+    x = "Month", 
+    y = "Temperature (Fahrenheit)",
+    title = paste0(
+      "Mean Monthly High Temperature in Rexburg (", 
+      min(last_2_years$year), 
+      "-", 
+      max(last_2_years$year), 
+      ")")
+  ) +
+  theme_minimal() +
+  theme(panel.grid.minor.x = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 
+
+
+
+
+
+
+
 ```{r}
+#| eval: false
+#| include: false
+
 temp <- sim_data |> 
   mutate(deviations = x - mean(x)) |> 
   arrange(desc(x))
