@@ -1,6 +1,6 @@
 ---
 title: "Linear Models, GLS, and Seasonal Indicator Variables"
-subtitle: "Chapter 5: Lesson 1"
+subtitle: "Chapter 5: Lesson 1 Handout"
 format: html
 editor: source
 sidebar: false
@@ -36,9 +36,18 @@ source("common_functions.R")
 
 
 
-## Small Group Activity: SectionTitle (xxx min)
 
 ```{r}
+# Read in Women's Clothing Retail Sales data
+retail_ts <- rio::import("data/retail_by_business_type.parquet") |>
+  filter(naics == 44812) |>
+  filter(month >= yearmonth(my("Jan 2004")) & month <= yearmonth(my("Dec 2006"))) 
+```
+
+
+```{r, fig.width=6, fig.asp=0.6}
+#| echo: false
+
 # Read in Women's Clothing Retail Sales data
 retail_ts <- rio::import("data/retail_by_business_type.parquet") |>
   filter(naics == 44812) |>
@@ -47,11 +56,6 @@ retail_ts <- rio::import("data/retail_by_business_type.parquet") |>
   mutate(year = year(month)) |>
   mutate(month_num = month(month)) |>
   as_tsibble(index = month)
-```
-
-
-```{r, fig.width=6, fig.asp=0.6}
-#| echo: false
 
 # Number of years of data we are considering...it would be better if this was computed from the data
 number_of_years <- 3
@@ -129,11 +133,20 @@ y_intercept_retail <- coef(model)[1] |> round(0)
 slope_retail <- coef(model)[2] |> round(0)
 ```
 
-The estimated simple linear regression equation (where sales in millions, $x_t$, is regressed on month, $t$) is given by:
+Use the estimated regression equation 
 $$
-  \hat x_t = `r y_intercept_retail` + `r slope_retail` \cdot t
+  \hat x_t = `r y_intercept_retail` + `r slope_retail` ~ t
 $$
-where $t = 1, 2, 3, \ldots, `r number_of_years * 12 - 1`, `r number_of_years * 12`$.
+to do the following:
+
+-   Find the equation for the line parallel to the regression line that passes through the origin.
+-   Compute the deviation of each observed point from the line you just obtained.
+-   Compute the value of $\hat \beta_i$ for each month, where $i = 1, 2, \ldots, 12$.
+-   Compute the estimate of the time series for $t = 1, 2, \ldots, 36$.
+-   Predict the value of the time series for the next six months.
+
+
+
 
 ::: {.callout-tip appearance="minimal"}
 
@@ -156,12 +169,39 @@ retail_df2 <- retail_df1 |>
   summarize(
     mean_deviation = mean(deviation) |> round(2),
     .groups = 'drop'
-  ) %>%
+  ) |>
   right_join(retail_df1, by = "month_num") |>
-  arrange(t) |> 
+  arrange(t)
+
+retail_pred_df <- rio::import("data/retail_by_business_type.parquet") |>
+  filter(naics == 44812) |>
+  filter(month >= yearmonth(my("Jan 2007")) & month <= yearmonth(my("Jun 2007"))) |>
+  mutate(month_seq = (1:n()) + nrow(retail_df1)) |>
+  mutate(year = year(month)) |>
+  mutate(month_num = month(month)) |>
+  mutate(month_text = format(month, "%b %Y")) |>
+  as_tibble() |>
+  mutate(month_text = format(month, "%b %Y")) |>
+  rename(t = month_seq) |>
+  dplyr::select(month_text, month_num, t, sales_millions) |>
+  mutate(
+    alpha1_t = slope_retail * t,
+    deviation = sales_millions - alpha1_t
+  ) |> 
+  mutate(
+    sales_millions = as.integer(NA),
+    deviation = as.numeric(NA)
+  ) |>
+  left_join(retail_df2 |> select(month_num, mean_deviation) |> unique(), by = join_by(month_num))  |>
+  dplyr::select(month_text, t, #month_num, 
+                sales_millions, alpha1_t, deviation, mean_deviation)
+
+retail_df3 <- retail_df2 |>
   dplyr::select(month_text, t, #month_num, 
                 sales_millions, alpha1_t, deviation, mean_deviation) |>
+  bind_rows(retail_pred_df) |>
   mutate(estimate = alpha1_t + mean_deviation) |>
+  replace_na_with_char(emdash) |>
   rename(
     "$$Date$$" = month_text,
     "$$t$$" = t,
@@ -171,24 +211,28 @@ retail_df2 <- retail_df1 |>
     "$$x_t - \\alpha_1 t$$" = deviation,
     "$$\\hat\\beta_i$$" = mean_deviation,
     "$$\\hat x_t$$" = estimate
-  ) 
+  )
 
-retail_df3 <- retail_df2 |>
+retail_df4 <- retail_df3 |>
   rename(
     " " = "$$\\alpha_1 t$$",
     "  " = "$$x_t - \\alpha_1 t$$",
     "   " = "$$\\hat\\beta_i$$",
     # "    " = "$$\\hat x_t$$"
   ) |>
-  replace_cells_with_char(rows = 1:nrow(retail_df1), cols = 4:7) 
+  replace_cells_with_char(rows = 1:nrow(retail_df3), cols = 4:7) 
 
-retail_df3 |>
+retail_df4 |>
   head(24) |>
-  display_table("0.75in") 
+  display_table() |>
+  column_spec(1:3, width_min = "0.35in") |>
+  column_spec(4:ncol(retail_df3), width_min = "1in")
   
-retail_df3 |>
-  tail(12) |>
-  display_table("0.75in") 
+retail_df4 |>
+  tail(12+6) |>
+  display_table() |>
+  column_spec(1:3, width_min = "0.35in") |>
+  column_spec(4:7, width_min = "1in")
   
 
 ```
