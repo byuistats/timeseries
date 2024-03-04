@@ -86,7 +86,7 @@ With a partner, practice determining which models are linear and which are non-l
 
     -   Model 1:
 $$
-  x_t = \alpha_0 + \alpha_1 \sin(x_{t-1}) + \alpha_2 e^{x_{t-2}} + z_t
+  x_t = \alpha_0 + \alpha_1 \sin(x_{t-1}) + \alpha_2 e^{t} + z_t
 $$
 
     -   Model 2:
@@ -96,35 +96,35 @@ $$
 
     -   Model 3:
 $$
-  \log(x_t) = \alpha_0 + \alpha_1 x_{t-1} + \alpha_2 \sqrt{t} + z_t
+  x_t = \alpha_0 + \alpha_1 x_{t-1}^2 + \alpha_2 ( x_{t-2} \cdot x_{t-3} ) + z_t
 $$
 
     -   Model 4:
 $$
-  x_t = \alpha_0 + \alpha_1 x_{t-1}^2 + \alpha_2 ( x_{t-2} \cdot x_{t-3} ) + z_t
+  x_t = \frac{ \alpha_0 + \alpha_1 x_{t-1} }{ 1 + \alpha_2 x_{t-2} } + z_t
 $$
 
     -   Model 5:
 $$
-  x_t = \frac{ \alpha_0 + \alpha_1 x_{t-1} }{ 1 + \alpha_2 x_{t-2} } + z_t
-$$
-
-    -   Model 6:
-$$
   x_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2 + \alpha_3 t^3 + z_t
 $$
 
-    -   Model 7:
+    -   Model 6:
 $$
   x_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2 + \alpha_1 \alpha_2 t^3 + z_t
 $$
 
 
--   For each of the following models, is there a way to transform it into a linear model? If so, apply the transformation.
+-   Is there a way to transform the following non-linear models into a linear model? If so, apply the transformation.
+
+    -   Model 7:
+$$
+  x_t = \sqrt{ \alpha_0 + \alpha_1 t + z_t }
+$$
 
     -   Model 8:
 $$
-  x_t = \sqrt{ \alpha_0 + \alpha_1 t + z_t }
+  x_t = \alpha_0 \sin( \alpha_1 + \alpha_2 t + z_t )
 $$
 
     -   Model 9:
@@ -153,7 +153,26 @@ Complete the following quotes from page 93 of the textbook:
 
 :::
 
-In <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_2.html#DifferenceOperator">Chapter 4 Lesson 2</a>, we established that taking the difference of a non-stationary time series with a stochastic trend can convert it to a stationary time series. Later in the <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_2.html#RepeatedDifferences">same lesson</a>, we learn that a linear deterministic trend can be removed by taking the first difference. A quadratic deterministic trend can be removed by taking the second differences, and so on. If there is an $m^{th}$ degree polynomial trend, we can remove it by taking $m$ differences.
+The book presents a time series that is modeled as a linear function of time plus white noise:
+$$
+  x_t = \alpha_0 + \alpha_1 t + z_t
+$$
+If we difference these values, we get:
+\begin{align*}
+  \nabla x_t 
+    &= x_t - x_{t-1} \\
+    &= \left[ \alpha_0 + \alpha_1 t + z_t \right] - \left[ \alpha_0 + \alpha_1 (t-1) + z_t \right] \\
+    &= z_t - z_{t-1} + \alpha_1
+\end{align*}
+
+Given that the white noise process $\{ z_t \}$ is stationary, then $\{ \nabla x_t \}$ is stationary. Differencing is a powerful tool for making a time series stationary.
+
+
+In <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_2.html#DifferenceOperator">Chapter 4 Lesson 2</a>, we established that taking the difference of a non-stationary time series with a stochastic trend can convert it to a stationary time series. Later in the <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_2.html#RepeatedDifferences">same lesson</a>, we learn that a linear deterministic trend can be removed by taking the first difference. A quadratic deterministic trend can be removed by taking the second differences, and so on. 
+
+::: {.callout-note}
+In general, if there is an $m^{th}$ degree polynomial trend in a time series, we can remove it by taking $m$ differences.
+:::
 
 
 ## Class Activity: Fitting Models (xxx min)
@@ -186,9 +205,11 @@ dat |> autoplot(.var = x) +
   theme_minimal()
 ```
 
+The advantage of simulation is that when we fit a model to the data, we can asses the fit...we know exactly what was simulated.
+
 ### Model Fitted to the Simulated Data
 
-When applying multiple regression, it is common to fit the model by minimizing the sum of squared errors:
+When applying ordinary least-squares multiple regression, it is common to fit the model by minimizing the sum of squared errors:
 $$
   \sum r_i^2 = \sum \left( x_t - \left[ \alpha_0 + \alpha_1 u_{1,t} + \alpha_2 u_{2,t} + \ldots + \alpha_m u_{m,t} \right] \right)^2
 $$
@@ -244,7 +265,9 @@ $$
 n <- 100
 ```
 
-The standard errors of these estimated parameters tend to be underestimated by the ordinary least squares method. To illustrate this, a simulation of `n = `r n`` realizations of the time series above were generated.
+The standard errors of these estimated parameters tend to be underestimated by the ordinary least squares method. To illustrate this, a simulation of `n = `r n`` realizations of the time series above was conducted.
+
+The parameter estimates and their standard errors are summarized in the table below. The "Computed SE" is the standard error reported by the `lm` function in R. The "Simulated SE" is the standard deviation of the parameter estimated obtained in the `r n` simulated realizations of this time series.
 
 ```{r}
 #| code-fold: true
@@ -277,8 +300,6 @@ standard_errors <- parameter_est |>
     alpha1 = sd(alpha1)
   )
 ```
-
-The parameter estimates and their standard errors are summarized in the table below. The "Computed SE" is the standard error reported by the `lm` function in R. The "Simulated SE" is the standard deviation of the parameter estimated obtained in the `r n` simulated realizations of this time series.
 
 | Parameter | Estimate | Computed SE | Simulated SE |
 |:---------:|:--------:|:---------:|:---------:|
@@ -340,9 +361,12 @@ temps_ts |> autoplot(.vars = change) +
   geom_smooth(method='lm', formula= y~x)
 ```
 
-Visually, it is easy to spot a positive trend in these data. Nevertheless, the ordinary least squares technique underestimates the standard error of the constant and slope term. This can lead to errant conclusions that these values are statistically significant when they are not.
+Visually, it is easy to spot a positive trend in these data. Nevertheless, the ordinary least squares technique underestimates the standard error of the constant and slope term. This can lead to errant conclusions that a linear relationship is statistically significant when it is not.
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 global <- tibble(x = scan("data/global.dat")) |>
     mutate(
         date = seq(
@@ -363,17 +387,20 @@ temp_lm <- temp_tidy |>
 
 tidy(temp_lm) |>
   mutate(
-    `2.5%` = estimate + qnorm(.025) * std.error,
-    `97.5%` = estimate + qnorm(.975) * std.error
+    lower = estimate + qnorm(0.025) * std.error,
+    upper = estimate + qnorm(0.975) * std.error
   )
 ```
 
-The confidence interval for the slope does not contain zero. If the errors were independent, this would be conclusive evidence that there is a significant linear relationship between the year and the global temperature.
+The 95% confidence interval for the slope does not contain zero. If the errors were independent, this would be conclusive evidence that there is a significant linear relationship between the year and the global temperature.
 
 Note that there is significant positive autocorrelation in the residual series for short lags. This implies that the standard errors will be underestimated, and the confidence interval is inappropriately narrow.
 
+Here are the values of the autocorrelation function of the residuals:
+
 ```{r}
-#| include: false
+#| echo: false
+#| warning: false
 
 acf_lag1 <- residuals(temp_lm) |>
   feasts::ACF(var = .resid) |> 
@@ -381,24 +408,36 @@ acf_lag1 <- residuals(temp_lm) |>
   head(1) |> 
   dplyr::select(acf) |> 
   pull()
+
+residuals(temp_lm) |>
+  feasts::ACF(var = .resid) |> 
+  mutate(acf = round(acf, 3)) |>
+  as_tibble() |>
+  select(-.model) |> 
+  head(10) |>
+  pivot_wider(names_from = lag, values_from = acf) |>
+  display_table("0.5in")
 ```
 
 The autocorrelation for $k=1$ is `r acf_lag1 |> round(3)`. We will use this value when we apply the Generalized Least Squares method in the next section.
 
   
-
+  
 To get an intuitive idea of why ordinary least squares underestimates the standard errors of the estimates, the positive autocorrelation of adjacent observations leads to a series of data that have an effective record length that is shorter than the number of observations. This happens because similar observations tend to be clumped together, and the overall variation is thereby understated.
 
 
 
 ## Class Activity: Generalized Least Squares, GLS (10 min)
 
-The autocorrelation in the data make ordinary least squares estimation inappropriate. What caped superhero comes to our rescue? None other than Captain GLS!
+The autocorrelation in the data make ordinary least squares estimation inappropriate. What caped superhero comes to our rescue? None other than Captain GLS -- the indominable Generalized Least Squares algorithm!
 
-This fitting procedure handles the autocorrelation by maximizing the likelihood of the data, given the autocorrelation in the residuals.
-This leads to much more appropriate standard errors for the parameter estimates.
+This fitting procedure handles the autocorrelation by maximizing the likelihood of the data, taking into account the autocorrelation in the residuals.
+This leads to much more appropriate standard errors for the parameter estimates. We will pass the value of the acf at lag $k=1$ into the regression function.
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 # Load additional packages
 pacman::p_load(tidymodels, multilevelmod,
   nlme, broom.mixed)
@@ -411,25 +450,21 @@ temp_gls <- temp_spec |>
 
 tidy(temp_gls) |>
   mutate(
-    `2.5%` = estimate + qnorm(.025) * std.error,
-    `97.5%` = estimate + qnorm(.975) * std.error
+    lower = estimate + qnorm(0.025) * std.error,
+    upper = estimate + qnorm(0.975) * std.error
   )
 ```
 
+As we observed visually, there is evidence to suggest that there is a linear trend in the data.
 
 
-
-
-$\nabla$
-
-$\nabla$
-
-$\nabla$
-
-$\nabla$
 
 
 ## Class Activity: Linear Models with Seasonal Variables (xxx min)
+
+Some time series involve seasonal variables. In this section, we will address one way to include seasonality in a regression analysis of a time series. In the next lesson, we will explore another method.
+
+### Additive Seasonal Indicator Variables
 
 
 ```{r}
@@ -437,17 +472,19 @@ $\nabla$
 #| warning: false
 #| results: asis
 
-
 library(ggrepel)
 
-weather_monthly <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather_monthly.csv") |>
+# Number of years to show data
+number_of_years <- 3
+
+chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |>
   mutate(
-    dates = yearmonth(my(date_text)),
+    dates = yearmonth(ym(Month)),
     month = month(dates),
     year = year(dates)
   )
 
-last_full_year <- weather_monthly |> 
+last_full_year <- chocolate_month |>
   group_by(year) |>
   tail(-3) |>
   summarize(n = n()) |>
@@ -456,25 +493,71 @@ last_full_year <- weather_monthly |>
   summarize(year = max(year)) |>
   select(year) |>
   pull()
-last_full_year <- 2023 # Comment out this line, if there is a positive slope in future years. Otherwise, this assures that the positive slope from 2022 to 2023 is illustrated. Note that this overwrites the results of the last command
 
-last_2_years <- weather_monthly |>
-  filter(year == last_full_year | year == last_full_year - 1) |>
-  mutate(month_seq = 1:24)
+first_year <- last_full_year - number_of_years + 1
+
+retail_ts <- chocolate_month |>
+  filter(year <= last_full_year & year >= first_year) |>
+  mutate(month_seq = 1:n())
+```
+
+Recall the time series representing the monthly relative number of Google searches for the term "chocolate." Here is a time plot of the data from `r min(retail_ts$year)` to `r max(retail_ts$year)`. 
+Month 1 is `r retail_ts |> filter(month_seq == 1) |> dplyr::select(dates) |> pull() |> format("%B %Y")`, 
+month 13 is `r retail_ts |> filter(month_seq == 13) |> dplyr::select(dates) |> pull() |> format("%B %Y")`,
+and
+month 25 is `r retail_ts |> filter(month_seq == 25) |> dplyr::select(dates) |> pull() |> format("%B %Y")`.
+
+```{r}
+#| echo: false
+#| warning: false
+#| label: fig-chocolatetimeplot
+#| fig-cap: "Time plot of a portion of the chocolate search data."
+
+chocolate_scatter_plot <- ggplot(retail_ts, aes(month_seq, chocolate)) +
+  # data points
+  geom_point(color = "#56B4E9", size = 2) +
+  # x-axis
+  geom_segment(x = 0, xend = number_of_years * 12 + 0.75, y = 0, yend = 0,
+               arrow = arrow(length = unit(0.25, "cm"))) +
+  geom_text(x = number_of_years * 12 + 0.75, y = 5, label = "x") +
+  scale_x_continuous(breaks = 1:(number_of_years * 12)) +
+  # y-axis
+  geom_segment(x = 0, xend = 0, y = 0, yend = 100,
+               arrow = arrow(length = unit(0.25, "cm"))) +
+  geom_text(x = 0.5, y = 102, label = "y") +
+  ylim(0,102) +
+  # labels and formatting
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = paste0(
+      "Relative Number of Google Searches for 'Chocolate' (",
+      min(retail_ts$year),
+      "-",
+      max(retail_ts$year),
+      ")")
+  ) +
+  theme_minimal() +
+  theme(panel.grid.minor.x = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5))
 
 # Fit regression model
-model <- lm(avg_daily_high_temp ~ month_seq, data = last_2_years)
+model <- lm(chocolate ~ month_seq, data = retail_ts)
 
-# Create data frame with line that goes through origin 
+# Create data frame for the regression line
+reg_line_df <- data.frame(month_seq = c(0, number_of_years * 12 + 1)) |>
+  mutate(chocolate = coef(model)[1] + coef(model)[2] * month_seq)
+
+# Create data frame with line that goes through origin
 # and is parallel to regression line
-line_df <- data.frame(month_seq = c(0,24.5)) |>
-  mutate(avg_daily_high_temp = coef(model)[2] * month_seq)
+zero_int_reg_line_df <- data.frame(month_seq = c(0, number_of_years * 12 + 1)) |>
+  mutate(chocolate = coef(model)[2] * month_seq)
 
-arrow_df0 <- last_2_years |>
+arrow_df0 <- retail_ts |>
   mutate(
     arrow_start = coef(model)[2] * month_seq,
-    deviation = avg_daily_high_temp - arrow_start
-  ) 
+    deviation = chocolate - arrow_start
+  )
 
 arrow_df <- arrow_df0 |>
   group_by(month) |>
@@ -485,190 +568,418 @@ arrow_df <- arrow_df0 |>
   right_join(arrow_df0, by = "month") |>
   arrange(dates)
 
-
-ggplot(last_2_years, aes(month_seq, avg_daily_high_temp)) +
-  geom_point(color = "#56B4E9", size = 2) + 
-  geom_line(data = line_df, color = "#D55E00") +
-  geom_smooth(method='lm', formula= y~x, linetype = "dashed", color = "#F0E442", se = FALSE) +
-  geom_segment(aes(x = month_seq, xend = month_seq, 
-                   y = arrow_df$arrow_start, yend = arrow_df$arrow_start + arrow_df$mean_deviation), 
-               arrow = arrow(length = unit(0.25, "cm")),
-                             color = "#009E73") +
-  geom_segment(x = 0, xend = 24.7, y = 0, yend = 0, 
-               arrow = arrow(length = unit(0.25, "cm"))) +
-  geom_segment(x = 0, xend = 0, y = 0, yend = 90,
-               arrow = arrow(length = unit(0.25, "cm"))) +
-  geom_text(x = 24.75, y = 3, label = "x") +
-  geom_text(x = 0.375, y = 92, label = "y") +
-  scale_x_continuous(breaks = 1:24) +
-  labs(
-    x = "Month", 
-    y = "Temperature (Fahrenheit)",
-    title = paste0(
-      "Mean Monthly High Temperature in Rexburg (", 
-      min(last_2_years$year), 
-      "-", 
-      max(last_2_years$year), 
-      ")")
-  ) +
-  theme_minimal() +
-  theme(panel.grid.minor.x = element_blank()) +
-  theme(plot.title = element_text(hjust = 0.5))
+# Display basic scatterplot
+chocolate_scatter_plot
 ```
 
-
-
-
-
-
-
-
+We fit a regression line to these data.
 
 ```{r}
-#| eval: false
-#| include: false
+#| echo: false
+#| warning: false
+#| label: fig-chocolateaddreg
+#| fig-cap: "The regression line is superimposed on the chocolate search time series."
 
-temp <- sim_data |> 
-  mutate(deviations = x - mean(x)) |> 
-  arrange(desc(x))
+chocolate_scatter_plot +
+  # regression line
+  geom_smooth(method='lm', formula= y~x, linetype = "dashed", color = "#F0E442", se = FALSE)
+```
 
-mean_x <- mean(temp$x)
-min_x <- floor(min(temp$x))
-max_x <- ceiling(max(temp$x))
-range <- max_x - min_x
-lower <- min_x - range / 10
-upper <- max_x + range / 10
+Now, we draw a line that is parallel to the regression line (has the same slope) but has a Y-intercept of 0.
 
-ticks <- ceiling(lower):floor(upper)
-ticks_df <- data.frame(x = ticks, y = -1)
+```{r}
+#| echo: false
+#| warning: false
+#| label: fig-chocolateaddparallel
+#| fig-cap: "A line parallel to the regression line that passes through the origin is added to the chocolate search time plot."
+
+chocolate_scatter_plot +
+  # regression line
+  geom_line(data = reg_line_df, linetype = "dashed", linewidth = 1, color = "#F0E442") +
+  # line through the origin, parallel to regression line
+  geom_line(data = zero_int_reg_line_df, linewidth = 1, color = "#D55E00")
+```
+
+For each month, we find the average amount that the relative number of google seachers that month deviates from the orange line (that is parallel to the regression line and passes through the origin). So, the length of the green line is the same for every January, etc.
+
+```{r}
+#| echo: false
+#| warning: false
+#| label: fig-chocolatelinearModelWithSeasonalIndicatorVariables
+#| fig-cap: "Representation of a linear model with seasonal indicator variables for the chocolate search time series data."
 
 
-# Plot deviations from the mean
-ggplot(temp, aes(x = x, y = 0)) +
-  # x-axis
-  annotate("segment", x = lower, xend = upper, y = -1, yend = -1, colour = "black", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
-  
-  # Add tick marks and labels          
-  annotate("segment", x = ticks, xend = ticks, y = -1.25, yend = -0.75, colour = "black", linewidth = 0.5) +
+chocolate_scatter_plot +
+  # regression line
+  geom_line(data = reg_line_df, linetype = "dashed", linewidth = 1, color = "#F0E442") +
+  # line through the origin, parallel to regression line
+  geom_line(data = zero_int_reg_line_df, linewidth = 1, color = "#D55E00") +
+  # Vertical arrows
+  geom_segment(aes(x = month_seq, xend = month_seq,
+                   y = arrow_df$arrow_start, yend = arrow_df$arrow_start + arrow_df$mean_deviation),
+               arrow = arrow(length = unit(0.25, "cm")),
+               color = "#009E73")
+```
 
-  geom_text(aes(x = upper, y = -1, label = "x"), size = 4, hjust = -1, vjust = 0, color = "black") +
-  
-  geom_text(data = ticks_df, aes(x = x, y = y, label = x), size = 4, vjust = 2, color = "black") +
-  
-  # Deviations from the mean arrows and lines
-  geom_segment(aes(x = mean_x, xend = x, y = 1:n, yend = 1:n), colour = okabeito_colors_list[2], linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
-  geom_segment(aes(x = x, xend = x, y = 0.25, yend = 1:n - 0.25), colour = okabeito_colors_list[2], linewidth = 0.5, linetype = "dashed") +
-  geom_text(aes(x = (mean_x + x)/2, y = 1:n, label = round(deviations, 2)), size = 3, vjust = -0.5) +
-  
-  # Marker for the mean
-  annotate("segment", x = mean_x, xend = mean_x, y = -2.5, yend = -1.25, colour = okabeito_colors_list[1], linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
-  geom_segment(aes(x = mean_x, xend = mean_x, y = -0.75, yend = n + 1), colour = okabeito_colors_list[1], linewidth = 0.5, linetype = "dashed") +
-  # Add xbar
-  geom_label(
-    label=expression(bar(x) == " "),
-    x=mean_x-0.1,
-    y=-2.6,
-    color = okabeito_colors_list[1],parse = TRUE,label.size = NA, fill=NA)+
-  # add mean value
-  geom_label(
-    label=paste0(round(mean_x, 2)),
-    x=mean_x+0.3,
-    y=-2.6,
-    color = okabeito_colors_list[1],label.size = NA, fill=NA)+
-  geom_point(size = 3, color = okabeito_colors_list[2]) + 
-  geom_text(aes(x = x, y = rep(0,n), label = x), size = 3, vjust = 1.75) +
-  
-  # theme
-  theme_void() +
-  theme(axis.title.y = element_blank()) +
-  theme(plot.title = element_text(hjust = 0.5)) +
-     
-  theme(aspect.ratio = 0.4) +
-  labs(title = "Deviations from the Mean", 
-       x = "Value",
-       y = "")
+When the bottom of the green arrow is on the orange line, the top of the green arrow is the estimate of the value of the time series for that month.
+
+We will create a linear model that includes a constant term for each month. This constant monthly term is called a **seasonal indicator variable**. This name is derived from the fact that each variable indicates (either as 1 or 0) whether a given month is represented. For example, one of the seasonal indicator variables will represent January. It will be equal to 1 for any value of $t$ representing an observation drawn in January and 0 otherwise. Indicator variables are also called **dummy varaibles.**
+
+This additive model with seasonal indicator variables can be perceived similarly to other additive models with a seasonal component:
+
+$$
+  x_t = m_t + s_t + z_t
+$$
+where 
+$$
+  s_t = 
+    \begin{cases}
+      \beta_1, & t ~\text{falls in season}~ 1 \\
+      \beta_2, & t ~\text{falls in season}~ 2 \\
+      ⋮~~~~ & ~~~~~~~~~~~~⋮ \\
+      \beta_s, & t ~\text{falls in season}~ s 
+    \end{cases}
+$$
+and $s$ is the number of seasons in one cycle/period, and $n$ is the number of observations, so $t = 1, 2, \ldots, n$ and $i = 1, 2, \ldots, s$, and $z_t$ is the residual error series, which can be autocorrelated.
+
+It is important to note that $m_t$ does not need to be a constant. It can be a linear trend:
+$$
+  m_t = \alpha_0 + \alpha_1 t
+$$
+or quadratic:
+$$
+  m_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2
+$$
+a polynomial of degree $p$:
+$$
+  m_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2 + \cdots + \alpha_p t^p
+$$
+or any other function of $t$.
+
+If $s_t$ has the same value for all corresponding seasons, then we can write the model as:
+$$
+  x_t = m_t + \beta_{1 + [(t-1) \mod s]} + z_t
+$$
+
+Putting this all together, if we have a time series that has a linear trend and monthly observations where $t=1$ corresponds to January, then the model becomes:
+\begin{align*}
+  x_t 
+    &= ~~~~ \alpha_1 t + s_t + z_t \\
+    &= 
+      \begin{cases}
+        \alpha_1 t + \beta_1 + z_t, & t = 1, 13, 25, \ldots ~~~~ ~~(January) \\
+        \alpha_1 t + \beta_2 + z_t, & t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
+        ~~~~~~~~⋮ & ~~~~~~~~~~~~⋮ \\
+        \alpha_1 t + \beta_{12} + z_t, & t = 12, 24, 36, \ldots ~~~~ (December) 
+      \end{cases}
+\end{align*}
+
+This is the model illustrated in @fig-chocolatelinearModelWithSeasonalIndicatorVariables. The orange line represents the term $\alpha_1 t$ and the green arrows represent the values of $\beta_1, ~ \beta_2, ~ \ldots, ~ \beta_{12}$. 
+
+The folded chunk of code below fits the model to the data and computes the estimated parameter values. 
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |>
+  mutate(
+    dates = yearmonth(ym(Month)),
+    month = month(dates),
+    year = year(dates),
+    stats_time = year + (month - 1) / 12,
+    month_seq = 1:n()
+  ) |>
+  mutate(month = factor(month)) |>
+  as_tsibble(index = dates)
+
+# Fit regression model
+chocolate_lm <- chocolate_month |>
+  model(TSLM(chocolate ~ 0 + stats_time + month))
+
+# Estimated parameter values
+param_est <- chocolate_lm |>
+  tidy() |>
+  pull(estimate)
 ```
 
 
 ```{r}
 #| echo: false
-#| warning: false
 
-# temp <- sim_data |> 
-#   mutate(deviations = x - mean(x)) |> 
-#   arrange(desc(x))
-# 
-# mean_x <- mean(temp$x)
-# min_x <- floor(min(temp$x))
-# max_x <- ceiling(max(temp$x))
-# range <- max_x - min_x
-# lower <- min_x - range / 10
-# upper <- max_x + range / 10
-# 
-# ticks <- ceiling(lower):floor(upper)
-# ticks_df <- data.frame(x = ticks, y = -1)
-# 
-# 
-# # Plot deviations from the mean
-# ggplot(temp, aes(x = x, y = 0)) +
-#   # x-axis
-#   annotate("segment", x = lower, xend = upper, y = -1, yend = -1, colour = "black", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
-#   
-#   # Add tick marks and labels          
-#   annotate("segment", x = ticks, xend = ticks, y = -1.25, yend = -0.75, colour = "black", linewidth = 0.5) +
-# 
-#   geom_text(aes(x = upper, y = -1, label = "x"), size = 4, hjust = -1, vjust = 0, color = "black") +
-#   
-#   geom_text(data = ticks_df, aes(x = x, y = y, label = x), size = 4, vjust = 2, color = "black") +
-#   
-#   # Deviations from the mean arrows and lines
-#   geom_segment(aes(x = mean_x, xend = x, y = 1:n, yend = 1:n), colour = okabeito_colors_list[2], linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
-#   geom_segment(aes(x = x, xend = x, y = 0.25, yend = 1:n - 0.25), colour = okabeito_colors_list[2], linewidth = 0.5, linetype = "dashed") +
-#   geom_text(aes(x = (mean_x + x)/2, y = 1:n, label = round(deviations, 2)), size = 3, vjust = -0.5) +
-#   
-#   # Marker for the mean
-#   annotate("segment", x = mean_x, xend = mean_x, y = -2.5, yend = -1.25, colour = okabeito_colors_list[1], linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
-#   geom_segment(aes(x = mean_x, xend = mean_x, y = -0.75, yend = n + 1), colour = okabeito_colors_list[1], linewidth = 0.5, linetype = "dashed") +
-#   # Add xbar
-#   geom_label(
-#     label=expression(bar(x) == " "),
-#     x=mean_x-0.1,
-#     y=-2.6,
-#     color = okabeito_colors_list[1],parse = TRUE,label.size = NA, fill=NA)+
-#   # add mean value
-#   geom_label(
-#     label=paste0(round(mean_x, 2)),
-#     x=mean_x+0.3,
-#     y=-2.6,
-#     color = okabeito_colors_list[1],label.size = NA, fill=NA)+
-#   geom_point(size = 3, color = okabeito_colors_list[2]) + 
-#   geom_text(aes(x = x, y = rep(0,n), label = x), size = 3, vjust = 1.75) +
-#   
-#   # theme
-#   theme_void() +
-#   theme(axis.title.y = element_blank()) +
-#   theme(plot.title = element_text(hjust = 0.5)) +
-#      
-#   theme(aspect.ratio = 0.4) +
-#   labs(title = "Deviations from the Mean", 
-#        x = "Value",
-#        y = "")
+alpha1 <- param_est |> head(1)
+betas <- param_est |> tail(-1)
+betas_df <- tibble(
+  month = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+  betas = betas
+)
+```
+
+The estimated value of $\alpha_1$ is `r alpha1`. The estimated values for the $\beta_i$ parameters are:
+
+```{r}
+#| echo: false
+
+first_half <- betas_df |>
+  head(6) |>
+  pivot_wider(names_from = month, values_from = betas)
+
+last_half <- betas_df |>
+  tail(6) |>
+  pivot_wider(names_from = month, values_from = betas)
+
+first_half |>
+  display_table()
+
+last_half |>
+  display_table()
+```
+
+Now, we compute forecasted (future) values for the relative number of Google searches for the word "Chocolate."
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-chocForecastPlot
+#| fig-cap: "Forecasted values of the relative number of Google searches for the word 'chocolate.'"
+
+num_years_to_forecast <- 5
+
+new_dat <- chocolate_month |>
+  as_tibble() |>
+  tail(num_years_to_forecast * 12) |>
+  dplyr::select(stats_time, month) |>
+  mutate(
+    stats_time = stats_time + num_years_to_forecast,
+    alpha = tidy(chocolate_lm) |> slice(1) |> pull(estimate),
+    beta = rep(tidy(chocolate_lm) |> slice(2:13) |> pull(estimate), num_years_to_forecast)
+  )
+
+chocolate_forecast <- chocolate_lm |>
+  forecast(new_data=as_tsibble(new_dat, index = stats_time)) 
+
+chocolate_forecast |> 
+  autoplot(chocolate_month, level = 95) +
+  labs(
+      x = "Month",
+      y = "Relative Count of Google Searches",
+      title = paste0("Google Searches for 'Chocolate' (", min(chocolate_month$year), "-", max(chocolate_month$year), ")"),
+      subtitle = paste0(num_years_to_forecast, "-Year Forecast Based on a Linear Model with Seasonal Indicator Variables")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
 ```
 
 
 
-$\nabla$
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
 
-$\nabla$
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: tbl-chocForecastValues
+#| tbl-cap: "Select forecasted values of the relative count of Google searches for 'chocolate'."
 
-$\nabla$
+new_dat |>
+  mutate(estimate = alpha * stats_time + beta) |>
+  display_partial_table(nrow_head = 4, nrow_tail = 3, decimals = 3)
+```
 
-$\nabla$
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+@tbl-chocForecastValues gives a few of the forecasted values illustrated in @fig-chocForecastPlot.
+
+:::
+:::
+<!-- End of two columns -->
+
 
 
 
 ## Small Group Activity: SectionTitle (xxx min)
-## Class Activity: SectionTitle (xxx min)
+
+```{r}
+# Read in clean data
+retail_ts <- rio::import("data/retail_by_business_type.parquet") |>
+  filter(naics == 44812) |>
+  filter(month >= yearmonth(my("Jan 2004")) & month <= yearmonth(my("Dec 2006"))) |>
+  mutate(month_seq = 1:n()) |>
+  mutate(year = year(month)) |>
+  mutate(month_num = month(month)) |>
+  as_tsibble(index = month)
+
+# Number of years of data we are considering...it would be better if this was computed from the data
+number_of_years <- 3
+
+# retail_ts |>
+#   model(feasts::classical_decomposition(sales_millions, type = "add")) |>
+#   components() |>
+#   autoplot()
+
+retail_scatter_plot <- ggplot(retail_ts, aes(month_seq, sales_millions)) +
+  # data points
+  geom_point(color = "#56B4E9", size = 2) +
+  # x-axis
+  geom_segment(x = 0, xend = number_of_years * 12 + 0.75, y = 0, yend = 0,
+               arrow = arrow(length = unit(0.25, "cm"))) +
+  geom_text(x = number_of_years * 12 + 0.75, y = 200, label = "x") +
+  scale_x_continuous(breaks = 1:(number_of_years * 12)) +
+  # y-axis
+  geom_segment(x = 0, xend = 0, y = 0, yend = 5400,
+               arrow = arrow(length = unit(0.25, "cm"))) +
+  geom_text(x = 0.5, y = 5500, label = "y") +
+  ylim(0,5500) +
+  # labels and formatting
+  labs(
+    x = "Month, t",
+    y = "Sales (in Millions of U.S. Dollars)",
+    title = paste0(
+      "Retail Sales: Women's Clothing in Millions (",
+      min(retail_ts$year),
+      "-",
+      max(retail_ts$year),
+      ")")
+  ) +
+  theme_minimal() +
+  theme(panel.grid.minor.x = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Fit regression model
+model <- lm(sales_millions ~ month_seq, data = retail_ts)
+
+# Create data frame for the regression line
+reg_line_df <- data.frame(month_seq = c(0, number_of_years * 12 + 1)) |>
+  mutate(sales_millions = coef(model)[1] + coef(model)[2] * month_seq)
+
+# Create data frame with line that goes through origin
+# and is parallel to regression line
+zero_int_reg_line_df <- data.frame(month_seq = c(0, number_of_years * 12 + 1)) |>
+  mutate(sales_millions = coef(model)[2] * month_seq)
+
+arrow_df0 <- retail_ts |>
+  mutate(
+    arrow_start = coef(model)[2] * month_seq,
+    deviation = sales_millions - arrow_start
+  ) |>
+  as_tibble()
+
+arrow_df <- arrow_df0 |>
+  group_by(month_num) |>
+  summarize(
+    mean_deviation = mean(deviation),
+    .groups = 'drop'
+  ) %>%
+  right_join(arrow_df0, by = "month_num") |>
+  arrange(month)
+
+# Display basic scatterplot
+retail_scatter_plot
+
+retail_scatter_plot +
+  # regression line
+  geom_line(data = reg_line_df, linetype = "dashed", linewidth = 1, color = "#F0E442") 
+  # # line through the origin, parallel to regression line
+  # geom_line(data = zero_int_reg_line_df, linewidth = 1, color = "#D55E00") +
+  # # Vertical arrows
+  # geom_segment(aes(x = month_seq, xend = month_seq,
+  #                  y = arrow_df$arrow_start, yend = arrow_df$arrow_start + arrow_df$mean_deviation),
+  #              arrow = arrow(length = unit(0.25, "cm")),
+  #              color = "#009E73")
+
+y_intercept_retail <- coef(model)[1] |> round(0)
+slope_retail <- coef(model)[2] |> round(0)
+```
+
+We define the model as :
+\begin{align*}
+  x_t 
+    &= ~~~~ \alpha_1 t + s_t + z_t \\
+    &= 
+      \begin{cases}
+        \alpha_1 t + \beta_1 + z_t, & t = 1, 13, 25 ~~~~ ~~(January) \\
+        \alpha_1 t + \beta_2 + z_t, & t = 2, 14, 26 ~~~~ ~~(February) \\
+        ~~~~~~~~⋮ & ~~~~~~~~~~~~⋮ \\
+        \alpha_1 t + \beta_{12} + z_t, & t = 12, 24, 36 ~~~~ (December) 
+      \end{cases}
+\end{align*}
+
+The estimated simple linear regression equation (where sales in millions, $x_t$, is regressed on month, $t$) is given by:
+$$
+  \hat x_t = `r y_intercept_retail` + `r slope_retail` \cdot t
+$$
+where $t = 1, 2, 3, \ldots, `r number_of_years * 12 - 1`, `r number_of_years * 12`$.
+
+::: {.callout-tip appearance="minimal"}
+
+\renewcommand{\arraystretch}{0.5}
+
+```{r}
+#| results: asis
+#| echo: false
+
+retail_df1 <- retail_ts |>
+  as_tibble() |>
+  mutate(month_text = format(month, "%b %Y")) |>
+  rename(t = month_seq) |>
+  dplyr::select(month_text, month_num, t, sales_millions) |>
+  mutate(
+    alpha1_t = slope_retail * t,
+    deviation = sales_millions - alpha1_t
+  )
+
+retail_df2 <- retail_df1 |>
+  group_by(month_num) |>
+  summarize(
+    mean_deviation = mean(deviation) |> round(2),
+    .groups = 'drop'
+  ) %>%
+  right_join(retail_df1, by = "month_num") |>
+  arrange(t) |> 
+  dplyr::select(month_text, t, #month_num, 
+                sales_millions, alpha1_t, deviation, mean_deviation) |>
+  mutate(estimate = alpha1_t + mean_deviation) |>
+  rename(
+    "$$Date$$" = month_text,
+    "$$t$$" = t,
+    # "$$i$$" = month_num,
+    "$$x_t$$" = sales_millions,
+    "$$\\alpha_1 t$$" = alpha1_t,
+    "$$x_t - \\alpha_1 t$$" = deviation,
+    "$$\\hat\\beta_i$$" = mean_deviation,
+    "$$\\hat x_t$$" = estimate
+  ) 
+
+retail_df2 |>
+  rename(
+    " " = "$$\\alpha_1 t$$",
+    "  " = "$$x_t - \\alpha_1 t$$",
+    "   " = "$$\\hat\\beta_i$$",
+    # "    " = "$$\\hat x_t$$"
+  ) |>
+  replace_cells_with_char(rows = 1:nrow(retail_df1), cols = 4:7) |>
+  display_table("0.75in")
+
+```
+
+\renewcommand{\arraystretch}{1}
+
+:::
+
+
+
+
+# Working Here
 
 
 <!-- Check your Understanding -->
@@ -704,34 +1015,38 @@ $\nabla$
 
 
 <a href="javascript:showhide('Solutions1')"
-style="font-size:.8em;">Class Activity</a>
+style="font-size:.8em;">Retail Sales</a>
   
 ::: {#Solutions1 style="display:none;"}
     
+```{r}
+retail_df2 |>
+  display_table("0.75in")
+```
 
 :::
 
 
 
 
-<a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Class Activity</a>
-  
-::: {#Solutions2 style="display:none;"}
-    
+<!-- <a href="javascript:showhide('Solutions')" -->
+<!-- style="font-size:.8em;">Class Activity</a> -->
 
-:::
+<!-- ::: {#Solutions2 style="display:none;"} -->
 
 
+<!-- ::: -->
 
 
-<a href="javascript:showhide('Solutions3')"
-style="font-size:.8em;">Class Activity</a>
-  
-::: {#Solutions3 style="display:none;"}
-    
 
-:::
+
+<!-- <a href="javascript:showhide('Solutions3')" -->
+<!-- style="font-size:.8em;">Class Activity</a> -->
+
+<!-- ::: {#Solutions3 style="display:none;"} -->
+
+
+<!-- ::: -->
 
 
 
