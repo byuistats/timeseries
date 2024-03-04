@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>BYU-Idaho Time Series - Leading Variables and Associated Variables</title>
+<title>BYU-Idaho Time Series - Linear Models, GLS, and Seasonal Indicator Variables</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -19,6 +19,40 @@ ul.task-list li input[type="checkbox"] {
   width: 0.8em;
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 </style>
 
@@ -300,15 +334,21 @@ ul.task-list li input[type="checkbox"] {
 <!-- sidebar -->
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#small-group-activity-sectiontitle-xxx-min" id="toc-small-group-activity-sectiontitle-xxx-min" class="nav-link active" data-scroll-target="#small-group-activity-sectiontitle-xxx-min">Small Group Activity: SectionTitle (xxx min)</a></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">Leading Variables and Associated Variables</h1>
-<p class="subtitle lead">Chapter 3: Lesson 1</p>
+<h1 class="title">Linear Models, GLS, and Seasonal Indicator Variables</h1>
+<p class="subtitle lead">Chapter 5: Lesson 1</p>
 </div>
 
 
@@ -343,336 +383,388 @@ ul.task-list li input[type="checkbox"] {
     evt.currentTarget.className += " active";
  }    
 </script>
-<!-- Check Your Understanding -->
-<!-- ::: {.callout-tip icon=false title="Check Your Understanding"} -->
-<p>Complete Tables 1 and 2 to calculate <span class="math inline">\(c_k\)</span> for the given values of <span class="math inline">\(k\)</span>.</p>
-<section id="table-1-computation-of-squared-deviations" class="level4">
-<h4 class="anchored" data-anchor-id="table-1-computation-of-squared-deviations">Table 1: Computation of squared deviations</h4>
+<section id="small-group-activity-sectiontitle-xxx-min" class="level2">
+<h2 class="anchored" data-anchor-id="small-group-activity-sectiontitle-xxx-min">Small Group Activity: SectionTitle (xxx min)</h2>
 <div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read in Women's Clothing Retail Sales data</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>retail_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"data/retail_by_business_type.parquet"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(naics <span class="sc">==</span> <span class="dv">44812</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(month <span class="sc">&gt;=</span> <span class="fu">yearmonth</span>(<span class="fu">my</span>(<span class="st">"Jan 2004"</span>)) <span class="sc">&amp;</span> month <span class="sc">&lt;=</span> <span class="fu">yearmonth</span>(<span class="fu">my</span>(<span class="st">"Dec 2006"</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">month_seq =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>()) <span class="sc">|&gt;</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">year =</span> <span class="fu">year</span>(month)) <span class="sc">|&gt;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">month_num =</span> <span class="fu">month</span>(month)) <span class="sc">|&gt;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> month)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-fig.asp="0.6">
 <div class="cell-output-display">
-<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<p><img src="chapter_5_lesson_1_handout_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="576"></p>
+</div>
+</div>
+<p>The estimated simple linear regression equation (where sales in millions, <span class="math inline">\(x_t\)</span>, is regressed on month, <span class="math inline">\(t\)</span>) is given by: <span class="math display">\[
+  \hat x_t = 2635 + 24 \cdot t
+\]</span> where <span class="math inline">\(t = 1, 2, 3, \ldots, 35, 36\)</span>.</p>
+<div class="callout callout-style-simple callout-tip no-icon">
+<div class="callout-body d-flex">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-body-container">
+<div class="cell-output-display">
+<table class="table table-striped" data-quarto-postprocess="true">
 <thead>
 <tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$Date$$</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">$$t$$</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">$$x_t$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$y_t$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$x_t - \bar x$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$(x_t - \bar x)^2$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$y_t - \bar y$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$(y_t - \bar y)^2$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th"></th>
+<th style="text-align: center;" data-quarto-table-cell-role="th"></th>
+<th style="text-align: center;" data-quarto-table-cell-role="th"></th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$\hat x_t$$</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;">1</td>
-<td style="text-align: center; min-width: 0in;">21</td>
-<td style="text-align: center; min-width: 0in;">14</td>
-<td style="text-align: center; min-width: 0in;">1</td>
-<td style="text-align: center; min-width: 0in;">1</td>
-<td style="text-align: center; min-width: 0in;"></td>
-<td style="text-align: center; min-width: 0in;"></td>
+<td style="text-align: center; min-width: 0.75in;">Jan 2004</td>
+<td style="text-align: center; min-width: 0.75in;">1</td>
+<td style="text-align: center; min-width: 0.75in;">2267</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;">2</td>
-<td style="text-align: center; min-width: 0in;">20</td>
-<td style="text-align: center; min-width: 0in;">16</td>
-<td style="text-align: center; min-width: 0in;">0</td>
-<td style="text-align: center; min-width: 0in;">0</td>
-<td style="text-align: center; min-width: 0in;"></td>
-<td style="text-align: center; min-width: 0in;"></td>
+<td style="text-align: center; min-width: 0.75in;">Feb 2004</td>
+<td style="text-align: center; min-width: 0.75in;">2</td>
+<td style="text-align: center; min-width: 0.75in;">2402</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;">3</td>
-<td style="text-align: center; min-width: 0in;">17</td>
-<td style="text-align: center; min-width: 0in;">18</td>
-<td style="text-align: center; min-width: 0in;">-3</td>
-<td style="text-align: center; min-width: 0in;">9</td>
-<td style="text-align: center; min-width: 0in;"></td>
-<td style="text-align: center; min-width: 0in;"></td>
+<td style="text-align: center; min-width: 0.75in;">Mar 2004</td>
+<td style="text-align: center; min-width: 0.75in;">3</td>
+<td style="text-align: center; min-width: 0.75in;">2915</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;">4</td>
-<td style="text-align: center; min-width: 0in;">15</td>
-<td style="text-align: center; min-width: 0in;">17</td>
-<td style="text-align: center; min-width: 0in;">-5</td>
-<td style="text-align: center; min-width: 0in;">25</td>
-<td style="text-align: center; min-width: 0in;"></td>
-<td style="text-align: center; min-width: 0in;"></td>
+<td style="text-align: center; min-width: 0.75in;">Apr 2004</td>
+<td style="text-align: center; min-width: 0.75in;">4</td>
+<td style="text-align: center; min-width: 0.75in;">3023</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;">5</td>
-<td style="text-align: center; min-width: 0in;">18</td>
-<td style="text-align: center; min-width: 0in;">12</td>
-<td style="text-align: center; min-width: 0in;">-2</td>
-<td style="text-align: center; min-width: 0in;">4</td>
-<td style="text-align: center; min-width: 0in;"></td>
-<td style="text-align: center; min-width: 0in;"></td>
+<td style="text-align: center; min-width: 0.75in;">May 2004</td>
+<td style="text-align: center; min-width: 0.75in;">5</td>
+<td style="text-align: center; min-width: 0.75in;">3005</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;">6</td>
-<td style="text-align: center; min-width: 0in;">21</td>
-<td style="text-align: center; min-width: 0in;">10</td>
-<td style="text-align: center; min-width: 0in;">1</td>
-<td style="text-align: center; min-width: 0in;">1</td>
-<td style="text-align: center; min-width: 0in;"></td>
-<td style="text-align: center; min-width: 0in;"></td>
+<td style="text-align: center; min-width: 0.75in;">Jun 2004</td>
+<td style="text-align: center; min-width: 0.75in;">6</td>
+<td style="text-align: center; min-width: 0.75in;">2777</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;">7</td>
-<td style="text-align: center; min-width: 0in;">21</td>
-<td style="text-align: center; min-width: 0in;">11</td>
-<td style="text-align: center; min-width: 0in;">1</td>
-<td style="text-align: center; min-width: 0in;">1</td>
-<td style="text-align: center; min-width: 0in;"></td>
-<td style="text-align: center; min-width: 0in;"></td>
+<td style="text-align: center; min-width: 0.75in;">Jul 2004</td>
+<td style="text-align: center; min-width: 0.75in;">7</td>
+<td style="text-align: center; min-width: 0.75in;">2595</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;">8</td>
-<td style="text-align: center; min-width: 0in;">24</td>
-<td style="text-align: center; min-width: 0in;">16</td>
-<td style="text-align: center; min-width: 0in;">4</td>
-<td style="text-align: center; min-width: 0in;">16</td>
-<td style="text-align: center; min-width: 0in;"></td>
-<td style="text-align: center; min-width: 0in;"></td>
+<td style="text-align: center; min-width: 0.75in;">Aug 2004</td>
+<td style="text-align: center; min-width: 0.75in;">8</td>
+<td style="text-align: center; min-width: 0.75in;">2644</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;">9</td>
-<td style="text-align: center; min-width: 0in;">22</td>
-<td style="text-align: center; min-width: 0in;">14</td>
-<td style="text-align: center; min-width: 0in;">2</td>
-<td style="text-align: center; min-width: 0in;">4</td>
-<td style="text-align: center; min-width: 0in;"></td>
-<td style="text-align: center; min-width: 0in;"></td>
+<td style="text-align: center; min-width: 0.75in;">Sep 2004</td>
+<td style="text-align: center; min-width: 0.75in;">9</td>
+<td style="text-align: center; min-width: 0.75in;">2774</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;">10</td>
-<td style="text-align: center; min-width: 0in;">21</td>
-<td style="text-align: center; min-width: 0in;">22</td>
-<td style="text-align: center; min-width: 0in;">1</td>
-<td style="text-align: center; min-width: 0in;">1</td>
-<td style="text-align: center; min-width: 0in;"></td>
-<td style="text-align: center; min-width: 0in;"></td>
+<td style="text-align: center; min-width: 0.75in;">Oct 2004</td>
+<td style="text-align: center; min-width: 0.75in;">10</td>
+<td style="text-align: center; min-width: 0.75in;">2990</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;">Sum</td>
-<td style="text-align: center; min-width: 0in;">200</td>
-<td style="text-align: center; min-width: 0in;">150</td>
-<td style="text-align: center; min-width: 0in;">0</td>
-<td style="text-align: center; min-width: 0in;">62</td>
-<td style="text-align: center; min-width: 0in;"></td>
-<td style="text-align: center; min-width: 0in;"></td>
+<td style="text-align: center; min-width: 0.75in;">Nov 2004</td>
+<td style="text-align: center; min-width: 0.75in;">11</td>
+<td style="text-align: center; min-width: 0.75in;">3090</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Dec 2004</td>
+<td style="text-align: center; min-width: 0.75in;">12</td>
+<td style="text-align: center; min-width: 0.75in;">4472</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Jan 2005</td>
+<td style="text-align: center; min-width: 0.75in;">13</td>
+<td style="text-align: center; min-width: 0.75in;">2338</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Feb 2005</td>
+<td style="text-align: center; min-width: 0.75in;">14</td>
+<td style="text-align: center; min-width: 0.75in;">2453</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Mar 2005</td>
+<td style="text-align: center; min-width: 0.75in;">15</td>
+<td style="text-align: center; min-width: 0.75in;">3105</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Apr 2005</td>
+<td style="text-align: center; min-width: 0.75in;">16</td>
+<td style="text-align: center; min-width: 0.75in;">3177</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">May 2005</td>
+<td style="text-align: center; min-width: 0.75in;">17</td>
+<td style="text-align: center; min-width: 0.75in;">3164</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Jun 2005</td>
+<td style="text-align: center; min-width: 0.75in;">18</td>
+<td style="text-align: center; min-width: 0.75in;">3045</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Jul 2005</td>
+<td style="text-align: center; min-width: 0.75in;">19</td>
+<td style="text-align: center; min-width: 0.75in;">2741</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Aug 2005</td>
+<td style="text-align: center; min-width: 0.75in;">20</td>
+<td style="text-align: center; min-width: 0.75in;">2871</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Sep 2005</td>
+<td style="text-align: center; min-width: 0.75in;">21</td>
+<td style="text-align: center; min-width: 0.75in;">2963</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Oct 2005</td>
+<td style="text-align: center; min-width: 0.75in;">22</td>
+<td style="text-align: center; min-width: 0.75in;">3120</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Nov 2005</td>
+<td style="text-align: center; min-width: 0.75in;">23</td>
+<td style="text-align: center; min-width: 0.75in;">3342</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Dec 2005</td>
+<td style="text-align: center; min-width: 0.75in;">24</td>
+<td style="text-align: center; min-width: 0.75in;">4756</td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
+<td style="text-align: center; min-width: 0.75in;"></td>
 </tr>
 </tbody>
 </table>
 
 
 </div>
-</div>
-<p><br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br> <br></p>
-</section>
-<section id="table-2-computation-of-c_k-and-r_k-for-select-values-of-k" class="level4">
-<h4 class="anchored" data-anchor-id="table-2-computation-of-c_k-and-r_k-for-select-values-of-k">Table 2: Computation of <span class="math inline">\(c_k\)</span> and <span class="math inline">\(r_k\)</span> for select values of <span class="math inline">\(k\)</span></h4>
-<div class="cell">
 <div class="cell-output-display">
-<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<table class="table table-striped" data-quarto-postprocess="true">
 <thead>
 <tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$Date$$</th>
 <th style="text-align: center;" data-quarto-table-cell-role="th">$$t$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$x_t - \bar x$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$y_t - \bar y$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$~k=-4~$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$~k=-3~$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$~k=-2~$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$~k=-1~$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$~k=0~$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$~k=1~$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$~k=2~$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$~k=3~$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$~k=4~$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$x_t$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th"></th>
+<th style="text-align: center;" data-quarto-table-cell-role="th"></th>
+<th style="text-align: center;" data-quarto-table-cell-role="th"></th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$\hat x_t$$</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: center; min-width: 0.75in;">1</td>
-<td style="text-align: center; min-width: 0.75in;">1</td>
-<td style="text-align: center; min-width: 0.75in;">-1</td>
+<td style="text-align: center; min-width: 0.75in;">Jan 2006</td>
+<td style="text-align: center; min-width: 0.75in;">25</td>
+<td style="text-align: center; min-width: 0.75in;">2518</td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">-1</td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">3</td>
-<td style="text-align: center; min-width: 0.75in;">5</td>
-<td style="text-align: center; min-width: 0.75in;">2</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0.75in;">2</td>
-<td style="text-align: center; min-width: 0.75in;">0</td>
-<td style="text-align: center; min-width: 0.75in;">1</td>
+<td style="text-align: center; min-width: 0.75in;">Feb 2006</td>
+<td style="text-align: center; min-width: 0.75in;">26</td>
+<td style="text-align: center; min-width: 0.75in;">2518</td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">-5</td>
-<td style="text-align: center; min-width: 0.75in;">-2</td>
-<td style="text-align: center; min-width: 0.75in;">1</td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0.75in;">3</td>
-<td style="text-align: center; min-width: 0.75in;">-3</td>
-<td style="text-align: center; min-width: 0.75in;">3</td>
+<td style="text-align: center; min-width: 0.75in;">Mar 2006</td>
+<td style="text-align: center; min-width: 0.75in;">27</td>
+<td style="text-align: center; min-width: 0.75in;">3194</td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">-6</td>
-<td style="text-align: center; min-width: 0.75in;">3</td>
-<td style="text-align: center; min-width: 0.75in;">3</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0.75in;">4</td>
-<td style="text-align: center; min-width: 0.75in;">-5</td>
-<td style="text-align: center; min-width: 0.75in;">2</td>
+<td style="text-align: center; min-width: 0.75in;">Apr 2006</td>
+<td style="text-align: center; min-width: 0.75in;">28</td>
+<td style="text-align: center; min-width: 0.75in;">3379</td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">2</td>
-<td style="text-align: center; min-width: 0.75in;">2</td>
-<td style="text-align: center; min-width: 0.75in;">8</td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0.75in;">5</td>
-<td style="text-align: center; min-width: 0.75in;">-2</td>
-<td style="text-align: center; min-width: 0.75in;">-3</td>
+<td style="text-align: center; min-width: 0.75in;">May 2006</td>
+<td style="text-align: center; min-width: 0.75in;">29</td>
+<td style="text-align: center; min-width: 0.75in;">3340</td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">-3</td>
-<td style="text-align: center; min-width: 0.75in;">-12</td>
-<td style="text-align: center; min-width: 0.75in;">-6</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0.75in;">6</td>
-<td style="text-align: center; min-width: 0.75in;">1</td>
-<td style="text-align: center; min-width: 0.75in;">-5</td>
+<td style="text-align: center; min-width: 0.75in;">Jun 2006</td>
+<td style="text-align: center; min-width: 0.75in;">30</td>
+<td style="text-align: center; min-width: 0.75in;">3183</td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">-20</td>
-<td style="text-align: center; min-width: 0.75in;">-10</td>
-<td style="text-align: center; min-width: 0.75in;">-5</td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0.75in;">7</td>
-<td style="text-align: center; min-width: 0.75in;">1</td>
-<td style="text-align: center; min-width: 0.75in;">-4</td>
+<td style="text-align: center; min-width: 0.75in;">Jul 2006</td>
+<td style="text-align: center; min-width: 0.75in;">31</td>
+<td style="text-align: center; min-width: 0.75in;">2923</td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">-8</td>
-<td style="text-align: center; min-width: 0.75in;">-4</td>
-<td style="text-align: center; min-width: 0.75in;">—</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0.75in;">8</td>
-<td style="text-align: center; min-width: 0.75in;">4</td>
-<td style="text-align: center; min-width: 0.75in;">1</td>
+<td style="text-align: center; min-width: 0.75in;">Aug 2006</td>
+<td style="text-align: center; min-width: 0.75in;">32</td>
+<td style="text-align: center; min-width: 0.75in;">2960</td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">1</td>
-<td style="text-align: center; min-width: 0.75in;">—</td>
-<td style="text-align: center; min-width: 0.75in;">—</td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0.75in;">9</td>
-<td style="text-align: center; min-width: 0.75in;">2</td>
-<td style="text-align: center; min-width: 0.75in;">-1</td>
+<td style="text-align: center; min-width: 0.75in;">Sep 2006</td>
+<td style="text-align: center; min-width: 0.75in;">33</td>
+<td style="text-align: center; min-width: 0.75in;">3164</td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">—</td>
-<td style="text-align: center; min-width: 0.75in;">—</td>
-<td style="text-align: center; min-width: 0.75in;">—</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0.75in;">10</td>
-<td style="text-align: center; min-width: 0.75in;">1</td>
-<td style="text-align: center; min-width: 0.75in;">7</td>
+<td style="text-align: center; min-width: 0.75in;">Oct 2006</td>
+<td style="text-align: center; min-width: 0.75in;">34</td>
+<td style="text-align: center; min-width: 0.75in;">3197</td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">—</td>
-<td style="text-align: center; min-width: 0.75in;">—</td>
-<td style="text-align: center; min-width: 0.75in;">—</td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0.75in;">Sum</td>
-<td style="text-align: center; min-width: 0.75in;">0</td>
-<td style="text-align: center; min-width: 0.75in;">0</td>
+<td style="text-align: center; min-width: 0.75in;">Nov 2006</td>
+<td style="text-align: center; min-width: 0.75in;">35</td>
+<td style="text-align: center; min-width: 0.75in;">3414</td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">-36</td>
-<td style="text-align: center; min-width: 0.75in;">-18</td>
-<td style="text-align: center; min-width: 0.75in;">3</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0.75in;">$$c_k$$</td>
+<td style="text-align: center; min-width: 0.75in;">Dec 2006</td>
+<td style="text-align: center; min-width: 0.75in;">36</td>
+<td style="text-align: center; min-width: 0.75in;">5019</td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
 <td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">-3.6</td>
-<td style="text-align: center; min-width: 0.75in;">-1.8</td>
-<td style="text-align: center; min-width: 0.75in;">0.3</td>
-</tr>
-<tr class="odd">
-<td style="text-align: center; min-width: 0.75in;">$$r_k$$</td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;"></td>
-<td style="text-align: center; min-width: 0.75in;">-0.424</td>
-<td style="text-align: center; min-width: 0.75in;">-0.212</td>
-<td style="text-align: center; min-width: 0.75in;">0.035</td>
 </tr>
 </tbody>
 </table>
@@ -680,21 +772,8 @@ ul.task-list li input[type="checkbox"] {
 
 </div>
 </div>
-<!-- -   Use the figure below as a guide to plot the ccf values. -->
-</section>
-<section id="figure-2-plot-of-the-sample-ccf" class="level4">
-<h4 class="anchored" data-anchor-id="figure-2-plot-of-the-sample-ccf">Figure 2: Plot of the Sample CCF</h4>
-<div class="cell" data-layout-align="center" data-fig.asp="0.6">
-<div class="cell-output-display">
-<div class="quarto-figure quarto-figure-center">
-<figure class="figure">
-<p><img src="chapter_3_lesson_1_handout_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="576"></p>
-</figure>
 </div>
 </div>
-</div>
-<!-- -   Are any of the ccf values statistically significant? If so, which one(s)? -->
-<!-- ::: -->
 
 
 </section>
