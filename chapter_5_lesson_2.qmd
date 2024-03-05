@@ -62,13 +62,161 @@ source("common_functions.R")
 
 ## Class Activity: XXXXXXXXXXXXXXXXXXXXXX (xxx min)
 
+::: {.callout-note title="Fourier Series"}
+The **Fourier Series** is an infinite series representation of a smooth function $f(t)$ with period $s$:
+$$
+  f(t) = \frac{A_0}{2} + \sum_{i=1}^{\infty} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
+$$
+The coefficients $A_i$ and $B_i$ are defined by the integrals:
+$$
+  A_i = \frac{2}{s} \int_0^s f(t) \cos \left( \frac{2\pi i t}{s} \right) \; dt
+  ~~~~~~~~~~~~~~~~~~
+  B_i = \frac{2}{s} \int_0^s f(t) \sin \left( \frac{2\pi i t}{s} \right) \; dt
+$$
+
+:::
+
+The function $f(t)$ can be approximated to any desired level of precision by truncating the series after a sufficient number of terms.
+
+The Fourier Series exists for any smooth (continuously differentiable) function. Note that this allows us to obtain the value of the function at any real value. 
+For a time series with $s$ seasons, we are only need to evaluate the function at a finite number of points: 
+$t = 1, 2, 3, \ldots, s-1, s$. Hence, we only need to obtain $\left\lfloor \frac{s}{2} \right\rfloor$ terms of this sum to fit the values perfectly. We can usually get a good approximation with only a few terms.
+
+For a time series with $s$ seasons per cycle, our additive model can be written as:
+
+\begin{align*}
+  x_t
+    &= m_t + s_t + z_t \\
+    &= m_t +
+        \sum_{i=1}^{\left\lfloor \frac{s}{2} \right\rfloor} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
+      + z_t
+\end{align*}
+
+# Continue from pg. 102
+
+
+In trigonometry, you learned that
+\begin{align*}
+  \sin(\theta + \phi) 
+    &= \sin(\theta)\cos(\phi)  + \cos(\theta)\sin(\phi)  \\
+    &= \cos(\phi) \sin(\theta) + \sin(\phi) \cos(\theta) 
+\end{align*}
+
+Consider the sine wave with the following parameters:
+
+-   $f$:$~~~$    the frequency or the number of cycles per sampling interval,
+-   $A$:$~~$    the amplitude, and 
+-   $\phi$:$~~~$ the phase shift.
+
+\begin{align*}
+  A \sin ( 2 \pi f t + \phi )
+    &= \underbrace{A \cos( \phi )}_{\alpha_s} \cdot \sin ( 2 \pi f t ) + \underbrace{A \sin( \phi )}_{\alpha_c} \cdot \cos ( 2 \pi f t ) \\
+    &= \alpha_s \cdot \sin ( 2 \pi f t ) + \alpha_c \cdot \cos ( 2 \pi f t ) 
+\end{align*}
+
+Using this sum/difference identity from trigonometry, we have transformed this from something that is not linear in the parameters $A$ and $\phi$ to an expression that is linear in the parameters $\alpha_s$ and $\alpha_c$.
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
-#| label: fig-globalTempTimePlot
-#| fig-cap: "Time plot of the mean annual temperature globally for select years."
+#| label: fig-namegoeshereAlso
+#| fig-cap: "Title goes here"
 
+create_sine_df <- function(i = 1, max_t = 12) {
+  periods <-  floor(max_t / 2)
+  df <- tibble(
+    t = seq(from = 0, to = max_t, length.out = 501),
+    value = sin(2 * pi * i * t / periods),
+    i = right(paste0(" ", as.character(i)), 2)
+  )
+  
+}
+
+sine_df <- create_sine_df(i = 1)
+for (i in 2:6) {
+  sine_df <- sine_df |> bind_rows(create_sine_df(i))
+}
+
+ggplot(sine_df, aes(x = t, y = 28 + value - 4*as.numeric(i), color = i)) +
+  geom_line() +
+  # geom_point(data = data.frame(x = 1:6, y = seq(4,24,4)), aes(x=x, y=y)) +
+  scale_y_continuous(
+    breaks = seq(4,24,4),
+    minor_breaks = NULL,
+    labels = NULL
+  ) +
+  scale_x_continuous(
+    breaks = c(0:12),
+    minor_breaks = NULL
+  ) +
+  scale_color_discrete(name = "i") +
+  labs(x = "t", y = "Sine Value", title = "Sine Functions with Different Periods") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-namegoeshere
+#| fig-cap: "Title goes here"
+
+create_cosine_df <- function(i = 1, max_t = 12) {
+  periods <-  floor(max_t / 2)
+  df <- tibble(
+    t = seq(from = 0, to = max_t, length.out = 501),
+    value = cos(2 * pi * i * t / periods),
+    i = right(paste0(" ", as.character(i)), 2)
+  )
+  
+}
+
+cosine_df <- create_cosine_df(i = 1)
+for (i in 2:6) {
+  cosine_df <- cosine_df |> bind_rows(create_cosine_df(i))
+}
+
+ggplot(cosine_df, aes(x = t, y = 28 + value - 4*as.numeric(i), color = i)) +
+  geom_line() +
+  # geom_point(data = data.frame(x = 1:6, y = seq(4,24,4)), aes(x=x, y=y)) +
+  scale_y_continuous(
+    breaks = seq(4,24,4),
+    minor_breaks = NULL,
+    labels = NULL
+  ) +
+  scale_x_continuous(
+    breaks = c(0:12),
+    minor_breaks = NULL
+  ) +
+  scale_color_discrete(name = "i") +
+  labs(x = "t", y = "Cosine Value", title = "Cosine Functions with Different Periods") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+```{r}
 temps_ts <- rio::import("data/global_temparature.csv") |>
   as_tsibble(index = year) |>
   filter(year >= 1970)
