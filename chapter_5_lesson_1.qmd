@@ -242,17 +242,6 @@ $$
 #| label: sets the number of values in the simulation
 #| echo: false
 
-# Make this number large (like 1000) when the document is ready to be compiled.
-# Make this number large (like 1000) when the document is ready to be compiled.
-# Make this number large (like 1000) when the document is ready to be compiled.
-# Make this number large (like 1000) when the document is ready to be compiled.
-# Make this number large (like 1000) when the document is ready to be compiled.
-# Make this number large (like 1000) when the document is ready to be compiled.
-# Make this number large (like 1000) when the document is ready to be compiled.
-# Make this number large (like 1000) when the document is ready to be compiled.
-# Make this number large (like 1000) when the document is ready to be compiled.
-# Make this number large (like 1000) when the document is ready to be compiled.
-
 n <- 1000
 ```
 
@@ -261,30 +250,38 @@ The standard errors of these estimated parameters tend to be underestimated by t
 The parameter estimates and their standard errors are summarized in the table below. The "Computed SE" is the standard error reported by the `lm` function in R. The "Simulated SE" is the standard deviation of the parameter estimated obtained in the `r n` simulated realizations of this time series.
 
 ```{r}
-#| label: Simulation...this takes a minute
+#| label: Simulation...
 #| code-fold: true
 #| code-summary: "Show the code"
 
-parameter_est <- data.frame(alpha0 = numeric(), alpha1 = numeric())
-for(count in 1:n) {
-  dat <- tibble(w = rnorm(100, sd = 20)) |>
-      mutate(
-          Time = 1:n(),
-           z = purrr::accumulate2(
-              lag(w), w, 
-              \(acc, nxt, w) 0.8 * acc + w,
-              .init = 0)[-1],
-            x = 50 + 3 * Time + z
-              ) |>
-      tsibble::as_tsibble(index = Time)
-  
-  dat_lm <- dat |>
-  model(lm = TSLM(x ~ Time))
+# This code simulates the data for this example
+#
+# parameter_est <- data.frame(alpha0 = numeric(), alpha1 = numeric())
+# for(count in 1:n) {
+#   dat <- tibble(w = rnorm(100, sd = 20)) |>
+#       mutate(
+#           Time = 1:n(),
+#            z = purrr::accumulate2(
+#               lag(w), w, 
+#               \(acc, nxt, w) 0.8 * acc + w,
+#               .init = 0)[-1],
+#             x = 50 + 3 * Time + z
+#               ) |>
+#       tsibble::as_tsibble(index = Time)
+#   
+#   dat_lm <- dat |>
+#   model(lm = TSLM(x ~ Time))
+# 
+#   parameters <- tidy(dat_lm) |> pull(estimate)
+#   parameter_est <- parameter_est |>
+#     bind_rows(data.frame(alpha0 = parameters[1], alpha1 = parameters[2])) 
+# }
+# 
+# parameter_est |> 
+#   rio::export("data/chapter_5_lesson_1_simulation.parquet")
 
-  parameters <- tidy(dat_lm) |> pull(estimate)
-  parameter_est <- parameter_est |>
-    bind_rows(data.frame(alpha0 = parameters[1], alpha1 = parameters[2])) 
-}
+parameter_est <- rio::import("data/chapter_5_lesson_1_simulation.parquet")
+
 
 standard_errors <- parameter_est |>
   summarize(
@@ -298,7 +295,7 @@ standard_errors <- parameter_est |>
 | $\alpha_0$ | `r params[1] |> round(3)` | `r stderr[1] |> round(3)` | `r standard_errors$alpha0 |> round(3)` |
 | $\alpha_1$ | `r params[2] |> round(3)` | `r stderr[2] |> round(3)` | `r standard_errors$alpha1 |> round(3)` |
 
-: Autocorrelation function and partial autorcorrelation function of the residuals from the fitted linear model for the simulated data. {#tbl-simParameters}
+: Autocorrelation function and partial autorcorrelation function of the residuals from the fitted linear model for the simulated data. Several realizations of the time series were simulated, and the standard deviation of the estimated parameters from the simulation is compared against the standard errors obtained by ordinary least squares regression. {#tbl-simParameters}
 
 
 ::: {.callout-warning}
@@ -390,7 +387,8 @@ tidy(temp_lm) |>
   mutate(
     lower = estimate + qnorm(0.025) * std.error,
     upper = estimate + qnorm(0.975) * std.error
-  )
+  ) |>
+  display_table()
 ```
 
 The 95% confidence interval for the slope does not contain zero. If the errors were independent, this would be conclusive evidence that there is a significant linear relationship between the year and the global temperature.
