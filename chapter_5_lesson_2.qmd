@@ -62,37 +62,7 @@ source("common_functions.R")
 
 ## Class Activity: XXXXXXXXXXXXXXXXXXXXXX (xxx min)
 
-::: {.callout-note title="Fourier Series"}
-The **Fourier Series** is an infinite series representation of a smooth function $f(t)$ with period $s$:
-$$
-  f(t) = \frac{A_0}{2} + \sum_{i=1}^{\infty} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
-$$
-The coefficients $A_i$ and $B_i$ are defined by the integrals:
-$$
-  A_i = \frac{2}{s} \int_0^s f(t) \cos \left( \frac{2\pi i t}{s} \right) \; dt
-  ~~~~~~~~~~~~~~~~~~
-  B_i = \frac{2}{s} \int_0^s f(t) \sin \left( \frac{2\pi i t}{s} \right) \; dt
-$$
-
-:::
-
-The function $f(t)$ can be approximated to any desired level of precision by truncating the series after a sufficient number of terms.
-
-The Fourier Series exists for any smooth (continuously differentiable) function. Note that this allows us to obtain the value of the function at any real value. 
-For a time series with $s$ seasons, we are only need to evaluate the function at a finite number of points: 
-$t = 1, 2, 3, \ldots, s-1, s$. Hence, we only need to obtain $\left\lfloor \frac{s}{2} \right\rfloor$ terms of this sum to fit the values perfectly. We can usually get a good approximation with only a few terms.
-
-For a time series with $s$ seasons per cycle, our additive model can be written as:
-
-\begin{align*}
-  x_t
-    &= m_t + s_t + z_t \\
-    &= m_t +
-        \sum_{i=1}^{\left\lfloor \frac{s}{2} \right\rfloor} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
-      + z_t
-\end{align*}
-
-# Continue from pg. 102
+### Review of Trigonometry
 
 
 In trigonometry, you learned that
@@ -116,6 +86,98 @@ Consider the sine wave with the following parameters:
 
 Using this sum/difference identity from trigonometry, we have transformed this from something that is not linear in the parameters $A$ and $\phi$ to an expression that is linear in the parameters $\alpha_s$ and $\alpha_c$.
 
+If we denote the frequency as $f = \frac{i}{s}$, where $s$ is the number of seasons in a cycle and $i$ is a given integer, where $i = 1, 2, 3, \ldots, \left\lfloor \frac{s}{2} \right\rfloor$, we get:
+
+\begin{align*}
+  A \sin \left( \frac{2 \pi i t}{s} + \phi \right)
+    &= \underbrace{A \cos( \phi )}_{\alpha_s} \cdot \sin \left( \frac{2 \pi i t}{s} \right) + \underbrace{A \sin( \phi )}_{\alpha_c} \cdot \cos \left( \frac{2 \pi i t}{s} \right) \\
+    &= \alpha_s \cdot \sin \left( \frac{2 \pi i t}{s} \right) + \alpha_c \cdot \cos \left( \frac{2 \pi i t}{s} \right) 
+\end{align*}
+
+### Fourier Series
+
+::: {.callout-note title="Fourier Series"}
+The **Fourier Series** is an infinite series representation of a smooth function $f(t)$ with period $s$:
+$$
+  f(t) = \frac{A_0}{2} + \sum_{i=1}^{\infty} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
+$$
+The coefficients $A_i$ and $B_i$ are defined by the integrals:
+$$
+  A_i = \frac{2}{s} \int_0^s f(t) \cos \left( \frac{2\pi i t}{s} \right) \; dt
+  ~~~~~~~~~~~~~~~~~~
+  B_i = \frac{2}{s} \int_0^s f(t) \sin \left( \frac{2\pi i t}{s} \right) \; dt
+$$
+
+:::
+
+The function $f(t)$ can be approximated to any desired level of precision by truncating the series after a sufficient number of terms.
+
+The Fourier Series exists for any smooth (continuously differentiable) function. Note that this allows us to obtain the value of the function at any real value. 
+For a time series with $s$ seasons, we are only need to evaluate the function at a finite number of points: 
+$t = 1, 2, 3, \ldots, s-1, s$. Hence, we only need to obtain $\left\lfloor \frac{s}{2} \right\rfloor$ terms of this sum to fit the values perfectly. 
+
+| Pattern            | Periods per Cycle, $s$ | Maximum terms in the sum, $\left\lfloor \frac{s}{2} \right\rfloor$ |
+|--------------------|------------------------|------------------------|
+| Days in a Week     | 7                      | 3                      |
+| Quarters in a Year | 4                      | 2                      |
+| Months in a Year   | 12                     | 6                      |
+
+: A few examples of seasonal patterns and the corresponding values of $s$ and $\left\lfloor \frac{s}{2} \right\rfloor$ {#tbl-sAndFloorFunction}
+
+Note that if $s$ is even, when $i=\frac{s}{2}$, 
+$$
+  \sin \left( \frac{2\pi i t}{s} \right) = 0
+$$
+for all integer values of $t$. So, this term can be omitted from the model.
+
+We can usually get a good approximation with only a few terms.
+
+For a time series with $s$ seasons per cycle, our additive model can be written as:
+
+\begin{align*}
+  x_t
+    &= m_t + s_t + z_t \\
+    &= m_t +
+        \sum_{i=1}^{\left\lfloor \frac{s}{2} \right\rfloor} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
+      + z_t
+\end{align*}
+
+The term $m_t$ can take a variety of forms, including:
+
+-   Linear:       $~~~~~~~~~~~$ $m_t = \alpha_0 + \alpha_1 t$
+-   Quadratic:    $~~~~~~$ $m_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2$
+-   Exponential:  $~~~$ $m_t = \alpha_0 e^{\alpha_1 t}$
+-   Any other functional form
+
+The term $z_t$ is a (possibly autocorrelated) time series with mean zero.
+
+We will now focus on the seasonal term, $s_t$.
+The full seasonal term when considering 12 months in a year is:
+
+\begin{align*}
+  s_t 
+    &= \sum_{i=1}^{\left\lfloor \frac{s}{2} \right\rfloor} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\} \\
+    &= \sum_{i=1}^{6} \left\{ A_i \sin \left( \frac{2\pi i t}{12} \right) + B_i \cos \left( \frac{2\pi i t}{12} \right) \right\} \\
+    &=~~~ \left\{ A_1 \sin \left( \frac{2\pi t}{12} \right) + B_1 \cos \left( \frac{2\pi t}{12} \right) \right\} & \leftarrow i = 1 \\
+    &~~~~+ \left\{ A_2 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) + B_2 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \right\} & \leftarrow i = 2 \\
+    &~~~~+ \left\{ A_3 \sin \left( \frac{2\pi \cdot 3 t}{12} \right) + B_3 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \right\} & \leftarrow i = 3 \\
+    &~~~~+ \left\{ A_4 \sin \left( \frac{2\pi \cdot 4 t}{12} \right) + B_4 \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \right\} & \leftarrow i = 4 \\
+    &~~~~+ \left\{ A_5 \sin \left( \frac{2\pi \cdot 5 t}{12} \right) + B_5 \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \right\} & \leftarrow i = 5 \\
+    &~~~~+ \left\{ A_6 \sin \left( \frac{2\pi \cdot 6 t}{12} \right) + B_6 \cos \left( \frac{2\pi \cdot 6 t}{12} \right) \right\} & \leftarrow i = 6 \\
+    &=~~~ \left\{ A_1 \sin \left( \frac{2\pi t}{12} \right) + B_1 \cos \left( \frac{2\pi t}{12} \right) \right\}  \\
+    &~~~~+ \left\{ A_2 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) + B_2 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \right\} \\
+    &~~~~+ \left\{ A_3 \sin \left( \frac{2\pi \cdot 3 t}{12} \right) + B_3 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \right\} \\
+    &~~~~+ \left\{ A_4 \sin \left( \frac{2\pi \cdot 4 t}{12} \right) + B_4 \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \right\} \\
+    &~~~~+ \left\{ A_5 \sin \left( \frac{2\pi \cdot 5 t}{12} \right) + B_5 \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \right\} \\
+    &~~~~+ \left\{ \phantom{A_6 \sin \left( \frac{2\pi \cdot 6 t}{12} \right) +}~~ B_6 \cos \left( \frac{2\pi \cdot 6 t}{12} \right) \right\} \\
+\end{align*}
+
+Note that $\sin \left( \frac{2\pi \cdot 6 t}{12} \right) = 0$ for all integer values of $t$, so we can omit this term.
+
+# Continue from pg. 102
+
+
+
 <!-- Beginning of two columns -->
 ::: columns
 ::: {.column width="45%"}
@@ -126,14 +188,12 @@ Using this sum/difference identity from trigonometry, we have transformed this f
 #| label: fig-namegoeshereAlso
 #| fig-cap: "Title goes here"
 
-create_sine_df <- function(i = 1, max_t = 12) {
-  periods <-  floor(max_t / 2)
+create_sine_df <- function(i, cycle_length = 12) {
   df <- tibble(
-    t = seq(from = 0, to = max_t, length.out = 501),
-    value = sin(2 * pi * i * t / periods),
+    t = seq(from = 0, to = cycle_length, length.out = 501),
+    value = sin(2 * pi * i * t / cycle_length),
     i = right(paste0(" ", as.character(i)), 2)
   )
-  
 }
 
 sine_df <- create_sine_df(i = 1)
@@ -175,14 +235,12 @@ ggplot(sine_df, aes(x = t, y = 28 + value - 4*as.numeric(i), color = i)) +
 #| label: fig-namegoeshere
 #| fig-cap: "Title goes here"
 
-create_cosine_df <- function(i = 1, max_t = 12) {
-  periods <-  floor(max_t / 2)
+create_cosine_df <- function(i, cycle_length = 12) {
   df <- tibble(
-    t = seq(from = 0, to = max_t, length.out = 501),
-    value = cos(2 * pi * i * t / periods),
+    t = seq(from = 0, to = cycle_length, length.out = 501),
+    value = cos(2 * pi * i * t / cycle_length),
     i = right(paste0(" ", as.character(i)), 2)
   )
-  
 }
 
 cosine_df <- create_cosine_df(i = 1)
