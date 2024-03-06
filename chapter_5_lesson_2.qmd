@@ -78,6 +78,8 @@ Here is an interactive plot of this function. Adjust the values of $A$, $f$, and
 
 <iframe src="https://www.desmos.com/calculator/sgbxo2c0hx" width="750" height="500" style="border: 1px solid #ccc" frameborder=0></iframe>
 
+Notice that this sine function is not linear in the parameters $A$ and $\phi$. 
+
 One of the trigonometric sum and difference identities is:
 
 \begin{align*}
@@ -107,11 +109,15 @@ If we denote the frequency as $f = \frac{i}{s}$, where $s$ is the number of seas
 ### Fourier Series
 
 ::: {.callout-note title="Fourier Series"}
+
 The **Fourier Series** is an infinite series representation of a smooth function $f(t)$ with period $s$:
+
 $$
   f(t) = \frac{A_0}{2} + \sum_{i=1}^{\infty} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
 $$
+
 The coefficients $A_i$ and $B_i$ are defined by the integrals:
+
 $$
   A_i = \frac{2}{s} \int_0^s f(t) \cos \left( \frac{2\pi i t}{s} \right) \; dt
   ~~~~~~~~~~~~~~~~~~
@@ -120,13 +126,13 @@ $$
 
 :::
 
-The function $f(t)$ can be approximated to any desired level of precision by truncating the series after a sufficient number of terms.
+The function $f(t)$ can be approximated to any desired level of precision by truncating the series after a sufficient number of terms. For the purpose of this discussion, one term is of the form $\left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}$.
 
-The Fourier Series exists for any smooth (continuously differentiable) function. Note that this allows us to obtain the value of the function at any real value. 
-For a time series with $s$ seasons, we are only need to evaluate the function at a finite number of points: 
+The Fourier series exists for any smooth (continuously differentiable) function. Note that this allows us to obtain the value of the function at any real value. 
+For a discrete time series with $s$ seasons, we are only need to evaluate the function at a finite number of points: 
 $t = 1, 2, 3, \ldots, s-1, s$. Hence, we only need to obtain $\left\lfloor \frac{s}{2} \right\rfloor$ terms of this sum to fit the values perfectly. 
 
-| Pattern            | Periods per Cycle, $s$ | Maximum terms in the sum, $\left\lfloor \frac{s}{2} \right\rfloor$ |
+| Pattern            | Number of Seasons, $s$ | Maximum terms in the sum, $\left\lfloor \frac{s}{2} \right\rfloor$ |
 |--------------------|------------------------|------------------------|
 | Days in a Week     | 7                      | 3                      |
 | Quarters in a Year | 4                      | 2                      |
@@ -136,7 +142,7 @@ $t = 1, 2, 3, \ldots, s-1, s$. Hence, we only need to obtain $\left\lfloor \frac
 
 Note that if $s$ is even, when $i=\frac{s}{2}$, 
 $$
-  \sin \left( \frac{2\pi i t}{s} \right) = 0
+  \sin \left( \frac{2\pi i t}{s} \right) = \sin \left( \frac{2\pi \cdot \frac{s}{2} \cdot t}{s} \right) = \sin \left( \pi t \right) = 0
 $$
 for all integer values of $t$. So, this term can be omitted from the model.
 
@@ -190,6 +196,9 @@ We can often use a small subset of these terms to get a good approximation of th
 
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
 weather_df <- rio::import("data/rexburg_weather_monthly.csv") |>
   mutate(dates = my(date_text)) |>
   filter(dates >= my("1/2008")) |>
@@ -209,40 +218,254 @@ weather_df <- rio::import("data/rexburg_weather_monthly.csv") |>
     sin5 = sin(2 * pi * 5 * TIME/12),
     sin6 = sin(2 * pi * 6 * TIME/12)) |>
   as_tsibble(index = TIME)
+```
 
-dat_lm1 <- weather_df |>
-  model(full = TSLM(x ~ TIME +
-    cos1 + sin1 + cos2 + sin2 + cos3 + sin3 +
-    cos4 + sin4 + cos5 + sin5 + cos6 ))
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 
-dat_lm1 |>
+full_cubic_lm <- weather_df |>
+  model(full_cubic = TSLM(x ~ TIME + I(TIME^2) + I(TIME^3) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 ))
+
+full_cubic_lm |>
   tidy() |>
-  mutate(t = estimate / std.error) |>
+  mutate(sig = p.value < 0.05) 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+full_quadratic_lm <- weather_df |>
+  model(full_quadratic = TSLM(x ~ TIME + I(TIME^2) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 ))
+
+full_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced1_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_1  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6))
+
+reduced1_quadratic_lm |>
+  tidy() |>
   mutate(sig = p.value < 0.05)
-  # pull(t)
+```
 
-dat_lm2 <- weather_df |>
-  model(reduced  = TSLM(x ~ TIME + sin1 + sin2))
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 
-dat_lm2 |>
+reduced2_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_2  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos6))
+
+reduced2_quadratic_lm |>
   tidy() |>
-  mutate(t = estimate / std.error) 
-# |>
-#   pull(`estimate/std.error`)
+  mutate(sig = p.value < 0.05) 
+```
 
-dat_lm2 |>
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced3_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_3  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3))
+
+reduced3_quadratic_lm |>
   tidy() |>
-  pull(estimate)
+  mutate(sig = p.value < 0.05)
+```
 
-model_three <- weather_df |>
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced4_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_4  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
+
+reduced4_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced5_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_5  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2))
+
+reduced5_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced6_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_6  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1))
+
+reduced6_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+full_linear_lm <- weather_df |>
+  model(full_linear = TSLM(x ~ TIME + I(TIME^2) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 ))
+
+full_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced1_linear_lm <- weather_df |>
+  model(reduced_linear_1  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6))
+
+reduced1_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced2_linear_lm <- weather_df |>
+  model(reduced_linear_2  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos6))
+
+reduced2_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced3_linear_lm <- weather_df |>
+  model(reduced_linear_3  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3))
+
+reduced3_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced4_linear_lm <- weather_df |>
+  model(reduced_linear_4  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
+
+reduced4_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced5_linear_lm <- weather_df |>
+  model(reduced_linear_5  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2))
+
+reduced5_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced6_linear_lm <- weather_df |>
+  model(reduced_linear_6  = TSLM(x ~ TIME + sin1 + cos1))
+
+reduced6_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| output: false
+
+model_combined <- weather_df |>
   model(
-    full = TSLM(x ~ TIME + I(TIME^2) +
-      cos1 + sin1 + cos2 + sin2 + cos3 + sin3 +
-      cos4 + sin4 + cos5 + cos6 + sin6),
-    reduced  = TSLM(x ~ I(TIME^2) + sin1 + sin2),
-    third = TSLM(x ~ TIME + I(TIME^2) + sin1 + sin2 + sin4 + cos4))
+    full_cubic = TSLM(x ~ TIME + I(TIME^2) + I(TIME^3) +
+      sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+      + sin4 + cos4 + sin5 + cos5 + cos6),
+    full_quadratic = TSLM(x ~ TIME + I(TIME^2) +
+      sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+      + sin4 + cos4 + sin5 + cos5 + cos6),
+    full_linear = TSLM(x ~ TIME + I(TIME^2) +
+      sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+      + sin4 + cos4 + sin5 + cos5 + cos6 ),
+    reduced_quadratic_1  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6),
+    reduced_quadratic_2  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos6),
+    reduced_quadratic_3  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3),
+    reduced_quadratic_4  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
+    reduced_quadratic_5  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2),
+    reduced_quadratic_6  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1),
+    reduced_linear_1  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6),
+    reduced_linear_2  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos6),
+    reduced_linear_3  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3),
+    reduced_linear_4  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
+    reduced_linear_5  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2),
+    reduced_linear_6  = TSLM(x ~ TIME + sin1 + cos1)
+  )
 
-glance(model_three) |> select(.model, AIC, AICc, BIC)
+glance(model_combined) |> 
+  select(.model, AIC, AICc, BIC)
+```
+
+
+```{r}
+#| echo: false
+
+combined_models <- glance(model_combined) |> 
+  select(.model, AIC, AICc, BIC)
+
+minimum <- combined_models |>
+  summarize(
+    AIC = which(min(AIC)==AIC),
+    AICc = which(min(AICc)==AICc),
+    BIC = which(min(BIC)==BIC)
+  )
+combined_models |>
+  rename(Model = ".model") |>
+  round_df(1) |>
+  format_cells(rows = minimum$AIC, cols = 2, "bold") |>
+  format_cells(rows = minimum$AICc, cols = 3, "bold") |>
+  format_cells(rows = minimum$BIC, cols = 4, "bold") |>
+  display_table()
 ```
 
 
