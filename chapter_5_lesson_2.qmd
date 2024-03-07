@@ -140,11 +140,11 @@ $t = 1, 2, 3, \ldots, s-1, s$. Hence, we only need to obtain $\left\lfloor \frac
 
 : A few examples of seasonal patterns and the corresponding values of $s$ and $\left\lfloor \frac{s}{2} \right\rfloor$ {#tbl-sAndFloorFunction}
 
-Note that if $s$ is even, when $i=\frac{s}{2}$, 
+Note that if $s$ is even and $i=\frac{s}{2}$, 
 $$
   \sin \left( \frac{2\pi i t}{s} \right) = \sin \left( \frac{2\pi \cdot \frac{s}{2} \cdot t}{s} \right) = \sin \left( \pi t \right) = 0
 $$
-for all integer values of $t$. So, this term can be omitted from the model.
+for all integer values of $t$. So, this term must be omitted from the model.
 
 We can usually get a good approximation with only a few terms.
 
@@ -192,16 +192,20 @@ Note that $\sin \left( \frac{2\pi \cdot 6 t}{12} \right) = 0$ for all integer va
 
 We can often use a small subset of these terms to get a good approximation of the seasonal component.
 
-### Example: Monthly Average High Temperature in Rexburg
+## Class Activity: Monthly Average High Temperature in Rexburg (xxx min)
 
+### Visualization of the Time Series
+
+Consider the mean monthly high temperature in Rexburg.
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
+#| warning: false
 
 weather_df <- rio::import("data/rexburg_weather_monthly.csv") |>
   mutate(dates = my(date_text)) |>
-  filter(dates >= my("1/2008")) |>
+  filter(dates >= my("1/2008") & dates <= my("12/2023")) |>
   rename(x = avg_daily_high_temp) |>
   mutate(TIME = 1:n()) |>
   mutate(
@@ -218,7 +222,31 @@ weather_df <- rio::import("data/rexburg_weather_monthly.csv") |>
     sin5 = sin(2 * pi * 5 * TIME/12),
     sin6 = sin(2 * pi * 6 * TIME/12)) |>
   as_tsibble(index = TIME)
+
+weather_df |>
+  as_tsibble(index = dates) |>
+  autoplot(.vars = x) +
+  geom_smooth(method = "lm", model = x ~ dates, se = FALSE, color = "#F0E442") +
+    labs(
+      x = "Month",
+      y = "Mean Daily High Temperature (Fahrenheit)",
+      title = "Time Plot of Mean Daily Rexburg High Temp by Month",
+      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
 ```
+
+### Model Selection
+
+#### Cubic Trend: Full Model
+
+Visually, we can identify a positive linear trend in the data. It is possible that there are higher-order properties of the trend. We will include a quadratic and cubic term in our search for a model.
+
+In addition to modeling the trend, we need to include terms for the seasonal component. We start with a full model that includes all six of the the sine and cosine terms from the summation above.
 
 ```{r}
 #| code-fold: true
@@ -234,6 +262,16 @@ full_cubic_lm |>
   mutate(sig = p.value < 0.05) 
 ```
 
+The cubic term in the trend is not significant, but the quadratic term is! The coefficient on the quadratic term is very small and negative. In other words, the data do not show an acceleration in the rate of global warming, even though the slope is positive.
+
+::: {.callout-caution}
+If you choose a different range of dates, you may get a different result. The regression model is fitted to the data, not to the physical situation.
+:::
+
+#### Quadratic Trend: Full Model
+
+We now fit a model that 
+
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -248,6 +286,8 @@ full_quadratic_lm |>
   mutate(sig = p.value < 0.05) 
 ```
 
+#### Quadratic Trend: Reduced Model 1
+
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -259,6 +299,8 @@ reduced1_quadratic_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
+
+#### Quadratic Trend: Reduced Model 2
 
 ```{r}
 #| code-fold: true
@@ -272,6 +314,8 @@ reduced2_quadratic_lm |>
   mutate(sig = p.value < 0.05) 
 ```
 
+#### Quadratic Trend: Reduced Model 3
+
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -283,6 +327,8 @@ reduced3_quadratic_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
+
+#### Quadratic Trend: Reduced Model 4
 
 ```{r}
 #| code-fold: true
@@ -296,6 +342,8 @@ reduced4_quadratic_lm |>
   mutate(sig = p.value < 0.05)
 ```
 
+#### Quadratic Trend: Reduced Model 5
+
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -307,6 +355,8 @@ reduced5_quadratic_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
+
+#### Quadratic Trend: Reduced Model 6
 
 ```{r}
 #| code-fold: true
@@ -322,6 +372,7 @@ reduced6_quadratic_lm |>
 
 
 
+#### Linear Trend: Full Model
 
 ```{r}
 #| code-fold: true
@@ -337,6 +388,8 @@ full_linear_lm |>
   mutate(sig = p.value < 0.05) 
 ```
 
+#### Linear Trend: Reduced Model 1
+
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -348,6 +401,8 @@ reduced1_linear_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
+
+#### Linear Trend: Reduced Model 2
 
 ```{r}
 #| code-fold: true
@@ -361,6 +416,8 @@ reduced2_linear_lm |>
   mutate(sig = p.value < 0.05) 
 ```
 
+#### Linear Trend: Reduced Model 3
+
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -372,6 +429,8 @@ reduced3_linear_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
+
+#### Linear Trend: Reduced Model 4
 
 ```{r}
 #| code-fold: true
@@ -385,6 +444,8 @@ reduced4_linear_lm |>
   mutate(sig = p.value < 0.05)
 ```
 
+#### Linear Trend: Reduced Model 5
+
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -396,6 +457,8 @@ reduced5_linear_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
+
+#### Linear Trend: Reduced Model 6
 
 ```{r}
 #| code-fold: true
@@ -409,8 +472,7 @@ reduced6_linear_lm |>
   mutate(sig = p.value < 0.05)
 ```
 
-
-
+#### Model Comparison
 
 ```{r}
 #| code-fold: true
