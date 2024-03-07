@@ -43,6 +43,7 @@ okabeito_colors_list <- c(
 
 # Definition
 emdash <- "—"
+endash <- "–"
 
 # Rounding ----
 ## Round Dataframe ----
