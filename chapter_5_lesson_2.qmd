@@ -557,7 +557,8 @@ glance(model_combined) |>
 
 
 ```{r}
-#| echo: false
+#| code-fold: true
+#| code-summary: "Show the code"
 
 combined_models <- glance(model_combined) |> 
   select(.model, AIC, AICc, BIC)
@@ -614,25 +615,275 @@ For these reasons, we will apply the "Reduced Linear 5" model. This model implie
 
 \begin{align*}
   x_t &= \beta_0 + \beta_1 t  
-            + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) + z_t
+            + \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~ + \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) + z_t
 \end{align*}
 
 
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+num_months <- weather_df |> 
+  as_tibble() |> 
+  dplyr::select(TIME) |> 
+  tail(1) |> 
+  pull()
+
+df <- tibble( TIME = seq(1, num_months, 0.01) ) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * TIME/12),
+    cos2 = cos(2 * pi * 2 * TIME/12),
+    cos3 = cos(2 * pi * 3 * TIME/12),
+    cos4 = cos(2 * pi * 4 * TIME/12),
+    cos5 = cos(2 * pi * 5 * TIME/12),
+    cos6 = cos(2 * pi * 6 * TIME/12),
+    sin1 = sin(2 * pi * 1 * TIME/12),
+    sin2 = sin(2 * pi * 2 * TIME/12),
+    sin3 = sin(2 * pi * 3 * TIME/12),
+    sin4 = sin(2 * pi * 4 * TIME/12),
+    sin5 = sin(2 * pi * 5 * TIME/12),
+    sin6 = sin(2 * pi * 6 * TIME/12)) |>
+  as_tsibble(index = TIME)
+
+quad1_ts <- reduced1_quadratic_lm |>
+  forecast(df) |>
+  as_tibble() |>
+  dplyr::select(TIME, .mean) |>
+  rename(value = .mean) |>
+  mutate(Model = "Quadratic 1")
+
+quad5_ts <- reduced5_quadratic_lm |>
+  forecast(df) |>
+  as_tibble() |>
+  dplyr::select(TIME, .mean) |>
+  rename(value = .mean) |>
+  mutate(Model = "Quadratic 5")
+
+linear5_ts <- reduced5_linear_lm |>
+  forecast(df) |>
+  as_tibble() |>
+  dplyr::select(TIME, .mean) |>
+  rename(value = .mean) |>
+  mutate(Model = "Linear 5")
+
+data_ts <- weather_df |> 
+  as_tibble() |>
+  rename(value = x) |>
+  mutate(Model = "Data") |>
+  dplyr::select(TIME, value, Model)
+
+combined_ts <- bind_rows(data_ts, quad1_ts, quad5_ts, linear5_ts) 
+point_ts <- combined_ts |> filter(TIME == floor(TIME))
+
+combined_ts |>
+  ggplot(aes(x = TIME, y = value, color = Model)) +
+  geom_line() +
+  geom_point(data = point_ts) +
+  labs(
+      x = "Month Number",
+      y = "Temperature (Fahrenheit)",
+      title = "Monthly Average of Daily High Temperatures in Rexburg",
+      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+### Standardizing the Time Variable
+
+::: {.callout-warning}
+When the independent variable (the measure of time) is large, floating point errors in the computation of the regression coefficents can be substantial. 
+:::
+
+To avoid serious floating point errors, we standardize the time variable. First, compute the sine and cosine terms using the original time variable, then transform the time variable by subtracting its mean and dividing by its standard deviation. (In other words, compute a $z$-score.)
+
+The model is adjusted accordingly after fitting.
+
+We will demonstrate this with the "Reduced Linear 5" and "Reduced Quadratic 5" models.
+
+#### Computing the standardized time variable
+
+Our time variable was a simple incremented value counting the months ranging from 
+`r weather_df |> as_tibble() |> dplyr::select(TIME) |> head(1) |> pull()` 
+(representing `r weather_df |> as_tibble() |> dplyr::select(date_text) |> head(1) |> pull()`) 
+to 
+`r weather_df |> as_tibble() |> dplyr::select(TIME) |> tail(1) |> pull()` 
+(representing `r weather_df |> as_tibble() |> dplyr::select(date_text) |> tail(1) |> pull()`).
+
+We standardize this variable by the transformation:
+
+$$
+  zTIME = \frac{t - mean}{standard~devation}
+$$
+
+```{r}
+#| echo: false
+
+stats <- weather_df |>
+  as_tibble() |>
+  dplyr::select(TIME) |>
+  summarize(mean = mean(TIME), sd = sd(TIME)) |>
+  round_df(3)
+```
+
+
+The mean of the variable `TIME` is $\bar t = `r stats$mean`$, and the standard deviation is $s_t = `r stats$sd`$.
+
+```{r}
+weather_df <- weather_df |>
+  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME))
+```
+
+Now, we fit the models using `zTIME` instead of `TIME`.
+
+#### Reduced Linear 5
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced5_linear_lm <- weather_df |>
+  model(reduced_linear_5  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2))
+
+reduced5_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+r5lin_coef <- reduced5_linear_lm |>
+  tidy() |>
+  select(term, estimate, std.error) |>
+  round_df(3)
+```
+
+The fitted model is:
+
+\begin{align*}
+  x_t &= \hat \beta_0 + \hat \beta_1 \left( zTIME \right)  \\
+      & ~~~~~~~~~~ + \hat \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \hat \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~ + \hat \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \hat \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= \hat \beta_0 + \hat \beta_1 \left( \frac{t - \bar t}{s_t} \right)  \\
+      & ~~~~~~~~~~ + \hat \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \hat \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~ + \hat \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \hat \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= `r r5lin_coef$estimate[1]` 
+            + `r r5lin_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right) \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+\end{align*}
+
+This can be simplified, if desired.
+
+#### Reduced Quadratic 5
+
+To illustrate this procedure, we will also fit the model called "Reduced Quadratic 5".
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced5_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_5  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2))
+
+reduced5_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+r5quad_coef <- reduced5_quadratic_lm |>
+  tidy() |>
+  select(term, estimate, std.error) |>
+  round_df(3)
+```
+
+The fitted model is:
+
+\begin{align*}
+  x_t &= \hat \beta_0 + \hat \beta_1 \left( zTIME \right) + \hat \beta_2 \left( zTIME \right)^2  \\
+      & ~~~~~~~~~~ + \hat \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \hat \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~ + \hat \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \hat \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= \hat \beta_0 + \hat \beta_1 \left( \frac{t - \bar t}{s_t} \right) + \hat \beta_2 \left( \frac{t - \bar t}{s_t} \right)^2 \\
+      & ~~~~~~~~~~ + \hat \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \hat \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~ + \hat \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \hat \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= `r r5quad_coef$estimate[1]` 
+            + `r r5quad_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right)
+            + (`r r5quad_coef$estimate[3]`) \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right)^2 \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5quad_coef$estimate[4]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5quad_coef$estimate[5]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5quad_coef$estimate[6]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5quad_coef$estimate[7]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+\end{align*}
+
+If we want, we could rewrite this by expanding out the polynomial in the first three terms, but it is not necessary.
 
 
 
 
 ## Small-Group Activity: River Flow (15 min)
 
+The Fall River is a tributary of the Henrys Fork of the Snake River northeast of Rexburg, Idaho. The United States Geological Survey (USGS) provides data every fifteen minutes on the flow rate (in cubic feet per second, cfs) of this river.
+
+This map shows the location of the monitoring station. On the left, you can see where Highway 20 intersects with Main St. in Ashton, Idaho.
+
+![Map of the fall river monitoring station](images/fallriver_map.png)
+Here is a glimpse of the data:
+
 ```{r}
-# Last attempt
+#| echo: false
 
-library(zoo, magrittr)
+temp <- rio::import("data/fallriver.parquet")
 
-fallriver_ts <- rio::import("data/fallriver.parquet") |>
+last_year <- temp |> 
+  mutate(year = as.numeric(left(datetime, 4))) |> 
+  summarize(max = max(year)) |> 
+  pull()
+
+first_year <- temp |> 
+  mutate(year = as.numeric(left(datetime, 4))) |> 
+  summarize(min = min(year)) |> 
+  pull()
+
+temp |>
+  dplyr::select(-comments) |>
+  display_partial_table(4,4)
+```
+
+The `r last_year` water year goes from October 1, `r last_year - 1` to September 30, `r last_year`. The data starts with the `r first_year + 1` water year and goes through the `r last_year` water year.
+
+We will average the flow rates across the first and last half of each month, so there are 24 values in a year. For various reasons, there are gaps in the data, even after averaging across the first and last half of the month. We impute the missing values by linear interpolation using the `zoo` package. This just means that when we encounter NAs, we fit a line between the most recent observed value and the next observed value. Then, we fill all the NAs in with the value given by the line.
+
+Here are a few of the values, after averaging:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# load necessary packages
+pacman::p_load(zoo) # for linear interpolation of missing values
+
+# create the tsibble
+fallriver_ts0 <- rio::import("data/fallriver.parquet") |>
   mutate(date = ymd_hm(datetime)) |>
   dplyr::select(datetime, date, flow) |>
   mutate(dates = ymd(paste0(year(date), "/", month(date), "/", day(date)))) |>
@@ -642,6 +893,7 @@ fallriver_ts <- rio::import("data/fallriver.parquet") |>
   as_tsibble(index = dates) |>
   fill_gaps() |> 
   read.zoo() %>% 
+  # impute missing values by interpolation
   na.approx(xout = seq(start(.), end(.), "day")) %>% 
   fortify.zoo() |>
   rename(
@@ -654,6 +906,24 @@ fallriver_ts <- rio::import("data/fallriver.parquet") |>
   summarize(flow = mean(flow)) |>
   ungroup() |> 
   rename(dates = dates2) |>
+  as_tsibble(index = dates, regular = FALSE)
+```
+
+
+```{r}
+#| echo: false
+
+fallriver_ts0 |>
+  display_partial_table(4,4)
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+fallriver_ts <- fallriver_ts0 |>
+  # compute additional variables needed for the regression
   mutate(TIME = 1:n()) |>
   mutate(
     cos1 = cos(2 * pi * 1 * TIME/24),
@@ -679,11 +949,79 @@ fallriver_ts <- rio::import("data/fallriver.parquet") |>
     sin9 = sin(2 * pi * 9 * TIME/24),
     sin10 = sin(2 * pi * 10 * TIME/24),
     sin11 = sin(2 * pi * 11 * TIME/24),
-    sin12 = sin(2 * pi * 12 * TIME/24)) |>
-  as_tsibble(index = dates, regular = FALSE) 
+    # sin12 = sin(2 * pi * 12 * TIME/24) # zero for all integer values of t
+  ) 
+   
 
+# plot the time series
 fallriver_ts |>
-  autoplot(.vars = flow)
+  autoplot(.vars = flow) +
+  labs(
+      x = "Date",
+      y = "Flow (cubic feet per second, cfs)",
+      title = "Fall River Flow Rate (cfs)",
+      subtitle = "Above the Yellowstone Canal near Squirrel, Idaho"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+river_full_lm <- fallriver_ts |>
+  model(river_full_lm  = TSLM(flow ~ TIME 
+                              + sin1 + cos1 + sin2 + cos2 
+                              + sin3 + cos3 + sin4 + cos4 
+                              + sin5 + cos5 + sin6 + cos6 
+                              + sin7 + cos7 + sin8 + cos8
+                              + sin9 + cos9 + sin10 + cos10
+                              + sin11 + cos11       + cos12
+                              )
+        )
+
+river_full_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+
+river_reduced1_lm <- fallriver_ts |>
+  model(river_reduced1_lm  = TSLM(flow ~ TIME 
+                              + sin1 + cos1 + sin2 + cos2 
+                              + sin3 + cos3 + sin4 + cos4 
+                              + sin5 + cos5
+                              )
+        )
+
+river_reduced1_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+
+## Small-Group Activity: Retail Sales (xxx min)
+
+```{r}
+# Read in retail sales data for "all other general merchandise stores"
+retail_ts <- rio::import("data/retail_by_business_type.parquet") |>
+  filter(naics == 45299) |>
+  as_tsibble(index = month)
+
+retail_ts |>
+  autoplot(.vars = sales_millions) +
+    labs(
+      x = "Month",
+      y = "Sales (Millions of U.S. Dollars)",
+      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
 
 ```
 
