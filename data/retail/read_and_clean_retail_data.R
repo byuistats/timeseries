@@ -57,7 +57,17 @@ plot_retail_sales <- function(df, naics_value) {
       y = "Sales (Millions of U.S. Dollars)",
       title = paste0(temp_ts$business[1], " (", temp_ts$naics[1], ")")
     ) +
+    theme_minimal() +
     theme(plot.title = element_text(hjust = 0.5))
+}
+
+plot_log_retail_sales <- function(df, naics_value) {
+  plot <- plot_retail_sales(df, naics_value)
+  log_df <- df |>
+    mutate(sales_millions = log(sales_millions))
+  log_plot <- plot_retail_sales(log_df, naics_value)
+
+  plot | log_plot
 }
 
 # Plot decomposition for one business type
@@ -134,7 +144,7 @@ plot_retail_sales(retail, 44819)
 plot_retail_sales(retail, 4482) # Fun multiplicative
 plot_retail_sales(retail, 44831)
 plot_retail_sales(retail, 451)
-plot_retail_sales(retail, 45111) # Great multiplicative pattern
+plot_retail_sales(retail, 45111) # Great multiplicative patternhttp://127.0.0.1:16493/graphics/ff5a0d1c-3d5f-4609-bb0a-a02840e4da73.png
 plot_retail_sales(retail, 45112)
 plot_retail_sales(retail, 451211) # Multiplicative: Rise and fall...very interesting
 plot_retail_sales(retail, 452) # Maybe additive, linear
@@ -157,6 +167,65 @@ plot_retail_sales(retail, 7224)
 plot_retail_sales(retail, 7225) # Multiplicative - Cut off before covid???
 plot_retail_sales(retail, 722511)
 
+
+# Side-by-Side Time Series Plots and TS plot on Log Scale
+plot_log_retail_sales(retail, 441)
+# plot_log_retail_sales(retail, 4411,4412)
+plot_log_retail_sales(retail, 4411)
+plot_log_retail_sales(retail, 44111)
+plot_log_retail_sales(retail, 44112)
+plot_log_retail_sales(retail, 4413)
+# plot_log_retail_sales(retail, 442,443)
+plot_log_retail_sales(retail, 442) # -- Linearized by log
+plot_log_retail_sales(retail, 4421)
+plot_log_retail_sales(retail, 4422) # Multiplicative
+plot_log_retail_sales(retail, 44221)
+plot_log_retail_sales(retail, 442299)
+plot_log_retail_sales(retail, 443)
+plot_log_retail_sales(retail, 443141) # Roughly additive
+plot_log_retail_sales(retail, 443142)
+plot_log_retail_sales(retail, 444)
+plot_log_retail_sales(retail, 4441) # Beautiful multiplicative ******
+plot_log_retail_sales(retail, 44412)
+plot_log_retail_sales(retail, 44413) # Multiplicative
+plot_log_retail_sales(retail, 445) # -- Linearized by log
+plot_log_retail_sales(retail, 4451)
+plot_log_retail_sales(retail, 44511)
+plot_log_retail_sales(retail, 4453)
+plot_log_retail_sales(retail, 446)
+plot_log_retail_sales(retail, 44611)
+plot_log_retail_sales(retail, 447) # Fun, wild multiplicative
+plot_log_retail_sales(retail, 448)
+plot_log_retail_sales(retail, 4481)
+plot_log_retail_sales(retail, 44811)
+plot_log_retail_sales(retail, 44812) # Beautiful additive
+plot_log_retail_sales(retail, 44814)
+plot_log_retail_sales(retail, 44819)
+plot_log_retail_sales(retail, 4482) # Fun multiplicative
+plot_log_retail_sales(retail, 44831)
+plot_log_retail_sales(retail, 451)
+plot_log_retail_sales(retail, 45111) # Great multiplicative pattern
+plot_log_retail_sales(retail, 45112)
+plot_log_retail_sales(retail, 451211) # Multiplicative: Rise and fall...very interesting
+plot_log_retail_sales(retail, 452) # Maybe additive, linear
+plot_log_retail_sales(retail, 4521) # Multiplicative: Rise and fall
+plot_log_retail_sales(retail, 452111)
+plot_log_retail_sales(retail, 452112) # Multiplicative: Rise and fall
+plot_log_retail_sales(retail, 4529) # Multiplicative
+plot_log_retail_sales(retail, 45291) # Multiplicative - very nice
+plot_log_retail_sales(retail, 45299)
+plot_log_retail_sales(retail, 453)
+plot_log_retail_sales(retail, 4532)
+plot_log_retail_sales(retail, 45321)
+plot_log_retail_sales(retail, 45322)
+plot_log_retail_sales(retail, 45330)
+plot_log_retail_sales(retail, 454)
+plot_log_retail_sales(retail, 4541) # Multiplicative - nice
+plot_log_retail_sales(retail, 45431)
+plot_log_retail_sales(retail, 722)
+plot_log_retail_sales(retail, 7224)
+plot_log_retail_sales(retail, 7225) # Multiplicative - Cut off before covid???
+plot_log_retail_sales(retail, 722511)
 
 # Decomposition plots
 decompose_retail_sales(retail, 447) # Gasoline stations
