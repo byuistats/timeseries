@@ -230,7 +230,220 @@ $$
   B_i = \frac{2}{s} \int_0^s f(t) \sin \left( \frac{2\pi i t}{s} \right) \; dt
 $$
 
+(You will not need to compute any of these integrals.)
 :::
+
+<!-- Sample Fourier Series -->
+
+As an example, we will approximate the periodic function illustrated here with a Fourier series.
+
+```{r}
+#| echo: false
+
+fourier_df <- tibble(x = seq(-1.75,1.75,0.01)) |>
+  mutate(
+    terms_1 = sin(pi * x),
+    terms_2 = terms_1 + sin(3 * pi * x) / 3,
+    terms_3 = terms_2 + sin(5 * pi * x) / 5,
+    terms_4 = terms_3 + sin(7 * pi * x) / 7,
+    terms_5 = terms_4 + sin(9 * pi * x) / 9,
+    terms_6 = terms_5 + sin(11 * pi * x) / 11,
+    terms_7 = terms_6 + sin(13 * pi * x) / 13,
+    terms_8 = terms_7 + sin(15 * pi * x) / 15,
+    terms_9 = terms_8 + sin(17 * pi * x) / 17,
+    terms_10 = terms_9 + sin(19 * pi * x) / 19,
+    terms_15 = terms_10 + sin(21 * pi * x) / 21 + sin(23 * pi * x) / 23 
+                        + sin(25 * pi * x) / 25 + sin(27 * pi * x) / 27 
+                        + sin(29 * pi * x) / 29,
+    terms_25 = terms_15 + sin(31 * pi * x) / 31 + sin(33 * pi * x) / 33 
+                        + sin(35 * pi * x) / 35 + sin(37 * pi * x) / 37 
+                        + sin(39 * pi * x) / 39 + sin(41 * pi * x) / 41 
+                        + sin(43 * pi * x) / 43 + sin(45 * pi * x) / 45
+                        + sin(47 * pi * x) / 47 + sin(49 * pi * x) / 49,
+    terms_50 = terms_25 + sin(51 * pi * x) / 51 + sin(53 * pi * x) / 53 
+      + sin(55 * pi * x) / 55 + sin(57 * pi * x) / 57 + sin(59 * pi * x) / 59 
+      + sin(61 * pi * x) / 61 + sin(63 * pi * x) / 63 + sin(65 * pi * x) / 65 
+      + sin(67 * pi * x) / 67 + sin(69 * pi * x) / 69 + sin(71 * pi * x) / 71 
+      + sin(73 * pi * x) / 73 + sin(75 * pi * x) / 75 + sin(77 * pi * x) / 77 
+      + sin(79 * pi * x) / 79 + sin(81 * pi * x) / 81 + sin(83 * pi * x) / 83 
+      + sin(85 * pi * x) / 85 + sin(87 * pi * x) / 87 + sin(89 * pi * x) / 89 
+      + sin(91 * pi * x) / 91 + sin(93 * pi * x) / 93 + sin(95 * pi * x) / 95 
+      + sin(97 * pi * x) / 97 + sin(99 * pi * x) / 99
+  ) |>
+  pivot_longer(names_to = "terms", values_to = "Value", cols = starts_with("terms")) |>
+  mutate(terms = str_remove(terms, "terms_"))
+
+plot_fourier <- function(num_terms) {
+  plot_df <- fourier_df |>
+  filter(terms == num_terms)
+  
+  my_plot <- plot_df |>
+    ggplot(aes(x = x, y = Value)) +
+    geom_segment(aes(x = -1.75, y = 0, xend = 1.75, yend = 0), linewidth = 1, colour = "black") +
+    geom_segment(aes(x = -1.75, y = 0.785, xend = -1, yend = 0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = -1, y = 0.785, xend = -1, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = -1, y = -0.785, xend = 0, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 0, y = -0.785, xend = 0, yend = 0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 0, y = 0.785, xend = 1, yend = 0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 1, y = 0.785, xend = 1, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 1, y = -0.785, xend = 1.75, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_line(aes(colour = "Approximation"), linewidth = 1, alpha = 0.75) +
+    scale_color_manual(values = c("Target Function" = "#E69F00", "Approximation" = "#56B4E9")) +
+    theme_minimal() +
+    coord_cartesian(ylim = c(-1,1)) +
+    labs(title = paste0("Fourier Series Approximation with ", plot_df$terms |> head(1), " Terms")) +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.text.y = element_blank(),
+      legend.position = c(0.9, 0.8),
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5)
+    )
+  
+  return(my_plot)
+}
+```
+
+::: panel-tabset
+#### Target
+
+```{r}
+#| echo: false
+fourier_df |>
+  filter(terms == 1) |>
+  ggplot(aes(x = x, y = Value)) +
+    geom_line(aes(colour = "Approximation"), linewidth = 1, alpha = 0) +
+    geom_segment(aes(x = -1.75, y = 0, xend = 1.75, yend = 0), linewidth = 1, colour = "black") +
+    geom_segment(aes(x = -1.75, y = 0.785, xend = -1, yend = 0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = -1, y = 0.785, xend = -1, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = -1, y = -0.785, xend = 0, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 0, y = -0.785, xend = 0, yend = 0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 0, y = 0.785, xend = 1, yend = 0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 1, y = 0.785, xend = 1, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 1, y = -0.785, xend = 1.75, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    scale_color_manual(values = c("Target Function" = "#E69F00", "Approximation" = "#56B4E9")) +
+    theme_minimal() +
+    coord_cartesian(ylim = c(-1,1)) +
+    labs(
+      title = "Periodic Target Function",
+      x = "x",
+      y = "Values"
+    ) +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.text.y = element_blank(),
+      legend.position = "none",
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5)
+    )
+
+```
+
+#### 1 term
+
+```{r}
+#| echo: false
+
+plot_fourier(1)
+```
+$$
+  f(x) \approx sin(\pi x)
+$$
+
+#### 2 terms
+
+```{r}
+#| echo: false
+
+plot_fourier(2)
+```
+$$
+  f(x) \approx \sin(\pi x) + \frac{1}{3} \sin(3 \pi x)
+$$
+
+#### 3 terms
+
+```{r}
+#| echo: false
+
+plot_fourier(3)
+```
+$$
+  f(x) \approx \sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x)
+$$
+
+#### 4 terms
+
+```{r}
+#| echo: false
+
+plot_fourier(4)
+```
+$$
+  f(x) \approx \sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \frac{1}{7} \sin(7 \pi x)
+$$
+
+#### 5 terms
+
+```{r}
+#| echo: false
+
+plot_fourier(5)
+```
+$$
+  f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \frac{1}{7} \sin(7 \pi x) + \frac{1}{9} \sin(9 \pi x)
+$$
+
+#### 10 terms
+
+```{r}
+#| echo: false
+
+plot_fourier(10)
+```
+$$
+  f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{17} \sin(17 \pi x) + \frac{1}{19} \sin(19 \pi x)
+$$
+
+#### 15 terms
+
+```{r}
+#| echo: false
+
+plot_fourier(15)
+```
+$$
+  f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{27} \sin(27 \pi x) + \frac{1}{29} \sin(29 \pi x)
+$$
+
+#### 25 terms
+
+```{r}
+#| echo: false
+
+plot_fourier(25)
+```
+$$
+  f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{47} \sin(47 \pi x) + \frac{1}{49} \sin(49 \pi x)
+$$
+
+#### 50 terms
+
+```{r}
+#| echo: false
+
+plot_fourier(50)
+```
+$$
+  f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{97} \sin(97 \pi x) + \frac{1}{99} \sin(99 \pi x)
+$$
+
+:::
+<!-- End of Fourier series example -->
+
+
 
 The function $f(t)$ can be approximated to any desired level of precision by truncating the series after a sufficient number of terms. For the purpose of this discussion, we will define "one term" as an expression of the form 
 $$
@@ -240,7 +453,7 @@ $$
 ### Fitting a Seasonal Component
 
 The Fourier series exists for any smooth (continuously differentiable) function. Note theoretically, this allows us to obtain the value of the function at any real value by using this series. 
-However, for a discrete time series with $s$ seasons, we are only need to evaluate the function at a finite number of points: 
+However, for a discrete time series with $s$ seasons, we only need to evaluate the function at a finite number of points: 
 $t = 1, 2, 3, \ldots, s-1, s$. 
 For example, in the previous lesson, we used twelve indicator variables to pass through twelve points in a monthly seasonal component to a time series with annual cycles.
 
@@ -766,83 +979,6 @@ For these reasons, we will apply the "Reduced Linear 5" model. This model implie
 \end{align*}
 
 
-# THE FLOW IS NOT GOOD HERE...NEED TO GIVE THE RESULT, and POSSIBLY COMPARE WITH THE RESULT BELOW.
-# THE FLOW IS NOT GOOD HERE...NEED TO GIVE THE RESULT, and POSSIBLY COMPARE WITH THE RESULT BELOW. 
-
-
-```{r}
-#| label: weather19
-#| code-fold: true
-#| code-summary: "Show the code"
-
-num_months <- weather_df |> 
-  as_tibble() |> 
-  dplyr::select(TIME) |> 
-  tail(1) |> 
-  pull()
-
-df <- tibble( TIME = seq(1, num_months, 0.01) ) |>
-  mutate(
-    cos1 = cos(2 * pi * 1 * TIME/12),
-    cos2 = cos(2 * pi * 2 * TIME/12),
-    cos3 = cos(2 * pi * 3 * TIME/12),
-    cos4 = cos(2 * pi * 4 * TIME/12),
-    cos5 = cos(2 * pi * 5 * TIME/12),
-    cos6 = cos(2 * pi * 6 * TIME/12),
-    sin1 = sin(2 * pi * 1 * TIME/12),
-    sin2 = sin(2 * pi * 2 * TIME/12),
-    sin3 = sin(2 * pi * 3 * TIME/12),
-    sin4 = sin(2 * pi * 4 * TIME/12),
-    sin5 = sin(2 * pi * 5 * TIME/12),
-    sin6 = sin(2 * pi * 6 * TIME/12)) |>
-  as_tsibble(index = TIME)
-
-quad1_ts <- reduced1_quadratic_lm |>
-  forecast(df) |>
-  as_tibble() |>
-  dplyr::select(TIME, .mean) |>
-  rename(value = .mean) |>
-  mutate(Model = "Quadratic 1")
-
-quad5_ts <- reduced5_quadratic_lm |>
-  forecast(df) |>
-  as_tibble() |>
-  dplyr::select(TIME, .mean) |>
-  rename(value = .mean) |>
-  mutate(Model = "Quadratic 5")
-
-linear5_ts <- reduced5_linear_lm |>
-  forecast(df) |>
-  as_tibble() |>
-  dplyr::select(TIME, .mean) |>
-  rename(value = .mean) |>
-  mutate(Model = "Linear 5")
-
-data_ts <- weather_df |> 
-  as_tibble() |>
-  rename(value = x) |>
-  mutate(Model = "Data") |>
-  dplyr::select(TIME, value, Model)
-
-combined_ts <- bind_rows(data_ts, quad1_ts, quad5_ts, linear5_ts) 
-point_ts <- combined_ts |> filter(TIME == floor(TIME))
-
-combined_ts |>
-  ggplot(aes(x = TIME, y = value, color = Model)) +
-  geom_line() +
-  geom_point(data = point_ts) +
-  labs(
-      x = "Month Number",
-      y = "Temperature (Fahrenheit)",
-      title = "Monthly Average of Daily High Temperatures in Rexburg",
-      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    plot.subtitle = element_text(hjust = 0.5)
-  )
-```
 
 ### Standardizing the Time Variable
 
@@ -988,6 +1124,84 @@ The fitted model is:
 
 If we want, we could rewrite this by expanding out the polynomial in the first three terms, but it is not necessary.
 
+
+### Comparison of Results
+
+
+```{r}
+#| label: weather19
+#| code-fold: true
+#| code-summary: "Show the code"
+
+num_months <- weather_df |> 
+  as_tibble() |> 
+  dplyr::select(TIME) |> 
+  tail(1) |> 
+  pull()
+
+df <- tibble( TIME = seq(1, num_months, 0.01) ) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * TIME/12),
+    cos2 = cos(2 * pi * 2 * TIME/12),
+    cos3 = cos(2 * pi * 3 * TIME/12),
+    cos4 = cos(2 * pi * 4 * TIME/12),
+    cos5 = cos(2 * pi * 5 * TIME/12),
+    cos6 = cos(2 * pi * 6 * TIME/12),
+    sin1 = sin(2 * pi * 1 * TIME/12),
+    sin2 = sin(2 * pi * 2 * TIME/12),
+    sin3 = sin(2 * pi * 3 * TIME/12),
+    sin4 = sin(2 * pi * 4 * TIME/12),
+    sin5 = sin(2 * pi * 5 * TIME/12),
+    sin6 = sin(2 * pi * 6 * TIME/12)) |>
+  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME)) |>
+  as_tsibble(index = TIME)
+
+quad1_ts <- reduced1_quadratic_lm |>
+  forecast(df) |>
+  as_tibble() |>
+  dplyr::select(TIME, .mean) |>
+  rename(value = .mean) |>
+  mutate(Model = "Quadratic 1")
+
+quad5_ts <- reduced5_quadratic_lm |>
+  forecast(df) |>
+  as_tibble() |>
+  dplyr::select(TIME, .mean) |>
+  rename(value = .mean) |>
+  mutate(Model = "Quadratic 5")
+
+linear5_ts <- reduced5_linear_lm |>
+  forecast(df) |>
+  as_tibble() |>
+  dplyr::select(TIME, .mean) |>
+  rename(value = .mean) |>
+  mutate(Model = "Linear 5")
+
+data_ts <- weather_df |> 
+  as_tibble() |>
+  rename(value = x) |>
+  mutate(Model = "Data") |>
+  dplyr::select(TIME, value, Model)
+
+combined_ts <- bind_rows(data_ts, quad1_ts, quad5_ts, linear5_ts) 
+point_ts <- combined_ts |> filter(TIME == floor(TIME))
+
+combined_ts |>
+  ggplot(aes(x = TIME, y = value, color = Model)) +
+  geom_line() +
+  geom_point(data = point_ts) +
+  labs(
+      x = "Month Number",
+      y = "Temperature (Fahrenheit)",
+      title = "Monthly Average of Daily High Temperatures in Rexburg",
+      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
 
 
 
