@@ -18,8 +18,8 @@ ui <- fluidPage(
   titlePanel(" 5-2 Chapter Code  "),
   
   fluidRow(
-    column(6, sliderInput("S1", label = "S1", min = 0, max = 1, value = 0.00, step = 0.01)),
-    column(6, sliderInput("S2", label = "S2", min = 0, max = 1, value = 0.00, step = 0.01)),
+    column(6, sliderInput("S1", label = "S1", min = 0, max = 1, value = 1, step = 0.01)),
+    column(6, sliderInput("S2", label = "S2", min = 0, max = 1, value = 1, step = 0.01)),
     column(6, sliderInput("S3", label = "S3", min = 0, max = 1, value = 0.00, step = 0.01)),
     column(6, sliderInput("S4", label = "S4", min = 0, max = 1, value = 0.00, step = 0.01)),
     column(6, sliderInput("S5", label = "S5", min = 0, max = 1, value = 0.00, step = 0.01)),
