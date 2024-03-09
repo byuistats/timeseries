@@ -55,7 +55,7 @@ server <- function(input, output, session) {
     
     # seq(from, to, length.out = n)
     # evenly space out 1000 "n" in this case to see better
-    t_values <- seq(0, T - 1, length.out = 1000) 
+    t_values <- seq(0, T - 1, length.out = 10000) 
     
     
     
