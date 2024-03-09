@@ -35,6 +35,82 @@ source("common_functions.R")
 ```
 
 
+```{r}
+#| echo: false
+#| label: functions_for_sine_and_cosine_plots
+
+# Okabe-Ito color palette
+okabe_ito_colors <- c("#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#E69F00", "#56B4E9")
+
+plot_sine <- function(cycle_length = 12, i_values = c(1:6), amplitude = rep(1, length(i_values)), spacing = 4, title = "Sine Functions with Different Frequencies", min_t = 0, max_t = cycle_length) {
+  
+  create_sine_df <- function(i, cycle_length, amplitude) {
+    df <- tibble(
+      t = seq(from = min_t, to = max_t, length.out = 501),
+      value = amplitude[which(i_values == i)] * sin(2 * pi * i * t / cycle_length),
+      i = right(paste0(" ", as.character(i)), 2)
+    )
+  }
+  
+  sine_df <- tibble(t = as.integer(), value = as.numeric(), i = as.character())
+  for (i in i_values) {
+    sine_df <- sine_df |> bind_rows(create_sine_df(i, cycle_length, amplitude))
+  }
+  
+  ggplot(sine_df, aes(x = t, y = value - spacing * as.numeric(i), color = i)) +
+    geom_line(linewidth = 1) +
+    scale_y_continuous(
+      breaks = -spacing * (i_values),
+      minor_breaks = NULL,
+      labels = NULL
+    ) +
+    scale_x_continuous(
+      breaks = c(-12:12),
+      minor_breaks = NULL
+    ) +
+    scale_color_manual(values = okabe_ito_colors[1:length(i_values)], name = "i") +
+    labs(x = "t", y = "Sine Value", title = title) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+}
+
+plot_cosine <- function(cycle_length = 12, i_values = c(1:6), amplitude = rep(1, length(i_values)), spacing = 4, title = "Cosine Functions with Different Frequencies", min_t = 0, max_t = cycle_length) {
+  
+  create_cosine_df <- function(i, cycle_length, amplitude) {
+    df <- tibble(
+      t = seq(from = min_t, to = max_t, length.out = 501),
+      value = amplitude[which(i_values == i)] * cos(2 * pi * i * t / cycle_length),
+      i = right(paste0(" ", as.character(i)), 2)
+    )
+  }
+  
+  cosine_df <- tibble(t = as.integer(), value = as.numeric(), i = as.character())
+  for (i in i_values) {
+    cosine_df <- cosine_df |> bind_rows(create_cosine_df(i, cycle_length, amplitude))
+  }
+  
+  ggplot(cosine_df, aes(x = t, y = value - spacing * as.numeric(i), color = i)) +
+    geom_line(linewidth = 1) +
+    scale_y_continuous(
+      breaks = -spacing * (i_values),
+      minor_breaks = NULL,
+      labels = NULL
+    ) +
+    scale_x_continuous(
+      breaks = c(-12:12),
+      minor_breaks = NULL
+    ) +
+    scale_color_manual(values = okabe_ito_colors[1:length(i_values)], name = "i") +
+    labs(x = "t", y = "Cosine Value", title = title) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+}
+```
+
 ## Learning Outcomes
 
 {{< include outcomes/chapter_5_lesson_2_outcomes.qmd >}}
@@ -111,7 +187,7 @@ We can denote the frequency of a sine function as $f = \frac{i}{s}$, where $s$ i
     &= \alpha_s \cdot \sin \left( \frac{2 \pi i t}{s} \right) + \alpha_c \cdot \cos \left( \frac{2 \pi i t}{s} \right) 
 \end{align*}
 
-@fig-sineFrequencies and @fig-cosineFrequencies illustrate these sine and cosine functions with various values of $i$.
+@fig-sineFrequencies and @fig-cosineFrequencies illustrate these sine and cosine functions with various values of $i$, where $s = 12$.
 
 <!-- Beginning of two columns -->
 ::: columns
@@ -123,37 +199,7 @@ We can denote the frequency of a sine function as $f = \frac{i}{s}$, where $s$ i
 #| label: fig-sineFrequencies
 #| fig-cap: "Sine Functions with Various Frequencies"
 
-create_sine_df <- function(i, cycle_length = 12) {
-  df <- tibble(
-    t = seq(from = 0, to = cycle_length, length.out = 501),
-    value = sin(2 * pi * i * t / cycle_length),
-    i = right(paste0(" ", as.character(i)), 2)
-  )
-}
-
-sine_df <- create_sine_df(i = 1)
-for (i in 2:6) {
-  sine_df <- sine_df |> bind_rows(create_sine_df(i))
-}
-
-ggplot(sine_df, aes(x = t, y = 28 + value - 4*as.numeric(i), color = i)) +
-  geom_line() +
-  # geom_point(data = data.frame(x = 1:6, y = seq(4,24,4)), aes(x=x, y=y)) +
-  scale_y_continuous(
-    breaks = seq(4,24,4),
-    minor_breaks = NULL,
-    labels = NULL
-  ) +
-  scale_x_continuous(
-    breaks = c(0:12),
-    minor_breaks = NULL
-  ) +
-  scale_color_discrete(name = "i") +
-  labs(x = "t", y = "Sine Value", title = "Sine Functions with Different Frequencies") +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5)
-  )
+plot_sine()
 ```
 
 :::
@@ -170,37 +216,7 @@ ggplot(sine_df, aes(x = t, y = 28 + value - 4*as.numeric(i), color = i)) +
 #| label: fig-cosineFrequencies
 #| fig-cap: "Cosine Functions with Various Frequencies"
 
-create_cosine_df <- function(i, cycle_length = 12) {
-  df <- tibble(
-    t = seq(from = 0, to = cycle_length, length.out = 501),
-    value = cos(2 * pi * i * t / cycle_length),
-    i = right(paste0(" ", as.character(i)), 2)
-  )
-}
-
-cosine_df <- create_cosine_df(i = 1)
-for (i in 2:6) {
-  cosine_df <- cosine_df |> bind_rows(create_cosine_df(i))
-}
-
-ggplot(cosine_df, aes(x = t, y = 28 + value - 4*as.numeric(i), color = i)) +
-  geom_line() +
-  # geom_point(data = data.frame(x = 1:6, y = seq(4,24,4)), aes(x=x, y=y)) +
-  scale_y_continuous(
-    breaks = seq(4,24,4),
-    minor_breaks = NULL,
-    labels = NULL
-  ) +
-  scale_x_continuous(
-    breaks = c(0:12),
-    minor_breaks = NULL
-  ) +
-  scale_color_discrete(name = "i") +
-  labs(x = "t", y = "Cosine Value", title = "Cosine Functions with Different Frequencies") +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5)
-  )
+plot_cosine()
 ```
 
 :::
@@ -208,7 +224,7 @@ ggplot(cosine_df, aes(x = t, y = 28 + value - 4*as.numeric(i), color = i)) +
 <!-- End of two columns -->
 
 
-In the next section, we will take a linear combination of functions like those above to model the seasonal component.
+One key objective of this lesson is to use a linear combination of functions like those above to model the seasonal component of a time series.
 
 ### Fourier Series
 
@@ -238,9 +254,13 @@ $$
 As an example, we will approximate the periodic function illustrated here with a Fourier series.
 
 ```{r}
-#| echo: false
+#| include: false
+#| eval: false
+#| label: use_this_chunk_to_generate_fourier_data
 
-fourier_df <- tibble(x = seq(-1.75,1.75,0.01)) |>
+step_size <- 0.001
+
+fourier_df <- tibble(x = seq(-1.75, 1.75, step_size)) |>
   mutate(
     terms_1 = sin(pi * x),
     terms_2 = terms_1 + sin(3 * pi * x) / 3,
@@ -268,13 +288,25 @@ fourier_df <- tibble(x = seq(-1.75,1.75,0.01)) |>
       + sin(79 * pi * x) / 79 + sin(81 * pi * x) / 81 + sin(83 * pi * x) / 83 
       + sin(85 * pi * x) / 85 + sin(87 * pi * x) / 87 + sin(89 * pi * x) / 89 
       + sin(91 * pi * x) / 91 + sin(93 * pi * x) / 93 + sin(95 * pi * x) / 95 
-      + sin(97 * pi * x) / 97 + sin(99 * pi * x) / 99
+      + sin(97 * pi * x) / 97 + sin(99 * pi * x) / 99,
+    terms_100 = terms_50 + sin(101 * pi * x) / 101 + sin(103 * pi * x) / 103 + sin(105 * pi * x) / 105 + sin(107 * pi * x) / 107 + sin(109 * pi * x) / 109 + sin(111 * pi * x) / 111 + sin(113 * pi * x) / 113 + sin(115 * pi * x) / 115 + sin(117 * pi * x) / 117 + sin(119 * pi * x) / 119 + sin(121 * pi * x) / 121 + sin(123 * pi * x) / 123 + sin(125 * pi * x) / 125 + sin(127 * pi * x) / 127 + sin(129 * pi * x) / 129 + sin(131 * pi * x) / 131 + sin(133 * pi * x) / 133 + sin(135 * pi * x) / 135 + sin(137 * pi * x) / 137 + sin(139 * pi * x) / 139 + sin(141 * pi * x) / 141 + sin(143 * pi * x) / 143 + sin(145 * pi * x) / 145 + sin(147 * pi * x) / 147 + sin(149 * pi * x) / 149 + sin(151 * pi * x) / 151 + sin(153 * pi * x) / 153 + sin(155 * pi * x) / 155 + sin(157 * pi * x) / 157 + sin(159 * pi * x) / 159 + sin(161 * pi * x) / 161 + sin(163 * pi * x) / 163 + sin(165 * pi * x) / 165 + sin(167 * pi * x) / 167 + sin(169 * pi * x) / 169 + sin(171 * pi * x) / 171 + sin(173 * pi * x) / 173 + sin(175 * pi * x) / 175 + sin(177 * pi * x) / 177 + sin(179 * pi * x) / 179 + sin(181 * pi * x) / 181 + sin(183 * pi * x) / 183 + sin(185 * pi * x) / 185 + sin(187 * pi * x) / 187 + sin(189 * pi * x) / 189 + sin(191 * pi * x) / 191 + sin(193 * pi * x) / 193 + sin(195 * pi * x) / 195 + sin(197 * pi * x) / 197 + sin(199 * pi * x) / 199
   ) |>
   pivot_longer(names_to = "terms", values_to = "Value", cols = starts_with("terms")) |>
   mutate(terms = str_remove(terms, "terms_"))
 
-plot_fourier <- function(num_terms) {
-  plot_df <- fourier_df |>
+fourier_df |>
+  rio::export("data/fourier_example.parquet")
+```
+
+
+```{r}
+#| echo: false
+#| label: fourier_plot_function
+
+fourier_df <- rio::import("data/fourier_example.parquet")
+
+plot_fourier <- function(df = fourier_df, num_terms) {
+  plot_df <- df |>
   filter(terms == num_terms)
   
   my_plot <- plot_df |>
@@ -310,8 +342,11 @@ plot_fourier <- function(num_terms) {
 
 ```{r}
 #| echo: false
+#| label: plot_target_function
+
 fourier_df |>
   filter(terms == 1) |>
+  filter(x == floor(x)) |> # To speed up the processing of this chunk
   ggplot(aes(x = x, y = Value)) +
     geom_line(aes(colour = "Approximation"), linewidth = 1, alpha = 0) +
     geom_segment(aes(x = -1.75, y = 0, xend = 1.75, yend = 0), linewidth = 1, colour = "black") +
@@ -345,63 +380,107 @@ fourier_df |>
 
 ```{r}
 #| echo: false
+#| label: plot_fourier_approx_1
 
-plot_fourier(1)
+plot_fourier(num_terms = 1)
 ```
 $$
   f(x) \approx sin(\pi x)
 $$
 
+```{r}
+#| echo: false
+
+plot_sine(cycle_length = 2, i_values = c(1), amplitude = c(1), spacing = 0, title = "Functions Summed for this Approximation", min_t = -1.75, max_t = 1.75) +
+  theme(legend.position = c(0.95, 0.85))
+```
+
+
 #### 2 terms
 
 ```{r}
 #| echo: false
+#| label: plot_fourier_approx_2
 
-plot_fourier(2)
+plot_fourier(num_terms = 2)
 ```
 $$
   f(x) \approx \sin(\pi x) + \frac{1}{3} \sin(3 \pi x)
 $$
 
+```{r}
+#| echo: false
+
+plot_sine(cycle_length = 2, i_values = c(1,3), amplitude = c(1, 1/3), spacing = 0, title = "Functions Summed for this Approximation", min_t = -1.75, max_t = 1.75) +
+  theme(legend.position = c(0.95, 0.85))
+```
+
 #### 3 terms
 
 ```{r}
 #| echo: false
+#| label: plot_fourier_approx_3
 
-plot_fourier(3)
+plot_fourier(num_terms = 3)
 ```
 $$
   f(x) \approx \sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x)
 $$
 
+```{r}
+#| echo: false
+
+plot_sine(cycle_length = 2, i_values = c(1,3,5), amplitude = c(1, 1/3, 1/5), spacing = 0, title = "Functions Summed for this Approximation", min_t = -1.75, max_t = 1.75) +
+  theme(legend.position = c(0.95, 0.85))
+```
+
+
+
 #### 4 terms
 
 ```{r}
 #| echo: false
+#| label: plot_fourier_approx_4
 
-plot_fourier(4)
+plot_fourier(num_terms = 4)
 ```
 $$
   f(x) \approx \sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \frac{1}{7} \sin(7 \pi x)
 $$
 
+```{r}
+#| echo: false
+
+plot_sine(cycle_length = 2, i_values = c(1,3,5,7), amplitude = c(1, 1/3, 1/5, 1/7), spacing = 0, title = "Functions Summed for this Approximation", min_t = -1.75, max_t = 1.75) +
+  theme(legend.position = c(0.95, 0.85))
+```
+
 #### 5 terms
 
 ```{r}
 #| echo: false
+#| label: plot_fourier_approx_5
 
-plot_fourier(5)
+plot_fourier(num_terms = 5)
 ```
 $$
   f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \frac{1}{7} \sin(7 \pi x) + \frac{1}{9} \sin(9 \pi x)
 $$
 
+```{r}
+#| echo: false
+
+plot_sine(cycle_length = 2, i_values = c(1,3,5,7,9), amplitude = c(1, 1/3, 1/5, 1/7, 1/9), spacing = 0, title = "Functions Summed for this Approximation", min_t = -1.75, max_t = 1.75) +
+  theme(legend.position = c(0.95, 0.85))
+```
+
 #### 10 terms
 
 ```{r}
 #| echo: false
+#| label: plot_fourier_approx_10
 
-plot_fourier(10)
+plot_fourier(num_terms = 10)
 ```
 $$
   f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{17} \sin(17 \pi x) + \frac{1}{19} \sin(19 \pi x)
@@ -411,8 +490,9 @@ $$
 
 ```{r}
 #| echo: false
+#| label: plot_fourier_approx_15
 
-plot_fourier(15)
+plot_fourier(num_terms = 15)
 ```
 $$
   f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{27} \sin(27 \pi x) + \frac{1}{29} \sin(29 \pi x)
@@ -422,8 +502,9 @@ $$
 
 ```{r}
 #| echo: false
+#| label: plot_fourier_approx_25
 
-plot_fourier(25)
+plot_fourier(num_terms = 25)
 ```
 $$
   f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{47} \sin(47 \pi x) + \frac{1}{49} \sin(49 \pi x)
@@ -433,19 +514,31 @@ $$
 
 ```{r}
 #| echo: false
+#| label: plot_fourier_approx_50
 
-plot_fourier(50)
+plot_fourier(num_terms = 50)
 ```
 $$
   f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{97} \sin(97 \pi x) + \frac{1}{99} \sin(99 \pi x)
 $$
 
+#### 100 terms
+
+```{r}
+#| echo: false
+#| label: plot_fourier_approx_100
+
+plot_fourier(num_terms = 100)
+```
+$$
+  f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{197} \sin(197 \pi x) + \frac{1}{199} \sin(199 \pi x)
+$$
+
 :::
 <!-- End of Fourier series example -->
 
-
-
-The function $f(t)$ can be approximated to any desired level of precision by truncating the series after a sufficient number of terms. For the purpose of this discussion, we will define "one term" as an expression of the form 
+We can continue to get more and more precise estimates of the function by just adding more terms to the sum.
+So, the function $f(t)$ can be approximated to any desired level of precision by truncating the series after a sufficient number of terms. For the purpose of this discussion, we will define "one term" as an expression of the form 
 $$
   \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
 $$
@@ -592,16 +685,17 @@ weather_df |>
   
 
 #### Standardizing the Time Variable
-  
-::: {.callout-warning}
-When the independent variable (the measure of time) is large, floating point errors in the computation of the regression coefficents can be substantial. 
-:::
-  
+
+
 To avoid serious floating point errors, we standardize the time variable. First, compute the sine and cosine terms using the original time variable, then transform the time variable by subtracting its mean and dividing by its standard deviation. (In other words, compute a $z$-score.)
 
 The model is adjusted accordingly after fitting.
 
-We will demonstrate this with the "Reduced Linear 5" and "Reduced Quadratic 5" models.
+::: {.callout-warning}
+When the independent variable (the measure of time) is large, floating point errors in the computation of the regression coefficents can be substantial. 
+:::
+  
+We will demonstrate standardizing the time variable below.
 
 #### Computing the standardized time variable
 
@@ -616,10 +710,12 @@ to
 #| label: weather20
 #| echo: false
 
-stats <- weather_df |>
+stats_unrounded <- weather_df |>
   as_tibble() |>
   dplyr::select(TIME) |>
-  summarize(mean = mean(TIME), sd = sd(TIME)) |>
+  summarize(mean = mean(TIME), sd = sd(TIME))
+
+stats <- stats_unrounded |>
   round_df(3)
 ```
 
@@ -641,16 +737,15 @@ weather_df <- weather_df |>
 ```
 
 Now, we fit the trend components of the models using `zTIME` instead of `TIME`.
+We will start by modeling a cubic trend term. 
 
 :::
 <!-- End of the Standardizing the Time Variable section -->
 
 
-We will start by modeling a cubic trend term. 
 
 
 <!-- Model Selection: Cubic Trends -->
-
 
 ::: {.callout-note icon=false title="Cubic Trends" collapse="false"}
 <!-- Begin hiding code for cubic trends -->
@@ -1094,11 +1189,14 @@ For these reasons, we will apply the "Reduced Linear 5" model. This model implie
 
 
 
+::: {.callout-note icon=false title="Model Fitting" collapse="false"}
+<!-- Begin hiding code for model fitting -->
 
+#### Model Fitting
 
+The model we have chosen is the "Reduced Linear 5" model. For convenience, we reprint the coefficients here.
 
-
-#### Reduced Linear 5
+##### Reduced Linear 5
 
 ```{r}
 #| label: weather22
@@ -1112,13 +1210,15 @@ reduced5_linear_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 
-r5lin_coef <- reduced5_linear_lm |>
+r5lin_coef_unrounded <- reduced5_linear_lm |>
   tidy() |>
-  select(term, estimate, std.error) |>
+  select(term, estimate, std.error)
+
+r5lin_coef <- r5lin_coef_unrounded |>
   round_df(3)
 ```
 
-The fitted model is:
+The fitted model is therefore:
 
 \begin{align*}
   x_t &= \hat \beta_0 + \hat \beta_1 \left( zTIME \right)  \\
@@ -1142,11 +1242,46 @@ The fitted model is:
       \\
 \end{align*}
 
-The linear trend term can be simplified, if desired.
+The linear trend term can be simplified, if desired, but it is not necessary.
 
-#### Reduced Quadratic 5
+\begin{align*}
+  x_t 
+      &= `r r5lin_coef$estimate[1]` 
+            + `r r5lin_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right) \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= `r r5lin_coef$estimate[1]` 
+            + `r r5lin_coef$estimate[2]` \left( \frac{t}{`r stats$sd`} \right)
+            - `r r5lin_coef$estimate[2]` \left( \frac{`r stats$mean`}{`r stats$sd`} \right) \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right)  
+      \\
+      &= `r r5lin_coef$estimate[1]` 
+            + `r ( r5lin_coef_unrounded$estimate[2] / stats_unrounded$sd ) |> round(3)` t
+            - `r ( r5lin_coef_unrounded$estimate[2] * stats_unrounded$mean / stats_unrounded$sd ) |> round(3)` \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= `r ( r5lin_coef_unrounded$estimate[1] -  r5lin_coef_unrounded$estimate[2] * stats_unrounded$mean / stats_unrounded$sd ) |> round(3)`
+            + `r ( r5lin_coef_unrounded$estimate[2] / stats_unrounded$sd ) |> round(3)` t  \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+\end{align*}
 
-To illustrate this procedure, we will also fit the model called "Reduced Quadratic 5".
+
+##### Reduced Quadratic 5
+
+To illustrate how to incorporate the quadratic term, we also fit the model called "Reduced Quadratic 5".
 
 ```{r}
 #| label: weather23
@@ -1193,9 +1328,17 @@ The fitted model is:
 
 If we want, we could rewrite this by expanding out the polynomial in the first three terms, but it is not necessary.
 
+:::
+<!-- End of Model Fitting -->
 
-### Comparison of Results
 
+
+::: {.callout-note icon=false title="Comparison of Fitted Values" collapse="false"}
+<!-- Begin hiding code for Comparison of Fitted Values -->
+
+#### Comparison of Fitted Values
+
+This time plot shows the original temperature data superimposed with the fitted curves based on three models.
 
 ```{r}
 #| label: weather19
@@ -1255,6 +1398,8 @@ data_ts <- weather_df |>
 combined_ts <- bind_rows(data_ts, quad1_ts, quad5_ts, linear5_ts) 
 point_ts <- combined_ts |> filter(TIME == floor(TIME))
 
+okabe_ito_colors <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
 combined_ts |>
   ggplot(aes(x = TIME, y = value, color = Model)) +
   geom_line() +
@@ -1264,13 +1409,22 @@ combined_ts |>
       y = "Temperature (Fahrenheit)",
       title = "Monthly Average of Daily High Temperatures in Rexburg",
       subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+  ) +    
+  scale_color_manual(
+    values = okabe_ito_colors[1:nrow(combined_ts |> as_tibble() |> select(Model) |> unique())], 
+    name = ""
   ) +
   theme_minimal() +
   theme(
     plot.title = element_text(hjust = 0.5),
-    plot.subtitle = element_text(hjust = 0.5)
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = "top", # Position the legend at the top
+    legend.direction = "horizontal" # Set the legend direction to horizontal
   )
 ```
+:::
+<!-- End of Comparison of Fitted Values -->
+
 
 
 
@@ -1408,64 +1562,16 @@ fallriver_ts |>
 ```
 
 
-```{r}
-#| label: fallriver5
-#| code-fold: true
-#| code-summary: "Show the code"
+<!-- Check Your Understanding -->
 
-river_full_lm <- fallriver_ts |>
-  model(river_full_lm  = TSLM(flow ~ TIME 
-                              + sin1 + cos1 + sin2 + cos2 
-                              + sin3 + cos3 + sin4 + cos4 
-                              + sin5 + cos5 + sin6 + cos6 
-                              + sin7 + cos7 + sin8 + cos8
-                              + sin9 + cos9 + sin10 + cos10
-                              + sin11 + cos11       + cos12
-                              )
-        )
+::: {.callout-tip icon=false title="Check Your Understanding"}
 
-river_full_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
+Use the Fall River flow data to do the following.
 
+-   Explore various linear models for the flow of the Fall River over time.
+-   Choose a model to represent the data, and justify your decision.
 
-river_reduced1_lm <- fallriver_ts |>
-  model(river_reduced1_lm  = TSLM(flow ~ TIME 
-                              + sin1 + cos1 + sin2 + cos2 
-                              + sin3 + cos3 + sin4 + cos4 
-                              + sin5 + cos5
-                              )
-        )
-
-river_reduced1_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-
-## Small-Group Activity: Retail Sales (xxx min)
-
-```{r}
-#| label: retail1
-# Read in retail sales data for "all other general merchandise stores"
-retail_ts <- rio::import("data/retail_by_business_type.parquet") |>
-  filter(naics == 45299) |>
-  as_tsibble(index = month)
-
-retail_ts |>
-  autoplot(.vars = sales_millions) +
-    labs(
-      x = "Month",
-      y = "Sales (Millions of U.S. Dollars)",
-      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
-    ) +
-    theme_minimal() +
-    theme(plot.title = element_text(hjust = 0.5))
-
-```
-
-
-
+:::
 
 
 
@@ -1495,10 +1601,52 @@ retail_ts |>
 
 
 <a href="javascript:showhide('Solutions1')"
-style="font-size:.8em;">Class Activity</a>
+style="font-size:.8em;">Small-Group Activity</a>
   
 ::: {#Solutions1 style="display:none;"}
     
+Here are the coefficients for two possible models that could be fitted to the Fall River flow data. 
+
+```{r}
+#| label: fallriverSolutions
+#| code-fold: true
+#| code-summary: "Show the code"
+
+river_full_lm <- fallriver_ts |>
+  model(river_full_lm  = TSLM(flow ~ TIME 
+                              + sin1 + cos1 + sin2 + cos2 
+                              + sin3 + cos3 + sin4 + cos4 
+                              + sin5 + cos5 + sin6 + cos6 
+                              + sin7 + cos7 + sin8 + cos8
+                              + sin9 + cos9 + sin10 + cos10
+                              + sin11 + cos11       + cos12
+                              )
+        )
+
+river_full_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+```{r}
+#| label: fallriverSolutions2
+#| code-fold: true
+#| code-summary: "Show the code"
+
+river_reduced1_lm <- fallriver_ts |>
+  model(river_reduced1_lm  = TSLM(flow ~ TIME 
+                              + sin1 + cos1 + sin2 + cos2 
+                              + sin3 + cos3 + sin4 + cos4 
+                              + sin5 + cos5
+                              )
+        )
+
+river_reduced1_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+
 
 :::
 
