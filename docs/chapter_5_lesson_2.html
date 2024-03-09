@@ -354,7 +354,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#visualization-of-the-time-series" id="toc-visualization-of-the-time-series" class="nav-link" data-scroll-target="#visualization-of-the-time-series">Visualization of the Time Series</a></li>
   <li><a href="#model-selection" id="toc-model-selection" class="nav-link" data-scroll-target="#model-selection">Model Selection</a></li>
-  <li><a href="#standardizing-the-time-variable" id="toc-standardizing-the-time-variable" class="nav-link" data-scroll-target="#standardizing-the-time-variable">Standardizing the Time Variable</a></li>
   <li><a href="#comparison-of-results" id="toc-comparison-of-results" class="nav-link" data-scroll-target="#comparison-of-results">Comparison of Results</a></li>
   </ul></li>
   <li><a href="#small-group-activity-river-flow-15-min" id="toc-small-group-activity-river-flow-15-min" class="nav-link" data-scroll-target="#small-group-activity-river-flow-15-min">Small-Group Activity: River Flow (15 min)</a></li>
@@ -840,7 +839,7 @@ Fourier Series
 <span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
 <span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
 <span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Mean Daily High Temperature (Fahrenheit)"</span>,</span>
-<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Time Plot of Mean Daily Rexburg High Temp by Month"</span>,</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Time Plot of Mean Daily Rexburg High Temperature by Month"</span>,</span>
 <span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>      <span class="at">subtitle =</span> <span class="fu">paste0</span>(<span class="st">"("</span>, <span class="fu">format</span>(weather_df<span class="sc">$</span>dates <span class="sc">%&gt;%</span> <span class="fu">head</span>(<span class="dv">1</span>), <span class="st">"%b %Y"</span>), endash, <span class="fu">format</span>(weather_df<span class="sc">$</span>dates <span class="sc">%&gt;%</span> <span class="fu">tail</span>(<span class="dv">1</span>), <span class="st">"%b %Y"</span>), <span class="st">")"</span>)</span>
 <span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
 <span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
@@ -856,9 +855,62 @@ Fourier Series
 </section>
 <section id="model-selection" class="level3">
 <h3 class="anchored" data-anchor-id="model-selection">Model Selection</h3>
+<div class="callout callout-style-default callout-note no-icon callout-titled" title="Standardizing the Time Variable">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Standardizing the Time Variable
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-3" class="callout-3-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<!-- Begin hiding code for standardizing the time varaible -->
+<section id="standardizing-the-time-variable" class="level4">
+<h4 class="anchored" data-anchor-id="standardizing-the-time-variable">Standardizing the Time Variable</h4>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>When the independent variable (the measure of time) is large, floating point errors in the computation of the regression coefficents can be substantial.</p>
+</div>
+</div>
+<p>To avoid serious floating point errors, we standardize the time variable. First, compute the sine and cosine terms using the original time variable, then transform the time variable by subtracting its mean and dividing by its standard deviation. (In other words, compute a <span class="math inline">\(z\)</span>-score.)</p>
+<p>The model is adjusted accordingly after fitting.</p>
+<p>We will demonstrate this with the “Reduced Linear 5” and “Reduced Quadratic 5” models.</p>
+</section>
+<section id="computing-the-standardized-time-variable" class="level4">
+<h4 class="anchored" data-anchor-id="computing-the-standardized-time-variable">Computing the standardized time variable</h4>
+<p>Our time variable was a simple incremented value counting the months ranging from 1 (representing 1/2008) to 192 (representing 12/2023).</p>
+<p>We standardize this variable by the transformation:</p>
+<p><span class="math display">\[
+zTIME
+  = \frac{t - \bar t}{s_t}
+  = \frac{t - 96.5}{55.57}
+\]</span></p>
+<p>where the mean of the variable <code>TIME</code> is <span class="math inline">\(\bar t = 96.5\)</span>, and the standard deviation is <span class="math inline">\(s_t = 55.57\)</span>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>weather_df <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">zTIME =</span> (TIME <span class="sc">-</span> <span class="fu">mean</span>(TIME)) <span class="sc">/</span> <span class="fu">sd</span>(TIME))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Now, we fit the trend components of the models using <code>zTIME</code> instead of <code>TIME</code>.</p>
+</section>
+</div>
+</div>
+</div>
+<!-- End of the Standardizing the Time Variable section -->
+<p>We will start by modeling a cubic trend term.</p>
 <!-- Model Selection: Cubic Trends -->
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="Cubic Trends">
-<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="true" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -867,7 +919,7 @@ Cubic Trends
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-3" class="callout-3-contents callout-collapse collapse show">
+<div id="callout-5" class="callout-5-contents callout-collapse collapse show">
 <div class="callout-body-container callout-body">
 <!-- Begin hiding code for cubic trends -->
 <section id="cubic-trend-full-model" class="level4">
@@ -877,56 +929,56 @@ Cubic Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>full_cubic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">full_cubic =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">3</span>) <span class="sc">+</span></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6 ))</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>full_cubic_lm <span class="sc">|&gt;</span></span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>full_cubic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">full_cubic =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> <span class="fu">I</span>(zTIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">I</span>(zTIME<span class="sc">^</span><span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6 ))</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>full_cubic_lm <span class="sc">|&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 15 × 7
-   .model     term            estimate  std.error statistic   p.value sig  
-   &lt;chr&gt;      &lt;chr&gt;              &lt;dbl&gt;      &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
- 1 full_cubic (Intercept)  52.5        1.11          47.5   1.12e-102 TRUE 
- 2 full_cubic TIME          0.135      0.0495         2.72  7.15e-  3 TRUE 
- 3 full_cubic I(TIME^2)    -0.00123    0.000595      -2.06  4.10e-  2 TRUE 
- 4 full_cubic I(TIME^3)     0.00000341 0.00000203     1.68  9.41e-  2 FALSE
- 5 full_cubic sin1        -16.0        0.383        -41.8   1.23e- 93 TRUE 
- 6 full_cubic cos1        -23.7        0.382        -62.1   4.30e-122 TRUE 
- 7 full_cubic sin2          1.29       0.382          3.37  9.34e-  4 TRUE 
- 8 full_cubic cos2         -2.87       0.382         -7.51  2.74e- 12 TRUE 
- 9 full_cubic sin3         -0.819      0.382         -2.15  3.33e-  2 TRUE 
-10 full_cubic cos3          0.608      0.382          1.59  1.13e-  1 FALSE
-11 full_cubic sin4          0.377      0.382          0.987 3.25e-  1 FALSE
-12 full_cubic cos4         -0.214      0.382         -0.561 5.76e-  1 FALSE
-13 full_cubic sin5         -0.0810     0.382         -0.212 8.32e-  1 FALSE
-14 full_cubic cos5         -0.0433     0.382         -0.113 9.10e-  1 FALSE
-15 full_cubic cos6         -0.567      0.270         -2.10  3.70e-  2 TRUE </code></pre>
+   .model     term        estimate std.error statistic   p.value sig  
+   &lt;chr&gt;      &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+ 1 full_cubic (Intercept)  57.2        0.405   141.    7.11e-184 TRUE 
+ 2 full_cubic zTIME        -0.359      0.678    -0.529 5.98e-  1 FALSE
+ 3 full_cubic I(zTIME^2)   -0.733      0.303    -2.42  1.67e-  2 TRUE 
+ 4 full_cubic I(zTIME^3)    0.586      0.348     1.68  9.41e-  2 FALSE
+ 5 full_cubic sin1        -16.0        0.383   -41.8   1.23e- 93 TRUE 
+ 6 full_cubic cos1        -23.7        0.382   -62.1   4.30e-122 TRUE 
+ 7 full_cubic sin2          1.29       0.382     3.37  9.34e-  4 TRUE 
+ 8 full_cubic cos2         -2.87       0.382    -7.51  2.74e- 12 TRUE 
+ 9 full_cubic sin3         -0.819      0.382    -2.15  3.33e-  2 TRUE 
+10 full_cubic cos3          0.608      0.382     1.59  1.13e-  1 FALSE
+11 full_cubic sin4          0.377      0.382     0.987 3.25e-  1 FALSE
+12 full_cubic cos4         -0.214      0.382    -0.561 5.76e-  1 FALSE
+13 full_cubic sin5         -0.0810     0.382    -0.212 8.32e-  1 FALSE
+14 full_cubic cos5         -0.0433     0.382    -0.113 9.10e-  1 FALSE
+15 full_cubic cos6         -0.567      0.270    -2.10  3.70e-  2 TRUE </code></pre>
 </div>
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>forecast_df <span class="ot">&lt;-</span> full_cubic_lm <span class="sc">|&gt;</span> <span class="fu">forecast</span>(weather_df, ) <span class="sc">|&gt;</span> <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">select</span>(TIME, .mean) <span class="sc">|&gt;</span> <span class="fu">rename</span>(<span class="at">pred =</span> .mean)</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>weather_df <span class="sc">|&gt;</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(forecast_df, <span class="at">by =</span> <span class="st">"TIME"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates) <span class="sc">|&gt;</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> x) <span class="sc">+</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se =</span> <span class="cn">FALSE</span>, <span class="at">color =</span> <span class="st">"#F0E442"</span>) <span class="sc">+</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> pred), <span class="at">color =</span> <span class="st">"#56B4E9"</span>, <span class="at">alpha =</span> <span class="fl">0.75</span>) <span class="sc">+</span></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Mean Daily High Temperature (Fahrenheit)"</span>,</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Time Plot of Mean Daily Rexburg High Temp by Month"</span>,</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">subtitle =</span> <span class="fu">paste0</span>(<span class="st">"("</span>, <span class="fu">format</span>(weather_df<span class="sc">$</span>dates <span class="sc">%&gt;%</span> <span class="fu">head</span>(<span class="dv">1</span>), <span class="st">"%b %Y"</span>), endash, <span class="fu">format</span>(weather_df<span class="sc">$</span>dates <span class="sc">%&gt;%</span> <span class="fu">tail</span>(<span class="dv">1</span>), <span class="st">"%b %Y"</span>), <span class="st">")"</span>)</span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>forecast_df <span class="ot">&lt;-</span> full_cubic_lm <span class="sc">|&gt;</span> <span class="fu">forecast</span>(weather_df, ) <span class="sc">|&gt;</span> <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">select</span>(zTIME, .mean) <span class="sc">|&gt;</span> <span class="fu">rename</span>(<span class="at">pred =</span> .mean)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>weather_df <span class="sc">|&gt;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(forecast_df, <span class="at">by =</span> <span class="st">"zTIME"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates) <span class="sc">|&gt;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> x) <span class="sc">+</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se =</span> <span class="cn">FALSE</span>, <span class="at">color =</span> <span class="st">"#F0E442"</span>) <span class="sc">+</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> pred), <span class="at">color =</span> <span class="st">"#56B4E9"</span>, <span class="at">alpha =</span> <span class="fl">0.75</span>) <span class="sc">+</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Mean Daily High Temperature (Fahrenheit)"</span>,</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Time Plot of Mean Daily Rexburg High Temperature by Month"</span>,</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">subtitle =</span> <span class="fu">paste0</span>(<span class="st">"("</span>, <span class="fu">format</span>(weather_df<span class="sc">$</span>dates <span class="sc">%&gt;%</span> <span class="fu">head</span>(<span class="dv">1</span>), <span class="st">"%b %Y"</span>), endash, <span class="fu">format</span>(weather_df<span class="sc">$</span>dates <span class="sc">%&gt;%</span> <span class="fu">tail</span>(<span class="dv">1</span>), <span class="st">"%b %Y"</span>), <span class="st">")"</span>)</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stderr">
 <pre><code>`geom_smooth()` using formula = 'y ~ x'</code></pre>
@@ -935,7 +987,7 @@ Cubic Trends
 <p><img src="chapter_5_lesson_2_files/figure-html/weather2-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
-<p>The cubic term in the trend is not significant, but the quadratic term is! The coefficient on the quadratic term is very small and negative. This suggests the data may indicate a decrease in the rate of global warming.</p>
+<p>The cubic term in the trend is not significant, but the quadratic term is. We will fit a quadratic model.</p>
 <div class="callout callout-style-default callout-caution callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -956,7 +1008,7 @@ Caution
 <!-- End hiding code for cubic model -->
 <!-- Model Selection: Quadratic Trends -->
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="Quadratic Trends">
-<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="true" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -965,7 +1017,7 @@ Quadratic Trends
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-4" class="callout-4-contents callout-collapse collapse show">
+<div id="callout-6" class="callout-6-contents callout-collapse collapse show">
 <div class="callout-body-container callout-body">
 <!-- Begin hiding code for quadratic trends -->
 <section id="quadratic-trend-full-model" class="level4">
@@ -974,35 +1026,36 @@ Quadratic Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>full_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">full_quadratic =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6 ))</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>full_quadratic_lm <span class="sc">|&gt;</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>full_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">full_quadratic =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> <span class="fu">I</span>(zTIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6 ))</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>full_quadratic_lm <span class="sc">|&gt;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 14 × 7
-   .model         term          estimate std.error statistic   p.value sig  
-   &lt;chr&gt;          &lt;chr&gt;            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
- 1 full_quadratic (Intercept)  53.8      0.823       65.3    2.45e-126 TRUE 
- 2 full_quadratic TIME          0.0582   0.0197       2.96   3.54e-  3 TRUE 
- 3 full_quadratic I(TIME^2)    -0.000237 0.0000988   -2.40   1.73e-  2 TRUE 
- 4 full_quadratic sin1        -16.1      0.384      -41.8    5.46e- 94 TRUE 
- 5 full_quadratic cos1        -23.7      0.384      -61.8    3.68e-122 TRUE 
- 6 full_quadratic sin2          1.26     0.384        3.29   1.19e-  3 TRUE 
- 7 full_quadratic cos2         -2.86     0.384       -7.44   4.03e- 12 TRUE 
- 8 full_quadratic sin3         -0.832    0.384       -2.17   3.15e-  2 TRUE 
- 9 full_quadratic cos3          0.620    0.384        1.62   1.08e-  1 FALSE
-10 full_quadratic sin4          0.370    0.384        0.963  3.37e-  1 FALSE
-11 full_quadratic cos4         -0.202    0.384       -0.525  6.00e-  1 FALSE
-12 full_quadratic sin5         -0.0844   0.384       -0.220  8.26e-  1 FALSE
-13 full_quadratic cos5         -0.0307   0.384       -0.0799 9.36e-  1 FALSE
-14 full_quadratic cos6         -0.561    0.271       -2.07   4.01e-  2 TRUE </code></pre>
+   .model         term        estimate std.error statistic   p.value sig  
+   &lt;chr&gt;          &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+ 1 full_quadratic (Intercept)  57.2        0.407  141.     2.70e-184 TRUE 
+ 2 full_quadratic zTIME         0.688      0.273    2.52   1.25e-  2 TRUE 
+ 3 full_quadratic I(zTIME^2)   -0.733      0.305   -2.40   1.73e-  2 TRUE 
+ 4 full_quadratic sin1        -16.1        0.384  -41.8    5.46e- 94 TRUE 
+ 5 full_quadratic cos1        -23.7        0.384  -61.8    3.68e-122 TRUE 
+ 6 full_quadratic sin2          1.26       0.384    3.29   1.19e-  3 TRUE 
+ 7 full_quadratic cos2         -2.86       0.384   -7.44   4.03e- 12 TRUE 
+ 8 full_quadratic sin3         -0.832      0.384   -2.17   3.15e-  2 TRUE 
+ 9 full_quadratic cos3          0.620      0.384    1.62   1.08e-  1 FALSE
+10 full_quadratic sin4          0.370      0.384    0.963  3.37e-  1 FALSE
+11 full_quadratic cos4         -0.202      0.384   -0.525  6.00e-  1 FALSE
+12 full_quadratic sin5         -0.0844     0.384   -0.220  8.26e-  1 FALSE
+13 full_quadratic cos5         -0.0307     0.384   -0.0799 9.36e-  1 FALSE
+14 full_quadratic cos6         -0.561      0.271   -2.07   4.01e-  2 TRUE </code></pre>
 </div>
 </div>
+<p>The coefficient on the quadratic trend term is very small and negative. This suggests the data may indicate a decrease in the <em>rate</em> of global warming.</p>
 </section>
 <section id="quadratic-trend-reduced-model-1" class="level4">
 <h4 class="anchored" data-anchor-id="quadratic-trend-reduced-model-1">Quadratic Trend: Reduced Model 1</h4>
@@ -1010,27 +1063,27 @@ Quadratic Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>reduced1_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_quadratic_1  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 <span class="sc">+</span> cos6))</span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>reduced1_quadratic_lm <span class="sc">|&gt;</span></span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>reduced1_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_quadratic_1  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> <span class="fu">I</span>(zTIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 <span class="sc">+</span> cos6))</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>reduced1_quadratic_lm <span class="sc">|&gt;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 10 × 7
-   .model              term         estimate std.error statistic   p.value sig  
-   &lt;chr&gt;               &lt;chr&gt;           &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
- 1 reduced_quadratic_1 (Intercept)   5.38e+1 0.817         65.9  6.95e-129 TRUE 
- 2 reduced_quadratic_1 TIME          5.81e-2 0.0195         2.97 3.33e-  3 TRUE 
- 3 reduced_quadratic_1 I(TIME^2)    -2.37e-4 0.0000980     -2.42 1.64e-  2 TRUE 
- 4 reduced_quadratic_1 sin1         -1.61e+1 0.381        -42.1  8.23e- 96 TRUE 
- 5 reduced_quadratic_1 cos1         -2.37e+1 0.381        -62.2  1.34e-124 TRUE 
- 6 reduced_quadratic_1 sin2          1.26e+0 0.381          3.32 1.09e-  3 TRUE 
- 7 reduced_quadratic_1 cos2         -2.86e+0 0.381         -7.50 2.71e- 12 TRUE 
- 8 reduced_quadratic_1 sin3         -8.32e-1 0.381         -2.18 3.02e-  2 TRUE 
- 9 reduced_quadratic_1 cos3          6.21e-1 0.381          1.63 1.05e-  1 FALSE
-10 reduced_quadratic_1 cos6         -5.61e-1 0.269         -2.08 3.86e-  2 TRUE </code></pre>
+   .model              term        estimate std.error statistic   p.value sig  
+   &lt;chr&gt;               &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+ 1 reduced_quadratic_1 (Intercept)   57.2       0.404    142.   4.02e-188 TRUE 
+ 2 reduced_quadratic_1 zTIME          0.684     0.271      2.53 1.23e-  2 TRUE 
+ 3 reduced_quadratic_1 I(zTIME^2)    -0.733     0.303     -2.42 1.64e-  2 TRUE 
+ 4 reduced_quadratic_1 sin1         -16.1       0.381    -42.1  8.23e- 96 TRUE 
+ 5 reduced_quadratic_1 cos1         -23.7       0.381    -62.2  1.34e-124 TRUE 
+ 6 reduced_quadratic_1 sin2           1.26      0.381      3.32 1.09e-  3 TRUE 
+ 7 reduced_quadratic_1 cos2          -2.86      0.381     -7.50 2.71e- 12 TRUE 
+ 8 reduced_quadratic_1 sin3          -0.832     0.381     -2.18 3.02e-  2 TRUE 
+ 9 reduced_quadratic_1 cos3           0.621     0.381      1.63 1.05e-  1 FALSE
+10 reduced_quadratic_1 cos6          -0.561     0.269     -2.08 3.86e-  2 TRUE </code></pre>
 </div>
 </div>
 </section>
@@ -1040,26 +1093,26 @@ Quadratic Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>reduced2_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_quadratic_2  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos6))</span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>reduced2_quadratic_lm <span class="sc">|&gt;</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>reduced2_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_quadratic_2  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> <span class="fu">I</span>(zTIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos6))</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>reduced2_quadratic_lm <span class="sc">|&gt;</span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 9 × 7
-  .model              term          estimate std.error statistic   p.value sig  
-  &lt;chr&gt;               &lt;chr&gt;            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 reduced_quadratic_2 (Intercept)  53.8      0.821         65.5  5.09e-129 TRUE 
-2 reduced_quadratic_2 TIME          0.0582   0.0196         2.97 3.42e-  3 TRUE 
-3 reduced_quadratic_2 I(TIME^2)    -0.000237 0.0000985     -2.41 1.69e-  2 TRUE 
-4 reduced_quadratic_2 sin1        -16.1      0.383        -41.9  8.35e- 96 TRUE 
-5 reduced_quadratic_2 cos1        -23.7      0.383        -62.0  9.99e-125 TRUE 
-6 reduced_quadratic_2 sin2          1.26     0.383          3.30 1.14e-  3 TRUE 
-7 reduced_quadratic_2 cos2         -2.86     0.383         -7.47 3.23e- 12 TRUE 
-8 reduced_quadratic_2 sin3         -0.832    0.383         -2.17 3.10e-  2 TRUE 
-9 reduced_quadratic_2 cos6         -0.561    0.271         -2.07 3.95e-  2 TRUE </code></pre>
+  .model              term        estimate std.error statistic   p.value sig  
+  &lt;chr&gt;               &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+1 reduced_quadratic_2 (Intercept)   57.2       0.406    141.   1.41e-188 TRUE 
+2 reduced_quadratic_2 zTIME          0.689     0.272      2.54 1.20e-  2 TRUE 
+3 reduced_quadratic_2 I(zTIME^2)    -0.733     0.304     -2.41 1.69e-  2 TRUE 
+4 reduced_quadratic_2 sin1         -16.1       0.383    -41.9  8.35e- 96 TRUE 
+5 reduced_quadratic_2 cos1         -23.7       0.383    -62.0  9.99e-125 TRUE 
+6 reduced_quadratic_2 sin2           1.26      0.383      3.30 1.14e-  3 TRUE 
+7 reduced_quadratic_2 cos2          -2.86      0.383     -7.47 3.23e- 12 TRUE 
+8 reduced_quadratic_2 sin3          -0.832     0.383     -2.17 3.10e-  2 TRUE 
+9 reduced_quadratic_2 cos6          -0.561     0.271     -2.07 3.95e-  2 TRUE </code></pre>
 </div>
 </div>
 </section>
@@ -1069,25 +1122,25 @@ Quadratic Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>reduced3_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_quadratic_3  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3))</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>reduced3_quadratic_lm <span class="sc">|&gt;</span></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>reduced3_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_quadratic_3  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> <span class="fu">I</span>(zTIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3))</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>reduced3_quadratic_lm <span class="sc">|&gt;</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 8 × 7
-  .model              term          estimate std.error statistic   p.value sig  
-  &lt;chr&gt;               &lt;chr&gt;            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 reduced_quadratic_3 (Intercept)  53.8      0.828         65.0  7.73e-129 TRUE 
-2 reduced_quadratic_3 TIME          0.0581   0.0198         2.94 3.76e-  3 TRUE 
-3 reduced_quadratic_3 I(TIME^2)    -0.000237 0.0000993     -2.39 1.79e-  2 TRUE 
-4 reduced_quadratic_3 sin1        -16.1      0.386        -41.6  1.76e- 95 TRUE 
-5 reduced_quadratic_3 cos1        -23.7      0.386        -61.4  1.63e-124 TRUE 
-6 reduced_quadratic_3 sin2          1.26     0.386          3.28 1.26e-  3 TRUE 
-7 reduced_quadratic_3 cos2         -2.86     0.386         -7.40 4.67e- 12 TRUE 
-8 reduced_quadratic_3 sin3         -0.832    0.386         -2.16 3.25e-  2 TRUE </code></pre>
+  .model              term        estimate std.error statistic   p.value sig  
+  &lt;chr&gt;               &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+1 reduced_quadratic_3 (Intercept)   57.2       0.409    140.   1.12e-188 TRUE 
+2 reduced_quadratic_3 zTIME          0.684     0.274      2.50 1.34e-  2 TRUE 
+3 reduced_quadratic_3 I(zTIME^2)    -0.733     0.307     -2.39 1.79e-  2 TRUE 
+4 reduced_quadratic_3 sin1         -16.1       0.386    -41.6  1.76e- 95 TRUE 
+5 reduced_quadratic_3 cos1         -23.7       0.386    -61.4  1.63e-124 TRUE 
+6 reduced_quadratic_3 sin2           1.26      0.386      3.28 1.26e-  3 TRUE 
+7 reduced_quadratic_3 cos2          -2.86      0.386     -7.40 4.67e- 12 TRUE 
+8 reduced_quadratic_3 sin3          -0.832     0.386     -2.16 3.25e-  2 TRUE </code></pre>
 </div>
 </div>
 </section>
@@ -1097,26 +1150,26 @@ Quadratic Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>reduced4_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_quadratic_4  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3))</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>reduced4_quadratic_lm <span class="sc">|&gt;</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>reduced4_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_quadratic_4  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> <span class="fu">I</span>(zTIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3))</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>reduced4_quadratic_lm <span class="sc">|&gt;</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 9 × 7
-  .model              term          estimate std.error statistic   p.value sig  
-  &lt;chr&gt;               &lt;chr&gt;            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 reduced_quadratic_4 (Intercept)  53.8      0.824         65.3  1.07e-128 TRUE 
-2 reduced_quadratic_4 TIME          0.0580   0.0197         2.94 3.67e-  3 TRUE 
-3 reduced_quadratic_4 I(TIME^2)    -0.000237 0.0000989     -2.40 1.74e-  2 TRUE 
-4 reduced_quadratic_4 sin1        -16.1      0.385        -41.8  1.76e- 95 TRUE 
-5 reduced_quadratic_4 cos1        -23.7      0.384        -61.7  2.21e-124 TRUE 
-6 reduced_quadratic_4 sin2          1.26     0.384          3.29 1.21e-  3 TRUE 
-7 reduced_quadratic_4 cos2         -2.86     0.384         -7.43 3.95e- 12 TRUE 
-8 reduced_quadratic_4 sin3         -0.832    0.384         -2.16 3.17e-  2 TRUE 
-9 reduced_quadratic_4 cos3          0.621    0.384          1.61 1.08e-  1 FALSE</code></pre>
+  .model              term        estimate std.error statistic   p.value sig  
+  &lt;chr&gt;               &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+1 reduced_quadratic_4 (Intercept)   57.2       0.408    140.   3.22e-188 TRUE 
+2 reduced_quadratic_4 zTIME          0.679     0.273      2.49 1.38e-  2 TRUE 
+3 reduced_quadratic_4 I(zTIME^2)    -0.733     0.305     -2.40 1.74e-  2 TRUE 
+4 reduced_quadratic_4 sin1         -16.1       0.385    -41.8  1.76e- 95 TRUE 
+5 reduced_quadratic_4 cos1         -23.7       0.384    -61.7  2.21e-124 TRUE 
+6 reduced_quadratic_4 sin2           1.26      0.384      3.29 1.21e-  3 TRUE 
+7 reduced_quadratic_4 cos2          -2.86      0.384     -7.43 3.95e- 12 TRUE 
+8 reduced_quadratic_4 sin3          -0.832     0.384     -2.16 3.17e-  2 TRUE 
+9 reduced_quadratic_4 cos3           0.621     0.384      1.61 1.08e-  1 FALSE</code></pre>
 </div>
 </div>
 </section>
@@ -1126,24 +1179,24 @@ Quadratic Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>reduced5_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_quadratic_5  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2))</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>reduced5_quadratic_lm <span class="sc">|&gt;</span></span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>reduced5_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_quadratic_5  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> <span class="fu">I</span>(zTIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2))</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>reduced5_quadratic_lm <span class="sc">|&gt;</span></span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 7 × 7
-  .model              term          estimate std.error statistic   p.value sig  
-  &lt;chr&gt;               &lt;chr&gt;            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 reduced_quadratic_5 (Intercept)  53.8       0.836        64.3  1.49e-128 TRUE 
-2 reduced_quadratic_5 TIME          0.0583    0.0200        2.91 4.00e-  3 TRUE 
-3 reduced_quadratic_5 I(TIME^2)    -0.000237  0.000100     -2.37 1.90e-  2 TRUE 
-4 reduced_quadratic_5 sin1        -16.1       0.390       -41.2  4.40e- 95 TRUE 
-5 reduced_quadratic_5 cos1        -23.7       0.390       -60.8  3.16e-124 TRUE 
-6 reduced_quadratic_5 sin2          1.26      0.390         3.24 1.40e-  3 TRUE 
-7 reduced_quadratic_5 cos2         -2.86      0.390        -7.33 6.96e- 12 TRUE </code></pre>
+  .model              term        estimate std.error statistic   p.value sig  
+  &lt;chr&gt;               &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+1 reduced_quadratic_5 (Intercept)   57.2       0.413    138.   1.06e-188 TRUE 
+2 reduced_quadratic_5 zTIME          0.692     0.277      2.50 1.33e-  2 TRUE 
+3 reduced_quadratic_5 I(zTIME^2)    -0.733     0.310     -2.37 1.90e-  2 TRUE 
+4 reduced_quadratic_5 sin1         -16.1       0.390    -41.2  4.40e- 95 TRUE 
+5 reduced_quadratic_5 cos1         -23.7       0.390    -60.8  3.16e-124 TRUE 
+6 reduced_quadratic_5 sin2           1.26      0.390      3.24 1.40e-  3 TRUE 
+7 reduced_quadratic_5 cos2          -2.86      0.390     -7.33 6.96e- 12 TRUE </code></pre>
 </div>
 </div>
 </section>
@@ -1153,22 +1206,22 @@ Quadratic Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>reduced6_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_quadratic_6  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1))</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>reduced6_quadratic_lm <span class="sc">|&gt;</span></span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>reduced6_quadratic_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_quadratic_6  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> <span class="fu">I</span>(zTIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1))</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>reduced6_quadratic_lm <span class="sc">|&gt;</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 7
-  .model              term          estimate std.error statistic   p.value sig  
-  &lt;chr&gt;               &lt;chr&gt;            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 reduced_quadratic_6 (Intercept)  53.9       0.965        55.8  1.55e-118 TRUE 
-2 reduced_quadratic_6 TIME          0.0575    0.0231        2.49 1.36e-  2 TRUE 
-3 reduced_quadratic_6 I(TIME^2)    -0.000238  0.000116     -2.05 4.14e-  2 TRUE 
-4 reduced_quadratic_6 sin1        -16.1       0.451       -35.7  2.32e- 85 TRUE 
-5 reduced_quadratic_6 cos1        -23.7       0.450       -52.7  4.14e-114 TRUE </code></pre>
+  .model              term        estimate std.error statistic   p.value sig  
+  &lt;chr&gt;               &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+1 reduced_quadratic_6 (Intercept)   57.2       0.477    120.   9.32e-179 TRUE 
+2 reduced_quadratic_6 zTIME          0.646     0.319      2.02 4.45e-  2 TRUE 
+3 reduced_quadratic_6 I(zTIME^2)    -0.734     0.358     -2.05 4.14e-  2 TRUE 
+4 reduced_quadratic_6 sin1         -16.1       0.451    -35.7  2.32e- 85 TRUE 
+5 reduced_quadratic_6 cos1         -23.7       0.450    -52.7  4.14e-114 TRUE </code></pre>
 </div>
 </div>
 </section>
@@ -1178,7 +1231,7 @@ Quadratic Trends
 <!-- End quadratic model -->
 <!-- Model Selection: Linear Trend -->
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="Linear Trends">
-<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="true" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -1187,7 +1240,7 @@ Linear Trends
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-5" class="callout-5-contents callout-collapse collapse show">
+<div id="callout-7" class="callout-7-contents callout-collapse collapse show">
 <div class="callout-body-container callout-body">
 <!-- Begin hiding code for linear trends -->
 <section id="linear-trend-full-model" class="level4">
@@ -1196,33 +1249,33 @@ Linear Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>full_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">full_linear =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span></span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6 ))</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>full_linear_lm <span class="sc">|&gt;</span></span>
-<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>full_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">full_linear =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> <span class="fu">I</span>(zTIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6 ))</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>full_linear_lm <span class="sc">|&gt;</span></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 14 × 7
-   .model      term          estimate std.error statistic   p.value sig  
-   &lt;chr&gt;       &lt;chr&gt;            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
- 1 full_linear (Intercept)  53.8      0.823       65.3    2.45e-126 TRUE 
- 2 full_linear TIME          0.0582   0.0197       2.96   3.54e-  3 TRUE 
- 3 full_linear I(TIME^2)    -0.000237 0.0000988   -2.40   1.73e-  2 TRUE 
- 4 full_linear sin1        -16.1      0.384      -41.8    5.46e- 94 TRUE 
- 5 full_linear cos1        -23.7      0.384      -61.8    3.68e-122 TRUE 
- 6 full_linear sin2          1.26     0.384        3.29   1.19e-  3 TRUE 
- 7 full_linear cos2         -2.86     0.384       -7.44   4.03e- 12 TRUE 
- 8 full_linear sin3         -0.832    0.384       -2.17   3.15e-  2 TRUE 
- 9 full_linear cos3          0.620    0.384        1.62   1.08e-  1 FALSE
-10 full_linear sin4          0.370    0.384        0.963  3.37e-  1 FALSE
-11 full_linear cos4         -0.202    0.384       -0.525  6.00e-  1 FALSE
-12 full_linear sin5         -0.0844   0.384       -0.220  8.26e-  1 FALSE
-13 full_linear cos5         -0.0307   0.384       -0.0799 9.36e-  1 FALSE
-14 full_linear cos6         -0.561    0.271       -2.07   4.01e-  2 TRUE </code></pre>
+   .model      term        estimate std.error statistic   p.value sig  
+   &lt;chr&gt;       &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+ 1 full_linear (Intercept)  57.2        0.407  141.     2.70e-184 TRUE 
+ 2 full_linear zTIME         0.688      0.273    2.52   1.25e-  2 TRUE 
+ 3 full_linear I(zTIME^2)   -0.733      0.305   -2.40   1.73e-  2 TRUE 
+ 4 full_linear sin1        -16.1        0.384  -41.8    5.46e- 94 TRUE 
+ 5 full_linear cos1        -23.7        0.384  -61.8    3.68e-122 TRUE 
+ 6 full_linear sin2          1.26       0.384    3.29   1.19e-  3 TRUE 
+ 7 full_linear cos2         -2.86       0.384   -7.44   4.03e- 12 TRUE 
+ 8 full_linear sin3         -0.832      0.384   -2.17   3.15e-  2 TRUE 
+ 9 full_linear cos3          0.620      0.384    1.62   1.08e-  1 FALSE
+10 full_linear sin4          0.370      0.384    0.963  3.37e-  1 FALSE
+11 full_linear cos4         -0.202      0.384   -0.525  6.00e-  1 FALSE
+12 full_linear sin5         -0.0844     0.384   -0.220  8.26e-  1 FALSE
+13 full_linear cos5         -0.0307     0.384   -0.0799 9.36e-  1 FALSE
+14 full_linear cos6         -0.561      0.271   -2.07   4.01e-  2 TRUE </code></pre>
 </div>
 </div>
 </section>
@@ -1232,26 +1285,26 @@ Linear Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>reduced1_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_linear_1  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 <span class="sc">+</span> cos6))</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>reduced1_linear_lm <span class="sc">|&gt;</span></span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>reduced1_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_linear_1  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 <span class="sc">+</span> cos6))</span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>reduced1_linear_lm <span class="sc">|&gt;</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 9 × 7
   .model           term        estimate std.error statistic   p.value sig  
   &lt;chr&gt;            &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 reduced_linear_1 (Intercept)  55.3      0.549      101.   3.00e-162 TRUE 
-2 reduced_linear_1 TIME          0.0123   0.00493      2.49 1.35e-  2 TRUE 
-3 reduced_linear_1 sin1        -16.1      0.386      -41.6  3.44e- 95 TRUE 
-4 reduced_linear_1 cos1        -23.7      0.386      -61.4  4.39e-124 TRUE 
-5 reduced_linear_1 sin2          1.26     0.386        3.27 1.26e-  3 TRUE 
-6 reduced_linear_1 cos2         -2.86     0.386       -7.40 4.65e- 12 TRUE 
-7 reduced_linear_1 sin3         -0.832    0.386       -2.16 3.24e-  2 TRUE 
-8 reduced_linear_1 cos3          0.620    0.386        1.61 1.10e-  1 FALSE
-9 reduced_linear_1 cos6         -0.561    0.273       -2.06 4.12e-  2 TRUE </code></pre>
+1 reduced_linear_1 (Intercept)   56.5       0.273    207.   6.64e-219 TRUE 
+2 reduced_linear_1 zTIME          0.684     0.274      2.49 1.35e-  2 TRUE 
+3 reduced_linear_1 sin1         -16.1       0.386    -41.6  3.44e- 95 TRUE 
+4 reduced_linear_1 cos1         -23.7       0.386    -61.4  4.39e-124 TRUE 
+5 reduced_linear_1 sin2           1.26      0.386      3.27 1.26e-  3 TRUE 
+6 reduced_linear_1 cos2          -2.86      0.386     -7.40 4.65e- 12 TRUE 
+7 reduced_linear_1 sin3          -0.832     0.386     -2.16 3.24e-  2 TRUE 
+8 reduced_linear_1 cos3           0.620     0.386      1.61 1.10e-  1 FALSE
+9 reduced_linear_1 cos6          -0.561     0.273     -2.06 4.12e-  2 TRUE </code></pre>
 </div>
 </div>
 </section>
@@ -1261,25 +1314,25 @@ Linear Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>reduced2_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_linear_2  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos6))</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>reduced2_linear_lm <span class="sc">|&gt;</span></span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>reduced2_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_linear_2  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos6))</span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>reduced2_linear_lm <span class="sc">|&gt;</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 8 × 7
   .model           term        estimate std.error statistic   p.value sig  
   &lt;chr&gt;            &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 reduced_linear_2 (Intercept)  55.3      0.551      100.   1.44e-162 TRUE 
-2 reduced_linear_2 TIME          0.0124   0.00495      2.50 1.31e-  2 TRUE 
-3 reduced_linear_2 sin1        -16.1      0.388      -41.4  3.41e- 95 TRUE 
-4 reduced_linear_2 cos1        -23.7      0.388      -61.2  3.22e-124 TRUE 
-5 reduced_linear_2 sin2          1.26     0.388        3.26 1.32e-  3 TRUE 
-6 reduced_linear_2 cos2         -2.86     0.388       -7.37 5.48e- 12 TRUE 
-7 reduced_linear_2 sin3         -0.832    0.388       -2.15 3.31e-  2 TRUE 
-8 reduced_linear_2 cos6         -0.561    0.274       -2.05 4.20e-  2 TRUE </code></pre>
+1 reduced_linear_2 (Intercept)   56.5       0.274    206.   1.56e-219 TRUE 
+2 reduced_linear_2 zTIME          0.689     0.275      2.50 1.31e-  2 TRUE 
+3 reduced_linear_2 sin1         -16.1       0.388    -41.4  3.41e- 95 TRUE 
+4 reduced_linear_2 cos1         -23.7       0.388    -61.2  3.22e-124 TRUE 
+5 reduced_linear_2 sin2           1.26      0.388      3.26 1.32e-  3 TRUE 
+6 reduced_linear_2 cos2          -2.86      0.388     -7.37 5.48e- 12 TRUE 
+7 reduced_linear_2 sin3          -0.832     0.388     -2.15 3.31e-  2 TRUE 
+8 reduced_linear_2 cos6          -0.561     0.274     -2.05 4.20e-  2 TRUE </code></pre>
 </div>
 </div>
 </section>
@@ -1289,24 +1342,24 @@ Linear Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>reduced3_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_linear_3  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3))</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>reduced3_linear_lm <span class="sc">|&gt;</span></span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>reduced3_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_linear_3  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3))</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>reduced3_linear_lm <span class="sc">|&gt;</span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 7 × 7
   .model           term        estimate std.error statistic   p.value sig  
   &lt;chr&gt;            &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 reduced_linear_3 (Intercept)  55.3      0.556       99.5  1.44e-162 TRUE 
-2 reduced_linear_3 TIME          0.0123   0.00500      2.47 1.46e-  2 TRUE 
-3 reduced_linear_3 sin1        -16.1      0.391      -41.1  6.93e- 95 TRUE 
-4 reduced_linear_3 cos1        -23.7      0.391      -60.6  5.06e-124 TRUE 
-5 reduced_linear_3 sin2          1.26     0.391        3.23 1.45e-  3 TRUE 
-6 reduced_linear_3 cos2         -2.86     0.391       -7.31 7.77e- 12 TRUE 
-7 reduced_linear_3 sin3         -0.832    0.391       -2.13 3.46e-  2 TRUE </code></pre>
+1 reduced_linear_3 (Intercept)   56.5       0.276    204.   8.13e-220 TRUE 
+2 reduced_linear_3 zTIME          0.684     0.278      2.47 1.46e-  2 TRUE 
+3 reduced_linear_3 sin1         -16.1       0.391    -41.1  6.93e- 95 TRUE 
+4 reduced_linear_3 cos1         -23.7       0.391    -60.6  5.06e-124 TRUE 
+5 reduced_linear_3 sin2           1.26      0.391      3.23 1.45e-  3 TRUE 
+6 reduced_linear_3 cos2          -2.86      0.391     -7.31 7.77e- 12 TRUE 
+7 reduced_linear_3 sin3          -0.832     0.391     -2.13 3.46e-  2 TRUE </code></pre>
 </div>
 </div>
 </section>
@@ -1316,25 +1369,25 @@ Linear Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>reduced4_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_linear_4  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3))</span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>reduced4_linear_lm <span class="sc">|&gt;</span></span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>reduced4_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_linear_4  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3))</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>reduced4_linear_lm <span class="sc">|&gt;</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 8 × 7
   .model           term        estimate std.error statistic   p.value sig  
   &lt;chr&gt;            &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 reduced_linear_4 (Intercept)  55.3      0.553       99.9  3.03e-162 TRUE 
-2 reduced_linear_4 TIME          0.0122   0.00497      2.45 1.50e-  2 TRUE 
-3 reduced_linear_4 sin1        -16.1      0.390      -41.2  7.05e- 95 TRUE 
-4 reduced_linear_4 cos1        -23.7      0.389      -60.9  6.98e-124 TRUE 
-5 reduced_linear_4 sin2          1.26     0.389        3.25 1.39e-  3 TRUE 
-6 reduced_linear_4 cos2         -2.86     0.389       -7.34 6.63e- 12 TRUE 
-7 reduced_linear_4 sin3         -0.832    0.389       -2.14 3.38e-  2 TRUE 
-8 reduced_linear_4 cos3          0.620    0.389        1.59 1.13e-  1 FALSE</code></pre>
+1 reduced_linear_4 (Intercept)   56.5       0.275    205.   3.50e-219 TRUE 
+2 reduced_linear_4 zTIME          0.679     0.276      2.45 1.50e-  2 TRUE 
+3 reduced_linear_4 sin1         -16.1       0.390    -41.2  7.05e- 95 TRUE 
+4 reduced_linear_4 cos1         -23.7       0.389    -60.9  6.98e-124 TRUE 
+5 reduced_linear_4 sin2           1.26      0.389      3.25 1.39e-  3 TRUE 
+6 reduced_linear_4 cos2          -2.86      0.389     -7.34 6.63e- 12 TRUE 
+7 reduced_linear_4 sin3          -0.832     0.389     -2.14 3.38e-  2 TRUE 
+8 reduced_linear_4 cos3           0.620     0.389      1.59 1.13e-  1 FALSE</code></pre>
 </div>
 </div>
 </section>
@@ -1344,23 +1397,23 @@ Linear Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>reduced5_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_linear_5  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2))</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>reduced5_linear_lm <span class="sc">|&gt;</span></span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>reduced5_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_linear_5  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2))</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a>reduced5_linear_lm <span class="sc">|&gt;</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb33-6"><a href="#cb33-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 6 × 7
   .model           term        estimate std.error statistic   p.value sig  
   &lt;chr&gt;            &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 reduced_linear_5 (Intercept)  55.3      0.561       98.5  1.83e-162 TRUE 
-2 reduced_linear_5 TIME          0.0125   0.00504      2.47 1.44e-  2 TRUE 
-3 reduced_linear_5 sin1        -16.1      0.395      -40.7  1.66e- 94 TRUE 
-4 reduced_linear_5 cos1        -23.7      0.395      -60.1  9.40e-124 TRUE 
-5 reduced_linear_5 sin2          1.26     0.395        3.20 1.60e-  3 TRUE 
-6 reduced_linear_5 cos2         -2.86     0.395       -7.24 1.13e- 11 TRUE </code></pre>
+1 reduced_linear_5 (Intercept)   56.5       0.279    202.   5.06e-220 TRUE 
+2 reduced_linear_5 zTIME          0.692     0.280      2.47 1.44e-  2 TRUE 
+3 reduced_linear_5 sin1         -16.1       0.395    -40.7  1.66e- 94 TRUE 
+4 reduced_linear_5 cos1         -23.7       0.395    -60.1  9.40e-124 TRUE 
+5 reduced_linear_5 sin2           1.26      0.395      3.20 1.60e-  3 TRUE 
+6 reduced_linear_5 cos2          -2.86      0.395     -7.24 1.13e- 11 TRUE </code></pre>
 </div>
 </div>
 </section>
@@ -1370,21 +1423,21 @@ Linear Trends
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>reduced6_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_linear_6  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1))</span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>reduced6_linear_lm <span class="sc">|&gt;</span></span>
-<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>reduced6_linear_lm <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">reduced_linear_6  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> zTIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1))</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>reduced6_linear_lm <span class="sc">|&gt;</span></span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 4 × 7
   .model           term        estimate std.error statistic   p.value sig  
   &lt;chr&gt;            &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 reduced_linear_6 (Intercept)  55.3      0.645       85.8  1.01e-152 TRUE 
-2 reduced_linear_6 TIME          0.0116   0.00580      2.01 4.63e-  2 TRUE 
-3 reduced_linear_6 sin1        -16.1      0.454      -35.4  5.09e- 85 TRUE 
-4 reduced_linear_6 cos1        -23.7      0.454      -52.2  7.20e-114 TRUE </code></pre>
+1 reduced_linear_6 (Intercept)   56.5       0.321    176.   1.43e-210 TRUE 
+2 reduced_linear_6 zTIME          0.646     0.322      2.01 4.63e-  2 TRUE 
+3 reduced_linear_6 sin1         -16.1       0.454    -35.4  5.09e- 85 TRUE 
+4 reduced_linear_6 cos1         -23.7       0.454    -52.2  7.20e-114 TRUE </code></pre>
 </div>
 </div>
 </section>
@@ -1392,9 +1445,8 @@ Linear Trends
 </div>
 </div>
 <!-- End of linear model output -->
-<!-- Model Selection: Cubic Trends -->
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="Model Comparison">
-<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-8-contents" aria-controls="callout-8" aria-expanded="true" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
@@ -1403,7 +1455,7 @@ Model Comparison
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-6" class="callout-6-contents callout-collapse collapse show">
+<div id="callout-8" class="callout-8-contents callout-collapse collapse show">
 <div class="callout-body-container callout-body">
 <!-- Begin hiding code for model comparison -->
 <section id="model-comparison" class="level4">
@@ -1412,33 +1464,33 @@ Model Comparison
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb36"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb36-1"><a href="#cb36-1" aria-hidden="true" tabindex="-1"></a>model_combined <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb36-2"><a href="#cb36-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
-<span id="cb36-3"><a href="#cb36-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">full_cubic =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">3</span>) <span class="sc">+</span></span>
-<span id="cb36-4"><a href="#cb36-4" aria-hidden="true" tabindex="-1"></a>      sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
-<span id="cb36-5"><a href="#cb36-5" aria-hidden="true" tabindex="-1"></a>      <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6),</span>
-<span id="cb36-6"><a href="#cb36-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">full_quadratic =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span></span>
-<span id="cb36-7"><a href="#cb36-7" aria-hidden="true" tabindex="-1"></a>      sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
-<span id="cb36-8"><a href="#cb36-8" aria-hidden="true" tabindex="-1"></a>      <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6),</span>
-<span id="cb36-9"><a href="#cb36-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">full_linear =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span></span>
-<span id="cb36-10"><a href="#cb36-10" aria-hidden="true" tabindex="-1"></a>      sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
-<span id="cb36-11"><a href="#cb36-11" aria-hidden="true" tabindex="-1"></a>      <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6 ),</span>
-<span id="cb36-12"><a href="#cb36-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_quadratic_1  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 <span class="sc">+</span> cos6),</span>
-<span id="cb36-13"><a href="#cb36-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_quadratic_2  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos6),</span>
-<span id="cb36-14"><a href="#cb36-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_quadratic_3  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3),</span>
-<span id="cb36-15"><a href="#cb36-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_quadratic_4  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3),</span>
-<span id="cb36-16"><a href="#cb36-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_quadratic_5  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2),</span>
-<span id="cb36-17"><a href="#cb36-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_quadratic_6  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1),</span>
-<span id="cb36-18"><a href="#cb36-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_linear_1  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 <span class="sc">+</span> cos6),</span>
-<span id="cb36-19"><a href="#cb36-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_linear_2  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos6),</span>
-<span id="cb36-20"><a href="#cb36-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_linear_3  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3),</span>
-<span id="cb36-21"><a href="#cb36-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_linear_4  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3),</span>
-<span id="cb36-22"><a href="#cb36-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_linear_5  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2),</span>
-<span id="cb36-23"><a href="#cb36-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_linear_6  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1)</span>
-<span id="cb36-24"><a href="#cb36-24" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb36-25"><a href="#cb36-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb36-26"><a href="#cb36-26" aria-hidden="true" tabindex="-1"></a><span class="fu">glance</span>(model_combined) <span class="sc">|&gt;</span></span>
-<span id="cb36-27"><a href="#cb36-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, AIC, AICc, BIC)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>model_combined <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">full_cubic =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>      sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>      <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6),</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">full_quadratic =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a>      sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>      <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6),</span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">full_linear =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>      sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>      <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6 ),</span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_quadratic_1  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 <span class="sc">+</span> cos6),</span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_quadratic_2  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos6),</span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_quadratic_3  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3),</span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_quadratic_4  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3),</span>
+<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_quadratic_5  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2),</span>
+<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_quadratic_6  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> <span class="fu">I</span>(TIME<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> sin1 <span class="sc">+</span> cos1),</span>
+<span id="cb37-18"><a href="#cb37-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_linear_1  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 <span class="sc">+</span> cos6),</span>
+<span id="cb37-19"><a href="#cb37-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_linear_2  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos6),</span>
+<span id="cb37-20"><a href="#cb37-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_linear_3  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3),</span>
+<span id="cb37-21"><a href="#cb37-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_linear_4  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3),</span>
+<span id="cb37-22"><a href="#cb37-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_linear_5  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2),</span>
+<span id="cb37-23"><a href="#cb37-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">reduced_linear_6  =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> TIME <span class="sc">+</span> sin1 <span class="sc">+</span> cos1)</span>
+<span id="cb37-24"><a href="#cb37-24" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb37-25"><a href="#cb37-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-26"><a href="#cb37-26" aria-hidden="true" tabindex="-1"></a><span class="fu">glance</span>(model_combined) <span class="sc">|&gt;</span></span>
+<span id="cb37-27"><a href="#cb37-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, AIC, AICc, BIC)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <div class="cell">
@@ -1551,23 +1603,23 @@ Model Comparison
 </div>
 <p>We look for the smallest value of the AIC, AICc, and BIC criteria. These methods do not have to agree with each other, and they provide different perspectives based on their various algorithms. Notice that the AIC and AICc criteria both suggest the model we titled “Reduced Quadratic 1:”</p>
 <p><span class="math display">\[\begin{align*}
-  x_t &amp;= \beta_0 + \beta_1 t + \beta_2 t^2
+  x_t &amp;= \beta_0 + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2
                         + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right)
                         + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      &amp; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right)
+      &amp; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right)
                         + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
-      &amp; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_7 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)  
+      &amp; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_7 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)  
                         + \beta_8 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \\
-      &amp; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_9 \cos \left( \frac{2\pi \cdot 6 t}{12} \right)
+      &amp; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_9 \cos \left( \frac{2\pi \cdot 6 t}{12} \right)
                \phantom{+ \beta_9 \sin \left( \frac{2\pi \cdot 6 t}{12} \right)}
       + z_t
 \end{align*}\]</span></p>
 <p>The BIC criteria points to the “Reduced Quadratic 5” model:</p>
 <p><span class="math display">\[\begin{align*}
-  x_t &amp;= \beta_0 + \beta_1 t + \beta_2 t^2
+  x_t &amp;= \beta_0 + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2
             + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right)
             + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      &amp; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right)
+      &amp; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right)
             + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) + z_t
 \end{align*}\]</span></p>
 <p>If there are two competing models that are both satisfactory, it is usually preferable to choose the more parsimonious (or simpler) model.</p>
@@ -1576,10 +1628,10 @@ Model Comparison
 <p>Notice that the linear models corresponding to the “Reduced Quadratic 1” and “Reduced Quadratic 5” models have AIC/AICc/BIC values that are not much larger than the minimum values. Given other external evidence related to global warming, it is unlikely that the second derivative of the function representing the Earth’s mean temperature is negative. In other words, it does not seem like the rate at which the earth is warming is decreasing. Even if there is a quadratic component to the trend, it is not visible to the eye in the time plot.</p>
 <p>For these reasons, we will apply the “Reduced Linear 5” model. This model implies a linear trend in the mean temperature of the Earth. The BIC for this model is not much bigger than the BIC for the “Reduced Quadratic 5” model. This model is simpler than the “Reduced Quadratic 1,” “Reduced Quadratic 5,” and “Reduced Linear 1” models.</p>
 <p><span class="math display">\[\begin{align*}
-  x_t &amp;= \beta_0 + \beta_1 t  
+  x_t &amp;= \beta_0 + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right)  
             + \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right)
             + \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      &amp; ~~~~~~~~~~~~~~~~~~~~ + \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right)
+      &amp; ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right)
             + \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) + z_t
 \end{align*}\]</span></p>
 </section>
@@ -1587,41 +1639,6 @@ Model Comparison
 </div>
 </div>
 <!-- End of model comparison -->
-</section>
-<section id="standardizing-the-time-variable" class="level3">
-<h3 class="anchored" data-anchor-id="standardizing-the-time-variable">Standardizing the Time Variable</h3>
-<div class="callout callout-style-default callout-warning callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Warning
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>When the independent variable (the measure of time) is large, floating point errors in the computation of the regression coefficents can be substantial.</p>
-</div>
-</div>
-<p>To avoid serious floating point errors, we standardize the time variable. First, compute the sine and cosine terms using the original time variable, then transform the time variable by subtracting its mean and dividing by its standard deviation. (In other words, compute a <span class="math inline">\(z\)</span>-score.)</p>
-<p>The model is adjusted accordingly after fitting.</p>
-<p>We will demonstrate this with the “Reduced Linear 5” and “Reduced Quadratic 5” models.</p>
-<section id="computing-the-standardized-time-variable" class="level4">
-<h4 class="anchored" data-anchor-id="computing-the-standardized-time-variable">Computing the standardized time variable</h4>
-<p>Our time variable was a simple incremented value counting the months ranging from 1 (representing 1/2008) to 192 (representing 12/2023).</p>
-<p>We standardize this variable by the transformation:</p>
-<p><span class="math display">\[
-  zTIME
-    = \frac{t - \bar t}{s_t}
-    = \frac{t - 96.5}{55.57}
-\]</span></p>
-<p>where the mean of the variable <code>TIME</code> is <span class="math inline">\(\bar t = 96.5\)</span>, and the standard deviation is <span class="math inline">\(s_t = 55.57\)</span>.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>weather_df <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span></span>
-<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">zTIME =</span> (TIME <span class="sc">-</span> <span class="fu">mean</span>(TIME)) <span class="sc">/</span> <span class="fu">sd</span>(TIME))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>Now, we fit the models using <code>zTIME</code> instead of <code>TIME</code>.</p>
-</section>
 <section id="reduced-linear-5" class="level4">
 <h4 class="anchored" data-anchor-id="reduced-linear-5">Reduced Linear 5</h4>
 <div class="cell">
@@ -1675,7 +1692,7 @@ Warning
             + (-2.858) \cos \left( \frac{2\pi \cdot 2 t}{12} \right)
       \\
 \end{align*}\]</span></p>
-<p>This can be simplified, if desired.</p>
+<p>The linear trend term can be simplified, if desired.</p>
 </section>
 <section id="reduced-quadratic-5" class="level4">
 <h4 class="anchored" data-anchor-id="reduced-quadratic-5">Reduced Quadratic 5</h4>
@@ -1998,47 +2015,46 @@ Warning
 <span id="cb46-2"><a href="#cb46-2" aria-hidden="true" tabindex="-1"></a>  <span class="co"># compute additional variables needed for the regression</span></span>
 <span id="cb46-3"><a href="#cb46-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">TIME =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>()) <span class="sc">|&gt;</span></span>
 <span id="cb46-4"><a href="#cb46-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos1 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos2 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos3 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos4 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos5 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-10"><a href="#cb46-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos6 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-11"><a href="#cb46-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos7 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">7</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-12"><a href="#cb46-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos8 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">8</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-13"><a href="#cb46-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos9 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">9</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-14"><a href="#cb46-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos10 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">10</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-15"><a href="#cb46-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos11 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">11</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-16"><a href="#cb46-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos12 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">12</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-17"><a href="#cb46-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin1 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-18"><a href="#cb46-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin2 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-19"><a href="#cb46-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin3 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-20"><a href="#cb46-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin4 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-21"><a href="#cb46-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin5 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-22"><a href="#cb46-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin6 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-23"><a href="#cb46-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin7 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">7</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-24"><a href="#cb46-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin8 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">8</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-25"><a href="#cb46-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin9 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">9</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-26"><a href="#cb46-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin10 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">10</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-27"><a href="#cb46-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin11 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">11</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">24</span>),</span>
-<span id="cb46-28"><a href="#cb46-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># sin12 = sin(2 * pi * 12 * TIME/24) # zero for all integer values of t</span></span>
+<span id="cb46-5"><a href="#cb46-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos1 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-6"><a href="#cb46-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos2 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-7"><a href="#cb46-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos3 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-8"><a href="#cb46-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos4 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-9"><a href="#cb46-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos5 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-10"><a href="#cb46-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos6 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-11"><a href="#cb46-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos7 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">7</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-12"><a href="#cb46-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos8 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">8</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-13"><a href="#cb46-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos9 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">9</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-14"><a href="#cb46-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos10 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">10</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-15"><a href="#cb46-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos11 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">11</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-16"><a href="#cb46-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos12 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">12</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-17"><a href="#cb46-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin1 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-18"><a href="#cb46-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin2 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-19"><a href="#cb46-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin3 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-20"><a href="#cb46-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin4 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-21"><a href="#cb46-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin5 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-22"><a href="#cb46-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin6 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-23"><a href="#cb46-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin7 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">7</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-24"><a href="#cb46-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin8 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">8</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-25"><a href="#cb46-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin9 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">9</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-26"><a href="#cb46-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin10 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">10</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-27"><a href="#cb46-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin11 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">11</span> <span class="sc">*</span> TIME <span class="sc">/</span> <span class="dv">24</span>),</span>
+<span id="cb46-28"><a href="#cb46-28" aria-hidden="true" tabindex="-1"></a>    <span class="co"># sin12 = sin(2 * pi * 12 * TIME / 24) # zero for all integer values of t</span></span>
 <span id="cb46-29"><a href="#cb46-29" aria-hidden="true" tabindex="-1"></a>  ) </span>
-<span id="cb46-30"><a href="#cb46-30" aria-hidden="true" tabindex="-1"></a>   </span>
-<span id="cb46-31"><a href="#cb46-31" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb46-32"><a href="#cb46-32" aria-hidden="true" tabindex="-1"></a><span class="co"># plot the time series</span></span>
-<span id="cb46-33"><a href="#cb46-33" aria-hidden="true" tabindex="-1"></a>fallriver_ts <span class="sc">|&gt;</span></span>
-<span id="cb46-34"><a href="#cb46-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> flow) <span class="sc">+</span></span>
-<span id="cb46-35"><a href="#cb46-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb46-36"><a href="#cb46-36" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Date"</span>,</span>
-<span id="cb46-37"><a href="#cb46-37" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Flow (cubic feet per second, cfs)"</span>,</span>
-<span id="cb46-38"><a href="#cb46-38" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Fall River Flow Rate (cfs)"</span>,</span>
-<span id="cb46-39"><a href="#cb46-39" aria-hidden="true" tabindex="-1"></a>      <span class="at">subtitle =</span> <span class="st">"Above the Yellowstone Canal near Squirrel, Idaho"</span></span>
-<span id="cb46-40"><a href="#cb46-40" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb46-41"><a href="#cb46-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb46-42"><a href="#cb46-42" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
-<span id="cb46-43"><a href="#cb46-43" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
-<span id="cb46-44"><a href="#cb46-44" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
-<span id="cb46-45"><a href="#cb46-45" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb46-30"><a href="#cb46-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb46-31"><a href="#cb46-31" aria-hidden="true" tabindex="-1"></a><span class="co"># plot the time series</span></span>
+<span id="cb46-32"><a href="#cb46-32" aria-hidden="true" tabindex="-1"></a>fallriver_ts <span class="sc">|&gt;</span></span>
+<span id="cb46-33"><a href="#cb46-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> flow) <span class="sc">+</span></span>
+<span id="cb46-34"><a href="#cb46-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb46-35"><a href="#cb46-35" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Date"</span>,</span>
+<span id="cb46-36"><a href="#cb46-36" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Flow (cubic feet per second, cfs)"</span>,</span>
+<span id="cb46-37"><a href="#cb46-37" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Fall River Flow Rate (cfs)"</span>,</span>
+<span id="cb46-38"><a href="#cb46-38" aria-hidden="true" tabindex="-1"></a>      <span class="at">subtitle =</span> <span class="st">"Above the Yellowstone Canal near Squirrel, Idaho"</span></span>
+<span id="cb46-39"><a href="#cb46-39" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb46-40"><a href="#cb46-40" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb46-41"><a href="#cb46-41" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb46-42"><a href="#cb46-42" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
+<span id="cb46-43"><a href="#cb46-43" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb46-44"><a href="#cb46-44" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="chapter_5_lesson_2_files/figure-html/fallriver4-1.png" class="img-fluid" width="672"></p>

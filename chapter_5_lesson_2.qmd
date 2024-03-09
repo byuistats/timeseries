@@ -569,7 +569,7 @@ weather_df |>
     labs(
       x = "Month",
       y = "Mean Daily High Temperature (Fahrenheit)",
-      title = "Time Plot of Mean Daily Rexburg High Temp by Month",
+      title = "Time Plot of Mean Daily Rexburg High Temperature by Month",
       subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
     ) +
     theme_minimal() +
@@ -584,6 +584,69 @@ weather_df |>
 
 
 ### Model Selection
+
+
+
+::: {.callout-note icon=false title="Standardizing the Time Variable" collapse="false"}
+<!-- Begin hiding code for standardizing the time varaible -->
+  
+
+#### Standardizing the Time Variable
+  
+::: {.callout-warning}
+When the independent variable (the measure of time) is large, floating point errors in the computation of the regression coefficents can be substantial. 
+:::
+  
+To avoid serious floating point errors, we standardize the time variable. First, compute the sine and cosine terms using the original time variable, then transform the time variable by subtracting its mean and dividing by its standard deviation. (In other words, compute a $z$-score.)
+
+The model is adjusted accordingly after fitting.
+
+We will demonstrate this with the "Reduced Linear 5" and "Reduced Quadratic 5" models.
+
+#### Computing the standardized time variable
+
+Our time variable was a simple incremented value counting the months ranging from 
+`r weather_df |> as_tibble() |> dplyr::select(TIME) |> head(1) |> pull()` 
+(representing `r weather_df |> as_tibble() |> dplyr::select(date_text) |> head(1) |> pull()`) 
+to 
+`r weather_df |> as_tibble() |> dplyr::select(TIME) |> tail(1) |> pull()` 
+(representing `r weather_df |> as_tibble() |> dplyr::select(date_text) |> tail(1) |> pull()`).
+
+```{r}
+#| label: weather20
+#| echo: false
+
+stats <- weather_df |>
+  as_tibble() |>
+  dplyr::select(TIME) |>
+  summarize(mean = mean(TIME), sd = sd(TIME)) |>
+  round_df(3)
+```
+
+
+We standardize this variable by the transformation:
+  
+$$
+zTIME 
+  = \frac{t - \bar t}{s_t}
+  = \frac{t - `r stats$mean`}{`r stats$sd`}
+$$
+  
+where the mean of the variable `TIME` is $\bar t = `r stats$mean`$, and the standard deviation is $s_t = `r stats$sd`$.
+
+```{r}
+#| label: weather21
+weather_df <- weather_df |>
+  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME))
+```
+
+Now, we fit the trend components of the models using `zTIME` instead of `TIME`.
+
+:::
+<!-- End of the Standardizing the Time Variable section -->
+
+
+We will start by modeling a cubic trend term. 
 
 
 <!-- Model Selection: Cubic Trends -->
@@ -604,7 +667,7 @@ In addition to modeling the trend, we need to include terms for the seasonal com
 #| code-summary: "Show the code"
 
 full_cubic_lm <- weather_df |>
-  model(full_cubic = TSLM(x ~ TIME + I(TIME^2) + I(TIME^3) +
+  model(full_cubic = TSLM(x ~ zTIME + I(zTIME^2) + I(zTIME^3) +
     sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
     + sin4 + cos4 + sin5 + cos5 + cos6 ))
 
@@ -612,10 +675,10 @@ full_cubic_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
 
-forecast_df <- full_cubic_lm |> forecast(weather_df, ) |> as_tibble() |> dplyr::select(TIME, .mean) |> rename(pred = .mean)
+forecast_df <- full_cubic_lm |> forecast(weather_df, ) |> as_tibble() |> dplyr::select(zTIME, .mean) |> rename(pred = .mean)
 
 weather_df |>
-  left_join(forecast_df, by = "TIME") |>
+  left_join(forecast_df, by = "zTIME") |>
   as_tsibble(index = dates) |>
   autoplot(.vars = x) +
   geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
@@ -623,7 +686,7 @@ weather_df |>
     labs(
       x = "Month",
       y = "Mean Daily High Temperature (Fahrenheit)",
-      title = "Time Plot of Mean Daily Rexburg High Temp by Month",
+      title = "Time Plot of Mean Daily Rexburg High Temperature by Month",
       subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
     ) +
     theme_minimal() +
@@ -633,7 +696,7 @@ weather_df |>
     )
 ```
 
-The cubic term in the trend is not significant, but the quadratic term is! The coefficient on the quadratic term is very small and negative. This suggests the data may indicate a decrease in the rate of global warming.
+The cubic term in the trend is not significant, but the quadratic term is. We will fit a quadratic model. 
 
 ::: {.callout-caution}
 If you choose a different range of dates, you may get a different result. The regression model is fitted to the data, not to the physical situation.
@@ -661,7 +724,7 @@ We now fit a quadratic model that includes all of the seasonal terms.
 #| code-summary: "Show the code"
 
 full_quadratic_lm <- weather_df |>
-  model(full_quadratic = TSLM(x ~ TIME + I(TIME^2) +
+  model(full_quadratic = TSLM(x ~ zTIME + I(zTIME^2) +
     sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
     + sin4 + cos4 + sin5 + cos5 + cos6 ))
 
@@ -669,6 +732,9 @@ full_quadratic_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
 ```
+
+The coefficient on the quadratic trend term is very small and negative. This suggests the data may indicate a decrease in the *rate* of global warming.
+
 
 #### Quadratic Trend: Reduced Model 1
 
@@ -680,7 +746,7 @@ Eliminating the $i=4$ and $i=5$ terms, we get the model:
 #| code-summary: "Show the code"
 
 reduced1_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_1  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6))
+  model(reduced_quadratic_1  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6))
 
 reduced1_quadratic_lm |>
   tidy() |>
@@ -697,7 +763,7 @@ Sequentially removing the cosine term for $i = 3$, we get:
 #| code-summary: "Show the code"
 
 reduced2_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_2  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos6))
+  model(reduced_quadratic_2  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos6))
 
 reduced2_quadratic_lm |>
   tidy() |>
@@ -714,7 +780,7 @@ This is the quadratic model obtained by eliminating the $i=6$ term from the prev
 #| code-summary: "Show the code"
 
 reduced3_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_3  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3))
+  model(reduced_quadratic_3  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2 + sin3))
 
 reduced3_quadratic_lm |>
   tidy() |>
@@ -731,7 +797,7 @@ This is similar to the previous model, except both the sine and cosine terms are
 #| code-summary: "Show the code"
 
 reduced4_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_4  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
+  model(reduced_quadratic_4  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
 
 reduced4_quadratic_lm |>
   tidy() |>
@@ -748,7 +814,7 @@ This quadratic model only includes the $i=1$ and $i=2$ terms.
 #| code-summary: "Show the code"
 
 reduced5_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_5  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2))
+  model(reduced_quadratic_5  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2))
 
 reduced5_quadratic_lm |>
   tidy() |>
@@ -765,7 +831,7 @@ This model includes a quadratic effect for time, but only includes the sine and 
 #| code-summary: "Show the code"
 
 reduced6_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_6  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1))
+  model(reduced_quadratic_6  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1))
 
 reduced6_quadratic_lm |>
   tidy() |>
@@ -795,7 +861,7 @@ This is the full model with a linear time component. All of the period functions
 #| code-summary: "Show the code"
 
 full_linear_lm <- weather_df |>
-  model(full_linear = TSLM(x ~ TIME + I(TIME^2) +
+  model(full_linear = TSLM(x ~ zTIME + I(zTIME^2) +
     sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
     + sin4 + cos4 + sin5 + cos5 + cos6 ))
 
@@ -814,7 +880,7 @@ This linear model excludes the terms corresponding to $i=4$ and $i=5$.
 #| code-summary: "Show the code"
 
 reduced1_linear_lm <- weather_df |>
-  model(reduced_linear_1  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6))
+  model(reduced_linear_1  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6))
 
 reduced1_linear_lm |>
   tidy() |>
@@ -831,7 +897,7 @@ This represents the reduction of the previous model by eliminating the cosine te
 #| code-summary: "Show the code"
 
 reduced2_linear_lm <- weather_df |>
-  model(reduced_linear_2  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos6))
+  model(reduced_linear_2  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos6))
 
 reduced2_linear_lm |>
   tidy() |>
@@ -848,7 +914,7 @@ This model is similar to the previous one, but the cosine term associated with $
 #| code-summary: "Show the code"
 
 reduced3_linear_lm <- weather_df |>
-  model(reduced_linear_3  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3))
+  model(reduced_linear_3  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2 + sin3))
 
 reduced3_linear_lm |>
   tidy() |>
@@ -865,7 +931,7 @@ This model consists of a linear trend with all the periodic terms associated wit
 #| code-summary: "Show the code"
 
 reduced4_linear_lm <- weather_df |>
-  model(reduced_linear_4  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
+  model(reduced_linear_4  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
 
 reduced4_linear_lm |>
   tidy() |>
@@ -882,7 +948,7 @@ This model has a linear trend and only includes the periodic terms corresponding
 #| code-summary: "Show the code"
 
 reduced5_linear_lm <- weather_df |>
-  model(reduced_linear_5  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2))
+  model(reduced_linear_5  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2))
 
 reduced5_linear_lm |>
   tidy() |>
@@ -899,7 +965,7 @@ This simple model includes a linear trend and period terms associated with $i=1$
 #| code-summary: "Show the code"
 
 reduced6_linear_lm <- weather_df |>
-  model(reduced_linear_6  = TSLM(x ~ TIME + sin1 + cos1))
+  model(reduced_linear_6  = TSLM(x ~ zTIME + sin1 + cos1))
 
 reduced6_linear_lm |>
   tidy() |>
@@ -912,13 +978,10 @@ reduced6_linear_lm |>
 
 
 
-<!-- Model Selection: Cubic Trends -->
 
 
 ::: {.callout-note icon=false title="Model Comparison" collapse="false"}
 <!-- Begin hiding code for model comparison -->
-
-
 
 
 #### Model Comparison
@@ -986,14 +1049,14 @@ combined_models |>
 We look for the smallest value of the AIC, AICc, and BIC criteria. These methods do not have to agree with each other, and they provide different perspectives based on their various algorithms. Notice that the AIC and AICc criteria both suggest the model we titled "Reduced Quadratic 1:"
 
 \begin{align*}
-  x_t &= \beta_0 + \beta_1 t + \beta_2 t^2 
+  x_t &= \beta_0 + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 
                         + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
                         + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
                         + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_7 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)  
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_7 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)  
                         + \beta_8 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_9 \cos \left( \frac{2\pi \cdot 6 t}{12} \right) 
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_9 \cos \left( \frac{2\pi \cdot 6 t}{12} \right) 
                \phantom{+ \beta_9 \sin \left( \frac{2\pi \cdot 6 t}{12} \right)}
       + z_t
 \end{align*}
@@ -1001,10 +1064,10 @@ We look for the smallest value of the AIC, AICc, and BIC criteria. These methods
 The BIC criteria points to the "Reduced Quadratic 5" model:
 
 \begin{align*}
-  x_t &= \beta_0 + \beta_1 t + \beta_2 t^2 
+  x_t &= \beta_0 + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 
             + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
             + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
             + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) + z_t
 \end{align*}
 
@@ -1019,10 +1082,10 @@ Notice that the linear models corresponding to the "Reduced Quadratic 1" and "Re
 For these reasons, we will apply the "Reduced Linear 5" model. This model implies a linear trend in the mean temperature of the Earth. The BIC for this model is not much bigger than the BIC for the "Reduced Quadratic 5" model. This model is simpler than the "Reduced Quadratic 1," "Reduced Quadratic 5," and "Reduced Linear 1" models. 
 
 \begin{align*}
-  x_t &= \beta_0 + \beta_1 t  
+  x_t &= \beta_0 + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right)  
             + \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
             + \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~ + \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
             + \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) + z_t
 \end{align*}
 
@@ -1032,56 +1095,8 @@ For these reasons, we will apply the "Reduced Linear 5" model. This model implie
 
 
 
-### Standardizing the Time Variable
-
-::: {.callout-warning}
-When the independent variable (the measure of time) is large, floating point errors in the computation of the regression coefficents can be substantial. 
-:::
-
-To avoid serious floating point errors, we standardize the time variable. First, compute the sine and cosine terms using the original time variable, then transform the time variable by subtracting its mean and dividing by its standard deviation. (In other words, compute a $z$-score.)
-
-The model is adjusted accordingly after fitting.
-
-We will demonstrate this with the "Reduced Linear 5" and "Reduced Quadratic 5" models.
-
-#### Computing the standardized time variable
-
-Our time variable was a simple incremented value counting the months ranging from 
-`r weather_df |> as_tibble() |> dplyr::select(TIME) |> head(1) |> pull()` 
-(representing `r weather_df |> as_tibble() |> dplyr::select(date_text) |> head(1) |> pull()`) 
-to 
-`r weather_df |> as_tibble() |> dplyr::select(TIME) |> tail(1) |> pull()` 
-(representing `r weather_df |> as_tibble() |> dplyr::select(date_text) |> tail(1) |> pull()`).
-
-```{r}
-#| label: weather20
-#| echo: false
-
-stats <- weather_df |>
-  as_tibble() |>
-  dplyr::select(TIME) |>
-  summarize(mean = mean(TIME), sd = sd(TIME)) |>
-  round_df(3)
-```
 
 
-We standardize this variable by the transformation:
-
-$$
-  zTIME 
-    = \frac{t - \bar t}{s_t}
-    = \frac{t - `r stats$mean`}{`r stats$sd`}
-$$
-
-where the mean of the variable `TIME` is $\bar t = `r stats$mean`$, and the standard deviation is $s_t = `r stats$sd`$.
-
-```{r}
-#| label: weather21
-weather_df <- weather_df |>
-  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME))
-```
-
-Now, we fit the models using `zTIME` instead of `TIME`.
 
 #### Reduced Linear 5
 
@@ -1127,7 +1142,7 @@ The fitted model is:
       \\
 \end{align*}
 
-This can be simplified, if desired.
+The linear trend term can be simplified, if desired.
 
 #### Reduced Quadratic 5
 
@@ -1350,32 +1365,31 @@ fallriver_ts <- fallriver_ts0 |>
   # compute additional variables needed for the regression
   mutate(TIME = 1:n()) |>
   mutate(
-    cos1 = cos(2 * pi * 1 * TIME/24),
-    cos2 = cos(2 * pi * 2 * TIME/24),
-    cos3 = cos(2 * pi * 3 * TIME/24),
-    cos4 = cos(2 * pi * 4 * TIME/24),
-    cos5 = cos(2 * pi * 5 * TIME/24),
-    cos6 = cos(2 * pi * 6 * TIME/24),
-    cos7 = cos(2 * pi * 7 * TIME/24),
-    cos8 = cos(2 * pi * 8 * TIME/24),
-    cos9 = cos(2 * pi * 9 * TIME/24),
-    cos10 = cos(2 * pi * 10 * TIME/24),
-    cos11 = cos(2 * pi * 11 * TIME/24),
-    cos12 = cos(2 * pi * 12 * TIME/24),
-    sin1 = sin(2 * pi * 1 * TIME/24),
-    sin2 = sin(2 * pi * 2 * TIME/24),
-    sin3 = sin(2 * pi * 3 * TIME/24),
-    sin4 = sin(2 * pi * 4 * TIME/24),
-    sin5 = sin(2 * pi * 5 * TIME/24),
-    sin6 = sin(2 * pi * 6 * TIME/24),
-    sin7 = sin(2 * pi * 7 * TIME/24),
-    sin8 = sin(2 * pi * 8 * TIME/24),
-    sin9 = sin(2 * pi * 9 * TIME/24),
-    sin10 = sin(2 * pi * 10 * TIME/24),
-    sin11 = sin(2 * pi * 11 * TIME/24),
-    # sin12 = sin(2 * pi * 12 * TIME/24) # zero for all integer values of t
+    cos1 = cos(2 * pi * 1 * TIME / 24),
+    cos2 = cos(2 * pi * 2 * TIME / 24),
+    cos3 = cos(2 * pi * 3 * TIME / 24),
+    cos4 = cos(2 * pi * 4 * TIME / 24),
+    cos5 = cos(2 * pi * 5 * TIME / 24),
+    cos6 = cos(2 * pi * 6 * TIME / 24),
+    cos7 = cos(2 * pi * 7 * TIME / 24),
+    cos8 = cos(2 * pi * 8 * TIME / 24),
+    cos9 = cos(2 * pi * 9 * TIME / 24),
+    cos10 = cos(2 * pi * 10 * TIME / 24),
+    cos11 = cos(2 * pi * 11 * TIME / 24),
+    cos12 = cos(2 * pi * 12 * TIME / 24),
+    sin1 = sin(2 * pi * 1 * TIME / 24),
+    sin2 = sin(2 * pi * 2 * TIME / 24),
+    sin3 = sin(2 * pi * 3 * TIME / 24),
+    sin4 = sin(2 * pi * 4 * TIME / 24),
+    sin5 = sin(2 * pi * 5 * TIME / 24),
+    sin6 = sin(2 * pi * 6 * TIME / 24),
+    sin7 = sin(2 * pi * 7 * TIME / 24),
+    sin8 = sin(2 * pi * 8 * TIME / 24),
+    sin9 = sin(2 * pi * 9 * TIME / 24),
+    sin10 = sin(2 * pi * 10 * TIME / 24),
+    sin11 = sin(2 * pi * 11 * TIME / 24),
+    # sin12 = sin(2 * pi * 12 * TIME / 24) # zero for all integer values of t
   ) 
-   
 
 # plot the time series
 fallriver_ts |>
@@ -1391,7 +1405,6 @@ fallriver_ts |>
     plot.title = element_text(hjust = 0.5),
     plot.subtitle = element_text(hjust = 0.5)
   )
-
 ```
 
 
