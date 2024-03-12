@@ -73,22 +73,123 @@ sigma <- .02
 
 z_t <- rnorm(n = n_months, mean = mu, sd = sigma)
 
-sim_df <- tibble(
+
+dates <- seq(floor_date(now(), unit = "year"), length.out=n_months + 1, by="-1 month") |>
+  floor_date(unit = "month") |> sort() |> head(n_months)
+
+sim_ts <- tibble(
   t = 1:n_months,
+  dates = dates,
   x_t = exp(2 + 0.012 * t +
     0.03 * sin(2 * pi * t / 12) + 0.01 * cos(2 * pi * t / 12) + 
     0.01 * sin(2 * pi * 3.5 / 12) + 0.01 * cos(2 * pi * 1.75 / 12) +
     0.005 * sin(2 * pi * 7.5 / 12) + 0.0025 * cos(2 * pi * 8.5 / 12) +
     rnorm(n = n_months, mean = mu, sd = sigma)
-  )
-)
+    )
+  ) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12),
+    sin6 = sin(2 * pi * 6 * t / 12)) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  as_tsibble(index = dates)
 
-plot(sim_df$t, sim_df$x_t)
-plot(sim_df$t, log(sim_df$x_t))
+sim_ts |>
+    autoplot(.vars = x_t)
+
+sim_ts |>
+    autoplot(.vars = log(x_t))
+
 
 ```
 
 
+```{r}
+#| label: simulatedExponentialTS1
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Cubic model with standardized time variable
+
+full_cubic_lm <- sim_ts |>
+  model(full_cubic = TSLM(x_t ~ std_t + I(std_t^2) + I(std_t^3) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 ))
+
+full_cubic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+forecast_df <- full_cubic_lm |> forecast(sim_ts, ) |> as_tibble() |> dplyr::select(std_t, .mean) |> rename(pred = .mean)
+
+sim_ts |>
+  left_join(forecast_df, by = "std_t") |>
+  as_tsibble(index = dates) |>
+  autoplot(.vars = x_t) +
+  geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
+  geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
+    labs(
+      x = "Month",
+      y = "Mean Daily High Temperature (Fahrenheit)",
+      title = "Time Plot of Mean Daily Rexburg High Temperature by Month",
+      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+```
+
+
+
+```{r}
+#| label: simulatedExponentialTS2
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Logarithmic transformation of the time series
+
+log_transform_lm <- sim_ts |>
+  model(full_cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 ))
+
+log_transform_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+forecast_df <- log_transform_lm |> forecast(sim_ts, ) |> as_tibble() |> dplyr::select(std_t, .mean) |> rename(pred = .mean)
+
+sim_ts |>
+  left_join(forecast_df, by = "std_t") |>
+  as_tsibble(index = dates) |>
+  autoplot(.vars = x_t) +
+  geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
+  geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
+    labs(
+      x = "Month",
+      y = "Mean Daily High Temperature (Fahrenheit)",
+      title = "Time Plot of Mean Daily Rexburg High Temperature by Month",
+      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+
+```
 
 
 
