@@ -262,6 +262,8 @@ In addition to modeling the trend, we need to include terms for the seasonal com
 #| code-fold: true
 #| code-summary: "Show the code"
 
+# Cubic model with standardized time variable
+
 full_cubic_lm <- weather_df |>
   model(full_cubic = TSLM(x ~ zTIME + I(zTIME^2) + I(zTIME^3) +
     sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
@@ -297,6 +299,36 @@ The cubic term in the trend is not significant, but the quadratic term is. We wi
 ::: {.callout-caution}
 If you choose a different range of dates, you may get a different result. The regression model is fitted to the data, not to the physical situation.
 :::
+
+::: {.callout-important icon=false title="Comparison of Standardized and Unstandardized Time Variable" collapse="true"}
+<!-- Begin code for comparison of unstandardized and standardized time variables -->
+
+#### Comparison of Standardized and Unstandardized Time Variable
+
+For comparison, note the values of the parameters if we fit the same model without standardizing the time variable:
+
+```{r}
+#| label: weather2a
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Cubic model with unstandardized time variable
+
+full_cubic_lm <- weather_df |>
+  model(full_cubic = TSLM(x ~ TIME + I(TIME^2) + I(TIME^3) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 ))
+
+full_cubic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+```
+
+Notice that the variable `TIME` is statistically significant for the unstandardized case but not the standardized case.
+
+::: 
+<!-- End of collapsed comparison of models -->
+
 
 :::
 <!-- End hiding code for cubic model -->
