@@ -141,8 +141,6 @@ plot_cosine <- function(cycle_length = 12, i_values = c(1:6), amplitude = rep(1,
 
 In the previous lesson, we learned how to incorporate an indicator (or dummy) variable for each season in a period. If there are twelve months in a year, this requires having twelve parameters in the model. Given that many seasonal changes are gradual and can be modeled by a continuous function, we can use sines and cosines to approximate the seasonal variation. This can lead to a smaller number of parameters than is required for the indicator variable approach. 
 
-### Review of Trigonometry
-
 Consider the sine wave with the following parameters:
 
 -   $A$:$~~$    the amplitude, 
@@ -227,7 +225,9 @@ plot_cosine()
 
 One key objective of this lesson is to use a linear combination of functions like those above to model the seasonal component of a time series.
 
-### Fourier Series
+## Class Activity: Fourier Series (15 min)
+
+### What is a Fourier Series?
 
 We now explore an important mathematical concept that allows us to approximate any periodic function. If we have an infinite number of terms, the FOurier Series described below gives an exact representation of the function.
 
@@ -236,15 +236,15 @@ We now explore an important mathematical concept that allows us to approximate a
 The **Fourier Series** is an infinite series representation of a smooth function $f(t)$ with period $s$:
 
 $$
-  f(t) = \frac{A_0}{2} + \sum_{i=1}^{\infty} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
+  f(t) = \frac{A_{s_0}}{2} + \sum_{i=1}^{\infty} \left\{ \alpha_{s_i} \sin \left( \frac{2\pi i t}{s} \right) + \alpha_{c_i} \cos \left( \frac{2\pi i t}{s} \right) \right\}
 $$
 
-The coefficients $A_i$ and $B_i$ are defined by the integrals:
+The coefficients $\alpha_{s_i}$ and $\alpha_{c_i}$ are defined by the integrals:
 
 $$
-  A_i = \frac{2}{s} \int_0^s f(t) \cos \left( \frac{2\pi i t}{s} \right) \; dt
+  \alpha_{s_i} = \frac{2}{s} \int_0^s f(t) \cos \left( \frac{2\pi i t}{s} \right) \; dt
   ~~~~~~~~~~~~~~~~~~
-  B_i = \frac{2}{s} \int_0^s f(t) \sin \left( \frac{2\pi i t}{s} \right) \; dt
+  \alpha_{c_i} = \frac{2}{s} \int_0^s f(t) \sin \left( \frac{2\pi i t}{s} \right) \; dt
 $$
 
 (You will not need to compute any of these integrals.)
@@ -534,7 +534,7 @@ $$
 We can continue to get more and more precise estimates of the function by just adding more terms to the sum.
 So, the function $f(t)$ can be approximated to any desired level of precision by truncating the series after a sufficient number of terms. For the purpose of this discussion, we will define "one term" as an expression of the form 
 $$
-  \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
+  \left\{ \alpha_{s_i} \sin \left( \frac{2\pi i t}{s} \right) + \alpha_{c_i} \cos \left( \frac{2\pi i t}{s} \right) \right\}
 $$
 
 ### Fitting a Seasonal Component
@@ -569,7 +569,7 @@ For a time series with $s$ seasons per cycle, our additive model can be written 
   x_t
     &= m_t + s_t + z_t \\
     &= m_t +
-        \sum_{i=1}^{\left\lfloor \frac{s}{2} \right\rfloor} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
+        \sum_{i=1}^{\left\lfloor \frac{s}{2} \right\rfloor} \left\{ \alpha_{s_i} \sin \left( \frac{2\pi i t}{s} \right) + \alpha_{c_i} \cos \left( \frac{2\pi i t}{s} \right) \right\}
       + z_t
 \end{align*}
 
@@ -587,23 +587,23 @@ The full seasonal term when considering 12 months in a year is:
 
 \begin{align*}
   s_t 
-    &= \sum_{i=1}^{\left\lfloor \frac{s}{2} \right\rfloor} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\} \\
-    &= \sum_{i=1}^{6} \left\{ A_i \sin \left( \frac{2\pi i t}{12} \right) + B_i \cos \left( \frac{2\pi i t}{12} \right) \right\} \\
-    &=~~~~ \left\{ A_1 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) + B_1 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \right\} & \leftarrow i = 1 \\
-    &~~~~~+ \left\{ A_2 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) + B_2 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \right\} & \leftarrow i = 2 \\
-    &~~~~~+ \left\{ A_3 \sin \left( \frac{2\pi \cdot 3 t}{12} \right) + B_3 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \right\} & \leftarrow i = 3 \\
-    &~~~~~+ \left\{ A_4 \sin \left( \frac{2\pi \cdot 4 t}{12} \right) + B_4 \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \right\} & \leftarrow i = 4 \\
-    &~~~~~+ \left\{ A_5 \sin \left( \frac{2\pi \cdot 5 t}{12} \right) + B_5 \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \right\} & \leftarrow i = 5 \\
-    &~~~~~+ \left\{ A_6 \sin \left( \frac{2\pi \cdot 6 t}{12} \right) + B_6 \cos \left( \frac{2\pi \cdot 6 t}{12} \right) \right\} & \leftarrow i = 6 \\
-    &=~~~~ \left\{ A_1 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) + B_1 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \right\}  \\
-    &~~~~~+ \left\{ A_2 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) + B_2 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \right\} \\
-    &~~~~~+ \left\{ A_3 \sin \left( \frac{2\pi \cdot 3 t}{12} \right) + B_3 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \right\} \\
-    &~~~~~+ \left\{ A_4 \sin \left( \frac{2\pi \cdot 4 t}{12} \right) + B_4 \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \right\} \\
-    &~~~~~+ \left\{ A_5 \sin \left( \frac{2\pi \cdot 5 t}{12} \right) + B_5 \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \right\} \\
-    &~~~~~+ \left\{ \phantom{A_6 \sin \left( \frac{2\pi \cdot 6 t}{12} \right) +}~~ B_6 \cos \left( \frac{2\pi \cdot 6 t}{12} \right) \right\} \\
+    &= \sum_{i=1}^{\left\lfloor \frac{s}{2} \right\rfloor} \left\{ \alpha_{s_i} \sin \left( \frac{2\pi i t}{s} \right) + \alpha_{c_i} \cos \left( \frac{2\pi i t}{s} \right) \right\} \\
+    &= \sum_{i=1}^{6} \left\{ \alpha_{s_i} \sin \left( \frac{2\pi i t}{12} \right) + \alpha_{c_i} \cos \left( \frac{2\pi i t}{12} \right) \right\} \\
+    &=~~~~ \left\{ \alpha_{s_1} \sin \left( \frac{2\pi \cdot 1 t}{12} \right) + \alpha_{c_1} \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \right\} & \leftarrow i = 1 \\
+    &~~~~~+ \left\{ \alpha_{s_2} \sin \left( \frac{2\pi \cdot 2 t}{12} \right) + \alpha_{c_2} \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \right\} & \leftarrow i = 2 \\
+    &~~~~~+ \left\{ \alpha_{s_3} \sin \left( \frac{2\pi \cdot 3 t}{12} \right) + \alpha_{c_3} \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \right\} & \leftarrow i = 3 \\
+    &~~~~~+ \left\{ \alpha_{s_4} \sin \left( \frac{2\pi \cdot 4 t}{12} \right) + \alpha_{c_4} \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \right\} & \leftarrow i = 4 \\
+    &~~~~~+ \left\{ \alpha_{s_5} \sin \left( \frac{2\pi \cdot 5 t}{12} \right) + \alpha_{c_5} \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \right\} & \leftarrow i = 5 \\
+    &~~~~~+ \left\{ \alpha_{s_6} \sin \left( \frac{2\pi \cdot 6 t}{12} \right) + \alpha_{c_6} \cos \left( \frac{2\pi \cdot 6 t}{12} \right) \right\} & \leftarrow i = 6 \\
+    &=~~~~ \left\{ \alpha_{s_1} \sin \left( \frac{2\pi \cdot 1 t}{12} \right) + \alpha_{c_1} \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \right\}  \\
+    &~~~~~+ \left\{ \alpha_{s_2} \sin \left( \frac{2\pi \cdot 2 t}{12} \right) + \alpha_{c_2} \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \right\} \\
+    &~~~~~+ \left\{ \alpha_{s_3} \sin \left( \frac{2\pi \cdot 3 t}{12} \right) + \alpha_{c_3} \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \right\} \\
+    &~~~~~+ \left\{ \alpha_{s_4} \sin \left( \frac{2\pi \cdot 4 t}{12} \right) + \alpha_{c_4} \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \right\} \\
+    &~~~~~+ \left\{ \alpha_{s_5} \sin \left( \frac{2\pi \cdot 5 t}{12} \right) + \alpha_{c_5} \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \right\} \\
+    &~~~~~+ \left\{ \phantom{\alpha_{s_6} \sin \left( \frac{2\pi \cdot 6 t}{12} \right) +}~~ \alpha_{c_6} \cos \left( \frac{2\pi \cdot 6 t}{12} \right) \right\} \\
 \end{align*}
 
-Note that $\sin \left( \frac{2\pi \cdot 6 t}{12} \right) = 0$ for all integer values of $t$, so we can omit the term $A_6 \sin \left( \frac{2\pi \cdot 6 t}{12} \right)$.
+Note that $\sin \left( \frac{2\pi \cdot 6 t}{12} \right) = 0$ for all integer values of $t$, so we can omit the term $\alpha_{s_6} \sin \left( \frac{2\pi \cdot 6 t}{12} \right)$.
 
 As noted above, we can often use a relatively small subset of these terms to get a good approximation of the seasonal component.
 
@@ -611,7 +611,7 @@ As noted above, we can often use a relatively small subset of these terms to get
 ### Simulation
 
 The following simulation illustrates harmonic seasonal terms. 
-The values S1, S2, S3, $\ldots$ represent the coefficients on sine functions with $i=1$, $i=2$, $i=3$, $\ldots$. Similarly, the values C1, C2, C3, $\ldots$ represent the coefficients on the corresponding cosine terms.
+The values S1, S2, S3, $\ldots$ represent the coefficients on the sine functions: $\alpha_{s_1}, ~ \alpha_{s_2}, ~ \alpha_{s_3}, ~ \ldots, ~ \alpha_{s_6}$. Similarly, the values C1, C2, C3, $\ldots$ represent the coefficients on the corresponding cosine terms: $\alpha_{c_1}, ~ \alpha_{c_2}, ~ \alpha_{c_3}, ~ \ldots, ~ \alpha_{c_6}$.
 
 Adjust the values of the parameters to create different seasonal patterns. Note that this is just a sum of sine and cosine function with various frequencies and amplitudes.
 
