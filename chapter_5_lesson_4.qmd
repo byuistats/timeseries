@@ -1,5 +1,5 @@
 ---
-title: "Forecasting, Inverse Transformation, and Bias Correction"
+title: "Transformations and Non-Linear Models"
 subtitle: "Chapter 5: Lesson 4"
 format: html
 editor: source
@@ -44,7 +44,7 @@ source("common_functions.R")
 
 ## Preparation
 
--   Read Sections 5.9-5.11
+-   Read Sections 5.7-5.8
 
 
 
@@ -59,6 +59,39 @@ source("common_functions.R")
 -   Sign the Learning Journal review sheet for your peer
 
 
+## Class Activity: Simulate an Exponential Trend with a Seasonal Component (xxx min)
+
+We will simulate code that has a seasonal component and impose an exponential trend.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+n_months <- 96 # Number of months
+mu <- 0
+sigma <- .02
+
+z_t <- rnorm(n = n_months, mean = mu, sd = sigma)
+
+sim_df <- tibble(
+  t = 1:n_months,
+  x_t = exp(2 + 0.012 * t +
+    0.03 * sin(2 * pi * t / 12) + 0.01 * cos(2 * pi * t / 12) + 
+    0.01 * sin(2 * pi * 3.5 / 12) + 0.01 * cos(2 * pi * 1.75 / 12) +
+    0.005 * sin(2 * pi * 7.5 / 12) + 0.0025 * cos(2 * pi * 8.5 / 12) +
+    rnorm(n = n_months, mean = mu, sd = sigma)
+  )
+)
+
+plot(sim_df$t, sim_df$x_t)
+plot(sim_df$t, log(sim_df$x_t))
+
+```
+
+
+
+
+
 ## Small Group Activity: SectionTitle (xxx min)
 ## Class Activity: SectionTitle (xxx min)
 
@@ -71,6 +104,29 @@ source("common_functions.R")
 -   Question2
 
 :::
+
+
+
+## Small-Group Activity: Retail Sales (xxx min)
+
+```{r}
+#| label: retail1
+# Read in retail sales data for "all other general merchandise stores"
+retail_ts <- rio::import("data/retail_by_business_type.parquet") |>
+  filter(naics == 45299) |>
+  as_tsibble(index = month)
+
+retail_ts |>
+  autoplot(.vars = sales_millions) +
+    labs(
+      x = "Month",
+      y = "Sales (Millions of U.S. Dollars)",
+      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+```
 
 
 
