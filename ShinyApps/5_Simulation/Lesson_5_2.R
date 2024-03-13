@@ -148,8 +148,8 @@ server <- function(input, output, session) {
       S <- input[[paste0("S", i)]]
       C <- input[[paste0("C", i)]]
       if (S != 0 | C != 0) {
-        function_string <- paste0(function_string, ifelse(S != 0, paste0(S,"*sin(2* \\pi *", i, "* \\frac{t}{12})"), ""),
-                                  ifelse(S != 0 & C != 0, " + ", ""), ifelse(C != 0, paste0(C, " *cos(2* \\pi *", i, " * \\frac{t}{12})"), ""))
+        function_string <- paste0(function_string, ifelse(S != 0, paste0(S,"\\cdot \\sin(2 \\cdot \\pi \\cdot", i, " \\cdot \\frac{t}{12})"), ""),
+                                  ifelse(S != 0 & C != 0, " + ", ""), ifelse(C != 0, paste0(C, " \\cdot \\cos(2 \\cdot \\pi \\cdot", i, " \\cdot \\frac{t}{12})"), ""))
       }
     }
     tagList(
