@@ -59,6 +59,12 @@ source("common_functions.R")
 -   Sign the Learning Journal review sheet for your peer
 
 
+
+<!-- {{< include _packages.qmd >}} -->
+
+
+
+
 ## Class Activity: Simulate an Exponential Trend with a Seasonal Component (xxx min)
 
 We will simulate code that has a seasonal component and impose an exponential trend.
@@ -67,12 +73,13 @@ We will simulate code that has a seasonal component and impose an exponential tr
 #| code-fold: true
 #| code-summary: "Show the code"
 
-n_months <- 96 # Number of months
-mu <- 0
-sigma <- .02
+set.seed(1)
 
-z_t <- rnorm(n = n_months, mean = mu, sd = sigma)
+n_years <- 9 # Number of years to simulate
+n_months <- n_years * 12 # Number of months
+sigma <- .02 # Standard deviation of random term
 
+z_t <- rnorm(n = n_months, mean = 0, sd = sigma)
 
 dates <- seq(floor_date(now(), unit = "year"), length.out=n_months + 1, by="-1 month") |>
   floor_date(unit = "month") |> sort() |> head(n_months)
@@ -81,10 +88,10 @@ sim_ts <- tibble(
   t = 1:n_months,
   dates = dates,
   x_t = exp(2 + 0.012 * t +
-    0.03 * sin(2 * pi * t / 12) + 0.01 * cos(2 * pi * t / 12) + 
-    0.01 * sin(2 * pi * 3.5 / 12) + 0.01 * cos(2 * pi * 1.75 / 12) +
-    0.005 * sin(2 * pi * 7.5 / 12) + 0.0025 * cos(2 * pi * 8.5 / 12) +
-    rnorm(n = n_months, mean = mu, sd = sigma)
+    0.03 * sin(2 * pi * 1 * t / 12) + 0.04 * cos(2 * pi * 1 * t / 12) + 
+    0.05 * sin(2 * pi * 2 * t / 12) + 0.03 * cos(2 * pi * 2 * t / 12) +
+    0.01 * sin(2 * pi * 3 * t / 12) + 0.005 * cos(2 * pi * 3 * t / 12) +
+    rnorm(n = n_months, mean = 0, sd = sigma)
     )
   ) |>
   mutate(
@@ -121,15 +128,15 @@ sim_ts |>
 # Cubic model with standardized time variable
 
 full_cubic_lm <- sim_ts |>
-  model(full_cubic = TSLM(x_t ~ std_t + I(std_t^2) + I(std_t^3) +
+  model(full_cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) +
     sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 ))
+    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
 
 full_cubic_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
 
-forecast_df <- full_cubic_lm |> forecast(sim_ts, ) |> as_tibble() |> dplyr::select(std_t, .mean) |> rename(pred = .mean)
+forecast_df <- full_cubic_lm |> forecast(sim_ts) |> as_tibble() |> dplyr::select(std_t, .mean) |> rename(pred = .mean)
 
 sim_ts |>
   left_join(forecast_df, by = "std_t") |>
@@ -140,7 +147,7 @@ sim_ts |>
     labs(
       x = "Month",
       y = "Mean Daily High Temperature (Fahrenheit)",
-      title = "Time Plot of Mean Daily Rexburg High Temperature by Month",
+      title = "Time Plot of LOGGED MODEL",
       subtitle = paste0("(", format(sim_ts$dates %>% head(1), "%b %Y"), endash, format(sim_ts$dates %>% tail(1), "%b %Y"), ")")
     ) +
     theme_minimal() +
@@ -168,7 +175,7 @@ log_transform_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
 
-forecast_df <- log_transform_lm |> forecast(sim_ts, ) |> as_tibble() |> dplyr::select(std_t, .mean) |> rename(pred = .mean)
+forecast_df <- log_transform_lm |> forecast(sim_ts) |> as_tibble() |> dplyr::select(std_t, .mean) |> rename(pred = .mean)
 
 sim_ts |>
   left_join(forecast_df, by = "std_t") |>

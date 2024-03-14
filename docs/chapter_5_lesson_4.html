@@ -230,13 +230,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="dropdown-header">Lesson 3</li>
         <li>
     <a class="dropdown-item" href="./chapter_3_lesson_3.html" rel="" target="">
- <span class="dropdown-text">Holt-Winters Method (Additive Model) - Part 1</span></a>
+ <span class="dropdown-text">Holt-Winters Method (Additive Models) - Part 1</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li class="dropdown-header">Lesson 4</li>
         <li>
     <a class="dropdown-item" href="./chapter_3_lesson_4.html" rel="" target="">
- <span class="dropdown-text">Holt-Winters Method (Additive Model) - Part 2</span></a>
+ <span class="dropdown-text">Holt-Winters Method (Additive Models) - Part 2</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li class="dropdown-header">Lesson 5</li>
@@ -506,6 +506,7 @@ From Daniel:
 <li><p>What would you recommend the other student add to their learning journal?</p></li>
 <li><p>Sign the Learning Journal review sheet for your peer</p></li>
 </ul>
+<!-- {{< include _packages.qmd >}} -->
 </section>
 <section id="class-activity-simulate-an-exponential-trend-with-a-seasonal-component-xxx-min" class="level2">
 <h2 class="anchored" data-anchor-id="class-activity-simulate-an-exponential-trend-with-a-seasonal-component-xxx-min">Class Activity: Simulate an Exponential Trend with a Seasonal Component (xxx min)</h2>
@@ -513,44 +514,45 @@ From Daniel:
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>n_months <span class="ot">&lt;-</span> <span class="dv">96</span> <span class="co"># Number of months</span></span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>mu <span class="ot">&lt;-</span> <span class="dv">0</span></span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>sigma <span class="ot">&lt;-</span> .<span class="dv">02</span></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>z_t <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="at">n =</span> n_months, <span class="at">mean =</span> mu, <span class="at">sd =</span> sigma)</span>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>n_years <span class="ot">&lt;-</span> <span class="dv">9</span> <span class="co"># Number of years to simulate</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>n_months <span class="ot">&lt;-</span> n_years <span class="sc">*</span> <span class="dv">12</span> <span class="co"># Number of months</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>sigma <span class="ot">&lt;-</span> .<span class="dv">02</span> <span class="co"># Standard deviation of random term</span></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>dates <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fu">floor_date</span>(<span class="fu">now</span>(), <span class="at">unit =</span> <span class="st">"year"</span>), <span class="at">length.out=</span>n_months <span class="sc">+</span> <span class="dv">1</span>, <span class="at">by=</span><span class="st">"-1 month"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">floor_date</span>(<span class="at">unit =</span> <span class="st">"month"</span>) <span class="sc">|&gt;</span> <span class="fu">sort</span>() <span class="sc">|&gt;</span> <span class="fu">head</span>(n_months)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>sim_ts <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">t =</span> <span class="dv">1</span><span class="sc">:</span>n_months,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">dates =</span> dates,</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">x_t =</span> <span class="fu">exp</span>(<span class="dv">2</span> <span class="sc">+</span> <span class="fl">0.012</span> <span class="sc">*</span> t <span class="sc">+</span></span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="fl">0.03</span> <span class="sc">*</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">+</span> <span class="fl">0.01</span> <span class="sc">*</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">+</span> </span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="fl">0.01</span> <span class="sc">*</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="fl">3.5</span> <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">+</span> <span class="fl">0.01</span> <span class="sc">*</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="fl">1.75</span> <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">+</span></span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="fl">0.005</span> <span class="sc">*</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="fl">7.5</span> <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">+</span> <span class="fl">0.0025</span> <span class="sc">*</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="fl">8.5</span> <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">+</span></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rnorm</span>(<span class="at">n =</span> n_months, <span class="at">mean =</span> mu, <span class="at">sd =</span> sigma)</span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos1 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos2 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos3 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos4 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos5 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos6 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin1 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin2 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin3 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin4 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin5 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin6 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">std_t =</span> (t <span class="sc">-</span> <span class="fu">mean</span>(t)) <span class="sc">/</span> <span class="fu">sd</span>(t)) <span class="sc">|&gt;</span></span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates)</span>
-<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>sim_ts <span class="sc">|&gt;</span></span>
-<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>    <span class="fu">autoplot</span>(<span class="at">.vars =</span> x_t)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>z_t <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="at">n =</span> n_months, <span class="at">mean =</span> <span class="dv">0</span>, <span class="at">sd =</span> sigma)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>dates <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="fu">floor_date</span>(<span class="fu">now</span>(), <span class="at">unit =</span> <span class="st">"year"</span>), <span class="at">length.out=</span>n_months <span class="sc">+</span> <span class="dv">1</span>, <span class="at">by=</span><span class="st">"-1 month"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">floor_date</span>(<span class="at">unit =</span> <span class="st">"month"</span>) <span class="sc">|&gt;</span> <span class="fu">sort</span>() <span class="sc">|&gt;</span> <span class="fu">head</span>(n_months)</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>sim_ts <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">t =</span> <span class="dv">1</span><span class="sc">:</span>n_months,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">dates =</span> dates,</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">x_t =</span> <span class="fu">exp</span>(<span class="dv">2</span> <span class="sc">+</span> <span class="fl">0.012</span> <span class="sc">*</span> t <span class="sc">+</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="fl">0.03</span> <span class="sc">*</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">+</span> <span class="fl">0.04</span> <span class="sc">*</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">+</span> </span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    <span class="fl">0.05</span> <span class="sc">*</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">+</span> <span class="fl">0.03</span> <span class="sc">*</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">+</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>    <span class="fl">0.01</span> <span class="sc">*</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">+</span> <span class="fl">0.005</span> <span class="sc">*</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">+</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rnorm</span>(<span class="at">n =</span> n_months, <span class="at">mean =</span> <span class="dv">0</span>, <span class="at">sd =</span> sigma)</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos1 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos2 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos3 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos4 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos5 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos6 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin1 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin2 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin3 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin4 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin5 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin6 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">std_t =</span> (t <span class="sc">-</span> <span class="fu">mean</span>(t)) <span class="sc">/</span> <span class="fu">sd</span>(t)) <span class="sc">|&gt;</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates)</span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>sim_ts <span class="sc">|&gt;</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>    <span class="fu">autoplot</span>(<span class="at">.vars =</span> x_t)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
 <p><img src="chapter_5_lesson_4_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid" width="672"></p>
@@ -570,9 +572,9 @@ From Daniel:
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Cubic model with standardized time variable</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>full_cubic_lm <span class="ot">&lt;-</span> sim_ts <span class="sc">|&gt;</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">full_cubic =</span> <span class="fu">TSLM</span>(x_t <span class="sc">~</span> std_t <span class="sc">+</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">full_cubic =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(x_t) <span class="sc">~</span> std_t <span class="sc">+</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">3</span>) <span class="sc">+</span></span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 </span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6 ))</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6 )) <span class="co"># Note sin6 is omitted</span></span>
 <span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>full_cubic_lm <span class="sc">|&gt;</span></span>
 <span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
@@ -580,27 +582,27 @@ From Daniel:
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 15 × 7
-   .model     term        estimate std.error statistic   p.value sig  
-   &lt;chr&gt;      &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
- 1 full_cubic (Intercept) 13.4        0.0464  289.     7.86e-124 TRUE 
- 2 full_cubic std_t        4.53       0.0784   57.8    1.28e- 67 TRUE 
- 3 full_cubic I(std_t^2)   0.747      0.0350   21.4    4.97e- 35 TRUE 
- 4 full_cubic I(std_t^3)   0.0776     0.0407    1.90   6.04e-  2 FALSE
- 5 full_cubic sin1         0.446      0.0444   10.0    7.15e- 16 TRUE 
- 6 full_cubic cos1         0.109      0.0438    2.50   1.45e-  2 TRUE 
- 7 full_cubic sin2         0.00381    0.0439    0.0868 9.31e-  1 FALSE
- 8 full_cubic cos2         0.00150    0.0438    0.0343 9.73e-  1 FALSE
- 9 full_cubic sin3        -0.0307     0.0438   -0.702  4.85e-  1 FALSE
-10 full_cubic cos3         0.0435     0.0438    0.993  3.24e-  1 FALSE
-11 full_cubic sin4         0.0604     0.0438    1.38   1.71e-  1 FALSE
-12 full_cubic cos4         0.0274     0.0438    0.626  5.33e-  1 FALSE
-13 full_cubic sin5         0.0487     0.0437    1.11   2.69e-  1 FALSE
-14 full_cubic cos5         0.0606     0.0438    1.38   1.70e-  1 FALSE
-15 full_cubic cos6         0.0485     0.0309    1.57   1.21e-  1 FALSE</code></pre>
+   .model     term         estimate std.error statistic   p.value sig  
+   &lt;chr&gt;      &lt;chr&gt;           &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+ 1 full_cubic (Intercept)  2.65       0.00289   918.    7.88e-186 TRUE 
+ 2 full_cubic std_t        0.385      0.00487    79.1   4.02e- 87 TRUE 
+ 3 full_cubic I(std_t^2)   0.00206    0.00217     0.946 3.47e-  1 FALSE
+ 4 full_cubic I(std_t^3)  -0.00371    0.00252    -1.47  1.45e-  1 FALSE
+ 5 full_cubic sin1         0.0310     0.00276    11.2   4.88e- 19 TRUE 
+ 6 full_cubic cos1         0.0402     0.00273    14.7   4.52e- 26 TRUE 
+ 7 full_cubic sin2         0.0492     0.00273    18.0   4.25e- 32 TRUE 
+ 8 full_cubic cos2         0.0282     0.00273    10.4   3.57e- 17 TRUE 
+ 9 full_cubic sin3         0.00636    0.00273     2.33  2.18e-  2 TRUE 
+10 full_cubic cos3         0.00196    0.00273     0.718 4.75e-  1 FALSE
+11 full_cubic sin4        -0.00273    0.00272    -1.00  3.19e-  1 FALSE
+12 full_cubic cos4        -0.00312    0.00273    -1.15  2.55e-  1 FALSE
+13 full_cubic sin5         0.00146    0.00272     0.537 5.92e-  1 FALSE
+14 full_cubic cos5         0.00538    0.00273     1.97  5.12e-  2 FALSE
+15 full_cubic cos6         0.000351   0.00193     0.182 8.56e-  1 FALSE</code></pre>
 </div>
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>forecast_df <span class="ot">&lt;-</span> full_cubic_lm <span class="sc">|&gt;</span> <span class="fu">forecast</span>(sim_ts, ) <span class="sc">|&gt;</span> <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">select</span>(std_t, .mean) <span class="sc">|&gt;</span> <span class="fu">rename</span>(<span class="at">pred =</span> .mean)</span>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>forecast_df <span class="ot">&lt;-</span> full_cubic_lm <span class="sc">|&gt;</span> <span class="fu">forecast</span>(sim_ts) <span class="sc">|&gt;</span> <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">select</span>(std_t, .mean) <span class="sc">|&gt;</span> <span class="fu">rename</span>(<span class="at">pred =</span> .mean)</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>sim_ts <span class="sc">|&gt;</span></span>
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(forecast_df, <span class="at">by =</span> <span class="st">"std_t"</span>) <span class="sc">|&gt;</span></span>
@@ -611,7 +613,7 @@ From Daniel:
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
 <span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Mean Daily High Temperature (Fahrenheit)"</span>,</span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Time Plot of Mean Daily Rexburg High Temperature by Month"</span>,</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Time Plot of LOGGED MODEL"</span>,</span>
 <span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">subtitle =</span> <span class="fu">paste0</span>(<span class="st">"("</span>, <span class="fu">format</span>(sim_ts<span class="sc">$</span>dates <span class="sc">%&gt;%</span> <span class="fu">head</span>(<span class="dv">1</span>), <span class="st">"%b %Y"</span>), endash, <span class="fu">format</span>(sim_ts<span class="sc">$</span>dates <span class="sc">%&gt;%</span> <span class="fu">tail</span>(<span class="dv">1</span>), <span class="st">"%b %Y"</span>), <span class="st">")"</span>)</span>
 <span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
 <span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
@@ -645,25 +647,25 @@ From Daniel:
 <pre><code># A tibble: 15 × 7
    .model     term         estimate std.error statistic   p.value sig  
    &lt;chr&gt;      &lt;chr&gt;           &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
- 1 full_cubic (Intercept)  2.59       0.00287  905.     5.86e-164 TRUE 
- 2 full_cubic std_t        0.336      0.00484   69.4    6.37e- 74 TRUE 
- 3 full_cubic I(std_t^2)  -0.00100    0.00216   -0.463  6.44e-  1 FALSE
- 4 full_cubic I(std_t^3)   0.000808   0.00252    0.321  7.49e-  1 FALSE
- 5 full_cubic sin1         0.0318     0.00275   11.6    6.99e- 19 TRUE 
- 6 full_cubic cos1         0.00643    0.00271    2.38   1.99e-  2 TRUE 
- 7 full_cubic sin2         0.000693   0.00271    0.255  7.99e-  1 FALSE
- 8 full_cubic cos2         0.000198   0.00271    0.0733 9.42e-  1 FALSE
- 9 full_cubic sin3        -0.00142    0.00271   -0.524  6.02e-  1 FALSE
-10 full_cubic cos3         0.000903   0.00271    0.334  7.40e-  1 FALSE
-11 full_cubic sin4         0.00378    0.00271    1.40   1.66e-  1 FALSE
-12 full_cubic cos4         0.00133    0.00271    0.492  6.24e-  1 FALSE
-13 full_cubic sin5         0.00214    0.00270    0.793  4.30e-  1 FALSE
-14 full_cubic cos5         0.00286    0.00271    1.06   2.94e-  1 FALSE
-15 full_cubic cos6         0.00418    0.00191    2.18   3.18e-  2 TRUE </code></pre>
+ 1 full_cubic (Intercept)  2.65       0.00289   918.    7.88e-186 TRUE 
+ 2 full_cubic std_t        0.385      0.00487    79.1   4.02e- 87 TRUE 
+ 3 full_cubic I(std_t^2)   0.00206    0.00217     0.946 3.47e-  1 FALSE
+ 4 full_cubic I(std_t^3)  -0.00371    0.00252    -1.47  1.45e-  1 FALSE
+ 5 full_cubic sin1         0.0310     0.00276    11.2   4.88e- 19 TRUE 
+ 6 full_cubic cos1         0.0402     0.00273    14.7   4.52e- 26 TRUE 
+ 7 full_cubic sin2         0.0492     0.00273    18.0   4.25e- 32 TRUE 
+ 8 full_cubic cos2         0.0282     0.00273    10.4   3.57e- 17 TRUE 
+ 9 full_cubic sin3         0.00636    0.00273     2.33  2.18e-  2 TRUE 
+10 full_cubic cos3         0.00196    0.00273     0.718 4.75e-  1 FALSE
+11 full_cubic sin4        -0.00273    0.00272    -1.00  3.19e-  1 FALSE
+12 full_cubic cos4        -0.00312    0.00273    -1.15  2.55e-  1 FALSE
+13 full_cubic sin5         0.00146    0.00272     0.537 5.92e-  1 FALSE
+14 full_cubic cos5         0.00538    0.00273     1.97  5.12e-  2 FALSE
+15 full_cubic cos6         0.000351   0.00193     0.182 8.56e-  1 FALSE</code></pre>
 </div>
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>forecast_df <span class="ot">&lt;-</span> log_transform_lm <span class="sc">|&gt;</span> <span class="fu">forecast</span>(sim_ts, ) <span class="sc">|&gt;</span> <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">select</span>(std_t, .mean) <span class="sc">|&gt;</span> <span class="fu">rename</span>(<span class="at">pred =</span> .mean)</span>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>forecast_df <span class="ot">&lt;-</span> log_transform_lm <span class="sc">|&gt;</span> <span class="fu">forecast</span>(sim_ts) <span class="sc">|&gt;</span> <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">select</span>(std_t, .mean) <span class="sc">|&gt;</span> <span class="fu">rename</span>(<span class="at">pred =</span> .mean)</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>sim_ts <span class="sc">|&gt;</span></span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(forecast_df, <span class="at">by =</span> <span class="st">"std_t"</span>) <span class="sc">|&gt;</span></span>
