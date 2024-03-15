@@ -1,0 +1,356 @@
+---
+title: "Sample Code"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+
+
+
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+TheInitialPromptGoesHere
+
+-   Question1
+-   Question2
+
+:::
+
+
+
+<!-- Folded code:  -->
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+code_goes_here <- 0
+```
+
+
+
+
+<!-- Tables -->
+
+```{r}
+#| label: tbl-LabelGoesHere
+#| tbl-cap: "TitleGoesHere"
+
+# make figure
+```
+
+
+<!-- Figures -->
+
+```{r}
+#| label: fig-LabelGoesHere
+#| fig-cap: "TitleGoesHere"
+
+# make figure
+```
+
+
+
+::: panel-tabset
+#### first_tab
+
+Stuff
+
+#### second_tab
+
+Stuff
+
+#### third_tab
+
+Stuff
+:::
+
+
+
+
+::: {.callout-note}
+Text goes here.
+:::
+
+::: {.callout-warning}
+Text goes here.
+:::
+
+::: {.callout-important}
+Text goes here.
+:::
+
+::: {.callout-tip}
+Text goes here. Color used for Check your understanding.
+:::
+
+::: {.callout-caution}
+Text goes here.
+:::
+
+
+
+::: {.callout-note icon=false title="TitleGoesHere"}
+This is a callout for a note with a title
+:::
+
+::: {.callout-tip appearance="minimal"}
+This creates a callout box with no title
+:::
+
+::: {.callout-note}
+Here is a note.
+:::
+
+
+
+
+
+
+<!-- Solutions at the bottom of the page -->
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Class Activity</a>
+
+::: {#Solutions style="display:none;"}
+
+Solutions to Class Activity
+
+
+```{r}
+#| echo: false
+stuff <- "here"
+```
+
+
+:::
+
+
+
+
+# Fill in missing data
+ tidyr::fill()
+
+
+ 
+ 
+ 
+ 
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+Stuff in first column
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+Stuff in second column
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+
+
+# Three column format
+
+::: columns
+::: {.column width="30%"}
+
+Stuff in first column
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
+Stuff in second column
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
+Stuff in third column
+
+:::
+:::
+
+
+
+
+
+
+
+# Generating R code for user
+
+
+```{r}
+#| echo: false
+x <- c(1:5)
+y <- x^2
+df <- data.frame(x = x, y = y)
+cat("x <- c(", paste(df$x, collapse = ", "),")\n")
+cat("y <- c(", paste(df$y, collapse = ", "),")")
+```
+
+```{r}
+#| echo: false
+
+df <- data.frame(x = c(1:16)) |> mutate(y = x^2)
+# build a string that gives the data
+xy_string <- rep("",6)
+xy_string[1] <- "sample_df <- data.frame("
+xy_string[2] <- paste0(" \t x = c(", paste(df$x |> head(8), collapse = ", "), ", ")
+xy_string[3] <- paste0(" \t  \t   ", paste(df$x |> tail(8), collapse = ", "), ")," )
+xy_string[4] <- paste0(" \t y = c(", paste(df$y |> head(8), collapse = ", "), ", ")
+xy_string[5] <- paste0(" \t  \t   ", paste(df$y |> tail(8), collapse = ", "), ")" )
+xy_string[6] <- ")"
+xystr <- paste(xy_string, " \n ", collapse="")
+
+#| echo: false
+cat(xystr)
+```
+
+
+
+
+## Plots
+
+
+```{r}
+#| eval: false
+
+ts |> 
+    autoplot(.vars = random) +
+    geom_line(data = ts, aes(x = index, y = a_t), linewidth = 1) +
+    labs(
+      x = "Time",
+      y = "Random",
+      title = paste0("Random Component and EWMA (α = ", alpha, ")")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+```{r}
+#| eval: false
+
+ts |> 
+    autoplot(.vars = random) +
+    geom_line(data = ts, aes(x = index, y = a_t), color = "#D55E00", linewidth = 1) +
+    labs(
+      x = "Time",
+      y = "Random",
+      title = paste0("Random Component and EWMA (α = ", alpha, ")"),
+      subtitle = "(All Dates)"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+```
+
+
+<!-- Formatting dates -->
+
+```{r}
+# Formatting dates
+usd1_ts <- rio::import("data/exchange_rates.parquet") |>
+  filter(currency == "USD.CAD") |>
+  mutate(diff = rate - lag(rate)) |>
+  as_tsibble(index = date) |>
+  na.omit()
+
+usd1_ts %>% 
+  autoplot(.vars = rate) + 
+    labs(
+      title = "Converstion Rate for 1 USD to Canadian Dollars",
+      subtitle = 
+        paste0(
+          format(min(usd1_ts$date), "%d %b %Y"),
+            " - ",
+          format(max(usd1_ts$date), "%d %b %Y")
+          ),
+      x = "Date",
+      y = "Conversion Rate",
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+```
+
+```{r}
+#| echo: false
+#| results: asis
+
+# LaTeX math mode from a string
+
+set.seed(6)
+n <- 8
+d_operator <- data.frame(t = c(1:n), x = sample(1:15, n, replace = FALSE)) |>
+  mutate(diff = t - n)
+cat( paste( paste0("$x_{t", ifelse(d_operator$t==n,"",d_operator$t-n), "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+cat( paste("$ x_t =", n, "$") )
+# DO I need the cat()?
+```
+
+```{r}
+# Create a time series based on the current year
+# See 3-3 and 4-5
+n_months <- 36
+start_date <- my(paste(1, floor(year(now())-n_months/12)))
+date_seq <- seq(start_date,
+    start_date + months(n_months - 1),
+    by = "1 months")
+```
+
+
+### Operators
+Backward Shift Operator: $\mathbf{B}$
+Difference operator: $\nabla$
+
+### Ellipses
+⋮
+
+### Hyperlinks to pages
+
+<!-- Bookmark -->
+<a id="IDvalue">THING TO LINK TO</a>
+
+<!-- Reference -->
+<a href="https://byuistats.github.io/timeseries/chapter_4_lesson_2.html#DifferenceOperator">Chapter 4 Lesson 2</a>
+
+
+<!-- Linear Imputation of Missing Values using the zoo package -->
+<!-- See Lesson 5-2 -->
