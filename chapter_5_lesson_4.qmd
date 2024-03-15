@@ -60,7 +60,14 @@ source("common_functions.R")
 
 
 
+
+
+
+
 <!-- {{< include _packages.qmd >}} -->
+
+
+
 
 
 
@@ -73,11 +80,11 @@ We will simulate code that has a seasonal component and impose an exponential tr
 #| code-fold: true
 #| code-summary: "Show the code"
 
-set.seed(1)
+set.seed(12345)
 
 n_years <- 9 # Number of years to simulate
 n_months <- n_years * 12 # Number of months
-sigma <- .02 # Standard deviation of random term
+sigma <- .05 # Standard deviation of random term
 
 z_t <- rnorm(n = n_months, mean = 0, sd = sigma)
 
@@ -87,11 +94,12 @@ dates <- seq(floor_date(now(), unit = "year"), length.out=n_months + 1, by="-1 m
 sim_ts <- tibble(
   t = 1:n_months,
   dates = dates,
-  x_t = exp(2 + 0.012 * t +
-    0.03 * sin(2 * pi * 1 * t / 12) + 0.04 * cos(2 * pi * 1 * t / 12) + 
-    0.05 * sin(2 * pi * 2 * t / 12) + 0.03 * cos(2 * pi * 2 * t / 12) +
-    0.01 * sin(2 * pi * 3 * t / 12) + 0.005 * cos(2 * pi * 3 * t / 12) +
-    rnorm(n = n_months, mean = 0, sd = sigma)
+  random = arima.sim(model=list(ar=c(.5,0.2)), n = n_months, sd = 0.02),
+  x_t = exp(2 + 0.015 * t +
+      0.03 * sin(2 * pi * 1 * t / 12) + 0.04 * cos(2 * pi * 1 * t / 12) + 
+      0.05 * sin(2 * pi * 2 * t / 12) + 0.03 * cos(2 * pi * 2 * t / 12) +
+      0.01 * sin(2 * pi * 3 * t / 12) + 0.005 * cos(2 * pi * 3 * t / 12) +
+      random
     )
   ) |>
   mutate(
@@ -115,8 +123,6 @@ sim_ts |>
 
 sim_ts |>
     autoplot(.vars = log(x_t))
-
-
 ```
 
 
@@ -157,6 +163,217 @@ sim_ts |>
     )
 ```
 
+```{r}
+full_cubic_lm <- sim_ts |>
+  model(full_cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
+full_cubic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+
+full_quad_lm <- sim_ts |>
+  model(full_quad = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
+full_quad_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+reduced_quad_lm1 <- sim_ts |>
+  model(reduced_quad1 = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
+reduced_quad_lm1 |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+reduced_quad_lm2 <- sim_ts |>
+  model(reduced_quad2 = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
+    sin1 + cos1 + sin2 + cos2 + sin3))
+reduced_quad_lm2 |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+reduced_quad_lm3 <- sim_ts |>
+  model(reduced_quad3 = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
+    sin1 + cos1 + sin2 + cos2))
+reduced_quad_lm3 |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+reduced_quad_lm4 <- sim_ts |>
+  model(reduced_quad4 = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
+    sin1 + cos1)) 
+reduced_quad_lm4 |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+
+full_linear_lm <- sim_ts |>
+  model(full_linear = TSLM(log(x_t) ~ std_t + 
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
+full_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+reduced_linear_lm1 <- sim_ts |>
+  model(reduced_linear1 = TSLM(log(x_t) ~ std_t + 
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
+reduced_linear_lm1 |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+reduced_linear_lm2 <- sim_ts |>
+  model(reduced_linear2 = TSLM(log(x_t) ~ std_t + 
+    sin1 + cos1 + sin2 + cos2 + sin3))
+reduced_linear_lm2 |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+reduced_linear_lm3 <- sim_ts |>
+  model(reduced_linear3 = TSLM(log(x_t) ~ std_t + 
+    sin1 + cos1 + sin2 + cos2))
+reduced_linear_lm3 |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+reduced_linear_lm4 <- sim_ts |>
+  model(reduced_linear4 = TSLM(log(x_t) ~ std_t + 
+    sin1 + cos1)) 
+reduced_linear_lm4 |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+```
+
+
+```{r}
+model_combined <- sim_ts |>
+  model(
+    full_cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) +
+                    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+                  + sin4 + cos4 + sin5 + cos5 + cos6 ),
+    full_quad = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
+                       sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+                     + sin4 + cos4 + sin5 + cos5 + cos6 ),
+    reduced_quad1 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
+    reduced_quad2 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1 + sin2 + cos2 + sin3),
+    reduced_quad3 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1 + sin2 + cos2),
+    reduced_quad4 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1),
+    full_linear = TSLM(log(x_t) ~ std_t + 
+                         sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+                       + sin4 + cos4 + sin5 + cos5 + cos6 ),
+    reduced_linear1 = TSLM(log(x_t) ~ std_t + sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
+    reduced_linear2 = TSLM(log(x_t) ~ std_t + sin1 + cos1 + sin2 + cos2 + sin3),
+    reduced_linear3 = TSLM(log(x_t) ~ std_t + sin1 + cos1 + sin2 + cos2),
+    reduced_linear4 = TSLM(log(x_t) ~ std_t + sin1 + cos1) 
+  )
+
+# glance(model_combined) |>
+#   select(.model, AIC, AICc, BIC)
+
+combined_models <- glance(model_combined) |> 
+  select(.model, AIC, AICc, BIC)
+
+minimum <- combined_models |>
+  summarize(
+    AIC = which(min(AIC)==AIC),
+    AICc = which(min(AICc)==AICc),
+    BIC = which(min(BIC)==BIC)
+  )
+
+combined_models |>
+  rename(Model = ".model") |>
+  round_df(1) |>
+  format_cells(rows = minimum$AIC, cols = 2, "bold") |>
+  format_cells(rows = minimum$AICc, cols = 3, "bold") |>
+  format_cells(rows = minimum$BIC, cols = 4, "bold") |>
+  display_table()
+```
+
+```{r}
+resid_q1_ts <- reduced_quad_lm1 |>
+  residuals() 
+
+acf(resid_q1_ts$.resid, plot=TRUE, lag.max = 25)
+pacf(resid_q1_ts$.resid, plot=TRUE, lag.max = 25)
+alphas_quad <- pacf(resid_q1_ts$.resid, plot=FALSE, lag.max = 25) 
+
+```
+
+Notice that the residual correlogram indicates a positive autocorrelation in the values. This suggests that the standard errors of the regression coefficients will be underestimated, which means that some predictors can appear to be statistically significant when they are not. 
+
+Recall that in [Chapter 5, Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html#FittingRegModelWithPACF), we fitted a linear regression model using the value of the partial autocorrelation function for $k=1$. This helps account for the autocorrelation in the residuals.
+
+The partial autocorrelation when $k=1$ is approximately `r alphas_quad$acf[1] |> round(3)`. We will use this value as we recompute the regression coefficients.
+
+```{r}
+
+# Load additional packages
+pacman::p_load(tidymodels, multilevelmod,
+  nlme, broom.mixed)
+
+temp_spec <- linear_reg() |>
+  set_engine("gls", correlation = nlme::corAR1(0.479))
+
+temp_gls <- temp_spec |>
+  fit(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3, data = sim_ts)
+
+tidy(temp_gls) |>
+  mutate(
+    lower = estimate + qnorm(0.025) * std.error,
+    upper = estimate + qnorm(0.975) * std.error
+  ) 
+```
+
+The quadratic term is not statistically significant in this model. 
+
+
+##### Reduced Linear 1
+
+```{r}
+resid_lin1_ts <- reduced_linear_lm1 |>
+  residuals() 
+
+acf(resid_lin1_ts$.resid, plot=TRUE, lag.max = 25)
+pacf(resid_lin1_ts$.resid, plot=TRUE, lag.max = 25)
+alphas_lin <- pacf(resid_lin1_ts$.resid, plot=FALSE, lag.max = 25) 
+
+```
+
+<!-- Notice that the residual correlogram indicates a positive autocorrelation in the values. This suggests that the standard errors of the regression coefficients will be underestimated, which means that some predictors can appear to be statistically significant when they are not.  -->
+
+<!-- Recall that in [Chapter 5, Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html#FittingRegModelWithPACF), we fitted a linear regression model using the value of the partial autocorrelation function for $k=1$. This helps account for the autocorrelation in the residuals. -->
+
+The partial autocorrelation when $k=1$ is approximately `r alphas_lin$acf[1] |> round(3)`. We will use this value as we recompute the regression coefficients.
+
+```{r}
+
+# Load additional packages
+pacman::p_load(tidymodels, multilevelmod,
+  nlme, broom.mixed)
+
+temp_spec <- linear_reg() |>
+  set_engine("gls", correlation = nlme::corAR1(0.497))
+
+temp_gls <- temp_spec |>
+  fit(log(x_t) ~ std_t + sin1 + cos1 + sin2 + cos2 + sin3 + cos3, data = sim_ts)
+
+tidy(temp_gls) |>
+  mutate(
+    lower = estimate + qnorm(0.025) * std.error,
+    upper = estimate + qnorm(0.975) * std.error
+  ) 
+```
+
+
+
+
+
+
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 
 ```{r}
@@ -167,7 +384,7 @@ sim_ts |>
 # Logarithmic transformation of the time series
 
 log_transform_lm <- sim_ts |>
-  model(full_cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) +
+  model(full_cubic = TSLM(log(x_t) ~ std_t +
     sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
     + sin4 + cos4 + sin5 + cos5 + cos6 ))
 
@@ -184,15 +401,13 @@ sim_ts |>
   geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
   geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
     labs(
-      x = "Month",
-      y = "Mean Daily High Temperature (Fahrenheit)",
-      title = "Time Plot of Mean Daily Rexburg High Temperature by Month",
-      subtitle = paste0("(", format(sim_ts$dates %>% head(1), "%b %Y"), endash, format(sim_ts$dates %>% tail(1), "%b %Y"), ")")
+      x = "Time",
+      y = "Simulated Time Series",
+      title = "Time Plot of Simulated Time Series with an Exponential Trend"
     ) +
     theme_minimal() +
     theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.subtitle = element_text(hjust = 0.5)
+      plot.title = element_text(hjust = 0.5)
     )
 
 
