@@ -16,7 +16,11 @@ pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite d
                tidyquant,
                gt, # grammar of tables, for LaTeX in tables
                quarto, # For LaTeX mode results = 'asis'
-               plotly # For interactive figures
+               plotly, # For interactive figures
+               tidymodels,    # for GLS
+               multilevelmod, # for GLS
+               nlme,          # for GLS
+               broom.mixed    # for GLS
 )
 ################# WARNING: DO NOT USE mosaic. IT MESSES UP THE DECOMPOSITION.
 
