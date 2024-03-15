@@ -79,6 +79,8 @@ We will simulate code that has a seasonal component and impose an exponential tr
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
+#| results: asis
+#| fig-height: 3.5
 
 set.seed(12345)
 
@@ -118,12 +120,71 @@ sim_ts <- tibble(
   mutate(std_t = (t - mean(t)) / sd(t)) |>
   as_tsibble(index = dates)
 
-sim_ts |>
-    autoplot(.vars = x_t)
+plot_raw <- sim_ts |>
+    autoplot(.vars = x_t) +
+    labs(
+      x = "Month",
+      y = "x_t",
+      title = "Simulated Time Series"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
 
-sim_ts |>
-    autoplot(.vars = log(x_t))
+plot_log <- sim_ts |>
+    autoplot(.vars = log(x_t)) +
+    labs(
+      x = "Month",
+      y = "log(x_t)",
+      title = "Logarithm of Simulated Time Series"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+plot_raw | plot_log
 ```
+
+We will compute the (natural) logarithm of the time series values before fitting any linear models. So, our response variable will be $\log(x_t)$, rather than $x_t$.
+
+Even though there is no visual evidence of curvature in the trend for the logarithm of the time series, we will start by fitting a model that allows for a cubic trend. (In practice, we would probably not fit this model. However, there are some things that will occur that are helpful to understand the underlying process.)
+
+::: {.callout-note icon=false title="Cubic Model" collapse="false"}
+<!-- Begin hiding code for cubic model -->
+
+#### Cubic Model
+
+After taking the (natural) logarithm of $x_t$, we fit a cubic model to the log-transformed time series.
+
+##### Full Cubic Model
+
+\begin{align*}
+  \log(x_t) &= \beta_0 
+            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
+            + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 
+            + \beta_3 \left( \frac{t - \mu_t}{\sigma_t} \right)^3 \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_4 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \beta_5 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_6 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \beta_7 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_8 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)
+            + \beta_9 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_{10} \sin \left( \frac{2\pi \cdot 4 t}{12} \right)
+            + \beta_{11} \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_{12} \sin \left( \frac{2\pi \cdot 5 t}{12} \right)
+            + \beta_{13} \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_{14} \cos \left( \frac{2\pi \cdot 6 t}{12} \right) 
+               \phantom{+ \beta_{15} \sin \left( \frac{2\pi \cdot 6 t}{12} \right)}
+      + z_t
+\end{align*}
 
 
 ```{r}
@@ -137,24 +198,27 @@ full_cubic_lm <- sim_ts |>
   model(full_cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) +
     sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
     + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
-
 full_cubic_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
 
-forecast_df <- full_cubic_lm |> forecast(sim_ts) |> as_tibble() |> dplyr::select(std_t, .mean) |> rename(pred = .mean)
+forecast_df <- full_cubic_lm |> 
+  forecast(sim_ts) |> 
+  as_tibble() |> 
+  dplyr::select(std_t, .mean) |> 
+  rename(pred = .mean)
 
 sim_ts |>
   left_join(forecast_df, by = "std_t") |>
   as_tsibble(index = dates) |>
   autoplot(.vars = x_t) +
-  geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
+  geom_smooth(method = "lm", formula = 'y ~ x', se = FALSE, color = "#E69F00", linewidth = 0.5, linetype = "dotted") +
   geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
     labs(
       x = "Month",
-      y = "Mean Daily High Temperature (Fahrenheit)",
-      title = "Time Plot of LOGGED MODEL",
-      subtitle = paste0("(", format(sim_ts$dates %>% head(1), "%b %Y"), endash, format(sim_ts$dates %>% tail(1), "%b %Y"), ")")
+      y = "Simulated Time Series",
+      title = "Time Plot of Simulated Time Series with an Exponential Trend",
+      subtitle = "Predicted values based on the full cubic model are given in blue"
     ) +
     theme_minimal() +
     theme(
@@ -163,15 +227,53 @@ sim_ts |>
     )
 ```
 
-```{r}
-full_cubic_lm <- sim_ts |>
-  model(full_cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) +
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
-full_cubic_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
+A dotted line illustrating the simple least squares line is plotted on this figure for reference. This was not used in the model, but it highlights the curvature in the trend.
 
+Note that neither the quadratic nor the cubic terms are statistically significant in this model. We will eliminate the cubic term and fit a model with a quadratic trend.
+
+:::
+<!-- End of cubic model -->
+
+
+
+::: {.callout-note icon=false title="Quadratic Model" collapse="false"}
+<!-- Begin hiding code for quadratic model -->
+
+#### Quadratic Model
+
+We now fit a quadratic model to the log-transformed time series.
+
+##### Full Quadratic Model
+
+\begin{align*}
+  \log(x_t) &= \beta_0 
+            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
+            + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_7 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)
+            + \beta_8 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_9 \sin \left( \frac{2\pi \cdot 4 t}{12} \right)
+            + \beta_{10} \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_{11} \sin \left( \frac{2\pi \cdot 5 t}{12} \right)
+            + \beta_{12} \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_{13} \cos \left( \frac{2\pi \cdot 6 t}{12} \right) 
+               \phantom{+ \beta_{14} \sin \left( \frac{2\pi \cdot 6 t}{12} \right)}
+      + z_t
+\end{align*}
+
+```{r}
+#| label: simulatedExponentialQuadraticFull
+#| code-fold: true
+#| code-summary: "Show the code"
 
 full_quad_lm <- sim_ts |>
   model(full_quad = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
@@ -180,6 +282,18 @@ full_quad_lm <- sim_ts |>
 full_quad_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
+```
+
+Now, note that the quadratic term is statistically significant. It was not significant when the cubic term was included in the model, but it is now.
+
+##### Reduced Quadratic Model 1
+
+This model omits sine and cosine terms where $i>3$.
+
+```{r}
+#| label: simulatedExponentialQuadratic1
+#| code-fold: true
+#| code-summary: "Show the code"
 
 reduced_quad_lm1 <- sim_ts |>
   model(reduced_quad1 = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
@@ -187,28 +301,57 @@ reduced_quad_lm1 <- sim_ts |>
 reduced_quad_lm1 |>
   tidy() |>
   mutate(sig = p.value < 0.05)
+```
+
+##### Reduced Quadratic Model 2
+
+```{r}
+#| label: simulatedExponentialQuadratic2
+#| code-fold: true
+#| code-summary: "Show the code"
 
 reduced_quad_lm2 <- sim_ts |>
   model(reduced_quad2 = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
-    sin1 + cos1 + sin2 + cos2 + sin3))
+    sin1 + cos1 + sin2 + cos2))
 reduced_quad_lm2 |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
+```
+
+##### Reduced Quadratic Model 3
+
+```{r}
+#| label: simulatedExponentialQuadratic4
+#| code-fold: true
+#| code-summary: "Show the code"
 
 reduced_quad_lm3 <- sim_ts |>
   model(reduced_quad3 = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
-    sin1 + cos1 + sin2 + cos2))
+    sin1 + cos1)) 
 reduced_quad_lm3 |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
+```
 
-reduced_quad_lm4 <- sim_ts |>
-  model(reduced_quad4 = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
-    sin1 + cos1)) 
-reduced_quad_lm4 |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
 
+:::
+<!-- End of quadratic model -->
+
+
+
+::: {.callout-note icon=false title="Linear Model" collapse="false"}
+<!-- Begin hiding code for linear model -->
+
+#### Linear Model
+
+We now fit a linear model to the log-transformed time series.
+
+##### Full Linear Model
+
+```{r}
+#| label: simulatedExponentialLinearFull
+#| code-fold: true
+#| code-summary: "Show the code"
 
 full_linear_lm <- sim_ts |>
   model(full_linear = TSLM(log(x_t) ~ std_t + 
@@ -217,6 +360,14 @@ full_linear_lm <- sim_ts |>
 full_linear_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
+```
+
+##### Reduced Linear Model 1
+
+```{r}
+#| label: simulatedExponentialLinear1
+#| code-fold: true
+#| code-summary: "Show the code"
 
 reduced_linear_lm1 <- sim_ts |>
   model(reduced_linear1 = TSLM(log(x_t) ~ std_t + 
@@ -224,30 +375,49 @@ reduced_linear_lm1 <- sim_ts |>
 reduced_linear_lm1 |>
   tidy() |>
   mutate(sig = p.value < 0.05)
+```
+
+##### Reduced Linear Model 2
+
+```{r}
+#| label: simulatedExponentialLinear2
+#| code-fold: true
+#| code-summary: "Show the code"
 
 reduced_linear_lm2 <- sim_ts |>
   model(reduced_linear2 = TSLM(log(x_t) ~ std_t + 
-    sin1 + cos1 + sin2 + cos2 + sin3))
+    sin1 + cos1 + sin2 + cos2))
 reduced_linear_lm2 |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
+```
+
+##### Reduced Linear Model 3
+
+```{r}
+#| label: simulatedExponentialLinear3
+#| code-fold: true
+#| code-summary: "Show the code"
 
 reduced_linear_lm3 <- sim_ts |>
   model(reduced_linear3 = TSLM(log(x_t) ~ std_t + 
-    sin1 + cos1 + sin2 + cos2))
-reduced_linear_lm3 |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
-
-reduced_linear_lm4 <- sim_ts |>
-  model(reduced_linear4 = TSLM(log(x_t) ~ std_t + 
     sin1 + cos1)) 
-reduced_linear_lm4 |>
+reduced_linear_lm3 |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
 
 ```
 
+:::
+<!-- End of linear model -->
+
+
+
+
+::: {.callout-note icon=false title="Model Comparison" collapse="false"}
+<!-- Begin hiding code for model comparison -->
+
+#### Comparison of Fitted Models
 
 ```{r}
 model_combined <- sim_ts |>
@@ -259,16 +429,14 @@ model_combined <- sim_ts |>
                        sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
                      + sin4 + cos4 + sin5 + cos5 + cos6 ),
     reduced_quad1 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
-    reduced_quad2 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1 + sin2 + cos2 + sin3),
-    reduced_quad3 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1 + sin2 + cos2),
-    reduced_quad4 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1),
+    reduced_quad2 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1 + sin2 + cos2),
+    reduced_quad3 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1),
     full_linear = TSLM(log(x_t) ~ std_t + 
                          sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
                        + sin4 + cos4 + sin5 + cos5 + cos6 ),
     reduced_linear1 = TSLM(log(x_t) ~ std_t + sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
-    reduced_linear2 = TSLM(log(x_t) ~ std_t + sin1 + cos1 + sin2 + cos2 + sin3),
-    reduced_linear3 = TSLM(log(x_t) ~ std_t + sin1 + cos1 + sin2 + cos2),
-    reduced_linear4 = TSLM(log(x_t) ~ std_t + sin1 + cos1) 
+    reduced_linear2 = TSLM(log(x_t) ~ std_t + sin1 + cos1 + sin2 + cos2),
+    reduced_linear3 = TSLM(log(x_t) ~ std_t + sin1 + cos1) 
   )
 
 # glance(model_combined) |>
@@ -370,6 +538,9 @@ tidy(temp_gls) |>
 
 
 
+:::
+<!-- End of model comparison -->
+
 
 
 
@@ -401,7 +572,7 @@ sim_ts |>
   geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
   geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
     labs(
-      x = "Time",
+      x = "Month",
       y = "Simulated Time Series",
       title = "Time Plot of Simulated Time Series with an Exponential Trend"
     ) +
@@ -409,8 +580,6 @@ sim_ts |>
     theme(
       plot.title = element_text(hjust = 0.5)
     )
-
-
 ```
 
 
