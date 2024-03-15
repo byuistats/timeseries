@@ -72,7 +72,7 @@ source("common_functions.R")
 
 
 
-## Class Activity: Simulate an Exponential Trend with a Seasonal Component (xxx min)
+## Class Activity: Simulate an Exponential Trend with a Seasonal Component (15 min)
 
 We will simulate code that has a seasonal component and impose an exponential trend.
 
@@ -664,10 +664,7 @@ alphas_lin <- pacf(resid_lin1_ts$.resid, plot=FALSE, lag.max = 25)
 pacf(resid_lin1_ts$.resid, plot=TRUE, lag.max = 25)
 ```
 
-<!-- Notice that the residual correlogram indicates a positive autocorrelation in the values. This suggests that the standard errors of the regression coefficients will be underestimated, which means that some predictors can appear to be statistically significant when they are not.  -->
-
-<!-- Recall that in [Chapter 5, Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html#FittingRegModelWithPACF), we fitted a linear regression model using the value of the partial autocorrelation function for $k=1$. This helps account for the autocorrelation in the residuals. -->
-
+We will use the PACF when $k=1$ to apply the GLS algorithm.
 The first few partial autocorrelation values are:
 
 ```{r}
@@ -751,65 +748,18 @@ sim_ts |>
 
 
 
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
+
+## Small-Group Activity: Retail Sales (20 min)
+
+@fig-RetailSalesGeneralMerch gives the total sales (in millions of U.S. dollars) for the category "all other general merchandise stores (45299)."
 
 ```{r}
-#| label: simulatedExponentialTS2
+#| label: fig-RetailSalesGeneralMerch
+#| fig-cap: "Time plot of the total monthly retail sales for all other general merchandise stores (45299)"
 #| code-fold: true
 #| code-summary: "Show the code"
 
-# Logarithmic transformation of the time series
-
-log_transform_lm <- sim_ts |>
-  model(full_cubic = TSLM(log(x_t) ~ std_t +
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 ))
-
-log_transform_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
-
-forecast_df <- log_transform_lm |> forecast(sim_ts) |> as_tibble() |> dplyr::select(std_t, .mean) |> rename(pred = .mean)
-
-sim_ts |>
-  left_join(forecast_df, by = "std_t") |>
-  as_tsibble(index = dates) |>
-  autoplot(.vars = x_t) +
-  geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
-  geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
-    labs(
-      x = "Month",
-      y = "Simulated Time Series",
-      title = "Time Plot of Simulated Time Series with an Exponential Trend"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-```
-
-
-
-## Small Group Activity: SectionTitle (xxx min)
-## Class Activity: SectionTitle (xxx min)
-
-
-<!-- Check your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   Question1
--   Question2
-
-:::
-
-
-
-## Small-Group Activity: Retail Sales (xxx min)
-
-```{r}
-#| label: retail1
 # Read in retail sales data for "all other general merchandise stores"
 retail_ts <- rio::import("data/retail_by_business_type.parquet") |>
   filter(naics == 45299) |>
@@ -826,6 +776,124 @@ retail_ts |>
     theme(plot.title = element_text(hjust = 0.5))
 
 ```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use @fig-RetailSalesGeneralMerch to explain the following questions to a partner.
+
+-   What is the shape of the trend of this time series?
+-   which model appears to be more appropriate: additive or linear? Justify your answer.
+-   Apply the appropriate transformation to the time series. 
+-   Fit models utilizing the Fourier terms for seasonal components.
+-   Determine the "best" model for these data. Justify your decision.
+-   Check for autocorrelation in the random terms.
+-   Use GLS to fit the model, if there is evidence of autocorrelation in the random component.
+-   Refine your choice of the "best" model, if necessary. Justify your actions.
+-   Plot the fitted values and the time series on the same figure.
+
+:::
+
+
+
+
+
+
+
+
+## Class Activity: Simulated Non-Linear Series (10 min)
+
+In Section 5.8 of the textbook, we are introduced to the possibility that a time series could have an exponential trend but also exhibit negative values. In this case, the logarithm of the negative values is not defined, so we need a different approach to fit the model.
+
+We will fit the non-linear time series
+
+$$
+x_t = -c_0 + e^{\alpha_0 + \alpha_1 t} + z_t
+$$
+
+where the time series can assume negative values. 
+
+We present the simulation from the textbook here:
+
+```{r}
+#| label: fig-TextbokSimulationTimePlot
+#| fig-cap: "Time plot of a simulated non-linear series"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+set.seed(1)
+dat <- tibble(w = rnorm(100, sd = 10)) |>
+    mutate(
+        Time = 1:n(),
+         z = purrr::accumulate2(
+            lag(w), w, 
+            \(acc, nxt, w) 0.7 * acc + w,
+            .init = 0)[-1],
+          x = exp(1 + 0.05 * Time) + z) |>
+    tsibble::as_tsibble(index = Time)
+
+autoplot(dat, .var = x) +
+  geom_hline(yintercept = 0) +
+  labs(
+    x = "Time",
+    y = "Value",
+    title = "Time Plot of Simulated Non-Linear Series"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+We will fit the non-linear model given above.
+
+```{r}
+equation <- x ~ exp(alp0 + alp1 * Time)
+
+dat_nls <- nls(equation, data = dat,
+  start = list(alp0 = 0.1, alp1 = 0.5))
+
+summary(dat_nls)$parameters
+```
+
+```{r}
+#| echo: false
+
+params <- summary(dat_nls)$parameters |> as_tibble() |> select(Estimate) |> pull() |> round(3)
+```
+
+The model we fitted was 
+
+$$
+  x_t = e^{1 + 0.05 t} + z_t
+$$
+
+where 
+
+$$
+  z_t = 0.7 z_{t-1} + w_t
+$$
+and $w_t$ is a white noise process. 
+
+Our fitted model is:
+$$
+  \hat x_t = e^{`r params[1]` + `r params[2]` t}
+$$
+
+Notice that our estimates are quite close to the parameters used in the simulation.
+
+
+
+<!-- Check your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Modify the time series and repeat the simulation.
+-   Fit your model using the `nls` function in R.
+-   Compare the parameter estimates with the actual values from your simulation.
+
+:::
 
 
 
@@ -849,37 +917,6 @@ retail_ts |>
 
 
 
-
-
-<a href="javascript:showhide('Solutions1')"
-style="font-size:.8em;">Class Activity</a>
-  
-::: {#Solutions1 style="display:none;"}
-    
-
-:::
-
-
-
-
-<a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Class Activity</a>
-  
-::: {#Solutions2 style="display:none;"}
-    
-
-:::
-
-
-
-
-<a href="javascript:showhide('Solutions3')"
-style="font-size:.8em;">Class Activity</a>
-  
-::: {#Solutions3 style="display:none;"}
-    
-
-:::
 
 
 
