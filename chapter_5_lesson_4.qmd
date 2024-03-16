@@ -94,12 +94,12 @@ sigma <- .05 # Standard deviation of random term
 
 z_t <- rnorm(n = n_months, mean = 0, sd = sigma)
 
-dates <- seq(floor_date(now(), unit = "year"), length.out=n_months + 1, by="-1 month") |>
+dates_seq <- seq(floor_date(now(), unit = "year"), length.out=n_months + 1, by="-1 month") |>
   floor_date(unit = "month") |> sort() |> head(n_months)
 
 sim_ts <- tibble(
   t = 1:n_months,
-  dates = dates,
+  dates = dates_seq,
   random = arima.sim(model=list(ar=c(.5,0.2)), n = n_months, sd = 0.02),
   x_t = exp(2 + 0.015 * t +
       0.03 * sin(2 * pi * 1 * t / 12) + 0.04 * cos(2 * pi * 1 * t / 12) + 
@@ -745,8 +745,112 @@ sim_ts |>
 
 
 
+::: {.callout-note icon=false title="Comparison of the Fitted Coefficients to the Simulation Parameters" collapse="false"}
+<!-- Begin hiding code for the comparison -->
 
+#### Comparison of Model Coefficients
 
+```{r}
+#| echo: false
+
+coeffs <- tidy(temp_gls) |> 
+  select(term, estimate) 
+```
+
+Note that the mean of the $x_t$ values is $\bar x_t = `r mean(sim_ts$x_t) |> round(3)`$, and the standard deviation is $s_t = `r sd(sim_ts$x_t) |> round(3)`$.
+
+The fitted model is:
+\begin{align*}
+  \hat x_t 
+      &= e^{
+          `r coeffs |> filter(term == "(Intercept)") |> select(estimate) |> pull() |> round(3)` 
+          + `r coeffs |> filter(term == "std_t") |> select(estimate) |> pull() |> round(3)` 
+                ~ \left( \frac{t - `r mean(sim_ts$x_t) |> round(3)`}{`r sd(sim_ts$x_t) |> round(3)`} \right)
+          + `r coeffs |> filter(term == "sin1") |> select(estimate) |> pull() |> round(3)` 
+                ~ \sin \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "cos1") |> select(estimate) |> pull() |> round(3)` 
+                ~ \cos \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "sin2") |> select(estimate) |> pull() |> round(3)` 
+                ~ \sin \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "cos2") |> select(estimate) |> pull() |> round(3)` 
+                ~ \cos \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "sin3") |> select(estimate) |> pull() |> round(3)` 
+                ~ \sin \left( \frac{2 \pi \cdot 3 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "cos3") |> select(estimate) |> pull() |> round(3)` 
+                ~ \cos \left( \frac{2 \pi \cdot 3 t }{ 12 } \right)
+     }
+     \\
+     &= e^{
+          `r coeffs |> filter(term == "(Intercept)") |> select(estimate) |> pull() |> round(3)` 
+          + `r coeffs |> filter(term == "std_t") |> select(estimate) |> pull() |> round(3)` 
+                ~ \left( \frac{t}{`r sd(sim_ts$x_t) |> round(3)`} \right)
+          - `r coeffs |> filter(term == "std_t") |> select(estimate) |> pull() |> round(3)` 
+                ~ \left( \frac{`r mean(sim_ts$x_t) |> round(3)`}{`r sd(sim_ts$x_t) |> round(3)`} \right)
+          + `r coeffs |> filter(term == "sin1") |> select(estimate) |> pull() |> round(3)` 
+                ~ \sin \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "cos1") |> select(estimate) |> pull() |> round(3)` 
+                ~ \cos \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "sin2") |> select(estimate) |> pull() |> round(3)` 
+                ~ \sin \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "cos2") |> select(estimate) |> pull() |> round(3)` 
+                ~ \cos \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "sin3") |> select(estimate) |> pull() |> round(3)` 
+                ~ \sin \left( \frac{2 \pi \cdot 3 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "cos3") |> select(estimate) |> pull() |> round(3)` 
+                ~ \cos \left( \frac{2 \pi \cdot 3 t }{ 12 } \right)
+     }
+     \\
+     &= e^{
+          `r coeffs |> filter(term == "(Intercept)") |> select(estimate) |> pull() |> round(3)` 
+          + `r ((coeffs |> filter(term == "std_t") |> select(estimate) |> pull() ) / sd(sim_ts$x_t)) |> round(3)` ~ t
+          - `r ((coeffs |> filter(term == "std_t") |> select(estimate) |> pull()) * (mean(sim_ts$x_t) / sd(sim_ts$x_t))) |> round(3)`
+          + `r coeffs |> filter(term == "sin1") |> select(estimate) |> pull() |> round(3)` 
+                ~ \sin \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "cos1") |> select(estimate) |> pull() |> round(3)` 
+                ~ \cos \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "sin2") |> select(estimate) |> pull() |> round(3)` 
+                ~ \sin \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "cos2") |> select(estimate) |> pull() |> round(3)` 
+                ~ \cos \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "sin3") |> select(estimate) |> pull() |> round(3)` 
+                ~ \sin \left( \frac{2 \pi \cdot 3 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "cos3") |> select(estimate) |> pull() |> round(3)` 
+                ~ \cos \left( \frac{2 \pi \cdot 3 t }{ 12 } \right)
+     }
+     \\
+     &= e^{
+          `r ((coeffs |> filter(term == "(Intercept)") |> select(estimate) |> pull()) - ((coeffs |> filter(term == "std_t") |> select(estimate) |> pull()) * (mean(sim_ts$x_t) / sd(sim_ts$x_t)))) |> round(3)`
+          + `r ((coeffs |> filter(term == "std_t") |> select(estimate) |> pull() ) / sd(sim_ts$x_t)) |> round(3)` ~ t
+          + `r coeffs |> filter(term == "sin1") |> select(estimate) |> pull() |> round(3)` 
+                ~ \sin \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "cos1") |> select(estimate) |> pull() |> round(3)` 
+                ~ \cos \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "sin2") |> select(estimate) |> pull() |> round(3)` 
+                ~ \sin \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "cos2") |> select(estimate) |> pull() |> round(3)` 
+                ~ \cos \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "sin3") |> select(estimate) |> pull() |> round(3)` 
+                ~ \sin \left( \frac{2 \pi \cdot 3 t }{ 12 } \right) 
+          + `r coeffs |> filter(term == "cos3") |> select(estimate) |> pull() |> round(3)` 
+                ~ \cos \left( \frac{2 \pi \cdot 3 t }{ 12 } \right)
+     }
+\end{align*}
+
+Notice how well this matches the original model used to simulate the data.
+
+\begin{align*}
+  x_t &= e^{
+          2 + 0.015 t +
+       0.03 ~ \sin \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) + 0.04 ~ \cos \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) + 
+       0.05 ~ \sin \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) + 0.03 ~ \cos \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) +
+       0.01 ~ \sin \left( \frac{2 \pi \cdot 3 t }{ 12 } \right) + 0.005 ~ \cos \left( \frac{2 \pi \cdot 3 t }{ 12 } \right) +
+        z_t
+     }
+\end{align*}
+where $z_t = 0.5 z_{t-1} + 0.2 z_{t-2} + w_t$ and $w_t$ is a white noise process with standard deviation of 0.02.
+
+:::
+<!-- End of the big reveal -->
 
 
 
@@ -761,7 +865,7 @@ sim_ts |>
 #| code-summary: "Show the code"
 
 # Read in retail sales data for "all other general merchandise stores"
-retail_ts <- rio::import("data/retail_by_business_type.parquet") |>
+retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
   filter(naics == 45299) |>
   as_tsibble(index = month)
 
@@ -785,7 +889,7 @@ retail_ts |>
 Use @fig-RetailSalesGeneralMerch to explain the following questions to a partner.
 
 -   What is the shape of the trend of this time series?
--   which model appears to be more appropriate: additive or linear? Justify your answer.
+-   Which decomposition would be more appropriate: additive or multiplicative? Justify your answer.
 -   Apply the appropriate transformation to the time series. 
 -   Fit models utilizing the Fourier terms for seasonal components.
 -   Determine the "best" model for these data. Justify your decision.
@@ -918,5 +1022,16 @@ Notice that our estimates are quite close to the parameters used in the simulati
 
 
 
+
+<!-- Solutions at the bottom of the page -->
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Small-Group Activity</a>
+
+::: {#Solutions style="display:none;"}
+
+Insert code for Small-Group Activity here
+
+:::
 
 
