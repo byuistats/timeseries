@@ -77,6 +77,9 @@ source("common_functions.R")
 
 <a id="Simulation">We</a> will simulate code that has a seasonal component and impose an exponential trend.
 
+::: {.callout-note icon=false title="Figures" collapse="false"}
+<!-- Begin hiding code for Figures -->
+
 @fig-simTSplot shows the simulated time series and the time series after the natural logarithm is applied.
 
 ```{r}
@@ -155,6 +158,10 @@ plot_raw | plot_log
 We will compute the (natural) logarithm of the time series values before fitting any linear models. So, our response variable will be $\log(x_t)$, rather than $x_t$.
 
 Even though there is no visual evidence of curvature in the trend for the logarithm of the time series, we will start by fitting a model that allows for a cubic trend. (In practice, we would probably not fit this model. However, there are some things that will occur that are helpful to understand the underlying process.)
+
+:::
+<!-- End figures -->
+
 
 ::: {.callout-note icon=false title="Cubic Model" collapse="false"}
 <!-- Begin hiding code for cubic model -->
@@ -710,7 +717,7 @@ For reference, a dotted line illustrating the simple least squares line is plott
 
 ```{r}
 #| label: fig-finalFittedPlot
-#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
+#| fig-cap: "Time plot of the time series and the fitted linear regression model"
 #| code-fold: true
 #| code-summary: "Show the code"
 
@@ -868,6 +875,7 @@ where $z_t = 0.5 z_{t-1} + 0.2 z_{t-2} + w_t$ and $w_t$ is a white noise process
 # Read in retail sales data for "all other general merchandise stores"
 retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
   filter(naics == 45299) |>
+  filter(as_date(month) >= my("Jan 1998")) |>
   as_tsibble(index = month)
 
 retail_ts |>
@@ -892,12 +900,19 @@ Use @fig-RetailSalesGeneralMerch to explain the following questions to a partner
 -   What is the shape of the trend of this time series?
 -   Which decomposition would be more appropriate: additive or multiplicative? Justify your answer.
 -   Apply the appropriate transformation to the time series. 
--   Fit models utilizing the Fourier terms for seasonal components.
+-   Fit appropriate  models utilizing the Fourier terms for seasonal components.
 -   Determine the "best" model for these data. Justify your decision.
--   Check for autocorrelation in the random terms.
--   Use GLS to fit the model, if there is evidence of autocorrelation in the random component.
--   Refine your choice of the "best" model, if necessary. Justify your actions.
+<!-- -   Check for autocorrelation in the random terms. -->
+<!-- -   Use GLS to fit the model, if there is evidence of autocorrelation in the random component. -->
+<!-- -   Refine your choice of the "best" model, if necessary. Justify your actions. -->
 -   Plot the fitted values and the time series on the same figure.
+
+Do the following to explore a cubic trend model with all the seasonal Fourier terms.
+
+-   Fit a full model with a cubic trend and the logarithm of the time series for the response, including all the Fourier seasonal terms. (Be sure to include the linear and quadratic components of the trend.)
+-   Fit a full model with a cubic trend and the logarithm of the time series for the response, but use indicator seasonal variables.  (Be sure to include the linear and quadratic components of the trend.)
+-   Compare the coefficients on the linear, quadratic, and cubic terms between the two models above. Why would we observe this result?
+-   Why does the coefficient on the intercept term differ in the two models?
 
 :::
 
@@ -1024,6 +1039,22 @@ Notice that our estimates are quite close to the parameters used in the simulati
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <!-- Solutions at the bottom of the page -->
 
 <a href="javascript:showhide('Solutions')"
@@ -1031,8 +1062,428 @@ style="font-size:.8em;">Small-Group Activity</a>
 
 ::: {#Solutions style="display:none;"}
 
-Insert code for Small-Group Activity here
+#### Small-Group Activity: Retail Sales Code
+
+::: {.callout-tip icon=false title="Check Your Understanding Code" }
+
+
+::: {.callout-caution icon=false title="Figures" collapse="false"}
+
+@fig-RetailSalesGeneralMerch2 gives the total sales (in millions of U.S. dollars) for the category "all other general merchandise stores (45299)," beginning with January 1998.
+
+```{r}
+#| label: fig-RetailSalesGeneralMerch2
+#| fig-cap: "Time plot of the total monthly retail sales for all other general merchandise stores (45299)"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Read in retail sales data for "all other general merchandise stores"
+retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
+  filter(naics == 45299) |>
+  mutate(t = 1:n()) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12)
+  ) |>
+  filter(as_date(month) >= my("Jan 1998")) |>
+  as_tsibble(index = month)
+
+retail_ts |>
+  autoplot(.vars = sales_millions) +
+    labs(
+      x = "Month",
+      y = "Sales (Millions of U.S. Dollars)",
+      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+@fig-retailSideBySidePlot shows the "All other general merchandise" retail sales data.
+
+```{r}
+#| label: fig-retailSideBySidePlot
+#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| results: asis
+#| fig-height: 3.5
+
+plot_raw <- retail_ts |>
+    autoplot(.vars = sales_millions) +
+    labs(
+      x = "Month",
+      y = "sales_millions",
+      title = "Other General Merchandise Sales"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+plot_log <- retail_ts |>
+    autoplot(.vars = log(sales_millions)) +
+    labs(
+      x = "Month",
+      y = "log(sales_millions)",
+      title = "Logarithm of Other Gen. Merch. Sales"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+plot_raw | plot_log
+```
 
 :::
+<!-- Figures -->
+
+
+::: {.callout-caution icon=false title="Cubic Trend" collapse="false"}
+
+```{r}
+#| label: fullCubicFittedModel
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Cubic model with standardized time variable
+
+full_cubic_lm <- retail_ts |>
+  model(full_cubic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6)) # Note sin6 is omitted
+full_cubic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+Note that each of the Fourier terms is statistically significant. 
+
+:::
+<!-- Cubic -->
+
+
+::: {.callout-caution icon=false title="Quadratic Trend" collapse="false"}
+
+```{r}
+#| label: ExponentialQuadraticFull1a
+#| code-fold: true
+#| code-summary: "Show the code"
+
+full_quad_lm <- retail_ts |>
+  model(full_quad = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
+full_quad_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+```
+
+
+:::
+<!-- Quadratic -->
+
+
+::: {.callout-caution icon=false title="Linear Trend" collapse="false"}
+
+```{r}
+#| label: ExponentialQuadraticFull2a
+#| code-fold: true
+#| code-summary: "Show the code"
+
+full_linear_lm <- retail_ts |>
+  model(full_quadratic = TSLM(log(sales_millions) ~ std_t +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
+full_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+```
+
+:::
+<!-- Linear -->
+
+
+::: {.callout-caution icon=false title="Model Comparison" collapse="false"}
+
+We will now compare the models we fitted above. #tbl-ModelComparison2 gives the AIC, AICc, and BIC of the models fitted above. In addition, other models with a reduced number of Fourier terms are included. For example, the model labeled `reduced_quadratic_fourier_i5` includes linear and quadratic trend terms but also the Fourier terms where $i \le 5$.
+
+```{r}
+#| label: modelComparison2
+#| output: false
+#| code-fold: true
+#| code-summary: "Show the code"
+
+model_combined <- retail_ts |>
+  model(
+    full_cubic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) +
+                    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+                  + sin4 + cos4 + sin5 + cos5 + cos6 ),
+    full_quadratic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
+                       sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+                     + sin4 + cos4 + sin5 + cos5 + cos6 ),
+    reduced_quadratic_fourier_i5 = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
+                       sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+                     + sin4 + cos4 + sin5 + cos5),
+    reduced_quadratic_fourier_i4 = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
+                       sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+                     + sin4 + cos4),
+    # reduced_quadratic_fourier_i3 = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
+    #                    sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
+    # reduced_quadratic_fourier_i2 = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
+    #                    sin1 + cos1 + sin2 + cos2),
+    # reduced_quadratic_fourier_i1 = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
+    #                    sin1 + cos1),
+    full_linear = TSLM(log(sales_millions) ~ std_t + 
+                         sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+                       + sin4 + cos4 + sin5 + cos5 + cos6 ),
+    reduced_linear_fourier_i5 = TSLM(log(sales_millions) ~ std_t + 
+                       sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+                     + sin4 + cos4 + sin5 + cos5),
+    reduced_linear_fourier_i4 = TSLM(log(sales_millions) ~ std_t + 
+                       sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+                     + sin4 + cos4),
+    # reduced_linear_fourier_i3 = TSLM(log(sales_millions) ~ std_t + 
+    #                    sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
+    # reduced_linear_fourier_i2 = TSLM(log(sales_millions) ~ std_t + 
+    #                    sin1 + cos1 + sin2 + cos2),
+    # reduced_linear_fourier_i1 = TSLM(log(sales_millions) ~ std_t + 
+    #                    sin1 + cos1)
+  )
+
+glance(model_combined) |>
+  select(.model, AIC, AICc, BIC)
+```
+
+```{r}
+#| label: tbl-ModelComparison2
+#| tbl-cap: "Comparison of the AIC, AICc, and BIC values for the models fitted to the logarithm of the retail sales time series."
+#| echo: false
+
+combined_models <- glance(model_combined) |> 
+  select(.model, AIC, AICc, BIC)
+
+minimum <- combined_models |>
+  summarize(
+    AIC = which(min(AIC)==AIC),
+    AICc = which(min(AICc)==AICc),
+    BIC = which(min(BIC)==BIC)
+  )
+
+combined_models |>
+  rename(Model = ".model") |>
+  round_df(1) |>
+  format_cells(rows = minimum$AIC, cols = 2, "bold") |>
+  format_cells(rows = minimum$AICc, cols = 3, "bold") |>
+  format_cells(rows = minimum$BIC, cols = 4, "bold") |>
+  display_table()
+```
+
+The model with the lowest AIC, AICc, and BIC values is the full quadratic model.
+This can be written as:
+
+\begin{align*}
+  \log(x_t) &= \beta_0 
+            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
+            + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_7 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)
+            + \beta_8 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_9 \sin \left( \frac{2\pi \cdot 4 t}{12} \right)
+            + \beta_{10} \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            + \beta_{11} \sin \left( \frac{2\pi \cdot 5 t}{12} \right)
+            + \beta_{12} \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            \phantom{+ \beta_{13} \sin \left( \frac{2\pi \cdot 6 t}{12} \right)}
+            + \beta_{13} \cos \left( \frac{2\pi \cdot 6 t}{12} \right)
+      + z_t
+\end{align*}
+
+:::
+<!-- model comparison -->
+
+
+::: {.callout-caution icon=false title="Autocorrelation of the Random Component" collapse="false"}
+
+We check for autocorrelation in the random component to determine if using GLS is warranted.
+
+@fig-FullQuadACF illustrates the ACF of the full model with a quadratic trend.
+
+```{r}
+#| label: fig-FullQuadACF
+#| fig-cap: "ACF of the full model with a quadratic trend"
+
+full_quad_ts <- full_quad_lm |>
+  residuals() 
+
+acf(full_quad_ts$.resid, plot=TRUE, lag.max = 25)
+```
+
+We observe evidence of autocorrelation in the random terms. In fact, there is something happening on an annual 
+
+@fig-FullQuadPACF illustrates the PACF of the reduced model 1 with linear trend.
+
+```{r}
+#| label: fig-FullQuadPACF
+#| fig-cap: "PACF of the full model with a quadratic trend"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+alphas_quad <- pacf(full_quad_ts$.resid, plot=FALSE, lag.max = 25) 
+pacf(full_quad_ts$.resid, plot=TRUE, lag.max = 25)
+```
+
+:::
+<!-- Autocorrelation of the random component -->
+
+
+::: {.callout-caution icon=false title="Applying Genearlized Least Squares, GLS" collapse="false"}
+
+Recall that in [Chapter 5, Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html#FittingRegModelWithPACF), we fitted a linear regression model using the value of the partial autocorrelation function for $k=1$. This helps account for the autocorrelation in the residuals.
+
+We will use the PACF when $k=1$ to apply the GLS algorithm.
+The first few partial autocorrelation values are:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+pacf(full_quad_ts$.resid, plot=FALSE, lag.max = 10)
+```
+
+The partial autocorrelation when $k=1$ is approximately `r alphas_quad$acf[1] |> round(3)`. We will use this value as we recompute the regression coefficients.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Load additional packages
+pacman::p_load(tidymodels, multilevelmod,
+  nlme, broom.mixed)
+
+temp_spec <- linear_reg() |>
+  set_engine("gls", correlation = nlme::corAR1(0.497))
+
+temp_gls <- temp_spec |>
+  fit(log(sales_millions) ~ std_t + sin1 + cos1 + sin2 + cos2 + sin3 + cos3, data = retail_ts)
+
+tidy(temp_gls) |>
+  mutate(
+    lower = estimate + qnorm(0.025) * std.error,
+    upper = estimate + qnorm(0.975) * std.error
+  ) 
+```
+
+
+@fig-finalFittedPlot2 illustrates the original time series (in black) and the fitted model (in blue). 
+For reference, a dotted line illustrating the simple least squares line is plotted on this figure for reference. It helps highlight the exponential shape of the trend.
+
+```{r}
+#| label: fig-finalFittedPlot2
+#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+forecast_df <- full_quad_lm |> 
+  forecast(retail_ts) |> 
+  as_tibble() |> 
+  dplyr::select(std_t, .mean) |> 
+  rename(pred = .mean)
+
+retail_ts |>
+  left_join(forecast_df, by = "std_t") |>
+  as_tsibble(index = month) |>
+  autoplot(.vars = sales_millions) +
+  geom_smooth(method = "lm", formula = 'y ~ x', se = FALSE, color = "#E69F00", linewidth = 0.5, linetype = "dotted") +
+  geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
+    labs(
+      x = "Month",
+      y = "Simulated Time Series",
+      title = "Time Plot of Simulated Time Series with an Exponential Trend",
+      subtitle = "Predicted values based on the full cubic model are given in blue"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+```
+
+
+:::
+<!-- GLS -->
+
+::: {.callout-caution icon=false title="Cubic Trend Revisited" collapse="false"}
+
+Recall the full cubic model:
+
+```{r}
+#| label: fullCubicFittedModel2
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Cubic model with standardized time variable
+
+full_cubic_lm <- retail_ts |>
+  model(full_cubic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6)) # Note sin6 is omitted
+full_cubic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+
+We now fit a model where the Fourier terms are replaced with indicator variables.
+
+```{r}
+#| label: fullCubicFittedModelComparisonReparameterized2
+#| code-fold: true
+#| code-summary: "Show the code"
+
+full_cubic_lm2 <- retail_ts |>
+  model(full_quad = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) + 
+    factor(month(month)))) # factor variable for the month number
+full_cubic_lm2 |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+```
+
+Note that the coefficients on the linear, quadratic, and cubic terms are identical between the two models. The other terms have different coefficients. 
+
+The constant (intercept) term differs in the two models. This is because it is affected by the choice of how the seasonal variables are parameterized.
+
+:::
+<!-- Cubic2 -->
+
+:::
+<!-- End of check your understanding colored code -->
+
+:::
+<!-- End of folded solution code -->
+
+
+
+
 
 
