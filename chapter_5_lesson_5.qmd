@@ -615,7 +615,16 @@ full_cubic_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 
-temp_df <- full_cubic_lm |> 
+# Quadratic model with standardized time variable
+
+full_quadratic_lm <- elec_ts |>
+  model(full_cubic = TSLM(log(megawatthours) ~ std_t + I(std_t^2) + 
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + sin4 + cos4 + sin5 + cos5 + cos6)) # Note sin6 is omitted
+full_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+temp_df <- full_quadratic_lm |> 
   residuals() |> 
   as_tibble() |> 
   dplyr::select(.resid) |>
