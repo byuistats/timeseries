@@ -1,0 +1,2557 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.450">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>BYU-Idaho Time Series - Linear Models, GLS, and Seasonal Indicator Variables</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./chapter_5_lesson_2.html" rel="next">
+<link href="./chapter_5.html" rel="prev">
+<link href="./images/TSFavicon.png" rel="icon" type="image/png">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark.min.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+<script src="site_libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="site_libs/lightable-0.0.1/lightable.css" rel="stylesheet">
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-fixed">
+
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark ">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container">
+    <a href="./index.html" class="navbar-brand navbar-brand-logo">
+    <img src="./images/TSfavicon_inv.png" alt="" class="navbar-logo">
+    </a>
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">BYU-Idaho Time Series</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="./index.html" rel="" target="">
+ <span class="menu-text">Table of Contents</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./resource_blog.html" rel="" target="">
+ <span class="menu-text">Resources</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-1" role="button" data-bs-toggle="dropdown" aria-expanded="false" rel="" target="">
+ <span class="menu-text">Chapter 1</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-1">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1.html" rel="" target="">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_1.html" rel="" target="">
+ <span class="dropdown-text">Course Introduction</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_2.html" rel="" target="">
+ <span class="dropdown-text">Plots Trends, and Seasonal Variation</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_3.html" rel="" target="">
+ <span class="dropdown-text">Averages for Time Series</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 4</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_4.html" rel="" target="">
+ <span class="dropdown-text">Additive Models</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 5</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_5.html" rel="" target="">
+ <span class="dropdown-text">Multiplicative Models</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-2" role="button" data-bs-toggle="dropdown" aria-expanded="false" rel="" target="">
+ <span class="menu-text">Chapter 2</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-2">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_2.html" rel="" target="">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_2_lesson_1.html" rel="" target="">
+ <span class="dropdown-text">Covariance and Correlation</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_2_lesson_2.html" rel="" target="">
+ <span class="dropdown-text">Autocorrelation Concepts</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_2_lesson_3.html" rel="" target="">
+ <span class="dropdown-text">Exploration of Autocorrelation Concepts</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-3" role="button" data-bs-toggle="dropdown" aria-expanded="false" rel="" target="">
+ <span class="menu-text">Chapter 3</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-3">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3.html" rel="" target="">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_1.html" rel="" target="">
+ <span class="dropdown-text">Leading Variables and Associated Variables</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_2.html" rel="" target="">
+ <span class="dropdown-text">Exponential Smoothing (EWMA)</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_3.html" rel="" target="">
+ <span class="dropdown-text">Holt-Winters Method (Additive Models) - Part 1</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 4</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_4.html" rel="" target="">
+ <span class="dropdown-text">Holt-Winters Method (Additive Models) - Part 2</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 5</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_5.html" rel="" target="">
+ <span class="dropdown-text">Holt-Winters Method (Multiplicative Models)</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-4" role="button" data-bs-toggle="dropdown" aria-expanded="false" rel="" target="">
+ <span class="menu-text">Chapter 4</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-4">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4.html" rel="" target="">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_1.html" rel="" target="">
+ <span class="dropdown-text">White Noise and Random Walks - Part 1</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_2.html" rel="" target="">
+ <span class="dropdown-text">White Noise and Random Walks - Part 2</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_3.html" rel="" target="">
+ <span class="dropdown-text">Autoregressive Models</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 4</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_4.html" rel="" target="">
+ <span class="dropdown-text">Fitted Models</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-5" role="button" data-bs-toggle="dropdown" aria-expanded="false" rel="" target="">
+ <span class="menu-text">Chapter 5</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-5">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_5.html" rel="" target="">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_5_lesson_1.html" rel="" target="">
+ <span class="dropdown-text">Linear Models, GLS, and Seasonal Indicator Variables</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_5_lesson_2.html" rel="" target="">
+ <span class="dropdown-text">Harmonic Seasonal Variables - Part 1</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_5_lesson_3.html" rel="" target="">
+ <span class="dropdown-text">Harmonic Seasonal Variables - Part 2</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 4</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_5_lesson_4.html" rel="" target="">
+ <span class="dropdown-text">Transformations and Non-Linear Models</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 5</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_5_lesson_5.html" rel="" target="">
+ <span class="dropdown-text">Forecasting, Inverse Transformation, and Bias Correction</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+            <div class="quarto-navbar-tools ms-auto">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+          </div> <!-- /navcollapse -->
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#learning-outcomes" id="toc-learning-outcomes" class="nav-link active" data-scroll-target="#learning-outcomes">Learning Outcomes</a></li>
+  <li><a href="#preparation" id="toc-preparation" class="nav-link" data-scroll-target="#preparation">Preparation</a></li>
+  <li><a href="#learning-journal-exchange-10-min" id="toc-learning-journal-exchange-10-min" class="nav-link" data-scroll-target="#learning-journal-exchange-10-min">Learning Journal Exchange (10 min)</a></li>
+  <li><a href="#small-group-activity-linear-models-5-min" id="toc-small-group-activity-linear-models-5-min" class="nav-link" data-scroll-target="#small-group-activity-linear-models-5-min">Small Group Activity: Linear Models (5 min)</a>
+  <ul class="collapse">
+  <li><a href="#definition-of-linear-models" id="toc-definition-of-linear-models" class="nav-link" data-scroll-target="#definition-of-linear-models">Definition of Linear Models</a></li>
+  <li><a href="#stationarity-of-linear-models" id="toc-stationarity-of-linear-models" class="nav-link" data-scroll-target="#stationarity-of-linear-models">Stationarity of Linear Models</a></li>
+  </ul></li>
+  <li><a href="#class-activity-fitting-models-15-min" id="toc-class-activity-fitting-models-15-min" class="nav-link" data-scroll-target="#class-activity-fitting-models-15-min">Class Activity: Fitting Models (15 min)</a>
+  <ul class="collapse">
+  <li><a href="#simulation" id="toc-simulation" class="nav-link" data-scroll-target="#simulation">Simulation</a></li>
+  <li><a href="#model-fitted-to-the-simulated-data" id="toc-model-fitted-to-the-simulated-data" class="nav-link" data-scroll-target="#model-fitted-to-the-simulated-data">Model Fitted to the Simulated Data</a></li>
+  <li><a href="#fitting-a-regression-model-to-the-global-temperature-time-series" id="toc-fitting-a-regression-model-to-the-global-temperature-time-series" class="nav-link" data-scroll-target="#fitting-a-regression-model-to-the-global-temperature-time-series">Fitting a Regression Model to the Global Temperature Time Series</a></li>
+  <li><a href="#applying-generalized-least-squares-gls" id="toc-applying-generalized-least-squares-gls" class="nav-link" data-scroll-target="#applying-generalized-least-squares-gls">Applying Generalized Least Squares, GLS</a></li>
+  </ul></li>
+  <li><a href="#class-activity-linear-models-with-seasonal-variables-10-min" id="toc-class-activity-linear-models-with-seasonal-variables-10-min" class="nav-link" data-scroll-target="#class-activity-linear-models-with-seasonal-variables-10-min">Class Activity: Linear Models with Seasonal Variables (10 min)</a>
+  <ul class="collapse">
+  <li><a href="#additive-seasonal-indicator-variables" id="toc-additive-seasonal-indicator-variables" class="nav-link" data-scroll-target="#additive-seasonal-indicator-variables">Additive Seasonal Indicator Variables</a></li>
+  </ul></li>
+  <li><a href="#small-group-activity-application-to-retail-sales-data-15-min" id="toc-small-group-activity-application-to-retail-sales-data-15-min" class="nav-link" data-scroll-target="#small-group-activity-application-to-retail-sales-data-15-min">Small Group Activity: Application to Retail Sales Data (15 min)</a></li>
+  <li><a href="#homework-preview-5-min" id="toc-homework-preview-5-min" class="nav-link" data-scroll-target="#homework-preview-5-min">Homework Preview (5 min)</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Linear Models, GLS, and Seasonal Indicator Variables</h1>
+<p class="subtitle lead">Chapter 5: Lesson 1</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+</header>
+
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+<section id="learning-outcomes" class="level2">
+<h2 class="anchored" data-anchor-id="learning-outcomes">Learning Outcomes</h2>
+<details>
+<summary>
+Explain the difference between stochastic and deterministic trends in time series
+</summary>
+<ul>
+<li>Describe deterministic trends as smooth, predictable changes over time</li>
+<li>Define stochastic trends as random, unpredictable fluctuations</li>
+<li>Explain the different treatment of stochastic and deterministic trends when forecasting</li>
+</ul>
+</details>
+<details>
+<summary>
+Fit linear regression models to time series data
+</summary>
+<ul>
+<li>Define a linear time series model</li>
+<li>Explain why ordinary linear regression systematically underestimates of the standard error of parameter estimates when the error terms are autocorrelated</li>
+<li>Apply generalized least squares GLS in R to estimate linear regression model parameters</li>
+<li>Explain how to estimate the autocorrelation input for the GLS algorithm</li>
+<li>Compare GLS and OLS standard error estimates to evaluate autocorrelation bias</li>
+<li>Identify an appropriate function to model the trend in a given time series</li>
+<li>Represent seasonal factors in a regression model using indicator variables</li>
+<li>Fit a linear model for a simulated time series with linear time trend and <span class="math inline">\(AR(p)\)</span> error</li>
+<li>Use acf and pacf to test for autocorrelation in the residuals</li>
+<li>Estimate a seasonal indicator model using GLS</li>
+<li>Forecast using a fitted GLS model with seasonal indicator variables</li>
+</ul>
+</details>
+<details>
+<summary>
+Apply differencing to nonstationary time series
+</summary>
+<ul>
+<li>Transform a non-stationary linear to a stationary process using differencing</li>
+<li>State how to remove a polynomial trend of order <span class="math inline">\(m\)</span></li>
+</ul>
+</details>
+<details>
+<summary>
+Simulate time series
+</summary>
+<ul>
+<li>Simulate a time series with a linear time trend and a <span class="math inline">\(AR(p)\)</span> error</li>
+</ul>
+</details>
+</section>
+<section id="preparation" class="level2">
+<h2 class="anchored" data-anchor-id="preparation">Preparation</h2>
+<ul>
+<li>Read Sections 5.1-5.5</li>
+</ul>
+</section>
+<section id="learning-journal-exchange-10-min" class="level2">
+<h2 class="anchored" data-anchor-id="learning-journal-exchange-10-min">Learning Journal Exchange (10 min)</h2>
+<ul>
+<li><p>Review another student’s journal</p></li>
+<li><p>What would you add to your learning journal after reading another student’s?</p></li>
+<li><p>What would you recommend the other student add to their learning journal?</p></li>
+<li><p>Sign the Learning Journal review sheet for your peer</p></li>
+</ul>
+</section>
+<section id="small-group-activity-linear-models-5-min" class="level2">
+<h2 class="anchored" data-anchor-id="small-group-activity-linear-models-5-min">Small Group Activity: Linear Models (5 min)</h2>
+<section id="definition-of-linear-models" class="level3">
+<h3 class="anchored" data-anchor-id="definition-of-linear-models">Definition of Linear Models</h3>
+<div class="callout callout-style-default callout-note no-icon callout-titled" title="Linear Model for a Time Series">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Linear Model for a Time Series
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A model for a time series <span class="math inline">\(\{x_t : t = 1 \ldots n \}\)</span> is <strong>linear</strong> if it can be written in the form <span class="math display">\[
+x_t = \alpha_0 + \alpha_1 u_{1,t} + \alpha_2 u_{2,t} + \alpha_3 u_{3,t} + \ldots + \alpha_m u_{m,t} + z_t
+\]</span></p>
+<p>where <span class="math inline">\(u_{i,t}\)</span> represents the <span class="math inline">\(i^{th}\)</span> predictor variable observed at time <span class="math inline">\(t\)</span>, <span class="math inline">\(z_t\)</span> is the value of the error time series at time <span class="math inline">\(t\)</span>, the values <span class="math inline">\(\{\alpha_0, \alpha_1, \alpha_2, \ldots, \alpha_m\}\)</span> are model parameters, and <span class="math inline">\(i = 1, 2, \ldots, n\)</span> and <span class="math inline">\(t = 1, 2, \ldots, m\)</span>.</p>
+<p>The error terms <span class="math inline">\(z_t\)</span> have mean 0, but they do not need to follow any particular distribution or be independent.</p>
+</div>
+</div>
+<p>With a partner, practice determining which models are linear and which are non-linear.</p>
+<!-- Check your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li><p>Which of the following models are linear?</p>
+<ul>
+<li><p>Model 1: <span class="math display">\[
+  x_t = \alpha_0 + \alpha_1 \sin(t^2-1) + \alpha_2 e^{t} + z_t
+\]</span></p></li>
+<li><p>Model 2: <span class="math display">\[
+  x_t = \sqrt{ \alpha_0 + \alpha_1 t + z_t }
+\]</span></p></li>
+<li><p>Model 3: <span class="math display">\[
+  x_t = \alpha_0 + \alpha_1 t^2 + \alpha_2 ( t \cdot \sqrt{t-3} ) + z_t
+\]</span></p></li>
+<li><p>Model 4: <span class="math display">\[
+  x_t = \frac{ \alpha_0 + \alpha_1 t }{ 1 + \alpha_2 \sqrt{t+1} } + z_t
+\]</span></p></li>
+<li><p>Model 5: <span class="math display">\[
+  x_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2 + \alpha_3 t^3 + z_t
+\]</span></p></li>
+<li><p>Model 6: <span class="math display">\[
+  x_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2 + \alpha_1 \alpha_2 t^3 + z_t
+\]</span></p></li>
+</ul></li>
+<li><p>Is there a way to transform the following non-linear models into a linear model? If so, apply the transformation.</p>
+<ul>
+<li><p>Model 7: <span class="math display">\[
+  x_t = \sqrt{ \alpha_0 + \alpha_1 t + z_t }
+\]</span></p></li>
+<li><p>Model 8: <span class="math display">\[
+  x_t = \sin( \alpha_1 + \alpha_2 t + z_t )
+\]</span></p></li>
+<li><p>Model 9: <span class="math display">\[
+  x_t = \alpha_0 \sin( \alpha_0 + \alpha_1 t + z_t )
+\]</span></p></li>
+<li><p>Model 10: <span class="math display">\[
+  x_t = \alpha_0 ~ e^{ \alpha_1 t + \alpha_2 t^2 + z_t }
+\]</span></p></li>
+</ul></li>
+</ul>
+</div>
+</div>
+</section>
+<section id="stationarity-of-linear-models" class="level3">
+<h3 class="anchored" data-anchor-id="stationarity-of-linear-models">Stationarity of Linear Models</h3>
+<!-- Check your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Complete the following quotes from page 93 of the textbook:</p>
+<ul>
+<li>“Linear models for time series are non-stationary when they include functions of ______.”</li>
+<li>______________________ can often transform a non-stationary series with a deterministic trend to a stationary series.</li>
+</ul>
+</div>
+</div>
+<p>The book presents a time series that is modeled as a linear function of time plus white noise: <span class="math display">\[
+  x_t = \alpha_0 + \alpha_1 t + z_t
+\]</span> If we difference these values, we get: <span class="math display">\[\begin{align*}
+  \nabla x_t
+    &amp;= x_t - x_{t-1} \\
+    &amp;= \left[ \alpha_0 + \alpha_1 t + z_t \right] - \left[ \alpha_0 + \alpha_1 (t-1) + z_t \right] \\
+    &amp;= z_t - z_{t-1} + \alpha_1
+\end{align*}\]</span></p>
+<p>Given that the white noise process <span class="math inline">\(\{ z_t \}\)</span> is stationary, then <span class="math inline">\(\{ \nabla x_t \}\)</span> is stationary. Differencing is a powerful tool for making a time series stationary.</p>
+<p>In <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_2.html#DifferenceOperator">Chapter 4 Lesson 2</a>, we established that taking the difference of a non-stationary time series with a stochastic trend can convert it to a stationary time series. Later in the <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_2.html#RepeatedDifferences">same lesson</a>, we learn that a linear deterministic trend can be removed by taking the first difference. A quadratic deterministic trend can be removed by taking the second differences, and so on.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Note
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>In general, if there is an <span class="math inline">\(m^{th}\)</span> degree polynomial trend in a time series, we can remove it by taking <span class="math inline">\(m\)</span> differences.</p>
+</div>
+</div>
+</section>
+</section>
+<section id="class-activity-fitting-models-15-min" class="level2">
+<h2 class="anchored" data-anchor-id="class-activity-fitting-models-15-min">Class Activity: Fitting Models (15 min)</h2>
+<section id="simulation" class="level3">
+<h3 class="anchored" data-anchor-id="simulation">Simulation</h3>
+<p>In Section 5.2.3, the textbook illustrates the time series <span class="math display">\[
+  x_t = 50 + 3t + z_t
+\]</span> where <span class="math inline">\(\{ z_t \}\)</span> is the <span class="math inline">\(AR(1)\)</span> process <span class="math inline">\(z_t = 0.8 z_{t-1} + w_t\)</span> and <span class="math inline">\(\{ w_t \}\)</span> is a Gaussian white noise process with <span class="math inline">\(\sigma = 20\)</span>. The code below simulates this time series and creates the resulting time plot.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">w =</span> <span class="fu">rnorm</span>(<span class="dv">100</span>, <span class="at">sd =</span> <span class="dv">20</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>        <span class="at">Time =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>(),</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">z =</span> purrr<span class="sc">::</span><span class="fu">accumulate2</span>(</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>            <span class="fu">lag</span>(w), w, </span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>            \(acc, nxt, w) <span class="fl">0.8</span> <span class="sc">*</span> acc <span class="sc">+</span> w,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>            <span class="at">.init =</span> <span class="dv">0</span>)[<span class="sc">-</span><span class="dv">1</span>],</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>          <span class="at">x =</span> <span class="dv">50</span> <span class="sc">+</span> <span class="dv">3</span> <span class="sc">*</span> Time <span class="sc">+</span> z</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>            ) <span class="sc">|&gt;</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    tsibble<span class="sc">::</span><span class="fu">as_tsibble</span>(<span class="at">index =</span> Time)</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>dat <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(<span class="at">.var =</span> x) <span class="sc">+</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-simulatedTimePlot" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_5_lesson_1_files/figure-html/fig-simulatedTimePlot-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;1: Time plot of a simulated time series with a linear trend.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The advantage of simulation is that when we fit a model to the data, we can asses the fit…we know exactly what was simulated.</p>
+</section>
+<section id="model-fitted-to-the-simulated-data" class="level3">
+<h3 class="anchored" data-anchor-id="model-fitted-to-the-simulated-data">Model Fitted to the Simulated Data</h3>
+<p>When applying ordinary least-squares multiple regression, it is common to fit the model by minimizing the sum of squared errors: <span class="math display">\[
+  \sum r_i^2 = \sum \left( x_t - \left[ \alpha_0 + \alpha_1 u_{1,t} + \alpha_2 u_{2,t} + \ldots + \alpha_m u_{m,t} \right] \right)^2
+\]</span> In R, we accomplish this using the <code>lm</code> function.</p>
+<p>We assume that the simulated time series above follows the model <span class="math display">\[
+  x_t = \alpha_0 + \alpha_1 t + z_t
+\]</span></p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>dat_lm <span class="ot">&lt;-</span> dat <span class="sc">|&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">lm =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> Time))</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>params <span class="ot">&lt;-</span> <span class="fu">tidy</span>(dat_lm) <span class="sc">|&gt;</span> <span class="fu">pull</span>(estimate)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>stderr <span class="ot">&lt;-</span> <span class="fu">tidy</span>(dat_lm) <span class="sc">|&gt;</span> <span class="fu">pull</span>(std.error)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>This gives the fitted equation <span class="math display">\[
+  \hat x_t = 58.551 + 3.063 t  
+\]</span></p>
+<p>The standard errors of these estimated parameters tend to be underestimated by the ordinary least squares method. To illustrate this, a simulation of <code>n = 1000</code> realizations of the time series above was conducted.</p>
+<p>The parameter estimates and their standard errors are summarized in the table below. The “Computed SE” is the standard error reported by the <code>lm</code> function in R. The “Simulated SE” is the standard deviation of the parameter estimated obtained in the 1000 simulated realizations of this time series.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># This code simulates the data for this example</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># parameter_est &lt;- data.frame(alpha0 = numeric(), alpha1 = numeric())</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># for(count in 1:n) {</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">#   dat &lt;- tibble(w = rnorm(100, sd = 20)) |&gt;</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="co">#       mutate(</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="co">#           Time = 1:n(),</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co">#            z = purrr::accumulate2(</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="co">#               lag(w), w, </span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="co">#               \(acc, nxt, w) 0.8 * acc + w,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co">#               .init = 0)[-1],</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="co">#             x = 50 + 3 * Time + z</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a><span class="co">#               ) |&gt;</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co">#       tsibble::as_tsibble(index = Time)</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a><span class="co">#   </span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a><span class="co">#   dat_lm &lt;- dat |&gt;</span></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="co">#   model(lm = TSLM(x ~ Time))</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="co">#   parameters &lt;- tidy(dat_lm) |&gt; pull(estimate)</span></span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="co">#   parameter_est &lt;- parameter_est |&gt;</span></span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a><span class="co">#     bind_rows(data.frame(alpha0 = parameters[1], alpha1 = parameters[2])) </span></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a><span class="co"># }</span></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="co"># parameter_est |&gt; </span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a><span class="co">#   rio::export("data/chapter_5_lesson_1_simulation.parquet")</span></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>parameter_est <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"data/chapter_5_lesson_1_simulation.parquet"</span>)</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>standard_errors <span class="ot">&lt;-</span> parameter_est <span class="sc">|&gt;</span></span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(</span>
+<span id="cb3-32"><a href="#cb3-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">alpha0 =</span> <span class="fu">sd</span>(alpha0), </span>
+<span id="cb3-33"><a href="#cb3-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">alpha1 =</span> <span class="fu">sd</span>(alpha1)</span>
+<span id="cb3-34"><a href="#cb3-34" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<div id="tbl-simParameters" class="anchored">
+<table class="table">
+<caption>Table&nbsp;1: Autocorrelation function and partial autorcorrelation function of the residuals from the fitted linear model for the simulated data. Several realizations of the time series were simulated, and the standard deviation of the estimated parameters from the simulation is compared against the standard errors obtained by ordinary least squares regression.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Parameter</th>
+<th style="text-align: center;">Estimate</th>
+<th style="text-align: center;">Computed SE</th>
+<th style="text-align: center;">Simulated SE</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;"><span class="math inline">\(\alpha_0\)</span></td>
+<td style="text-align: center;">58.551</td>
+<td style="text-align: center;">4.88</td>
+<td style="text-align: center;">17.798</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;"><span class="math inline">\(\alpha_1\)</span></td>
+<td style="text-align: center;">3.063</td>
+<td style="text-align: center;">0.084</td>
+<td style="text-align: center;">0.315</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Note that the simulated standard errors are much larger than those obtained by the <code>lm</code> function in R. The standard errors reported by R will lead to unduly small confidence intervals. <em>This illustrates the problem of applying the standard least-squares estimates to time series data.</em></p>
+</div>
+</div>
+<p>After fitting a regression model, it is appropriate to review the relevant diagnostic plots. Here are the correlogram and partial correlogram of the residuals.</p>
+<div class="cell" data-fig.asp="0.5">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>acf_plot <span class="ot">&lt;-</span> <span class="fu">residuals</span>(dat_lm) <span class="sc">|&gt;</span> feasts<span class="sc">::</span><span class="fu">ACF</span>() <span class="sc">|&gt;</span> <span class="fu">autoplot</span>()</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>pacf_plot <span class="ot">&lt;-</span> <span class="fu">residuals</span>(dat_lm) <span class="sc">|&gt;</span> feasts<span class="sc">::</span><span class="fu">PACF</span>() <span class="sc">|&gt;</span> <span class="fu">autoplot</span>()</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>acf_plot <span class="sc">|</span> pacf_plot</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-simulatedACFpacf" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_5_lesson_1_files/figure-html/fig-simulatedACFpacf-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;2: Autocorrelation function and partial autorcorrelation function of the residuals from the fitted linear model for the simulated data.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p><a id="FittingRegModelWithPACF">Recall</a> that in our simulation, the residuals were modeled by an <span class="math inline">\(AR(1)\)</span> process. So, it is not surprising that the residuals are correlated and that the partial autocorrelation function is only significant for the first lag.</p>
+</section>
+<section id="fitting-a-regression-model-to-the-global-temperature-time-series" class="level3">
+<h3 class="anchored" data-anchor-id="fitting-a-regression-model-to-the-global-temperature-time-series">Fitting a Regression Model to the Global Temperature Time Series</h3>
+<p>In <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_2.html#GlobalWarming">Chapter 4 Lesson 2</a>, we fit AR models to data representing the change in the Earth’s mean annual temperature from 1880 to 2023. These values represent the deviation of the mean global surface temperature from the long-term average from 1951 to 1980. (Source: NASA/GISS.) We will consider the portion of the time series beginning in 1970.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>temps_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"data/global_temparature.csv"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> year) <span class="sc">|&gt;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">&gt;=</span> <span class="dv">1970</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>temps_ts <span class="sc">|&gt;</span> <span class="fu">autoplot</span>(<span class="at">.vars =</span> change) <span class="sc">+</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Year"</span>,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Temperature Change (Celsius)"</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="fu">paste0</span>(<span class="st">"Change in Mean Annual Global Temperature ("</span>, <span class="fu">min</span>(temps_ts<span class="sc">$</span>year), <span class="st">"-"</span>, <span class="fu">max</span>(temps_ts<span class="sc">$</span>year), <span class="st">")"</span>)</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span> </span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_smooth</span>(<span class="at">method=</span><span class="st">'lm'</span>, <span class="at">formula=</span> y<span class="sc">~</span>x)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-globalTempTimePlot" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_5_lesson_1_files/figure-html/fig-globalTempTimePlot-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;3: Time plot of the mean annual temperature globally for select years.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Visually, it is easy to spot a positive trend in these data. Nevertheless, the ordinary least squares technique underestimates the standard error of the constant and slope term. This can lead to errant conclusions that a linear relationship is statistically significant when it is not.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>global <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">x =</span> <span class="fu">scan</span>(<span class="st">"data/global.dat"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        <span class="at">date =</span> <span class="fu">seq</span>(</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>            <span class="fu">ymd</span>(<span class="st">"1856-01-01"</span>),</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">by =</span> <span class="st">"1 months"</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>            <span class="at">length.out =</span> <span class="fu">n</span>()),</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="at">year =</span> <span class="fu">year</span>(date),</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>        <span class="at">year_month =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(date),</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        <span class="at">stats_time =</span> year <span class="sc">+</span> <span class="fu">c</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">11</span>)<span class="sc">/</span><span class="dv">12</span>)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>global_ts <span class="ot">&lt;-</span> global <span class="sc">|&gt;</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tsibble</span>(<span class="at">index =</span> year_month)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>temp_tidy <span class="ot">&lt;-</span> global_ts <span class="sc">|&gt;</span> <span class="fu">filter</span>(year <span class="sc">&gt;=</span> <span class="dv">1970</span>)</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>temp_lm <span class="ot">&lt;-</span> temp_tidy <span class="sc">|&gt;</span></span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">lm =</span> <span class="fu">TSLM</span>(x <span class="sc">~</span> stats_time ))</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="co"># tidy(temp_lm) |&gt; pull(estimate)</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(temp_lm) <span class="sc">|&gt;</span></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">lower =</span> estimate <span class="sc">+</span> <span class="fu">qnorm</span>(<span class="fl">0.025</span>) <span class="sc">*</span> std.error,</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">upper =</span> estimate <span class="sc">+</span> <span class="fu">qnorm</span>(<span class="fl">0.975</span>) <span class="sc">*</span> std.error</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="tbl-globalTempsEstParams" class="anchored">
+<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<caption>Table&nbsp;2: Parameter estimates for the fitted global temperature time series.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">.model</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">term</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">estimate</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">std.error</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">statistic</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">p.value</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">lower</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">upper</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">lm</td>
+<td style="text-align: center; min-width: 0in;">(Intercept)</td>
+<td style="text-align: center; min-width: 0in;">-34.920409</td>
+<td style="text-align: center; min-width: 0in;">1.164899</td>
+<td style="text-align: center; min-width: 0in;">-29.97721</td>
+<td style="text-align: center; min-width: 0in;">0</td>
+<td style="text-align: center; min-width: 0in;">-37.2035680</td>
+<td style="text-align: center; min-width: 0in;">-32.6372500</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">lm</td>
+<td style="text-align: center; min-width: 0in;">stats_time</td>
+<td style="text-align: center; min-width: 0in;">0.017654</td>
+<td style="text-align: center; min-width: 0in;">0.000586</td>
+<td style="text-align: center; min-width: 0in;">30.12786</td>
+<td style="text-align: center; min-width: 0in;">0</td>
+<td style="text-align: center; min-width: 0in;">0.0165055</td>
+<td style="text-align: center; min-width: 0in;">0.0188025</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+</div>
+</div>
+<p>The 95% confidence interval for the slope does not contain zero. If the errors were independent, this would be conclusive evidence that there is a significant linear relationship between the year and the global temperature.</p>
+<p>Note that there is significant positive autocorrelation in the residual series for short lags. This implies that the standard errors will be underestimated, and the confidence interval is inappropriately narrow.</p>
+<p>Here are the values of the autocorrelation function of the residuals:</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="tbl-globalTempsResidACF" class="anchored">
+<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<caption>Table&nbsp;3: Autocorrelation function of the residuals for the global temperature time series.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">1M</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">2M</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">3M</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">4M</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">5M</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">6M</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">7M</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">8M</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">9M</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">10M</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.5in;">0.706</td>
+<td style="text-align: center; min-width: 0.5in;">0.638</td>
+<td style="text-align: center; min-width: 0.5in;">0.5</td>
+<td style="text-align: center; min-width: 0.5in;">0.447</td>
+<td style="text-align: center; min-width: 0.5in;">0.375</td>
+<td style="text-align: center; min-width: 0.5in;">0.307</td>
+<td style="text-align: center; min-width: 0.5in;">0.254</td>
+<td style="text-align: center; min-width: 0.5in;">0.206</td>
+<td style="text-align: center; min-width: 0.5in;">0.12</td>
+<td style="text-align: center; min-width: 0.5in;">0.078</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+</div>
+</div>
+<p>The autocorrelation for <span class="math inline">\(k=1\)</span> is 0.706. We will use this value when we apply the Generalized Least Squares method in the next section.</p>
+<p>To get an intuitive idea of why ordinary least squares underestimates the standard errors of the estimates, the positive autocorrelation of adjacent observations leads to a series of data that have an effective record length that is shorter than the number of observations. This happens because similar observations tend to be clumped together, and the overall variation is thereby understated.</p>
+</section>
+<section id="applying-generalized-least-squares-gls" class="level3">
+<h3 class="anchored" data-anchor-id="applying-generalized-least-squares-gls">Applying Generalized Least Squares, GLS</h3>
+<p>The autocorrelation in the data make ordinary least squares estimation inappropriate. What caped superhero comes to our rescue? None other than Captain GLS – the indominable Generalized Least Squares algorithm!</p>
+<p>This fitting procedure handles the autocorrelation by maximizing the likelihood of the data, taking into account the autocorrelation in the residuals. This leads to much more appropriate standard errors for the parameter estimates. We will pass the value of the acf at lag <span class="math inline">\(k=1\)</span> into the regression function.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load additional packages</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(tidymodels, multilevelmod,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  nlme, broom.mixed)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>temp_spec <span class="ot">&lt;-</span> <span class="fu">linear_reg</span>() <span class="sc">|&gt;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_engine</span>(<span class="st">"gls"</span>, <span class="at">correlation =</span> nlme<span class="sc">::</span><span class="fu">corAR1</span>(<span class="fl">0.706</span>))</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>temp_gls <span class="ot">&lt;-</span> temp_spec <span class="sc">|&gt;</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fit</span>(x <span class="sc">~</span> stats_time, <span class="at">data =</span> global_ts)</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(temp_gls) <span class="sc">|&gt;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">lower =</span> estimate <span class="sc">+</span> <span class="fu">qnorm</span>(<span class="fl">0.025</span>) <span class="sc">*</span> std.error,</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">upper =</span> estimate <span class="sc">+</span> <span class="fu">qnorm</span>(<span class="fl">0.975</span>) <span class="sc">*</span> std.error</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div id="tbl-globalTempsGLS" class="anchored">
+<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<caption>Table&nbsp;4: Parameter estimates for the Generalized Least Squares estimates of the fit for the global temperature time series.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">term</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">estimate</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">std.error</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">statistic</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">p.value</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">lower</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">upper</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">(Intercept)</td>
+<td style="text-align: center; min-width: 0in;">-9.1361773</td>
+<td style="text-align: center; min-width: 0in;">0.4547490</td>
+<td style="text-align: center; min-width: 0in;">-20.09059</td>
+<td style="text-align: center; min-width: 0in;">0</td>
+<td style="text-align: center; min-width: 0in;">-10.0274689</td>
+<td style="text-align: center; min-width: 0in;">-8.2448856</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">stats_time</td>
+<td style="text-align: center; min-width: 0in;">0.0046599</td>
+<td style="text-align: center; min-width: 0in;">0.0002354</td>
+<td style="text-align: center; min-width: 0in;">19.79209</td>
+<td style="text-align: center; min-width: 0in;">0</td>
+<td style="text-align: center; min-width: 0in;">0.0041985</td>
+<td style="text-align: center; min-width: 0in;">0.0051214</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+</div>
+</div>
+<p>As we observed visually, there is evidence to suggest that there is a linear trend in the data.</p>
+</section>
+</section>
+<section id="class-activity-linear-models-with-seasonal-variables-10-min" class="level2">
+<h2 class="anchored" data-anchor-id="class-activity-linear-models-with-seasonal-variables-10-min">Class Activity: Linear Models with Seasonal Variables (10 min)</h2>
+<p>Some time series involve seasonal variables. In this section, we will address one way to include seasonality in a regression analysis of a time series. In the next lesson, we will explore another method.</p>
+<section id="additive-seasonal-indicator-variables" class="level3">
+<h3 class="anchored" data-anchor-id="additive-seasonal-indicator-variables">Additive Seasonal Indicator Variables</h3>
+<p>Recall the time series representing the monthly relative number of Google searches for the term “chocolate.” Here is a time plot of the data from 2021 to 2023. Month 1 is January 2021, month 13 is January 2022, and month 25 is January 2023.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-chocolatetimeplot" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_5_lesson_1_files/figure-html/fig-chocolatetimeplot-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;4: Time plot of a portion of the chocolate search data.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>We fit a regression line to these data.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-chocolateaddreg" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_5_lesson_1_files/figure-html/fig-chocolateaddreg-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;5: The regression line is superimposed on the chocolate search time series.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Now, we draw a line that is parallel to the regression line (has the same slope) but has a Y-intercept of 0.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-chocolateaddparallel" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_5_lesson_1_files/figure-html/fig-chocolateaddparallel-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;6: A line parallel to the regression line that passes through the origin is added to the chocolate search time plot.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>For each month, we find the average amount that the relative number of google seachers that month deviates from the orange line (that is parallel to the regression line and passes through the origin). So, the length of the green line is the same for every January, etc.</p>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-chocolatelinearModelWithSeasonalIndicatorVariables" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_5_lesson_1_files/figure-html/fig-chocolatelinearModelWithSeasonalIndicatorVariables-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;7: Representation of a linear model with seasonal indicator variables for the chocolate search time series data.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>When the bottom of the green arrow is on the orange line, the top of the green arrow is the estimate of the value of the time series for that month.</p>
+<p>We will create a linear model that includes a constant term for each month. This constant monthly term is called a <strong>seasonal indicator variable</strong>. This name is derived from the fact that each variable indicates (either as 1 or 0) whether a given month is represented. For example, one of the seasonal indicator variables will represent January. It will be equal to 1 for any value of <span class="math inline">\(t\)</span> representing an observation drawn in January and 0 otherwise. Indicator variables are also called <strong>dummy varaibles.</strong></p>
+<p>This additive model with seasonal indicator variables can be perceived similarly to other additive models with a seasonal component:</p>
+<p><span class="math display">\[
+  x_t = m_t + s_t + z_t
+\]</span> where <span class="math display">\[
+  s_t =
+    \begin{cases}
+      \beta_1, &amp; t ~\text{falls in season}~ 1 \\
+      \beta_2, &amp; t ~\text{falls in season}~ 2 \\
+      ⋮~~~~ &amp; ~~~~~~~~~~~~⋮ \\
+      \beta_s, &amp; t ~\text{falls in season}~ s
+    \end{cases}
+\]</span> and <span class="math inline">\(s\)</span> is the number of seasons in one cycle/period, and <span class="math inline">\(n\)</span> is the number of observations, so <span class="math inline">\(t = 1, 2, \ldots, n\)</span> and <span class="math inline">\(i = 1, 2, \ldots, s\)</span>, and <span class="math inline">\(z_t\)</span> is the residual error series, which can be autocorrelated.</p>
+<p>It is important to note that <span class="math inline">\(m_t\)</span> does not need to be a constant. It can be a linear trend: <span class="math display">\[
+  m_t = \alpha_0 + \alpha_1 t
+\]</span> or quadratic: <span class="math display">\[
+  m_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2
+\]</span> a polynomial of degree <span class="math inline">\(p\)</span>: <span class="math display">\[
+  m_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2 + \cdots + \alpha_p t^p
+\]</span> or any other function of <span class="math inline">\(t\)</span>.</p>
+<p>If <span class="math inline">\(s_t\)</span> has the same value for all corresponding seasons, then we can write the model as: <span class="math display">\[
+  x_t = m_t + \beta_{1 + [(t-1) \mod s]} + z_t
+\]</span></p>
+<p>Putting this all together, if we have a time series that has a linear trend and monthly observations where <span class="math inline">\(t=1\)</span> corresponds to January, then the model becomes: <span class="math display">\[\begin{align*}
+  x_t
+    &amp;= ~~~~ \alpha_1 t + s_t + z_t \\
+    &amp;=
+      \begin{cases}
+        \alpha_1 t + \beta_1 + z_t, &amp; t = 1, 13, 25, \ldots ~~~~ ~~(January) \\
+        \alpha_1 t + \beta_2 + z_t, &amp; t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
+        ~~~~~~~~⋮ &amp; ~~~~~~~~~~~~⋮ \\
+        \alpha_1 t + \beta_{12} + z_t, &amp; t = 12, 24, 36, \ldots ~~~~ (December)
+      \end{cases}
+\end{align*}\]</span></p>
+<p>This is the model illustrated in <a href="#fig-chocolatelinearModelWithSeasonalIndicatorVariables">Figure&nbsp;7</a>. The orange line represents the term <span class="math inline">\(\alpha_1 t\)</span> and the green arrows represent the values of <span class="math inline">\(\beta_1, ~ \beta_2, ~ \ldots, ~ \beta_{12}\)</span>.</p>
+<p>The folded chunk of code below fits the model to the data and computes the estimated parameter values.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>chocolate_month <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/chocolate.csv"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> <span class="fu">yearmonth</span>(<span class="fu">ym</span>(Month)),</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> <span class="fu">month</span>(dates),</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> <span class="fu">year</span>(dates),</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">stats_time =</span> year <span class="sc">+</span> (month <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">/</span> <span class="dv">12</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">month_seq =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>()</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">month =</span> <span class="fu">factor</span>(month)) <span class="sc">|&gt;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a><span class="co"># Fit regression model</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>chocolate_lm <span class="ot">&lt;-</span> chocolate_month <span class="sc">|&gt;</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">TSLM</span>(chocolate <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> stats_time <span class="sc">+</span> month))</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Estimated parameter values</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>param_est <span class="ot">&lt;-</span> chocolate_lm <span class="sc">|&gt;</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(estimate)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p>The estimated value of <span class="math inline">\(\alpha_1\)</span> is 1.1316416. The estimated values for the <span class="math inline">\(\beta_i\)</span> parameters are:</p>
+<div id="tbl-chocolateParameterEstIndicator" class="cell tbl-parent quarto-layout-panel anchored">
+<div class="panel-caption table-caption">
+<p>Estimated values of $beta_i$ for the fitted model for chocolate search time series.</p>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">Jan</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Feb</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Mar</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Apr</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">May</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Jun</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">-2227.91</td>
+<td style="text-align: center; min-width: 0in;">-2219.305</td>
+<td style="text-align: center; min-width: 0in;">-2233.149</td>
+<td style="text-align: center; min-width: 0in;">-2233.443</td>
+<td style="text-align: center; min-width: 0in;">-2234.838</td>
+<td style="text-align: center; min-width: 0in;">-2237.932</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+
+
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">Jul</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Aug</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Sep</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Oct</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Nov</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Dec</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">-2236.476</td>
+<td style="text-align: center; min-width: 0in;">-2237.37</td>
+<td style="text-align: center; min-width: 0in;">-2237.515</td>
+<td style="text-align: center; min-width: 0in;">-2232.659</td>
+<td style="text-align: center; min-width: 0in;">-2223.003</td>
+<td style="text-align: center; min-width: 0in;">-2200.098</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="quarto-layout-row quarto-layout-valign-top">
+<div class="quarto-layout-cell" style="flex-basis: 100.0%;justify-content: center;">
+
+
+</div>
+</div>
+</div>
+<p>Now, we compute forecasted (future) values for the relative number of Google searches for the word “Chocolate.”</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>num_years_to_forecast <span class="ot">&lt;-</span> <span class="dv">5</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>new_dat <span class="ot">&lt;-</span> chocolate_month <span class="sc">|&gt;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tail</span>(num_years_to_forecast <span class="sc">*</span> <span class="dv">12</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(stats_time, month) <span class="sc">|&gt;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">stats_time =</span> stats_time <span class="sc">+</span> num_years_to_forecast,</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">alpha =</span> <span class="fu">tidy</span>(chocolate_lm) <span class="sc">|&gt;</span> <span class="fu">slice</span>(<span class="dv">1</span>) <span class="sc">|&gt;</span> <span class="fu">pull</span>(estimate),</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">beta =</span> <span class="fu">rep</span>(<span class="fu">tidy</span>(chocolate_lm) <span class="sc">|&gt;</span> <span class="fu">slice</span>(<span class="dv">2</span><span class="sc">:</span><span class="dv">13</span>) <span class="sc">|&gt;</span> <span class="fu">pull</span>(estimate), num_years_to_forecast)</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>chocolate_forecast <span class="ot">&lt;-</span> chocolate_lm <span class="sc">|&gt;</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">new_data=</span><span class="fu">as_tsibble</span>(new_dat, <span class="at">index =</span> stats_time)) </span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>chocolate_forecast <span class="sc">|&gt;</span> </span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(chocolate_month, <span class="at">level =</span> <span class="dv">95</span>) <span class="sc">+</span></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Relative Count of Google Searches"</span>,</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="fu">paste0</span>(<span class="st">"Google Searches for 'Chocolate' ("</span>, <span class="fu">min</span>(chocolate_month<span class="sc">$</span>year), <span class="st">"-"</span>, <span class="fu">max</span>(chocolate_month<span class="sc">$</span>year), <span class="st">")"</span>),</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>      <span class="at">subtitle =</span> <span class="fu">paste0</span>(num_years_to_forecast, <span class="st">"-Year Forecast Based on a Linear Model with Seasonal Indicator Variables"</span>)</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-chocForecastPlot" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_5_lesson_1_files/figure-html/fig-chocForecastPlot-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;8: Forecasted values of the relative number of Google searches for the word ‘chocolate.’</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<!-- Beginning of two columns -->
+<div class="columns">
+<div class="column" style="width:45%;">
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>new_dat <span class="sc">|&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">estimate =</span> alpha <span class="sc">*</span> stats_time <span class="sc">+</span> beta) <span class="sc">|&gt;</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_partial_table</span>(<span class="at">nrow_head =</span> <span class="dv">4</span>, <span class="at">nrow_tail =</span> <span class="dv">3</span>, <span class="at">decimals =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="tbl-chocForecastValues" class="anchored">
+<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<caption>Table&nbsp;5: Select forecasted values of the relative count of Google searches for ‘chocolate’.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">stats_time</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">month</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">alpha</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">beta</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">2024</td>
+<td style="text-align: center; min-width: 0in;">1</td>
+<td style="text-align: center; min-width: 0in;">1.132</td>
+<td style="text-align: center; min-width: 0in;">-2227.91</td>
+<td style="text-align: center; min-width: 0in;">62.532</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2024.083</td>
+<td style="text-align: center; min-width: 0in;">2</td>
+<td style="text-align: center; min-width: 0in;">1.132</td>
+<td style="text-align: center; min-width: 0in;">-2219.305</td>
+<td style="text-align: center; min-width: 0in;">71.232</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">2024.167</td>
+<td style="text-align: center; min-width: 0in;">3</td>
+<td style="text-align: center; min-width: 0in;">1.132</td>
+<td style="text-align: center; min-width: 0in;">-2233.149</td>
+<td style="text-align: center; min-width: 0in;">57.482</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2024.25</td>
+<td style="text-align: center; min-width: 0in;">4</td>
+<td style="text-align: center; min-width: 0in;">1.132</td>
+<td style="text-align: center; min-width: 0in;">-2233.443</td>
+<td style="text-align: center; min-width: 0in;">57.282</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2028.75</td>
+<td style="text-align: center; min-width: 0in;">10</td>
+<td style="text-align: center; min-width: 0in;">1.132</td>
+<td style="text-align: center; min-width: 0in;">-2232.659</td>
+<td style="text-align: center; min-width: 0in;">63.159</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">2028.833</td>
+<td style="text-align: center; min-width: 0in;">11</td>
+<td style="text-align: center; min-width: 0in;">1.132</td>
+<td style="text-align: center; min-width: 0in;">-2223.003</td>
+<td style="text-align: center; min-width: 0in;">72.909</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2028.917</td>
+<td style="text-align: center; min-width: 0in;">12</td>
+<td style="text-align: center; min-width: 0in;">1.132</td>
+<td style="text-align: center; min-width: 0in;">-2200.098</td>
+<td style="text-align: center; min-width: 0in;">95.909</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+</div>
+</div>
+</div><div class="column" style="width:10%;">
+<!-- empty column to create gap -->
+</div><div class="column" style="width:45%;">
+<p><a href="#tbl-chocForecastValues">Table&nbsp;5</a> gives a few of the forecasted values illustrated in <a href="#fig-chocForecastPlot">Figure&nbsp;8</a>.</p>
+</div>
+</div>
+<!-- End of two columns -->
+</section>
+</section>
+<section id="small-group-activity-application-to-retail-sales-data-15-min" class="level2">
+<h2 class="anchored" data-anchor-id="small-group-activity-application-to-retail-sales-data-15-min">Small Group Activity: Application to Retail Sales Data (15 min)</h2>
+<p>Recall the monthly U.S. retail sales data. We will consider the total retail sales for women’s clothing for 2004-2006. You can use the code below to download the data into a tsibble.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read in Women's Clothing Retail Sales data</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>retail_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"data/retail_by_business_type.parquet"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(naics <span class="sc">==</span> <span class="dv">44812</span>) <span class="sc">|&gt;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(month <span class="sc">&gt;=</span> <span class="fu">yearmonth</span>(<span class="fu">my</span>(<span class="st">"Jan 2004"</span>)) <span class="sc">&amp;</span> month <span class="sc">&lt;=</span> <span class="fu">yearmonth</span>(<span class="fu">my</span>(<span class="st">"Dec 2006"</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">month_seq =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>()) <span class="sc">|&gt;</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">year =</span> <span class="fu">year</span>(month)) <span class="sc">|&gt;</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">month_num =</span> <span class="fu">month</span>(month)) <span class="sc">|&gt;</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> month)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="cell-output-display">
+<div id="fig-retailWomensClothingTimePlotWithRegressionLine" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_5_lesson_1_files/figure-html/fig-retailWomensClothingTimePlotWithRegressionLine-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;9: Time plot of the aggregated monthly sales for women’s clothing stores in the United States.</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>We define the model as : <span class="math display">\[\begin{align*}
+  x_t
+    &amp;= ~~~~ \alpha_1 t + s_t + z_t \\
+    &amp;=
+      \begin{cases}
+        \alpha_1 t + \beta_1 + z_t, &amp; t = 1, 13, 25 ~~~~ ~~(January) \\
+        \alpha_1 t + \beta_2 + z_t, &amp; t = 2, 14, 26 ~~~~ ~~(February) \\
+        ~~~~~~~~⋮ &amp; ~~~~~~~~~~~~⋮ \\
+        \alpha_1 t + \beta_{12} + z_t, &amp; t = 12, 24, 36 ~~~~ (December)
+      \end{cases}
+\end{align*}\]</span></p>
+<p>When we regress the women’s clothing retail sales in millions, <span class="math inline">\(x_t\)</span>, on the month number, <span class="math inline">\(t\)</span>, the estimated simple linear regression equation is: <span class="math display">\[
+  \hat x_t = 2635 + 24 ~ t
+\]</span> where <span class="math inline">\(t = 1, 2, 3, \ldots, 35, 36\)</span>.</p>
+<!-- Check Your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Use the estimated regression equation <span class="math display">\[
+  \hat x_t = 2635 + 24 ~ t
+\]</span> to do the following:</p>
+<ul>
+<li>Find the equation for the line parallel to the regression line that passes through the origin.</li>
+<li>Compute the deviation of each observed point from the line you just obtained.</li>
+<li>Compute the value of <span class="math inline">\(\hat \beta_i\)</span> for each month, where <span class="math inline">\(i = 1, 2, \ldots, 12\)</span>.</li>
+<li>Compute the estimate of the time series for <span class="math inline">\(t = 1, 2, \ldots, 36\)</span>.</li>
+<li>Predict the value of the time series for the next six months.</li>
+</ul>
+</div>
+</div>
+<div class="callout callout-style-simple callout-tip no-icon">
+<div class="callout-body d-flex">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-body-container">
+<div class="cell">
+<div class="cell-output-display">
+<div id="tbl-retailWomensClothingTable" class="anchored">
+<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<caption>Table&nbsp;6: Table used to compute the estimate of the women’s clothing retail sales time series using a linear model with seasonal indicator variables.</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$Date$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$t$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$x_t$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$\hat \alpha_1 t$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$x_t - \hat \alpha_1 t$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$\hat\beta_i$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$\hat x_t$$</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Jan 2004</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">1</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2267</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">24</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2243</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2062.33</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2086.33</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Feb 2004</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2402</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">48</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2354</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Mar 2004</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2915</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Apr 2004</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">4</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3023</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">May 2004</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">5</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3005</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Jun 2004</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">6</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2777</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">144</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2633</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2569.67</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2713.67</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Jul 2004</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">7</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2595</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">168</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2427</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2297</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2465</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Aug 2004</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">8</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2644</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">192</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2452</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2345</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2537</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Sep 2004</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">9</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2774</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">216</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2558</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2463</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2679</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Oct 2004</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">10</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2990</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">240</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2750</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2574.33</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2814.33</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Nov 2004</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">11</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3090</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">264</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2826</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2730</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2994</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Dec 2004</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">12</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">4472</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">288</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">4184</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">4173</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">4461</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Jan 2005</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">13</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2338</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">312</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2026</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2062.33</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2374.33</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Feb 2005</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">14</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2453</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">336</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2117</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Mar 2005</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">15</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3105</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Apr 2005</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">16</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3177</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">May 2005</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">17</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3164</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Jun 2005</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">18</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3045</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">432</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2613</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2569.67</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">3001.67</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Jul 2005</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">19</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2741</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">456</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2285</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2297</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2753</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Aug 2005</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">20</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2871</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">480</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2391</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2345</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2825</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Sep 2005</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">21</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2963</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">504</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2459</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2463</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2967</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Oct 2005</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">22</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3120</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">528</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2592</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2574.33</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">3102.33</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Nov 2005</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">23</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3342</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">552</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2790</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2730</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">3282</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Dec 2005</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">24</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">4756</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">576</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">4180</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">4173</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">4749</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Jan 2006</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">25</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2518</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">600</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">1918</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2062.33</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2662.33</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Feb 2006</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">26</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2518</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">624</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">1894</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Mar 2006</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">27</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3194</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Apr 2006</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">28</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3379</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">May 2006</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">29</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3340</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Jun 2006</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">30</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3183</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">720</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2463</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2569.67</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">3289.67</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Jul 2006</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">31</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2923</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">744</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2179</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2297</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">3041</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Aug 2006</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">32</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">2960</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">768</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2192</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2345</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">3113</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Sep 2006</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">33</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3164</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">792</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2372</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2463</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">3255</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Oct 2006</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">34</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3197</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">816</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2381</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2574.33</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">3390.33</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Nov 2006</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">35</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">3414</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">840</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2574</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2730</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">3570</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Dec 2006</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">36</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">5019</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">864</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">4155</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">4173</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">5037</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Jan 2007</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">37</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">—</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">888</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">—</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2062.33</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2950.33</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Feb 2007</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">38</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">—</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">912</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">—</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Mar 2007</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">39</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">—</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">—</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Apr 2007</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">40</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">—</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">—</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">May 2007</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">41</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">—</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">—</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;"></td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">Jun 2007</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">42</td>
+<td style="text-align: center; min-width: 0in; min-width: 0.35in;">—</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">1008</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">—</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">2569.67</td>
+<td style="text-align: center; min-width: 0in; min-width: 1in;">3577.67</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="homework-preview-5-min" class="level2">
+<h2 class="anchored" data-anchor-id="homework-preview-5-min">Homework Preview (5 min)</h2>
+<ul>
+<li>Review upcoming homework assignment</li>
+<li>Clarify questions</li>
+</ul>
+<div class="callout callout-style-default callout-note no-icon callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Download Homework
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><a href="https://byuistats.github.io/timeseries/homework/homework_5_1.qmd" download="homework_5_1.qmd"> homework_5_1.qmd </a></p>
+</div>
+</div>
+<p><a href="javascript:showhide('Solutions1')" style="font-size:.8em;">Retail Sales</a></p>
+<div id="Solutions1" style="display:none;">
+<div class="cell">
+<div class="cell-output-display">
+<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$Date$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$t$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$x_t$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$\hat \alpha_1 t$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$x_t - \hat \alpha_1 t$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$\hat\beta_i$$</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">$$\hat x_t$$</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Jan 2004</td>
+<td style="text-align: center; min-width: 0.75in;">1</td>
+<td style="text-align: center; min-width: 0.75in;">2267</td>
+<td style="text-align: center; min-width: 0.75in;">24</td>
+<td style="text-align: center; min-width: 0.75in;">2243</td>
+<td style="text-align: center; min-width: 0.75in;">2062.33</td>
+<td style="text-align: center; min-width: 0.75in;">2086.33</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Feb 2004</td>
+<td style="text-align: center; min-width: 0.75in;">2</td>
+<td style="text-align: center; min-width: 0.75in;">2402</td>
+<td style="text-align: center; min-width: 0.75in;">48</td>
+<td style="text-align: center; min-width: 0.75in;">2354</td>
+<td style="text-align: center; min-width: 0.75in;">2121.67</td>
+<td style="text-align: center; min-width: 0.75in;">2169.67</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Mar 2004</td>
+<td style="text-align: center; min-width: 0.75in;">3</td>
+<td style="text-align: center; min-width: 0.75in;">2915</td>
+<td style="text-align: center; min-width: 0.75in;">72</td>
+<td style="text-align: center; min-width: 0.75in;">2843</td>
+<td style="text-align: center; min-width: 0.75in;">2711.33</td>
+<td style="text-align: center; min-width: 0.75in;">2783.33</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Apr 2004</td>
+<td style="text-align: center; min-width: 0.75in;">4</td>
+<td style="text-align: center; min-width: 0.75in;">3023</td>
+<td style="text-align: center; min-width: 0.75in;">96</td>
+<td style="text-align: center; min-width: 0.75in;">2927</td>
+<td style="text-align: center; min-width: 0.75in;">2809</td>
+<td style="text-align: center; min-width: 0.75in;">2905</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">May 2004</td>
+<td style="text-align: center; min-width: 0.75in;">5</td>
+<td style="text-align: center; min-width: 0.75in;">3005</td>
+<td style="text-align: center; min-width: 0.75in;">120</td>
+<td style="text-align: center; min-width: 0.75in;">2885</td>
+<td style="text-align: center; min-width: 0.75in;">2761.67</td>
+<td style="text-align: center; min-width: 0.75in;">2881.67</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Jun 2004</td>
+<td style="text-align: center; min-width: 0.75in;">6</td>
+<td style="text-align: center; min-width: 0.75in;">2777</td>
+<td style="text-align: center; min-width: 0.75in;">144</td>
+<td style="text-align: center; min-width: 0.75in;">2633</td>
+<td style="text-align: center; min-width: 0.75in;">2569.67</td>
+<td style="text-align: center; min-width: 0.75in;">2713.67</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Jul 2004</td>
+<td style="text-align: center; min-width: 0.75in;">7</td>
+<td style="text-align: center; min-width: 0.75in;">2595</td>
+<td style="text-align: center; min-width: 0.75in;">168</td>
+<td style="text-align: center; min-width: 0.75in;">2427</td>
+<td style="text-align: center; min-width: 0.75in;">2297</td>
+<td style="text-align: center; min-width: 0.75in;">2465</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Aug 2004</td>
+<td style="text-align: center; min-width: 0.75in;">8</td>
+<td style="text-align: center; min-width: 0.75in;">2644</td>
+<td style="text-align: center; min-width: 0.75in;">192</td>
+<td style="text-align: center; min-width: 0.75in;">2452</td>
+<td style="text-align: center; min-width: 0.75in;">2345</td>
+<td style="text-align: center; min-width: 0.75in;">2537</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Sep 2004</td>
+<td style="text-align: center; min-width: 0.75in;">9</td>
+<td style="text-align: center; min-width: 0.75in;">2774</td>
+<td style="text-align: center; min-width: 0.75in;">216</td>
+<td style="text-align: center; min-width: 0.75in;">2558</td>
+<td style="text-align: center; min-width: 0.75in;">2463</td>
+<td style="text-align: center; min-width: 0.75in;">2679</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Oct 2004</td>
+<td style="text-align: center; min-width: 0.75in;">10</td>
+<td style="text-align: center; min-width: 0.75in;">2990</td>
+<td style="text-align: center; min-width: 0.75in;">240</td>
+<td style="text-align: center; min-width: 0.75in;">2750</td>
+<td style="text-align: center; min-width: 0.75in;">2574.33</td>
+<td style="text-align: center; min-width: 0.75in;">2814.33</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Nov 2004</td>
+<td style="text-align: center; min-width: 0.75in;">11</td>
+<td style="text-align: center; min-width: 0.75in;">3090</td>
+<td style="text-align: center; min-width: 0.75in;">264</td>
+<td style="text-align: center; min-width: 0.75in;">2826</td>
+<td style="text-align: center; min-width: 0.75in;">2730</td>
+<td style="text-align: center; min-width: 0.75in;">2994</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Dec 2004</td>
+<td style="text-align: center; min-width: 0.75in;">12</td>
+<td style="text-align: center; min-width: 0.75in;">4472</td>
+<td style="text-align: center; min-width: 0.75in;">288</td>
+<td style="text-align: center; min-width: 0.75in;">4184</td>
+<td style="text-align: center; min-width: 0.75in;">4173</td>
+<td style="text-align: center; min-width: 0.75in;">4461</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Jan 2005</td>
+<td style="text-align: center; min-width: 0.75in;">13</td>
+<td style="text-align: center; min-width: 0.75in;">2338</td>
+<td style="text-align: center; min-width: 0.75in;">312</td>
+<td style="text-align: center; min-width: 0.75in;">2026</td>
+<td style="text-align: center; min-width: 0.75in;">2062.33</td>
+<td style="text-align: center; min-width: 0.75in;">2374.33</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Feb 2005</td>
+<td style="text-align: center; min-width: 0.75in;">14</td>
+<td style="text-align: center; min-width: 0.75in;">2453</td>
+<td style="text-align: center; min-width: 0.75in;">336</td>
+<td style="text-align: center; min-width: 0.75in;">2117</td>
+<td style="text-align: center; min-width: 0.75in;">2121.67</td>
+<td style="text-align: center; min-width: 0.75in;">2457.67</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Mar 2005</td>
+<td style="text-align: center; min-width: 0.75in;">15</td>
+<td style="text-align: center; min-width: 0.75in;">3105</td>
+<td style="text-align: center; min-width: 0.75in;">360</td>
+<td style="text-align: center; min-width: 0.75in;">2745</td>
+<td style="text-align: center; min-width: 0.75in;">2711.33</td>
+<td style="text-align: center; min-width: 0.75in;">3071.33</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Apr 2005</td>
+<td style="text-align: center; min-width: 0.75in;">16</td>
+<td style="text-align: center; min-width: 0.75in;">3177</td>
+<td style="text-align: center; min-width: 0.75in;">384</td>
+<td style="text-align: center; min-width: 0.75in;">2793</td>
+<td style="text-align: center; min-width: 0.75in;">2809</td>
+<td style="text-align: center; min-width: 0.75in;">3193</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">May 2005</td>
+<td style="text-align: center; min-width: 0.75in;">17</td>
+<td style="text-align: center; min-width: 0.75in;">3164</td>
+<td style="text-align: center; min-width: 0.75in;">408</td>
+<td style="text-align: center; min-width: 0.75in;">2756</td>
+<td style="text-align: center; min-width: 0.75in;">2761.67</td>
+<td style="text-align: center; min-width: 0.75in;">3169.67</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Jun 2005</td>
+<td style="text-align: center; min-width: 0.75in;">18</td>
+<td style="text-align: center; min-width: 0.75in;">3045</td>
+<td style="text-align: center; min-width: 0.75in;">432</td>
+<td style="text-align: center; min-width: 0.75in;">2613</td>
+<td style="text-align: center; min-width: 0.75in;">2569.67</td>
+<td style="text-align: center; min-width: 0.75in;">3001.67</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Jul 2005</td>
+<td style="text-align: center; min-width: 0.75in;">19</td>
+<td style="text-align: center; min-width: 0.75in;">2741</td>
+<td style="text-align: center; min-width: 0.75in;">456</td>
+<td style="text-align: center; min-width: 0.75in;">2285</td>
+<td style="text-align: center; min-width: 0.75in;">2297</td>
+<td style="text-align: center; min-width: 0.75in;">2753</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Aug 2005</td>
+<td style="text-align: center; min-width: 0.75in;">20</td>
+<td style="text-align: center; min-width: 0.75in;">2871</td>
+<td style="text-align: center; min-width: 0.75in;">480</td>
+<td style="text-align: center; min-width: 0.75in;">2391</td>
+<td style="text-align: center; min-width: 0.75in;">2345</td>
+<td style="text-align: center; min-width: 0.75in;">2825</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Sep 2005</td>
+<td style="text-align: center; min-width: 0.75in;">21</td>
+<td style="text-align: center; min-width: 0.75in;">2963</td>
+<td style="text-align: center; min-width: 0.75in;">504</td>
+<td style="text-align: center; min-width: 0.75in;">2459</td>
+<td style="text-align: center; min-width: 0.75in;">2463</td>
+<td style="text-align: center; min-width: 0.75in;">2967</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Oct 2005</td>
+<td style="text-align: center; min-width: 0.75in;">22</td>
+<td style="text-align: center; min-width: 0.75in;">3120</td>
+<td style="text-align: center; min-width: 0.75in;">528</td>
+<td style="text-align: center; min-width: 0.75in;">2592</td>
+<td style="text-align: center; min-width: 0.75in;">2574.33</td>
+<td style="text-align: center; min-width: 0.75in;">3102.33</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Nov 2005</td>
+<td style="text-align: center; min-width: 0.75in;">23</td>
+<td style="text-align: center; min-width: 0.75in;">3342</td>
+<td style="text-align: center; min-width: 0.75in;">552</td>
+<td style="text-align: center; min-width: 0.75in;">2790</td>
+<td style="text-align: center; min-width: 0.75in;">2730</td>
+<td style="text-align: center; min-width: 0.75in;">3282</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Dec 2005</td>
+<td style="text-align: center; min-width: 0.75in;">24</td>
+<td style="text-align: center; min-width: 0.75in;">4756</td>
+<td style="text-align: center; min-width: 0.75in;">576</td>
+<td style="text-align: center; min-width: 0.75in;">4180</td>
+<td style="text-align: center; min-width: 0.75in;">4173</td>
+<td style="text-align: center; min-width: 0.75in;">4749</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Jan 2006</td>
+<td style="text-align: center; min-width: 0.75in;">25</td>
+<td style="text-align: center; min-width: 0.75in;">2518</td>
+<td style="text-align: center; min-width: 0.75in;">600</td>
+<td style="text-align: center; min-width: 0.75in;">1918</td>
+<td style="text-align: center; min-width: 0.75in;">2062.33</td>
+<td style="text-align: center; min-width: 0.75in;">2662.33</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Feb 2006</td>
+<td style="text-align: center; min-width: 0.75in;">26</td>
+<td style="text-align: center; min-width: 0.75in;">2518</td>
+<td style="text-align: center; min-width: 0.75in;">624</td>
+<td style="text-align: center; min-width: 0.75in;">1894</td>
+<td style="text-align: center; min-width: 0.75in;">2121.67</td>
+<td style="text-align: center; min-width: 0.75in;">2745.67</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Mar 2006</td>
+<td style="text-align: center; min-width: 0.75in;">27</td>
+<td style="text-align: center; min-width: 0.75in;">3194</td>
+<td style="text-align: center; min-width: 0.75in;">648</td>
+<td style="text-align: center; min-width: 0.75in;">2546</td>
+<td style="text-align: center; min-width: 0.75in;">2711.33</td>
+<td style="text-align: center; min-width: 0.75in;">3359.33</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Apr 2006</td>
+<td style="text-align: center; min-width: 0.75in;">28</td>
+<td style="text-align: center; min-width: 0.75in;">3379</td>
+<td style="text-align: center; min-width: 0.75in;">672</td>
+<td style="text-align: center; min-width: 0.75in;">2707</td>
+<td style="text-align: center; min-width: 0.75in;">2809</td>
+<td style="text-align: center; min-width: 0.75in;">3481</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">May 2006</td>
+<td style="text-align: center; min-width: 0.75in;">29</td>
+<td style="text-align: center; min-width: 0.75in;">3340</td>
+<td style="text-align: center; min-width: 0.75in;">696</td>
+<td style="text-align: center; min-width: 0.75in;">2644</td>
+<td style="text-align: center; min-width: 0.75in;">2761.67</td>
+<td style="text-align: center; min-width: 0.75in;">3457.67</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Jun 2006</td>
+<td style="text-align: center; min-width: 0.75in;">30</td>
+<td style="text-align: center; min-width: 0.75in;">3183</td>
+<td style="text-align: center; min-width: 0.75in;">720</td>
+<td style="text-align: center; min-width: 0.75in;">2463</td>
+<td style="text-align: center; min-width: 0.75in;">2569.67</td>
+<td style="text-align: center; min-width: 0.75in;">3289.67</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Jul 2006</td>
+<td style="text-align: center; min-width: 0.75in;">31</td>
+<td style="text-align: center; min-width: 0.75in;">2923</td>
+<td style="text-align: center; min-width: 0.75in;">744</td>
+<td style="text-align: center; min-width: 0.75in;">2179</td>
+<td style="text-align: center; min-width: 0.75in;">2297</td>
+<td style="text-align: center; min-width: 0.75in;">3041</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Aug 2006</td>
+<td style="text-align: center; min-width: 0.75in;">32</td>
+<td style="text-align: center; min-width: 0.75in;">2960</td>
+<td style="text-align: center; min-width: 0.75in;">768</td>
+<td style="text-align: center; min-width: 0.75in;">2192</td>
+<td style="text-align: center; min-width: 0.75in;">2345</td>
+<td style="text-align: center; min-width: 0.75in;">3113</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Sep 2006</td>
+<td style="text-align: center; min-width: 0.75in;">33</td>
+<td style="text-align: center; min-width: 0.75in;">3164</td>
+<td style="text-align: center; min-width: 0.75in;">792</td>
+<td style="text-align: center; min-width: 0.75in;">2372</td>
+<td style="text-align: center; min-width: 0.75in;">2463</td>
+<td style="text-align: center; min-width: 0.75in;">3255</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Oct 2006</td>
+<td style="text-align: center; min-width: 0.75in;">34</td>
+<td style="text-align: center; min-width: 0.75in;">3197</td>
+<td style="text-align: center; min-width: 0.75in;">816</td>
+<td style="text-align: center; min-width: 0.75in;">2381</td>
+<td style="text-align: center; min-width: 0.75in;">2574.33</td>
+<td style="text-align: center; min-width: 0.75in;">3390.33</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Nov 2006</td>
+<td style="text-align: center; min-width: 0.75in;">35</td>
+<td style="text-align: center; min-width: 0.75in;">3414</td>
+<td style="text-align: center; min-width: 0.75in;">840</td>
+<td style="text-align: center; min-width: 0.75in;">2574</td>
+<td style="text-align: center; min-width: 0.75in;">2730</td>
+<td style="text-align: center; min-width: 0.75in;">3570</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Dec 2006</td>
+<td style="text-align: center; min-width: 0.75in;">36</td>
+<td style="text-align: center; min-width: 0.75in;">5019</td>
+<td style="text-align: center; min-width: 0.75in;">864</td>
+<td style="text-align: center; min-width: 0.75in;">4155</td>
+<td style="text-align: center; min-width: 0.75in;">4173</td>
+<td style="text-align: center; min-width: 0.75in;">5037</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Jan 2007</td>
+<td style="text-align: center; min-width: 0.75in;">37</td>
+<td style="text-align: center; min-width: 0.75in;">—</td>
+<td style="text-align: center; min-width: 0.75in;">888</td>
+<td style="text-align: center; min-width: 0.75in;">—</td>
+<td style="text-align: center; min-width: 0.75in;">2062.33</td>
+<td style="text-align: center; min-width: 0.75in;">2950.33</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Feb 2007</td>
+<td style="text-align: center; min-width: 0.75in;">38</td>
+<td style="text-align: center; min-width: 0.75in;">—</td>
+<td style="text-align: center; min-width: 0.75in;">912</td>
+<td style="text-align: center; min-width: 0.75in;">—</td>
+<td style="text-align: center; min-width: 0.75in;">2121.67</td>
+<td style="text-align: center; min-width: 0.75in;">3033.67</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">Mar 2007</td>
+<td style="text-align: center; min-width: 0.75in;">39</td>
+<td style="text-align: center; min-width: 0.75in;">—</td>
+<td style="text-align: center; min-width: 0.75in;">936</td>
+<td style="text-align: center; min-width: 0.75in;">—</td>
+<td style="text-align: center; min-width: 0.75in;">2711.33</td>
+<td style="text-align: center; min-width: 0.75in;">3647.33</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Apr 2007</td>
+<td style="text-align: center; min-width: 0.75in;">40</td>
+<td style="text-align: center; min-width: 0.75in;">—</td>
+<td style="text-align: center; min-width: 0.75in;">960</td>
+<td style="text-align: center; min-width: 0.75in;">—</td>
+<td style="text-align: center; min-width: 0.75in;">2809</td>
+<td style="text-align: center; min-width: 0.75in;">3769</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0.75in;">May 2007</td>
+<td style="text-align: center; min-width: 0.75in;">41</td>
+<td style="text-align: center; min-width: 0.75in;">—</td>
+<td style="text-align: center; min-width: 0.75in;">984</td>
+<td style="text-align: center; min-width: 0.75in;">—</td>
+<td style="text-align: center; min-width: 0.75in;">2761.67</td>
+<td style="text-align: center; min-width: 0.75in;">3745.67</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0.75in;">Jun 2007</td>
+<td style="text-align: center; min-width: 0.75in;">42</td>
+<td style="text-align: center; min-width: 0.75in;">—</td>
+<td style="text-align: center; min-width: 0.75in;">1008</td>
+<td style="text-align: center; min-width: 0.75in;">—</td>
+<td style="text-align: center; min-width: 0.75in;">2569.67</td>
+<td style="text-align: center; min-width: 0.75in;">3577.67</td>
+</tr>
+</tbody>
+</table>
+
+
+</div>
+</div>
+</div>
+<!-- <a href="javascript:showhide('Solutions')" -->
+<!-- style="font-size:.8em;">Class Activity</a> -->
+<!-- ::: {#Solutions2 style="display:none;"} -->
+<!-- ::: -->
+<!-- <a href="javascript:showhide('Solutions3')" -->
+<!-- style="font-size:.8em;">Class Activity</a> -->
+<!-- ::: {#Solutions3 style="display:none;"} -->
+<!-- ::: -->
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const disableStylesheet = (stylesheets) => {
+    for (let i=0; i < stylesheets.length; i++) {
+      const stylesheet = stylesheets[i];
+      stylesheet.rel = 'prefetch';
+    }
+  }
+  const enableStylesheet = (stylesheets) => {
+    for (let i=0; i < stylesheets.length; i++) {
+      const stylesheet = stylesheets[i];
+      stylesheet.rel = 'stylesheet';
+    }
+  }
+  const manageTransitions = (selector, allowTransitions) => {
+    const els = window.document.querySelectorAll(selector);
+    for (let i=0; i < els.length; i++) {
+      const el = els[i];
+      if (allowTransitions) {
+        el.classList.remove('notransition');
+      } else {
+        el.classList.add('notransition');
+      }
+    }
+  }
+  const toggleColorMode = (alternate) => {
+    // Switch the stylesheets
+    const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+    manageTransitions('#quarto-margin-sidebar .nav-link', false);
+    if (alternate) {
+      enableStylesheet(alternateStylesheets);
+      for (const sheetNode of alternateStylesheets) {
+        if (sheetNode.id === "quarto-bootstrap") {
+          toggleBodyColorMode(sheetNode);
+        }
+      }
+    } else {
+      disableStylesheet(alternateStylesheets);
+      toggleBodyColorPrimary();
+    }
+    manageTransitions('#quarto-margin-sidebar .nav-link', true);
+    // Switch the toggles
+    const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+    for (let i=0; i < toggles.length; i++) {
+      const toggle = toggles[i];
+      if (toggle) {
+        if (alternate) {
+          toggle.classList.add("alternate");     
+        } else {
+          toggle.classList.remove("alternate");
+        }
+      }
+    }
+    // Hack to workaround the fact that safari doesn't
+    // properly recolor the scrollbar when toggling (#1455)
+    if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+      manageTransitions("body", false);
+      window.scrollTo(0, 1);
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+        manageTransitions("body", true);
+      }, 40);  
+    }
+  }
+  const isFileUrl = () => { 
+    return window.location.protocol === 'file:';
+  }
+  const hasAlternateSentinel = () => {  
+    let styleSentinel = getColorSchemeSentinel();
+    if (styleSentinel !== null) {
+      return styleSentinel === "alternate";
+    } else {
+      return false;
+    }
+  }
+  const setStyleSentinel = (alternate) => {
+    const value = alternate ? "alternate" : "default";
+    if (!isFileUrl()) {
+      window.localStorage.setItem("quarto-color-scheme", value);
+    } else {
+      localAlternateSentinel = value;
+    }
+  }
+  const getColorSchemeSentinel = () => {
+    if (!isFileUrl()) {
+      const storageValue = window.localStorage.getItem("quarto-color-scheme");
+      return storageValue != null ? storageValue : localAlternateSentinel;
+    } else {
+      return localAlternateSentinel;
+    }
+  }
+  let localAlternateSentinel = 'default';
+  // Dark / light mode switch
+  window.quartoToggleColorScheme = () => {
+    // Read the current dark / light value 
+    let toAlternate = !hasAlternateSentinel();
+    toggleColorMode(toAlternate);
+    setStyleSentinel(toAlternate);
+  };
+  // Ensure there is a toggle, if there isn't float one in the top right
+  if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+    const a = window.document.createElement('a');
+    a.classList.add('top-right');
+    a.classList.add('quarto-color-scheme-toggle');
+    a.href = "";
+    a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+    const i = window.document.createElement("i");
+    i.classList.add('bi');
+    a.appendChild(i);
+    window.document.body.appendChild(a);
+  }
+  // Switch to dark mode if need be
+  if (hasAlternateSentinel()) {
+    toggleColorMode(true);
+  } else {
+    toggleColorMode(false);
+  }
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./chapter_5.html" class="pagination-link">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Lessons &amp; Homework</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./chapter_5_lesson_2.html" class="pagination-link">
+        <span class="nav-page-text">Harmonic Seasonal Variables - Part 1</span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+</body></html>
