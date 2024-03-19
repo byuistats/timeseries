@@ -2,6 +2,8 @@
 
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite dplyr::select()
+               nlme,
+               tidymodels,    # for GLS
                tidyverse, kableExtra,
                tsibble, fable,
                feasts, tsibbledata,
@@ -17,9 +19,7 @@ pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite d
                gt, # grammar of tables, for LaTeX in tables
                quarto, # For LaTeX mode results = 'asis'
                plotly, # For interactive figures
-               tidymodels,    # for GLS
                multilevelmod, # for GLS
-               nlme,          # for GLS
                broom.mixed    # for GLS
 )
 ################# WARNING: DO NOT USE mosaic. IT MESSES UP THE DECOMPOSITION.
