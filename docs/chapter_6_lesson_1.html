@@ -20,6 +20,40 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -432,7 +466,7 @@ Definition of Strict Stationarity
 </section>
 <section id="moving-average-ma-models" class="level3">
 <h3 class="anchored" data-anchor-id="moving-average-ma-models">Moving Average (MA) Models</h3>
-<p>Recall in <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_3.html#ARdefinition">Chapter 4, Lesson 3</a> we learned the definition of an AR model:</p>
+<p>Recall in <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_3.html#ARdefinition">Chapter 4, Lesson 3</a>, we learned the definition of an AR model:</p>
 <div class="callout callout-style-default callout-note no-icon callout-titled" title="Definition of an Autoregressive (AR) Model">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -510,7 +544,9 @@ Note
   cor(x_t, x_{t+k}) =
     \begin{cases}
       1, &amp; k=0 \\
-      \frac{ \sum\limits_{i=0}^{q-k} \beta_i \beta_{i+k} }{ \sum\limits_{i=0}^q \beta_i^2 }, &amp; k = 1, 2, \ldots, q \\
+      ~\\
+      \dfrac{ \sum\limits_{i=0}^{q-k} \beta_i \beta_{i+k} }{ \sum\limits_{i=0}^q \beta_i^2 }, &amp; k = 1, 2, \ldots, q \\
+      ~\\
       0, &amp; k &gt; q
     \end{cases}
 \]</span> where <span class="math inline">\(\beta_0 = 1\)</span>.</p>
@@ -531,6 +567,8 @@ Definition of an Invertible <span class="math inline">\(MA\)</span> Process
 <p>An <span class="math inline">\(MA\)</span> process is said to be <strong>invertible</strong> if it can be expressed as a stationary autoregressive process (of possibly infinite order) with no error term.</p>
 </div>
 </div>
+<section id="example-of-an-invertible-ma-process" class="level4">
+<h4 class="anchored" data-anchor-id="example-of-an-invertible-ma-process">Example of an Invertible MA Process</h4>
 <p>Recall that <span class="math display">\[
   (1-x)(1 + x + x^2 + x^3 + \cdots) = 1
 \]</span></p>
@@ -549,7 +587,7 @@ Definition of an Invertible <span class="math inline">\(MA\)</span> Process
   x_t + \beta x_{t-1} + \beta^2 x_{t-2} + \beta^3 x_{t-3} + \cdots &amp;= w_t \\
   x_t &amp;= \left( -\beta x_{t-1} - \beta^2 x_{t-2} - \beta^3 x_{t-3} - \cdots \right) + w_t
 \end{align*}\]</span></p>
-<p>assuming that <span class="math inline">\(|\beta|&lt;1\)</span>, which is necessary for the series to converge.</p>
+<p>assuming that <span class="math inline">\(|\beta|&lt;1\)</span>. Note that this series will not converge unless <span class="math inline">\(|\beta|&lt;1\)</span>.</p>
 <p>We have just shown that the <span class="math inline">\(MA\)</span> process <span class="math display">\[
   x_t = \left( 1 - \beta \mathbf{B} \right) w_t
 \]</span> is invertible.</p>
@@ -570,12 +608,135 @@ Theorem: Invertibility of an <span class="math inline">\(MA(q)\)</span> Process
 \]</span> are all greater than 1 in absolute value.</p>
 </div>
 </div>
-<p>Does this remind you of the test for a stationary <span class="math inline">\(AR(p)\)</span> model?</p>
+<p>Does this remind you of the test for the stationarity of an <span class="math inline">\(AR(p)\)</span> model?</p>
 <p>Note that the autocovariance function (acvf) will identify a unique <span class="math inline">\(MA(q)\)</span> process only if the process is invertible. Fortunately, the algorithm R uses to estimate an <span class="math inline">\(MA(q)\)</span> process always leads to an invertible model.</p>
+</section>
 </section>
 </section>
 <section id="class-activity-simulating-an-maq-model-xxx-min" class="level2">
 <h2 class="anchored" data-anchor-id="class-activity-simulating-an-maq-model-xxx-min">Class Activity: Simulating an <span class="math inline">\(MA(q)\)</span> Model (xxx min)</h2>
+<p>The textbook gives a simulation of an <span class="math inline">\(MA(3)\)</span> process:</p>
+<p><span class="math display">\[
+  x_t = w_t + \beta_1 w_{t-1} + \beta_2 w_{t-2} + \beta_3 w_{t-3}
+\]</span></p>
+<p>where <span class="math inline">\(\beta_1 = 0.7\)</span>, <span class="math inline">\(\beta_1 = 0.5\)</span>, and <span class="math inline">\(\beta_3 = 0.2\)</span>. This figure gives the acf of this process.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(<span class="st">"tsibble"</span>, <span class="st">"fable"</span>, <span class="st">"feasts"</span>,</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    <span class="st">"tsibbledata"</span>, <span class="st">"fable.prophet"</span>, <span class="st">"tidyverse"</span>,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"patchwork"</span>, <span class="st">"slider"</span>, <span class="st">"urca"</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># define the parameters of the simulation</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>beta1 <span class="ot">&lt;-</span> <span class="fl">0.7</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>beta2 <span class="ot">&lt;-</span> <span class="fl">0.5</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>beta3 <span class="ot">&lt;-</span> <span class="fl">0.2</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># function to compute the autocorrelation</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>rho <span class="ot">&lt;-</span> <span class="cf">function</span>(k, beta) {</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  q <span class="ot">&lt;-</span> <span class="fu">length</span>(beta) <span class="sc">-</span> <span class="dv">1</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (k <span class="sc">&gt;</span> q) ACF <span class="ot">&lt;-</span> <span class="dv">0</span> <span class="cf">else</span> {</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    s1 <span class="ot">&lt;-</span> <span class="dv">0</span>; s2 <span class="ot">&lt;-</span> <span class="dv">0</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>(q<span class="sc">-</span>k<span class="sc">+</span><span class="dv">1</span>)) s1 <span class="ot">&lt;-</span> s1 <span class="sc">+</span> beta[i] <span class="sc">*</span> beta[i<span class="sc">+</span>k]</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span>(q<span class="sc">+</span><span class="dv">1</span>)) s2 <span class="ot">&lt;-</span> s2 <span class="sc">+</span> beta[i]<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>    ACF <span class="ot">&lt;-</span> s1 <span class="sc">/</span> s2}</span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  ACF</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co"># create the tibble</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>acf_dat <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="at">order =</span> <span class="dv">0</span><span class="sc">:</span><span class="dv">10</span>,</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">betas =</span> <span class="fu">list</span>(<span class="fu">c</span>(<span class="dv">1</span>, beta1, beta2, beta3)),</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">rho.k =</span> <span class="fu">map2_dbl</span>(order, betas, <span class="sc">~</span><span class="fu">rho</span>(.x, .y)))</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a><span class="co"># generate the autocorrelation plot</span></span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>acf_dat <span class="sc">|&gt;</span></span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> order, <span class="at">y =</span> rho.k)) <span class="sc">+</span></span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">0</span>, <span class="at">color =</span> <span class="st">"darkgrey"</span>) <span class="sc">+</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span></span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">y =</span> <span class="fu">expression</span>(rho[k]), <span class="at">x =</span> <span class="st">"lag k"</span>) <span class="sc">+</span></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Time"</span>,</span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"ACF"</span>,</span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Theoretical ACF for the Simulated MA(3) Process"</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="chapter_6_lesson_1_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Now, we simulate data from this process.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">1234</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">w =</span> <span class="fu">rnorm</span>(<span class="dv">1000</span>),</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">betas =</span> <span class="fu">list</span>(<span class="fu">c</span>(beta1, beta2, beta3))) <span class="sc">|&gt;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">w_lag =</span> <span class="fu">slide</span>(w, <span class="sc">~</span>.x, <span class="at">.before =</span> <span class="dv">3</span>, <span class="at">.after =</span> <span class="sc">-</span><span class="dv">1</span>),</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">w_lag =</span> <span class="fu">map</span>(w_lag, <span class="sc">~</span><span class="fu">rev</span>(.x)),</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">t =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>()) <span class="sc">|&gt;</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">slice</span>(<span class="sc">-</span><span class="fu">c</span>(<span class="dv">1</span><span class="sc">:</span><span class="dv">3</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">lag_betas =</span> <span class="fu">map2_dbl</span>(</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>      w_lag,</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>      betas,</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>      \(.x, .y) <span class="fu">sum</span>(.x <span class="sc">*</span>.y)),</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> w <span class="sc">+</span> lag_betas) <span class="sc">|&gt;</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a>  tsibble<span class="sc">::</span><span class="fu">as_tsibble</span>(<span class="at">index =</span> t)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(dat, <span class="at">.var =</span> x)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<p><img src="chapter_6_lesson_1_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>Here is the acf function computed from the simulated data.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>dat <span class="sc">|&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>(<span class="at">var =</span> x) <span class="sc">|&gt;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: The `...` argument of `PACF()` is deprecated as of feasts 0.2.2.
+ℹ ACF variables should be passed to the `y` argument. If multiple variables are
+  to be used, specify them using `vars(...)`.</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="chapter_6_lesson_1_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<!-- Check Your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Generate the theoretical acf plot for the <span class="math inline">\(MA(3)\)</span> model <span class="math display">\[
+  x_t = w_t - 0.7 w_{t-1} + 0.5 w_{t-2} - 0.2 w_{t-3}
+\]</span></li>
+<li>How does the value of the <span class="math inline">\(\beta\)</span>’s affect the acf?</li>
+<li>Simulate 1000 observations from this <span class="math inline">\(MA(3)\)</span> process.
+<ul>
+<li>Give the time plot of the simulated data</li>
+<li>Plot the acf of the simulated data.</li>
+</ul></li>
+<li>Compare the acf from the simulated data with the theoretical acf.</li>
+</ul>
+</div>
+</div>
 </section>
 <section id="small-group-activity-fitting-an-maq-model-xxx-min" class="level2">
 <h2 class="anchored" data-anchor-id="small-group-activity-fitting-an-maq-model-xxx-min">Small Group Activity: Fitting an <span class="math inline">\(MA(q)\)</span> Model (xxx min)</h2>
@@ -628,7 +789,13 @@ Download Homework
 </div>
 <p><a href="javascript:showhide('Solutions')" style="font-size:.8em;">Class Activity</a></p>
 <div id="Solutions2" style="display:none;">
-
+<p>Change the values of the parameters <code>beta1</code>, <code>beta2</code>, and <code>beta3</code> in the code provided to match the following:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define the parameters of the simulation</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>beta1 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fl">0.7</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>beta2 <span class="ot">&lt;-</span> <span class="fl">0.5</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>beta3 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fl">0.2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
 </div>
 <p><a href="javascript:showhide('Solutions3')" style="font-size:.8em;">Class Activity</a></p>
 <div id="Solutions3" style="display:none;">

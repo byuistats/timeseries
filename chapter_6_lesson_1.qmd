@@ -95,7 +95,7 @@ Typically the models in this chapter are applied to the residual series from a r
 
 ### Moving Average (MA) Models
 
-Recall in [Chapter 4, Lesson 3](https://byuistats.github.io/timeseries/chapter_4_lesson_3.html#ARdefinition) we learned the definition of an AR model:
+Recall in [Chapter 4, Lesson 3](https://byuistats.github.io/timeseries/chapter_4_lesson_3.html#ARdefinition), we learned the definition of an AR model:
 
 ::: {.callout-note icon=false title="Definition of an Autoregressive (AR) Model"}
 
@@ -158,7 +158,9 @@ $$
   cor(x_t, x_{t+k}) =
     \begin{cases}
       1, & k=0 \\
-      \frac{ \sum\limits_{i=0}^{q-k} \beta_i \beta_{i+k} }{ \sum\limits_{i=0}^q \beta_i^2 }, & k = 1, 2, \ldots, q \\
+      ~\\
+      \dfrac{ \sum\limits_{i=0}^{q-k} \beta_i \beta_{i+k} }{ \sum\limits_{i=0}^q \beta_i^2 }, & k = 1, 2, \ldots, q \\
+      ~\\
       0, & k > q
     \end{cases}
 $$
@@ -175,6 +177,8 @@ We now define an invertible $MA$ process.
 An $MA$ process is said to be **invertible** if it can be expressed as a stationary autoregressive process (of possibly infinite order) with no error term.
 
 :::
+
+#### Example of an Invertible MA Process
 
 Recall that 
 $$
@@ -203,7 +207,7 @@ can be written as:
   x_t &= \left( -\beta x_{t-1} - \beta^2 x_{t-2} - \beta^3 x_{t-3} - \cdots \right) + w_t
 \end{align*}
 
-assuming that $|\beta|<1$, which is necessary for the series to converge.
+assuming that $|\beta|<1$. Note that this series will not converge unless $|\beta|<1$. 
 
 We have just shown that the $MA$ process 
 $$
@@ -226,12 +230,121 @@ are all greater than 1 in absolute value.
 
 :::
 
-Does this remind you of the test for a stationary $AR(p)$ model?
+Does this remind you of the test for the stationarity of an $AR(p)$ model?
 
 Note that the autocovariance function (acvf) will identify a unique $MA(q)$ process only if the process is invertible. Fortunately, the algorithm R uses to estimate an $MA(q)$ process always leads to an invertible model.
 
 
 ## Class Activity: Simulating an $MA(q)$ Model (xxx min)
+
+The textbook gives a simulation of an $MA(3)$ process:
+
+$$
+  x_t = w_t + \beta_1 w_{t-1} + \beta_2 w_{t-2} + \beta_3 w_{t-3}
+$$
+
+where $\beta_1 = 0.7$, $\beta_1 = 0.5$, and $\beta_3 = 0.2$. This figure gives the acf of this process.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+pacman::p_load("tsibble", "fable", "feasts",
+    "tsibbledata", "fable.prophet", "tidyverse",
+    "patchwork", "slider", "urca")
+
+# define the parameters of the simulation
+beta1 <- 0.7
+beta2 <- 0.5
+beta3 <- 0.2
+
+# function to compute the autocorrelation
+rho <- function(k, beta) {
+  q <- length(beta) - 1
+  if (k > q) ACF <- 0 else {
+    s1 <- 0; s2 <- 0
+    for (i in 1:(q-k+1)) s1 <- s1 + beta[i] * beta[i+k]
+    for (i in 1:(q+1)) s2 <- s2 + beta[i]^2
+    ACF <- s1 / s2}
+  ACF
+}
+
+# create the tibble
+acf_dat <- tibble(
+  order = 0:10,
+  betas = list(c(1, beta1, beta2, beta3)),
+  rho.k = map2_dbl(order, betas, ~rho(.x, .y)))
+
+# generate the autocorrelation plot
+acf_dat |>
+  ggplot(aes(x = order, y = rho.k)) +
+  geom_hline(yintercept = 0, color = "darkgrey") +
+  geom_point() +
+  labs(y = expression(rho[k]), x = "lag k") +
+    labs(
+      x = "Time",
+      y = "ACF",
+      title = "Theoretical ACF for the Simulated MA(3) Process"
+    ) +
+    theme_bw() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+Now, we simulate data from this process.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+set.seed(1234)
+dat <- tibble(
+  w = rnorm(1000),
+  betas = list(c(beta1, beta2, beta3))) |>
+  mutate(
+    w_lag = slide(w, ~.x, .before = 3, .after = -1),
+    w_lag = map(w_lag, ~rev(.x)),
+    t = 1:n()) |>
+  slice(-c(1:3)) |>
+  mutate(
+    lag_betas = map2_dbl(
+      w_lag,
+      betas,
+      \(.x, .y) sum(.x *.y)),
+    x = w + lag_betas) |>
+  tsibble::as_tsibble(index = t)
+autoplot(dat, .var = x)
+```
+
+Here is the acf function computed from the simulated data.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+dat |>
+  ACF(var = x) |>
+  autoplot()
+```
+
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Generate the theoretical acf plot for the $MA(3)$ model
+$$
+  x_t = w_t - 0.7 w_{t-1} + 0.5 w_{t-2} - 0.2 w_{t-3}
+$$
+-   How does the value of the $\beta$'s affect the acf?
+-   Simulate 1000 observations from this $MA(3)$ process.
+    -   Give the time plot of the simulated data
+    -   Plot the acf of the simulated data.
+-   Compare the acf from the simulated data with the theoretical acf.
+  
+:::
 
 
 
@@ -298,7 +411,17 @@ style="font-size:.8em;">MA(q) process in terms of the backward shift operator</a
 style="font-size:.8em;">Class Activity</a>
   
 ::: {#Solutions2 style="display:none;"}
-    
+
+Change the values of the parameters `beta1`, `beta2`, and `beta3` in the code provided to match the following:
+```{r}
+#| eval: false
+
+# define the parameters of the simulation
+beta1 <- -0.7
+beta2 <- 0.5
+beta3 <- -0.2
+```
+
 
 :::
 
