@@ -44,7 +44,7 @@ source("common_functions.R")
 
 ## Preparation
 
--   Read Sections 6.1-6.zzz
+-   Read Sections 6.1-6.4
 
 
 
@@ -59,8 +59,188 @@ source("common_functions.R")
 -   Sign the Learning Journal review sheet for your peer
 
 
-## Small Group Activity: SectionTitle (xxx min)
-## Class Activity: SectionTitle (xxx min)
+
+## Class Activity: Introduction to Moving Average (MA) Models (xxx min)
+
+### Stationary Processes
+
+In previous chapters, we have explored how to identify and remove the trend and seasonal components of a time series. After the trend and seasonal component have been properly removed, the residual should be stationary. However, these residual components may still contain autocorrelation. 
+
+In this chapter, we will explore stationary models that are appropriate when there are no obvious trends or seasonal elements. Combining the fitted stationary model with the estimated trend and seasonal components can improve our ability to make forecasts. We will build on the autoregressive (AR) models we learned in Chapter 4.
+
+### Strictly Stationary Series
+
+First, we define a strictly stationary series.
+
+::: {.callout-note icon=false title="Definition of Strict Stationarity"}
+
+A time series model $\{x_t\}$ is said to be **strictly stationary** if the joint distribution of the random variables 
+$x_{t_1}, x_{t_2}, \ldots, x_{t_n}$ is the same as the joint distribution of 
+$x_{t_1+m}, x_{t_2+m}, \ldots, x_{t_n+m}$ for all $t_1, t_2, \ldots, t_n$ and $m$, so that the distribution of the values in the time series is the same after an arbitrary time shift.
+
+:::
+
+If a time series is strictly stationary, then its mean and variance are constant in time. Hence, the autocovariance $cov(x_t, x_s)$ depends only on the lag, $k = | t - s |$. We can therefore denote the covariance function as $\gamma(k) = cov(x_t, x_{t+k})$.
+
+**Note:** It is possible that a series could have a constant mean and variance in time and the autocovariance depends only on the lag, but the series is not strictly stationary. This is called **second-order stationary**.
+
+We will focus on the second-order properties of the time series, even though all the series we will explore in this chapter are strictly stationary.
+
+**Note:** if a white noise process is Gaussian, the stochastic process is completely determined by the mean and covariance structure. This is similar to how a (univariate or multivariate) normal distribution is completely specified by the mean and variance-covariance matrix.
+
+The concept of stationarity is a property of time series models. When we use certain models, we are assuming stationarity. Before we apply these models, it is important to check for stationarity in the time series. In other words, we check to see if there is evidence of a trend or seasonality and if so, we remove these components.
+We can use methods such as decomposition, Holt-Winters, or regression to remove the trend and seasonality. Hence, it is typically reasonable to consider the residual series as a stationary series.
+Typically the models in this chapter are applied to the residual series from a regression or similar analysis.
+
+
+### Moving Average (MA) Models
+
+Recall in [Chapter 4, Lesson 3](https://byuistats.github.io/timeseries/chapter_4_lesson_3.html#ARdefinition) we learned the definition of an AR model:
+
+::: {.callout-note icon=false title="Definition of an Autoregressive (AR) Model"}
+
+The time series $\{x_t\}$ is an **autoregressive process of order $p$**, denoted as $AR(p)$, if
+$$
+  x_t = \alpha_1 x_{t-1} + \alpha_2 x_{t-2} + \alpha_3 x_{t-3} + \cdots + \alpha_{p-1} x_{t-(p-1)} + \alpha_p x_{t-p} + w_t ~~~~~~~~~~~~~~~~~~~~~~~ (4.15)
+$$
+
+where $\{w_t\}$ is white noise and the $\alpha_i$ are the model parameters with $\alpha_p \ne 0$.
+
+:::
+
+The $AR(p)$ model can be expressed in terms of the backward shift operator:
+$$
+   \left( 1 - \alpha_1 \mathbf{B} - \alpha_2 \mathbf{B}^2 - \cdots - \alpha_p \mathbf{B}^p \right) x_t = w_t
+$$
+
+Now, we consider a different, but related model, the moving average (MA) model
+
+::: {.callout-note icon=false title="Definition of a Moving Average (MA) Model"}
+
+We say that a time series $\{x_t\}$ is a **moving average process of order $q$**, denoted as $MA(q)$, if each term in the time series is a linear combination of the current white noise term and the $q$ most recent past white noise terms. 
+
+It is given as:
+$$
+  x_t = w_t + \beta_1 w_{t-1} + \beta_2 w_{t-2} + \beta_3 w_{t-3} + \cdots + \beta_{q-1} w_{t-(q-1)} + \beta_q w_{t-q} ~~~~~~~~~~~~~~~~~~~~~~~ (6.1)
+$$
+
+where $\{w_t\}$ is white noise with zero mean and variance $\sigma_w^2$, and the $\beta_i$ are the model parameters with $\beta_q \ne 0$.
+
+:::
+
+<!-- Check your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Write Equation (6.1) in terms of the backward shift operator. Your answer will be of the form:
+
+$$
+  x_t 
+    = (\text{some}~q^{th}~\text{degree polynomial in}~\mathbf{B}) w_t
+    = \phi_q(\mathbf{B}) w_t
+$$
+
+:::
+
+
+::: {.callout-caution icon=false title="Note"}
+
+An $MA(q)$ process is comprised of a finite summation of stationary white noise terms. Hence, an $MA(q)$ process will be stationary with a time-invariante mean and autocovariance.
+
+The mean and variance of $\{x_t\}$ are easily derived. The mean must be zero, because each term is a sum of scaled white noise terms with mean zero.
+
+The variance of an $MA(q)$ process is ${ \sigma_w^2 \left( 1 + \beta_1^2 + \beta_2^2 + \beta_3^2 + \cdots + \beta_{q-1}^2 + \beta_q^2 \right) }$. This can be seen, because the white noise terms are independent with the same variance.
+
+So, the autocorrelation function is
+
+$$
+  \rho(k) =
+  cor(x_t, x_{t+k}) =
+    \begin{cases}
+      1, & k=0 \\
+      \frac{ \sum\limits_{i=0}^{q-k} \beta_i \beta_{i+k} }{ \sum\limits_{i=0}^q \beta_i^2 }, & k = 1, 2, \ldots, q \\
+      0, & k > q
+    \end{cases}
+$$
+where $\beta_0 = 1$.
+
+Note that the autocorrelation function is zero if $k>q$, because $x_t$ and $x_{t+k}$ would be independent weighted summations of white noise processes and hence the covariance between them would be zero.
+
+:::
+
+We now define an invertible $MA$ process.
+
+::: {.callout-note icon=false title="Definition of an Invertible $MA$ Process"}
+
+An $MA$ process is said to be **invertible** if it can be expressed as a stationary autoregressive process (of possibly infinite order) with no error term.
+
+:::
+
+Recall that 
+$$
+  (1-x)(1 + x + x^2 + x^3 + \cdots) = 1
+$$
+
+or, 
+
+$$
+  (1-x)^{-1} = (1 + x + x^2 + x^3 + \cdots)
+$$
+if $|x|<1$.
+
+Now, note that the $MA$ process 
+
+$$
+  x_t = \left( 1 - \beta \mathbf{B} \right) w_t
+$$
+
+can be written as:
+
+\begin{align*}
+  \left( 1 - \beta \mathbf{B} \right)^{-1} x_t &= w_t \\
+  \left( 1 + \beta \mathbf{B} + \beta^2 \mathbf{B}^2 + \beta^3 \mathbf{B}^3 + \cdots \right) x_t &= w_t \\
+  x_t + \beta x_{t-1} + \beta^2 x_{t-2} + \beta^3 x_{t-3} + \cdots &= w_t \\
+  x_t &= \left( -\beta x_{t-1} - \beta^2 x_{t-2} - \beta^3 x_{t-3} - \cdots \right) + w_t
+\end{align*}
+
+assuming that $|\beta|<1$, which is necessary for the series to converge.
+
+We have just shown that the $MA$ process 
+$$
+  x_t = \left( 1 - \beta \mathbf{B} \right) w_t
+$$
+is invertible.
+
+
+::: {.callout-note icon=false title="Theorem: Invertibility of an $MA(q)$ Process"}
+
+The $MA(q)$ process 
+$$
+  x_t = \phi_q(\mathbf{B}) w_t
+$$
+will be invertible if the solutions to the equation
+$$
+  \phi_q(\mathbf{B}) = 0
+$$
+are all greater than 1 in absolute value.
+
+:::
+
+Does this remind you of the test for a stationary $AR(p)$ model?
+
+Note that the autocovariance function (acvf) will identify a unique $MA(q)$ process only if the process is invertible. Fortunately, the algorithm R uses to estimate an $MA(q)$ process always leads to an invertible model.
+
+
+## Class Activity: Simulating an $MA(q)$ Model (xxx min)
+
+
+
+
+
+
+## Small Group Activity: Fitting an $MA(q)$ Model (xxx min)
+
+
 
 
 <!-- Check your Understanding -->
@@ -97,10 +277,17 @@ source("common_functions.R")
 
 
 <a href="javascript:showhide('Solutions1')"
-style="font-size:.8em;">Class Activity</a>
+style="font-size:.8em;">MA(q) process in terms of the backward shift operator</a>
   
 ::: {#Solutions1 style="display:none;"}
-    
+  
+\begin{align*}
+  x_t 
+    &= w_t + \beta_1 w_{t-1} + \beta_2 w_{t-2} + \beta_3 w_{t-3} + \cdots + \beta_{q-1} w_{t-(q-1)} + \beta_q w_{t-q} \\
+    &= w_t + \beta_1 \mathbf{B} w_t + \beta_2 \mathbf{B}^2 w_t + \beta_3 \mathbf{B}^3 w_t + \cdots + \beta_{q-1} \mathbf{B}^{q-1} w_t + \beta_q \mathbf{B}^{q} w_t \\
+    &= \left( 1 + \beta_1 \mathbf{B} + \beta_2 \mathbf{B}^2  + \beta_3 \mathbf{B}^3  + \cdots + \beta_{q-1} \mathbf{B}^{q-1}  + \beta_q \mathbf{B}^{q} \right) w_t \\
+    &= \phi_q(\mathbf{B}) w_t
+\end{align*}
 
 :::
 
