@@ -237,7 +237,7 @@ are all greater than 1 in absolute value.
 
 :::
 
-Does this remind you of the test for the stationarity of an $AR(p)$ model?
+<a id="FittedModelWillBeInvertible">Does</a> this remind you of the test for the stationarity of an $AR(p)$ model?
 
 Note that the autocovariance function (acvf) will identify a unique $MA(q)$ process only if the process is invertible. Fortunately, the algorithm R uses to estimate an $MA(q)$ process always leads to an invertible model.
 
@@ -354,6 +354,8 @@ dat |>
 <!-- Check Your Understanding -->
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the simulation above to do the following:
 
 -   Generate the theoretical acf plot for the $MA(3)$ model
 $$
@@ -484,24 +486,57 @@ gdp_ma |>
 ```
 -   What are the values of the model coefficients?
 -   Based on the acf of the residuals, is the MA model you identified a good fit to the data?
+-   Is the MA model you fitted invertible? (Use the estimated parameter values to make this determination.)
 
 :::
 
 
 
 
-## Small-Group Activity: Fitting an $MA(q)$ Model to Year-Over-Year Trade Vessel Ratios (10 min)
+## Small-Group Activity: Fitting an $MA(q)$ Model to the Trade Data (15 min)
 
 
+#### Vessels Cleared in Foreign Trade for United States
 
-<!-- Check your Understanding -->
+In the homework for Chapter 1 Lesson 5, you explored data on the thousands of net tons cleared in foreign trade for the United States each month from January 1902 to December 1940. The code below computes the year-over-year change in the amount of cargo cleared for trade. This is stored in the variable `ratio`.
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+vessels_ts <- rio::import("https://byuistats.github.io/timeseries/data/Vessels_Trade_US.csv") |>
+  # filter(-comments) |>
+  mutate(
+    date = yearmonth(dmy(date)),
+    ratio = vessels / lag(vessels, 12)
+  ) |>
+  na.omit() |>
+  as_tsibble(index = date)
+
+vessels_ts |>
+  autoplot(.vars = ratio) +
+    labs(
+      x = "Month",
+      y = "Ratio",
+      title = "Year-Over-Year Change in Net Tons on Vessels Cleared for Trade"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+<!-- Check Your Understanding -->
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Question1
--   Question2
+Practice applying an $MA(q)$ model using the year-over-year amounts.
+
+-   Determine which MA model is most appropriate for these data.
+-   Fit the model you deem most appropriate.
+-   Assess the appropriateness of applying your model to the data.
 
 :::
+
 
 
 
@@ -545,31 +580,176 @@ style="font-size:.8em;">MA(q) process in terms of the backward shift operator</a
 
 
 
-<a href="javascript:showhide('Solutions')"
+<a href="javascript:showhide('Solutions2')"
 style="font-size:.8em;">Simulating an MA(3) process</a>
   
 ::: {#Solutions2 style="display:none;"}
 
-Change the values of the parameters `beta1`, `beta2`, and `beta3` in the code provided to match the following:
-```{r}
-#| eval: false
-
-# define the parameters of the simulation
-beta1 <- -0.7
-beta2 <- 0.5
-beta3 <- -0.2
-```
+Set the values of the parameters $n$, $\beta_1$, $\beta_2$, and $\beta_3$ in the simulation to the following:
+$$
+n = 1000, ~~~~~~~~~~~
+\beta_1 = -0.7, ~~~~~~~~~~~
+\beta_2 = 0.5, ~~~~~~~~~~~
+\beta_3 = -0.2
+$$
 
 :::
 
 
 
 
+
+
+
 <a href="javascript:showhide('Solutions3')"
-style="font-size:.8em;">Class Activity</a>
+style="font-size:.8em;">Class Activity: Fitting an MA(q) Model to GDP Year-Over-Year Ratios</a>
   
 ::: {#Solutions3 style="display:none;"}
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What process would you use to model the year-over-year GDP ratios?
+
+Based on the acf, an $MA(3)$ model seems most appropriate.
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+gdp_ts |>
+  select(year_over_year) |>
+  acf()
+
+gdp_ts |>
+  select(year_over_year) |>
+  pacf()
+```
+
+
+
+
+-   Modify the code below to implement your model.
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+gdp_ma <- gdp_ts |>
+  # Changed 1 to a 3 on the next line
+  model(arima = ARIMA(year_over_year ~ 1 + pdq(0,0,3) + PDQ(0, 0, 0))) 
+```
+-   What are the values of the model coefficients?
+
+The values of the coefficients are given in the table below:
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+tidy(gdp_ma)
+```
+
+-   Based on the acf of the residuals, is the MA model you identified a good fit to the data?
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+gdp_ma |>
+  residuals() |>
+  ACF(var = .resid) |>
+  autoplot()
+```
+
+None of the acf values are significant. The $MA(3)$ model seems appropriate.
+
+
+-   Is the MA model you fitted invertible? (Use the estimated parameter values to make this determination.)
+
+```{r}
+#| echo: false
+
+coeffs <- tidy(gdp_ma) |>
+  # filter(term != "constant") |>
+  select(estimate) |>
+  pull()
+```
+
+We can write the estimated model as:
+$$
+  x_t = `r coeffs[4]` + `r coeffs[1]` \mathbf{B} + `r coeffs[2]` \mathbf{B}^2 + `r coeffs[3]` \mathbf{B}^3
+$$
+
+The absolute values of the roots of the right-hand side of this equation are:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+coeffs <- tidy(gdp_ma) |>
+  # filter(term != "constant") |>
+  select(estimate) |>
+  pull()
+
+abs(polyroot(c(coeffs |> tail(1), coeffs |> head(-1))))
+```
+
+The model is invertible. (As mentioned [previously](#FittedModelWillBeInvertible), the process by which these are constructed guarantees they will be invertible.)
+
+:::
+
+:::
+
+
+
+
+<a href="javascript:showhide('Solutions4')"
+style="font-size:.8em;">Small-Group Activity: Fitting an MA(q) Model to the Trade Data</a>
+  
+::: {#Solutions4 style="display:none;"}
     
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+vessels_ts <- rio::import("https://byuistats.github.io/timeseries/data/Vessels_Trade_US.csv") |>
+  # filter(-comments) |>
+  mutate(
+    date = yearmonth(dmy(date)),
+    ratio = vessels / lag(vessels, 12)
+  ) |>
+  na.omit() |>
+  as_tsibble(index = date)
+
+vessels_ts |>
+  autoplot(.vars = ratio) +
+    labs(
+      x = "Month",
+      y = "Ratio",
+      title = "Year-Over-Year Change in Net Tons on Vessels Cleared for Trade"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+vessels_ts |>
+  select(ratio) |>
+  acf()
+
+vessels_ts |>
+  select(ratio) |>
+  pacf()
+
+gdp_ma <- vessels_ts |>
+  model(arima = ARIMA(ratio ~ 1 + pdq(0,0,12) + PDQ(0, 0, 0)))
+
+tidy(gdp_ma)
+
+gdp_ma |>
+  residuals() |>
+  ACF() |>
+  autoplot()
+```
+
+
 
 :::
 
