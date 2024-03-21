@@ -351,7 +351,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#moving-average-ma-models" id="toc-moving-average-ma-models" class="nav-link" data-scroll-target="#moving-average-ma-models">Moving Average (MA) Models</a></li>
   </ul></li>
   <li><a href="#class-activity-simulating-an-maq-model-xxx-min" id="toc-class-activity-simulating-an-maq-model-xxx-min" class="nav-link" data-scroll-target="#class-activity-simulating-an-maq-model-xxx-min">Class Activity: Simulating an <span class="math inline">\(MA(q)\)</span> Model (xxx min)</a></li>
-  <li><a href="#small-group-activity-fitting-an-maq-model-xxx-min" id="toc-small-group-activity-fitting-an-maq-model-xxx-min" class="nav-link" data-scroll-target="#small-group-activity-fitting-an-maq-model-xxx-min">Small Group Activity: Fitting an <span class="math inline">\(MA(q)\)</span> Model (xxx min)</a></li>
+  <li><a href="#class-activity-fitting-an-maq-model-xxx-min" id="toc-class-activity-fitting-an-maq-model-xxx-min" class="nav-link" data-scroll-target="#class-activity-fitting-an-maq-model-xxx-min">Class Activity: Fitting an <span class="math inline">\(MA(q)\)</span> Model (xxx min)</a></li>
   <li><a href="#homework-preview-5-min" id="toc-homework-preview-5-min" class="nav-link" data-scroll-target="#homework-preview-5-min">Homework Preview (5 min)</a></li>
   </ul>
 </nav>
@@ -738,8 +738,161 @@ Check Your Understanding
 </div>
 </div>
 </section>
-<section id="small-group-activity-fitting-an-maq-model-xxx-min" class="level2">
-<h2 class="anchored" data-anchor-id="small-group-activity-fitting-an-maq-model-xxx-min">Small Group Activity: Fitting an <span class="math inline">\(MA(q)\)</span> Model (xxx min)</h2>
+<section id="class-activity-fitting-an-maq-model-xxx-min" class="level2">
+<h2 class="anchored" data-anchor-id="class-activity-fitting-an-maq-model-xxx-min">Class Activity: Fitting an <span class="math inline">\(MA(q)\)</span> Model (xxx min)</h2>
+<p>To fit an <span class="math inline">\(MA(q)\)</span> model,</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># dat &lt;- read_table("data/pounds_nz.dat") |&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   mutate(</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">#     date = seq(</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="co">#       ymd("1991-01-01"),</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">#       by = "3 months",</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">#       length.out = n()) |&gt;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a><span class="co">#       yearquarter()) |&gt;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a><span class="co">#   as_tsibble()</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>chocolate_month <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/chocolate.csv"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> <span class="fu">yearmonth</span>(<span class="fu">ym</span>(Month)),</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> <span class="fu">month</span>(dates),</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> <span class="fu">year</span>(dates),</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">stats_time =</span> year <span class="sc">+</span> (month <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">/</span> <span class="dv">12</span>,</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">month_seq =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>()</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">month =</span> <span class="fu">factor</span>(month)) <span class="sc">|&gt;</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> dates)</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Fit regression model</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>chocolate_lm <span class="ot">&lt;-</span> chocolate_month <span class="sc">|&gt;</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">TSLM</span>(chocolate <span class="sc">~</span> <span class="dv">0</span> <span class="sc">+</span> stats_time <span class="sc">+</span> month))</span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>resid_ts <span class="ot">&lt;-</span> chocolate_lm <span class="sc">|&gt;</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">.model0 =</span> .model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read in retail sales data for "445 Food and Beverage"</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>retail_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(naics <span class="sc">==</span> <span class="dv">445</span>) <span class="sc">|&gt;</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">as_date</span>(month) <span class="sc">&gt;=</span> <span class="fu">my</span>(<span class="st">"Jan 1996"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">as_date</span>(month) <span class="sc">&lt;</span> <span class="fu">my</span>(<span class="st">"Jan 2020"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">t =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>()) <span class="sc">|&gt;</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">std_t =</span> (t <span class="sc">-</span> <span class="fu">mean</span>(t)) <span class="sc">/</span> <span class="fu">sd</span>(t)) <span class="sc">|&gt;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos1 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos2 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos3 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos4 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos5 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos6 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin1 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin2 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin3 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin4 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin5 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>)</span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> month)</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>retail_ts <span class="sc">|&gt;</span></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> <span class="fu">log</span>(sales_millions)) <span class="sc">+</span></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stat_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, </span>
+<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>              <span class="at">formula =</span> y <span class="sc">~</span> x, </span>
+<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>              <span class="at">geom =</span> <span class="st">"smooth"</span>,</span>
+<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a>              <span class="at">se =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>              <span class="at">color =</span> <span class="st">"#E69F00"</span>,</span>
+<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>              <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span></span>
+<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
+<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Sales (Millions of U.S. Dollars)"</span>,</span>
+<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="fu">paste0</span>(retail_ts<span class="sc">$</span>business[<span class="dv">1</span>], <span class="st">" ("</span>, retail_ts<span class="sc">$</span>naics[<span class="dv">1</span>], <span class="st">")"</span>)</span>
+<span id="cb6-35"><a href="#cb6-35" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb6-36"><a href="#cb6-36" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb6-37"><a href="#cb6-37" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_6_lesson_1_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>model_combined <span class="ot">&lt;-</span> retail_ts <span class="sc">|&gt;</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">retail_full_cubic =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(sales_millions) <span class="sc">~</span> std_t <span class="sc">+</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">3</span>) <span class="sc">+</span> </span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>        sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 <span class="sc">+</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5        <span class="sc">+</span> cos6 ), <span class="co"># Note sin6 is omitted</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">retail_full_quad =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(sales_millions) <span class="sc">~</span> std_t <span class="sc">+</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span>  </span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>        sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 <span class="sc">+</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5        <span class="sc">+</span> cos6 ), <span class="co"># Note sin6 is omitted</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">retail_full_linear =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(sales_millions) <span class="sc">~</span> std_t <span class="sc">+</span> </span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>        sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3 <span class="sc">+</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5        <span class="sc">+</span> cos6 ), <span class="co"># Note sin6 is omitted</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>model_combined <span class="sc">|&gt;</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(retail_full_linear) <span class="sc">|&gt;</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 13 × 7
+   .model             term        estimate std.error statistic   p.value sig  
+   &lt;chr&gt;              &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+ 1 retail_full_linear (Intercept) 10.7      0.000976  10993.   0         TRUE 
+ 2 retail_full_linear std_t        0.201    0.000979    205.   6.70e-303 TRUE 
+ 3 retail_full_linear sin1        -0.0156   0.00138     -11.3  1.36e- 24 TRUE 
+ 4 retail_full_linear cos1        -0.00440  0.00138      -3.18 1.62e-  3 TRUE 
+ 5 retail_full_linear sin2        -0.0105   0.00138      -7.59 4.91e- 13 TRUE 
+ 6 retail_full_linear cos2         0.0313   0.00138      22.7  5.86e- 65 TRUE 
+ 7 retail_full_linear sin3        -0.00783  0.00138      -5.67 3.55e-  8 TRUE 
+ 8 retail_full_linear cos3         0.0288   0.00138      20.8  1.84e- 58 TRUE 
+ 9 retail_full_linear sin4         0.00172  0.00138       1.25 2.13e-  1 FALSE
+10 retail_full_linear cos4         0.0153   0.00138      11.1  7.82e- 24 TRUE 
+11 retail_full_linear sin5         0.0212   0.00138      15.4  6.87e- 39 TRUE 
+12 retail_full_linear cos5         0.0199   0.00138      14.4  1.71e- 35 TRUE 
+13 retail_full_linear cos6        -0.00215  0.000976     -2.20 2.89e-  2 TRUE </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">glance</span>(model_combined) <span class="sc">|&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, AIC, AICc, BIC)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 3 × 4
+  .model                AIC   AICc    BIC
+  &lt;chr&gt;               &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+1 retail_full_cubic  -2368. -2366. -2309.
+2 retail_full_quad   -2366. -2365. -2311.
+3 retail_full_linear -2347. -2345. -2296.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>resid_ts <span class="ot">&lt;-</span> model_combined <span class="sc">|&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(retail_full_linear) <span class="sc">|&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">.model0 =</span> .model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>resid_ts <span class="sc">|&gt;</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pacf</span>() </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="chapter_6_lesson_1_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>dat_ma <span class="ot">&lt;-</span> resid_ts <span class="sc">|&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">arima =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)))</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(dat_ma)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 2 × 7
+  .model0            .model term       estimate std.error statistic p.value
+  &lt;chr&gt;              &lt;chr&gt;  &lt;chr&gt;         &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;
+1 retail_full_linear arima  ma1       0.154       0.0494     3.11   0.00204
+2 retail_full_linear arima  constant -0.0000120   0.00108   -0.0111 0.991  </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>dat_ma <span class="sc">|&gt;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>() <span class="sc">|&gt;</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Response variable not specified, automatically selected `var = .resid`</code></pre>
+</div>
+<div class="cell-output-display">
+<p><img src="chapter_6_lesson_1_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
 <!-- Check your Understanding -->
 <div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
 <div class="callout-header d-flex align-content-center">
@@ -787,14 +940,14 @@ Download Homework
     &amp;= \phi_q(\mathbf{B}) w_t
 \end{align*}\]</span></p>
 </div>
-<p><a href="javascript:showhide('Solutions')" style="font-size:.8em;">Class Activity</a></p>
+<p><a href="javascript:showhide('Solutions')" style="font-size:.8em;">Simulating an MA(3) process</a></p>
 <div id="Solutions2" style="display:none;">
 <p>Change the values of the parameters <code>beta1</code>, <code>beta2</code>, and <code>beta3</code> in the code provided to match the following:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define the parameters of the simulation</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>beta1 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fl">0.7</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>beta2 <span class="ot">&lt;-</span> <span class="fl">0.5</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>beta3 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fl">0.2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># define the parameters of the simulation</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>beta1 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fl">0.7</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>beta2 <span class="ot">&lt;-</span> <span class="fl">0.5</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>beta3 <span class="ot">&lt;-</span> <span class="sc">-</span><span class="fl">0.2</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 <p><a href="javascript:showhide('Solutions3')" style="font-size:.8em;">Class Activity</a></p>

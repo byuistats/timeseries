@@ -348,10 +348,130 @@ $$
 
 
 
+## Class Activity: Fitting an $MA(q)$ Model (xxx min)
+
+To fit an $MA(q)$ model, 
+
+```{r}
+# dat <- read_table("data/pounds_nz.dat") |>
+#   mutate(
+#     date = seq(
+#       ymd("1991-01-01"),
+#       by = "3 months",
+#       length.out = n()) |>
+#       yearquarter()) |>
+#   as_tsibble()
+
+chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |>
+  mutate(
+    dates = yearmonth(ym(Month)),
+    month = month(dates),
+    year = year(dates),
+    stats_time = year + (month - 1) / 12,
+    month_seq = 1:n()
+  ) |>
+  mutate(month = factor(month)) |>
+  as_tsibble(index = dates)
+
+# Fit regression model
+chocolate_lm <- chocolate_month |>
+  model(TSLM(chocolate ~ 0 + stats_time + month))
+
+resid_ts <- chocolate_lm |>
+  residuals() |>
+  rename(.model0 = .model)
+```
+
+```{r}
+# Read in retail sales data for "445 Food and Beverage"
+retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
+  filter(naics == 445) |>
+  filter(as_date(month) >= my("Jan 1996")) |>
+  filter(as_date(month) < my("Jan 2020")) |>
+  mutate(t = 1:n()) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12)
+  ) |>
+  as_tsibble(index = month)
+
+retail_ts |>
+  autoplot(.vars = log(sales_millions)) +
+  stat_smooth(method = "lm", 
+              formula = y ~ x, 
+              geom = "smooth",
+              se = FALSE,
+              color = "#E69F00",
+              linetype = "dotted") +
+    labs(
+      x = "Month",
+      y = "Sales (Millions of U.S. Dollars)",
+      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+model_combined <- retail_ts |>
+  model(
+    retail_full_cubic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) + 
+        sin1 + cos1 + sin2 + cos2 + sin3 + cos3 +
+        sin4 + cos4 + sin5 + cos5        + cos6 ), # Note sin6 is omitted
+    retail_full_quad = TSLM(log(sales_millions) ~ std_t + I(std_t^2) +  
+        sin1 + cos1 + sin2 + cos2 + sin3 + cos3 +
+        sin4 + cos4 + sin5 + cos5        + cos6 ), # Note sin6 is omitted
+    retail_full_linear = TSLM(log(sales_millions) ~ std_t + 
+        sin1 + cos1 + sin2 + cos2 + sin3 + cos3 +
+        sin4 + cos4 + sin5 + cos5        + cos6 ), # Note sin6 is omitted
+  )
+
+model_combined |>
+  select(retail_full_linear) |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+glance(model_combined) |>
+  select(.model, AIC, AICc, BIC)
+
+resid_ts <- model_combined |>
+  select(retail_full_linear) |>
+  residuals() |>
+  rename(.model0 = .model)
+```
 
 
+```{r}
+resid_ts |>
+  pacf() 
+```
 
-## Small Group Activity: Fitting an $MA(q)$ Model (xxx min)
+
+```{r}
+dat_ma <- resid_ts |>
+  model(arima = ARIMA(.resid ~ 1 + pdq(0,0,1) + PDQ(0, 0, 0)))
+
+tidy(dat_ma)
+
+dat_ma |>
+  residuals() |>
+  ACF() |>
+  autoplot()
+```
+```{r}
+
+```
+
 
 
 
@@ -408,7 +528,7 @@ style="font-size:.8em;">MA(q) process in terms of the backward shift operator</a
 
 
 <a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Class Activity</a>
+style="font-size:.8em;">Simulating an MA(3) process</a>
   
 ::: {#Solutions2 style="display:none;"}
 
