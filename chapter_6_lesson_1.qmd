@@ -347,66 +347,78 @@ $$
 :::
 
 
+## Identifying AR and MA Models from the ACF and PACF
+
+#### AR Process
+
+Recall that on page 81, the textbook states that in general, the partial autocorrelation at lag $k$ is the $k^{th}$ coefficient of a fitted $AR(k)$ model.
+This implies that if the underlying process is $AR(p)$, then all the coefficients $\alpha_k$ will equal 0 whenever $k>p$. So, an $AR(p)$ process will result in partial correlations that are zero after lag $p$. So, we can look at the correlogram of partial autocorrelations to determine the order of an appropriate $AR$ process to model a time series.
+
+#### MA Process
+
+Similarly, for an $MA(q)$ process, the coefficients $\beta_k$ will equal 0 whenever $k > q$. Hence, an $MA(q)$ process will demonstrate autocorrelations that are 0 after lag $q$. So, considering the correlogram of autocorrelations, we can assess if an $MA(q)$ model would be appropriate. 
+
+Bless their hearts, the textbook authors give a bad example in Section 6.4.2. They even state that it is "not a realistic realisation." MA processes naturally arise in ratios of observed data. Multi-period asset returns (i.e. ratios of some previous term's value) tend to follow an MA process.
+
+For example, if there are 252 trading days in a year, then the daily series of year-over-year returns (this year's value divided by last year's value) follows an $MA(252-1)$ process. If we are comparing values observed to those from one week ago, we would have an $MA(7-1)$ process.
+
+#### Comparison 
+::: {.callout-note icon=false title="ACF and PACF of an $AR(p)$ Process"}
+
+We can use the PACF and ACF plots to assess if an $AR(p)$ or $MA(q)$ model is appropriate. 
+For an $AR(p)$ or $MA(q)$ process, we observe the following:
+
+<center>
+
+|      | AR(p)                  | MA(q)                  |
+|------|------------------------|------------------------|
+| ACF  | Tails off              | Cuts off after lag $q$ |
+| PACF | Cuts off after lag $p$ | Tails off              |
+
+</center>
+
+<!-- https://people.cs.pitt.edu/~milos/courses/cs3750/lectures/class16.pdf -->
+
+<!-- |      | AR(p)                  | MA(q)                  | ARMA(p,q)                | -->
+<!-- |------|------------------------|------------------------|--------------------------| -->
+<!-- | ACF  | Tails off              | Cuts off after lag $q$ | Tails off                | -->
+<!-- | PACF | Cuts off after lag $p$ | Tails off              | Tails off                | -->
+
+:::
+
 
 ## Class Activity: Fitting an $MA(q)$ Model (xxx min)
 
-To fit an $MA(q)$ model, 
+To fit an $MA(q)$ model, we look at the acf to determine if it cuts off after $q$ lags.
+
 
 ```{r}
-# dat <- read_table("data/pounds_nz.dat") |>
-#   mutate(
-#     date = seq(
-#       ymd("1991-01-01"),
-#       by = "3 months",
-#       length.out = n()) |>
-#       yearquarter()) |>
-#   as_tsibble()
+#| code-fold: true
+#| code-summary: "Show the code"
 
-chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |>
-  mutate(
-    dates = yearmonth(ym(Month)),
-    month = month(dates),
-    year = year(dates),
-    stats_time = year + (month - 1) / 12,
-    month_seq = 1:n()
-  ) |>
-  mutate(month = factor(month)) |>
-  as_tsibble(index = dates)
-
-# Fit regression model
-chocolate_lm <- chocolate_month |>
-  model(TSLM(chocolate ~ 0 + stats_time + month))
-
-resid_ts <- chocolate_lm |>
-  residuals() |>
-  rename(.model0 = .model)
-```
-
-```{r}
-# Read in retail sales data for "445 Food and Beverage"
-retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
-  filter(naics == 445) |>
-  filter(as_date(month) >= my("Jan 1996")) |>
-  filter(as_date(month) < my("Jan 2020")) |>
+# gdp_ts <- rio::import("https://byuistats.github.io/timeseries/data/gdp_fred.csv") |>
+gdp_ts <- rio::import("data/gdp_fred.csv") |>
+  select(-comments) |>
+  mutate(year_over_year = gdp_millions / lag(gdp_millions, 4)) |>
+  mutate(quarter = yearquarter(mdy(quarter))) |>
+  filter(quarter >= yearquarter(my("Jan 1990")) & quarter < yearquarter(my("Jan 2025"))) |>
+  na.omit() |>
   mutate(t = 1:n()) |>
   mutate(std_t = (t - mean(t)) / sd(t)) |>
-  mutate(
-    cos1 = cos(2 * pi * 1 * t / 12),
-    cos2 = cos(2 * pi * 2 * t / 12),
-    cos3 = cos(2 * pi * 3 * t / 12),
-    cos4 = cos(2 * pi * 4 * t / 12),
-    cos5 = cos(2 * pi * 5 * t / 12),
-    cos6 = cos(2 * pi * 6 * t / 12),
-    sin1 = sin(2 * pi * 1 * t / 12),
-    sin2 = sin(2 * pi * 2 * t / 12),
-    sin3 = sin(2 * pi * 3 * t / 12),
-    sin4 = sin(2 * pi * 4 * t / 12),
-    sin5 = sin(2 * pi * 5 * t / 12)
-  ) |>
-  as_tsibble(index = month)
+  as_tsibble(index = quarter)
 
-retail_ts |>
-  autoplot(.vars = log(sales_millions)) +
+gdp_ts |>
+  autoplot(.vars = gdp_millions) +
+    labs(
+      x = "Quarter",
+      y = "GDP (Millions of $US)",
+      title = "U.S. Gross Domestic Product (GDP) in Millions of Dollars"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+gdp_ts |>
+  autoplot(.vars = year_over_year) +
   stat_smooth(method = "lm", 
               formula = y ~ x, 
               geom = "smooth",
@@ -414,63 +426,46 @@ retail_ts |>
               color = "#E69F00",
               linetype = "dotted") +
     labs(
-      x = "Month",
-      y = "Sales (Millions of U.S. Dollars)",
-      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+      x = "Quarter",
+      y = "Proportion",
+      title = "Year-Over-Year Change in U.S. GDP"
     ) +
     theme_minimal() +
     theme(plot.title = element_text(hjust = 0.5))
+
+gdp_ts |>
+  select(year_over_year) |>
+  acf()
+
+gdp_ts |>
+  select(year_over_year) |>
+  pacf()
 ```
 
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What process would you use to model the year-over-year GDP ratios?
+-   Modify the code below to implement your model.
 ```{r}
-model_combined <- retail_ts |>
-  model(
-    retail_full_cubic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) + 
-        sin1 + cos1 + sin2 + cos2 + sin3 + cos3 +
-        sin4 + cos4 + sin5 + cos5        + cos6 ), # Note sin6 is omitted
-    retail_full_quad = TSLM(log(sales_millions) ~ std_t + I(std_t^2) +  
-        sin1 + cos1 + sin2 + cos2 + sin3 + cos3 +
-        sin4 + cos4 + sin5 + cos5        + cos6 ), # Note sin6 is omitted
-    retail_full_linear = TSLM(log(sales_millions) ~ std_t + 
-        sin1 + cos1 + sin2 + cos2 + sin3 + cos3 +
-        sin4 + cos4 + sin5 + cos5        + cos6 ), # Note sin6 is omitted
-  )
+#| eval: false
 
-model_combined |>
-  select(retail_full_linear) |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
+gdp_ma <- gdp_ts |>
+  model(arima = ARIMA(year_over_year ~ 1 + pdq(0,0,1) + PDQ(0, 0, 0)))
 
-glance(model_combined) |>
-  select(.model, AIC, AICc, BIC)
+tidy(gdp_ma)
 
-resid_ts <- model_combined |>
-  select(retail_full_linear) |>
-  residuals() |>
-  rename(.model0 = .model)
-```
-
-
-```{r}
-resid_ts |>
-  pacf() 
-```
-
-
-```{r}
-dat_ma <- resid_ts |>
-  model(arima = ARIMA(.resid ~ 1 + pdq(0,0,1) + PDQ(0, 0, 0)))
-
-tidy(dat_ma)
-
-dat_ma |>
+gdp_ma |>
   residuals() |>
   ACF() |>
   autoplot()
 ```
-```{r}
+-   What are the values of the model coefficients?
+-   Based on the acf of the residuals, is the MA model you identified a good fit to the data?
 
-```
+:::
+
 
 
 
@@ -541,7 +536,6 @@ beta1 <- -0.7
 beta2 <- 0.5
 beta3 <- -0.2
 ```
-
 
 :::
 
