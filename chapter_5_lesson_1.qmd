@@ -510,16 +510,16 @@ last_full_year <- chocolate_month |>
 
 first_year <- last_full_year - number_of_years + 1
 
-retail_ts <- chocolate_month |>
+chocolate_ts <- chocolate_month |>
   filter(year <= last_full_year & year >= first_year) |>
   mutate(month_seq = 1:n())
 ```
 
-Recall the time series representing the monthly relative number of Google searches for the term "chocolate." Here is a time plot of the data from `r min(retail_ts$year)` to `r max(retail_ts$year)`. 
-Month 1 is `r retail_ts |> filter(month_seq == 1) |> dplyr::select(dates) |> pull() |> format("%B %Y")`, 
-month 13 is `r retail_ts |> filter(month_seq == 13) |> dplyr::select(dates) |> pull() |> format("%B %Y")`,
+Recall the time series representing the monthly relative number of Google searches for the term "chocolate." Here is a time plot of the data from `r min(chocolate_ts$year)` to `r max(chocolate_ts$year)`. 
+Month 1 is `r chocolate_ts |> filter(month_seq == 1) |> dplyr::select(dates) |> pull() |> format("%B %Y")`, 
+month 13 is `r chocolate_ts |> filter(month_seq == 13) |> dplyr::select(dates) |> pull() |> format("%B %Y")`,
 and
-month 25 is `r retail_ts |> filter(month_seq == 25) |> dplyr::select(dates) |> pull() |> format("%B %Y")`.
+month 25 is `r chocolate_ts |> filter(month_seq == 25) |> dplyr::select(dates) |> pull() |> format("%B %Y")`.
 
 ```{r}
 #| echo: false
@@ -527,7 +527,7 @@ month 25 is `r retail_ts |> filter(month_seq == 25) |> dplyr::select(dates) |> p
 #| label: fig-chocolatetimeplot
 #| fig-cap: "Time plot of a portion of the chocolate search data."
 
-chocolate_scatter_plot <- ggplot(retail_ts, aes(month_seq, chocolate)) +
+chocolate_scatter_plot <- ggplot(chocolate_ts, aes(month_seq, chocolate)) +
   # data points
   geom_point(color = "#56B4E9", size = 2) +
   # x-axis
@@ -546,9 +546,9 @@ chocolate_scatter_plot <- ggplot(retail_ts, aes(month_seq, chocolate)) +
     y = "Searches",
     title = paste0(
       "Relative Number of Google Searches for 'Chocolate' (",
-      min(retail_ts$year),
+      min(chocolate_ts$year),
       "-",
-      max(retail_ts$year),
+      max(chocolate_ts$year),
       ")")
   ) +
   theme_minimal() +
@@ -556,7 +556,7 @@ chocolate_scatter_plot <- ggplot(retail_ts, aes(month_seq, chocolate)) +
   theme(plot.title = element_text(hjust = 0.5))
 
 # Fit regression model
-model <- lm(chocolate ~ month_seq, data = retail_ts)
+model <- lm(chocolate ~ month_seq, data = chocolate_ts)
 
 # Create data frame for the regression line
 reg_line_df <- data.frame(month_seq = c(0, number_of_years * 12 + 1)) |>
@@ -567,7 +567,7 @@ reg_line_df <- data.frame(month_seq = c(0, number_of_years * 12 + 1)) |>
 zero_int_reg_line_df <- data.frame(month_seq = c(0, number_of_years * 12 + 1)) |>
   mutate(chocolate = coef(model)[2] * month_seq)
 
-arrow_df0 <- retail_ts |>
+arrow_df0 <- chocolate_ts |>
   mutate(
     arrow_start = coef(model)[2] * month_seq,
     deviation = chocolate - arrow_start
