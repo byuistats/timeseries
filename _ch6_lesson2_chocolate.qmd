@@ -38,16 +38,16 @@ last_full_year <- chocolate_month |>
 
 first_year <- last_full_year - number_of_years + 1
 
-retail_ts <- chocolate_month |>
+chocolate_ts <- chocolate_month |>
   filter(year <= last_full_year & year >= first_year) |>
   mutate(month_seq = 1:n())
 ```
 
-Recall the time series representing the monthly relative number of Google searches for the term "chocolate." Here is a time plot of the data from `r min(retail_ts$year)` to `r max(retail_ts$year)`. 
-Month 1 is `r retail_ts |> filter(month_seq == 1) |> dplyr::select(dates) |> pull() |> format("%B %Y")`, 
-month 13 is `r retail_ts |> filter(month_seq == 13) |> dplyr::select(dates) |> pull() |> format("%B %Y")`,
+Recall the time series representing the monthly relative number of Google searches for the term "chocolate." Here is a time plot of the data from `r min(chocolate_ts$year)` to `r max(chocolate_ts$year)`. 
+Month 1 is `r chocolate_ts |> filter(month_seq == 1) |> dplyr::select(dates) |> pull() |> format("%B %Y")`, 
+month 13 is `r chocolate_ts |> filter(month_seq == 13) |> dplyr::select(dates) |> pull() |> format("%B %Y")`,
 and
-month 25 is `r retail_ts |> filter(month_seq == 25) |> dplyr::select(dates) |> pull() |> format("%B %Y")`.
+month 25 is `r chocolate_ts |> filter(month_seq == 25) |> dplyr::select(dates) |> pull() |> format("%B %Y")`.
 
 ```{r}
 #| echo: false
@@ -55,168 +55,10 @@ month 25 is `r retail_ts |> filter(month_seq == 25) |> dplyr::select(dates) |> p
 #| label: fig-chocolatetimeplot
 #| fig-cap: "Time plot of a portion of the chocolate search data."
 
-chocolate_scatter_plot <- ggplot(retail_ts, aes(month_seq, chocolate)) +
-  # data points
-  geom_point(color = "#56B4E9", size = 2) +
-  # x-axis
-  geom_segment(x = 0, xend = number_of_years * 12 + 0.75, y = 0, yend = 0,
-               arrow = arrow(length = unit(0.25, "cm"))) +
-  geom_text(x = number_of_years * 12 + 0.75, y = 5, label = "x") +
-  scale_x_continuous(breaks = 1:(number_of_years * 12)) +
-  # y-axis
-  geom_segment(x = 0, xend = 0, y = 0, yend = 100,
-               arrow = arrow(length = unit(0.25, "cm"))) +
-  geom_text(x = 0.5, y = 102, label = "y") +
-  ylim(0,102) +
-  # labels and formatting
-  labs(
-    x = "Month",
-    y = "Searches",
-    title = paste0(
-      "Relative Number of Google Searches for 'Chocolate' (",
-      min(retail_ts$year),
-      "-",
-      max(retail_ts$year),
-      ")")
-  ) +
-  theme_minimal() +
-  theme(panel.grid.minor.x = element_blank()) +
-  theme(plot.title = element_text(hjust = 0.5))
 
-# Fit regression model
-model <- lm(chocolate ~ month_seq, data = retail_ts)
-
-# Create data frame for the regression line
-reg_line_df <- data.frame(month_seq = c(0, number_of_years * 12 + 1)) |>
-  mutate(chocolate = coef(model)[1] + coef(model)[2] * month_seq)
-
-# Create data frame with line that goes through origin
-# and is parallel to regression line
-zero_int_reg_line_df <- data.frame(month_seq = c(0, number_of_years * 12 + 1)) |>
-  mutate(chocolate = coef(model)[2] * month_seq)
-
-arrow_df0 <- retail_ts |>
-  mutate(
-    arrow_start = coef(model)[2] * month_seq,
-    deviation = chocolate - arrow_start
-  )
-
-arrow_df <- arrow_df0 |>
-  group_by(month) |>
-  summarize(
-    mean_deviation = mean(deviation),
-    .groups = 'drop'
-  ) |>
-  right_join(arrow_df0, by = "month") |>
-  arrange(dates)
-
-# Display basic scatterplot
-chocolate_scatter_plot
 ```
 
-We fit a regression line to these data.
-
-```{r}
-#| echo: false
-#| warning: false
-#| label: fig-chocolateaddreg
-#| fig-cap: "The regression line is superimposed on the chocolate search time series."
-
-chocolate_scatter_plot +
-  # regression line
-  geom_smooth(method='lm', formula= y~x, linetype = "dashed", color = "#F0E442", se = FALSE)
-```
-
-Now, we draw a line that is parallel to the regression line (has the same slope) but has a Y-intercept of 0.
-
-```{r}
-#| echo: false
-#| warning: false
-#| label: fig-chocolateaddparallel
-#| fig-cap: "A line parallel to the regression line that passes through the origin is added to the chocolate search time plot."
-
-chocolate_scatter_plot +
-  # regression line
-  geom_line(data = reg_line_df, linetype = "dashed", linewidth = 1, color = "#F0E442") +
-  # line through the origin, parallel to regression line
-  geom_line(data = zero_int_reg_line_df, linewidth = 1, color = "#D55E00")
-```
-
-For each month, we find the average amount that the relative number of google seachers that month deviates from the orange line (that is parallel to the regression line and passes through the origin). So, the length of the green line is the same for every January, etc.
-
-```{r}
-#| echo: false
-#| warning: false
-#| label: fig-chocolatelinearModelWithSeasonalIndicatorVariables
-#| fig-cap: "Representation of a linear model with seasonal indicator variables for the chocolate search time series data."
-
-
-chocolate_scatter_plot +
-  # regression line
-  geom_line(data = reg_line_df, linetype = "dashed", linewidth = 1, color = "#F0E442") +
-  # line through the origin, parallel to regression line
-  geom_line(data = zero_int_reg_line_df, linewidth = 1, color = "#D55E00") +
-  # Vertical arrows
-  geom_segment(aes(x = month_seq, xend = month_seq,
-                   y = arrow_df$arrow_start, yend = arrow_df$arrow_start + arrow_df$mean_deviation),
-               arrow = arrow(length = unit(0.25, "cm")),
-               color = "#009E73")
-```
-
-When the bottom of the green arrow is on the orange line, the top of the green arrow is the estimate of the value of the time series for that month.
-
-We will create a linear model that includes a constant term for each month. This constant monthly term is called a **seasonal indicator variable**. This name is derived from the fact that each variable indicates (either as 1 or 0) whether a given month is represented. For example, one of the seasonal indicator variables will represent January. It will be equal to 1 for any value of $t$ representing an observation drawn in January and 0 otherwise. Indicator variables are also called **dummy varaibles.**
-
-This additive model with seasonal indicator variables can be perceived similarly to other additive models with a seasonal component:
-
-$$
-  x_t = m_t + s_t + z_t
-$$
-where 
-$$
-  s_t = 
-    \begin{cases}
-      \beta_1, & t ~\text{falls in season}~ 1 \\
-      \beta_2, & t ~\text{falls in season}~ 2 \\
-      ⋮~~~~ & ~~~~~~~~~~~~⋮ \\
-      \beta_s, & t ~\text{falls in season}~ s 
-    \end{cases}
-$$
-and $s$ is the number of seasons in one cycle/period, and $n$ is the number of observations, so $t = 1, 2, \ldots, n$ and $i = 1, 2, \ldots, s$, and $z_t$ is the residual error series, which can be autocorrelated.
-
-It is important to note that $m_t$ does not need to be a constant. It can be a linear trend:
-$$
-  m_t = \alpha_0 + \alpha_1 t
-$$
-or quadratic:
-$$
-  m_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2
-$$
-a polynomial of degree $p$:
-$$
-  m_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2 + \cdots + \alpha_p t^p
-$$
-or any other function of $t$.
-
-If $s_t$ has the same value for all corresponding seasons, then we can write the model as:
-$$
-  x_t = m_t + \beta_{1 + [(t-1) \mod s]} + z_t
-$$
-
-Putting this all together, if we have a time series that has a linear trend and monthly observations where $t=1$ corresponds to January, then the model becomes:
-\begin{align*}
-  x_t 
-    &= ~~~~ \alpha_1 t + s_t + z_t \\
-    &= 
-      \begin{cases}
-        \alpha_1 t + \beta_1 + z_t, & t = 1, 13, 25, \ldots ~~~~ ~~(January) \\
-        \alpha_1 t + \beta_2 + z_t, & t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
-        ~~~~~~~~⋮ & ~~~~~~~~~~~~⋮ \\
-        \alpha_1 t + \beta_{12} + z_t, & t = 12, 24, 36, \ldots ~~~~ (December) 
-      \end{cases}
-\end{align*}
-
-This is the model illustrated in @fig-chocolatelinearModelWithSeasonalIndicatorVariables. The orange line represents the term $\alpha_1 t$ and the green arrows represent the values of $\beta_1, ~ \beta_2, ~ \ldots, ~ \beta_{12}$. 
+ 
 
 The folded chunk of code below fits the model to the data and computes the estimated parameter values. 
 ```{r}
@@ -245,107 +87,41 @@ param_est <- chocolate_lm |>
 ```
 
 
-```{r}
-#| echo: false
 
-alpha1 <- param_est |> head(1)
-betas <- param_est |> tail(-1)
-betas_df <- tibble(
-  month = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
-  betas = betas
-)
-```
-
-The estimated value of $\alpha_1$ is `r alpha1`. The estimated values for the $\beta_i$ parameters are:
 
 ```{r}
-#| echo: false
-#| label: tbl-chocolateParameterEstIndicator
-#| tbl-cap: "Estimated values of $beta_i$ for the fitted model for chocolate search time series."
+chocolate_lm |>
+  residuals() |>
+  acf()
 
-first_half <- betas_df |>
-  head(6) |>
-  pivot_wider(names_from = month, values_from = betas)
-
-last_half <- betas_df |>
-  tail(6) |>
-  pivot_wider(names_from = month, values_from = betas)
-
-first_half |>
-  display_table()
-
-last_half |>
-  display_table()
+chocolate_lm |>
+  residuals() |>
+  pacf()
 ```
-
-Now, we compute forecasted (future) values for the relative number of Google searches for the word "Chocolate."
 
 ```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-#| label: fig-chocForecastPlot
-#| fig-cap: "Forecasted values of the relative number of Google searches for the word 'chocolate.'"
+model_resid <- chocolate_lm |>
+  residuals() |>
+  select(-.model) |>
+  model(
+    auto = ARIMA(.resid ~ 1 + pdq(0:3,0,0:3) + PDQ(0, 0, 0)),
+    a000 = ARIMA(.resid ~ 1 + pdq(0,0,0) + PDQ(0, 0, 0)),
+    a001 = ARIMA(.resid ~ 1 + pdq(0,0,1) + PDQ(0, 0, 0)),
+    a002 = ARIMA(.resid ~ 1 + pdq(0,0,2) + PDQ(0, 0, 0)),
+    a100 = ARIMA(.resid ~ 1 + pdq(1,0,0) + PDQ(0, 0, 0)),
+    a101 = ARIMA(.resid ~ 1 + pdq(1,0,1) + PDQ(0, 0, 0)),
+    a102 = ARIMA(.resid ~ 1 + pdq(1,0,2) + PDQ(0, 0, 0)),
+    a200 = ARIMA(.resid ~ 1 + pdq(2,0,0) + PDQ(0, 0, 0)),
+    a201 = ARIMA(.resid ~ 1 + pdq(2,0,1) + PDQ(0, 0, 0)),
+    a202 = ARIMA(.resid ~ 1 + pdq(2,0,2) + PDQ(0, 0, 0))) 
 
-num_years_to_forecast <- 5
+# best order is 2, 0, 0
+# auto would pick it without running each    
+model_best <- select(model_resid, "a200")
 
-new_dat <- chocolate_month |>
-  as_tibble() |>
-  tail(num_years_to_forecast * 12) |>
-  dplyr::select(stats_time, month) |>
-  mutate(
-    stats_time = stats_time + num_years_to_forecast,
-    alpha = tidy(chocolate_lm) |> slice(1) |> pull(estimate),
-    beta = rep(tidy(chocolate_lm) |> slice(2:13) |> pull(estimate), num_years_to_forecast)
-  )
-
-chocolate_forecast <- chocolate_lm |>
-  forecast(new_data=as_tsibble(new_dat, index = stats_time)) 
-
-chocolate_forecast |> 
-  autoplot(chocolate_month, level = 95) +
-  labs(
-      x = "Month",
-      y = "Relative Count of Google Searches",
-      title = paste0("Google Searches for 'Chocolate' (", min(chocolate_month$year), "-", max(chocolate_month$year), ")"),
-      subtitle = paste0(num_years_to_forecast, "-Year Forecast Based on a Linear Model with Seasonal Indicator Variables")
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.subtitle = element_text(hjust = 0.5)
-    )
-
+model_resid |>
+  glance() |>
+  filter(AIC == min(AIC) | AICc == min(AICc) | BIC == min(BIC) | .model == "auto")
 ```
-
-
-
-<!-- Beginning of two columns -->
-::: columns
-::: {.column width="45%"}
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-#| label: tbl-chocForecastValues
-#| tbl-cap: "Select forecasted values of the relative count of Google searches for 'chocolate'."
-
-new_dat |>
-  mutate(estimate = alpha * stats_time + beta) |>
-  display_partial_table(nrow_head = 4, nrow_tail = 3, decimals = 3)
-```
-
-:::
-
-::: {.column width="10%"}
-<!-- empty column to create gap -->
-:::
-
-::: {.column width="45%"}
-
-@tbl-chocForecastValues gives a few of the forecasted values illustrated in @fig-chocForecastPlot.
-
-:::
-:::
-<!-- End of two columns -->
 
 
