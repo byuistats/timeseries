@@ -1,0 +1,131 @@
+---
+title: "Untitled"
+---
+
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+
+```{r}
+#| echo: false
+
+temps_ts <- rio::import("data/global_temparature.csv") |>
+  as_tsibble(index = year)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-globalTempTimePlot
+#| fig-cap: "Time plot of the mean annual temperature globally for select years."
+
+temps_ts <- rio::import("data/global_temparature.csv") |>
+  as_tsibble(index = year) |>
+  filter(year >= 1970)
+
+temps_ts |> autoplot(.vars = change) +
+    labs(
+      x = "Year",
+      y = "Temperature Change (Celsius)",
+      title = paste0("Change in Mean Annual Global Temperature (", min(temps_ts$year), "-", max(temps_ts$year), ")")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    ) + 
+  geom_smooth(method='lm', formula= y~x)
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: tbl-globalTempsEstParams
+#| tbl-cap: "Parameter estimates for the fitted global temperature time series."
+
+global <- tibble(x = scan("data/global.dat")) |>
+    mutate(
+        date = seq(
+            ymd("1856-01-01"),
+            by = "1 months",
+            length.out = n()),
+        year = year(date),
+        year_month = tsibble::yearmonth(date),
+        stats_time = year + c(0:11)/12)
+
+global_ts <- global |>
+    as_tsibble(index = year_month)
+
+temp_tidy <- global_ts |> filter(year >= 1970)
+temp_lm <- temp_tidy |>
+  model(lm = TSLM(x ~ stats_time ))
+# tidy(temp_lm) |> pull(estimate)
+
+tidy(temp_lm) |>
+  mutate(
+    lower = estimate + qnorm(0.025) * std.error,
+    upper = estimate + qnorm(0.975) * std.error
+  ) |>
+  display_table()
+```
+
+```{r}
+#| echo: false
+#| warning: false
+#| label: tbl-globalTempsResidACF
+#| tbl-cap: "Autocorrelation function of the residuals for the global temperature time series."
+
+acf_lag1 <- residuals(temp_lm) |>
+  feasts::ACF(var = .resid) |> 
+  as_tibble() |> 
+  head(1) |> 
+  dplyr::select(acf) |> 
+  pull()
+
+residuals(temp_lm) |>
+  feasts::ACF(var = .resid) |> 
+  mutate(acf = round(acf, 3)) |>
+  as_tibble() |>
+  select(-.model) |> 
+  head(10) |>
+  pivot_wider(names_from = lag, values_from = acf) |>
+  display_table("0.5in")
+```
+
+```{r}
+#| output: false
+
+# Load additional packages
+pacman::p_load(tidymodels, multilevelmod,
+  nlme, broom.mixed)
+
+temp_spec <- linear_reg() |>
+  set_engine("gls", correlation = nlme::corAR1(0.706))
+
+temp_gls <- temp_spec |>
+  fit(x ~ stats_time, data = global_ts)
+
+tidy(temp_gls) |>
+  mutate(
+    lower = estimate + qnorm(0.025) * std.error,
+    upper = estimate + qnorm(0.975) * std.error
+  )
+```
+
+```{r}
+#| echo: false
+#| label: tbl-globalTempsGLS
+#| tbl-cap: "Parameter estimates for the Generalized Least Squares estimates of the fit for the global temperature time series."
+
+tidy(temp_gls) |>
+  mutate(
+    lower = estimate + qnorm(0.025) * std.error,
+    upper = estimate + qnorm(0.975) * std.error
+  ) |>
+  display_table()
+```
+
+
