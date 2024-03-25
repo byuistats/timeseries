@@ -169,8 +169,322 @@ $$
 :::
 
 
+## Class Activity: Model for the Residuals from the Rexburg Weather Model
 
-# xxx
+### Review
+
+We now review the model we built in [Chapter 5 Lesson 3](https://byuistats.github.io/timeseries/chapter_5_lesson_3.html#weather) for the monthly average of the daily high temperature in Rexburg, Idaho.
+
+```{r}
+#| label: weather1
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+weather_df <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather_monthly.csv") |>
+  mutate(dates = my(date_text)) |>
+  filter(dates >= my("1/2008") & dates <= my("12/2023")) |>
+  rename(x = avg_daily_high_temp) |>
+  mutate(TIME = 1:n()) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * TIME/12),
+    cos2 = cos(2 * pi * 2 * TIME/12),
+    cos3 = cos(2 * pi * 3 * TIME/12),
+    cos4 = cos(2 * pi * 4 * TIME/12),
+    cos5 = cos(2 * pi * 5 * TIME/12),
+    cos6 = cos(2 * pi * 6 * TIME/12),
+    sin1 = sin(2 * pi * 1 * TIME/12),
+    sin2 = sin(2 * pi * 2 * TIME/12),
+    sin3 = sin(2 * pi * 3 * TIME/12),
+    sin4 = sin(2 * pi * 4 * TIME/12),
+    sin5 = sin(2 * pi * 5 * TIME/12),
+    sin6 = sin(2 * pi * 6 * TIME/12)) |>
+  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME)) |>
+  as_tsibble(index = TIME)
+
+weather_df |>
+  as_tsibble(index = dates) |>
+  autoplot(.vars = x) +
+  geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
+    labs(
+      x = "Month",
+      y = "Mean Daily High Temperature (Fahrenheit)",
+      title = "Time Plot of Mean Daily Rexburg High Temperature by Month",
+      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+```
+
+
+
+
+
+<!-- Now, we compare all the models side-by-side. -->
+
+<!-- ```{r} -->
+<!-- #| label: weather17 -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: "Show the code" -->
+<!-- #| output: false -->
+
+<!-- model_combined <- weather_df |> -->
+<!--   model( -->
+<!--     full_cubic = TSLM(x ~ TIME + I(TIME^2) + I(TIME^3) + -->
+<!--       sin1 + cos1 + sin2 + cos2 + sin3 + cos3  -->
+<!--       + sin4 + cos4 + sin5 + cos5 + cos6), -->
+<!--     full_quadratic = TSLM(x ~ TIME + I(TIME^2) + -->
+<!--       sin1 + cos1 + sin2 + cos2 + sin3 + cos3  -->
+<!--       + sin4 + cos4 + sin5 + cos5 + cos6), -->
+<!--     full_linear = TSLM(x ~ TIME  + -->
+<!--       sin1 + cos1 + sin2 + cos2 + sin3 + cos3  -->
+<!--       + sin4 + cos4 + sin5 + cos5 + cos6 ), -->
+<!--     reduced_quadratic_1  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6), -->
+<!--     reduced_quadratic_2  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos6), -->
+<!--     reduced_quadratic_3  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3), -->
+<!--     reduced_quadratic_4  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3), -->
+<!--     reduced_quadratic_5  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2), -->
+<!--     reduced_quadratic_6  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1), -->
+<!--     reduced_linear_1  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6), -->
+<!--     reduced_linear_2  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos6), -->
+<!--     reduced_linear_3  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3), -->
+<!--     reduced_linear_4  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3), -->
+<!--     reduced_linear_5  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2), -->
+<!--     reduced_linear_6  = TSLM(x ~ TIME + sin1 + cos1) -->
+<!--   ) -->
+
+<!-- glance(model_combined) |> -->
+<!--   select(.model, AIC, AICc, BIC) -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- #| label: weather18 -->
+<!-- #| echo: false -->
+
+<!-- combined_models <- glance(model_combined) |>  -->
+<!--   select(.model, AIC, AICc, BIC) -->
+
+<!-- minimum <- combined_models |> -->
+<!--   summarize( -->
+<!--     AIC = which(min(AIC)==AIC), -->
+<!--     AICc = which(min(AICc)==AICc), -->
+<!--     BIC = which(min(BIC)==BIC) -->
+<!--   ) -->
+<!-- combined_models |> -->
+<!--   rename(Model = ".model") |> -->
+<!--   round_df(1) |> -->
+<!--   format_cells(rows = minimum$AIC, cols = 2, "bold") |> -->
+<!--   format_cells(rows = minimum$AICc, cols = 3, "bold") |> -->
+<!--   format_cells(rows = minimum$BIC, cols = 4, "bold") |> -->
+<!--   display_table() -->
+<!-- ``` -->
+
+
+We chose the "Reduced Linear 5" model. For convenience, we reprint the coefficients here.
+
+```{r}
+#| label: weather22
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced5_linear_lm <- weather_df |>
+  model(reduced_linear_5  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2))
+
+reduced5_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+r5lin_coef_unrounded <- reduced5_linear_lm |>
+  tidy() |>
+  select(term, estimate, std.error)
+
+r5lin_coef <- r5lin_coef_unrounded |>
+  round_df(3)
+
+stats_unrounded <- weather_df |>
+  as_tibble() |>
+  dplyr::select(TIME) |>
+  summarize(mean = mean(TIME), sd = sd(TIME))
+
+stats <- stats_unrounded |>
+  round_df(3)
+```
+
+The fitted model is:
+
+\begin{align*}
+  x_t 
+      &= \hat \beta_0 + \hat \beta_1 \left( \frac{t - \bar t}{s_t} \right)  \\
+      & ~~~~~~~~~~ + \hat \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \hat \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~ + \hat \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \hat \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= `r r5lin_coef$estimate[1]` 
+            + `r r5lin_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right) \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+\end{align*}
+
+### Fiiting an ARMA(p,q) Model
+
+First, we create an acf and pacf plot of the residuals from the model above.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-acfResidWeather
+#| fig-cap: "ACF Plot of the Residuals from the Rexburg Weather Model"
+
+reduced5_linear_lm |>
+  residuals() |>
+  ACF() |>
+  autoplot(var = .resid)
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-pacfResidWeather
+#| fig-cap: "PACF Plot of the Residuals from the Rexburg Weather Model"
+
+reduced5_linear_lm |> 
+  residuals() |>
+  PACF() |>
+  autoplot(var = .resid)
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What ARMA model does the combined information in the acf and pacf plots suggest would be appropriate for the residuals of the Rexburg weather model?
+
+:::
+
+Here are summaries of some ARMA models that could be constructed.
+
+```{r}
+#| output: false
+
+model_resid <- reduced5_linear_lm |>
+  residuals() |>
+  select(-.model) |>
+  model(
+    auto = ARIMA(.resid ~ 1 + pdq(0:2,0,0:2) + PDQ(0, 0, 0)),
+    a000 = ARIMA(.resid ~ 1 + pdq(0,0,0) + PDQ(0, 0, 0)),
+    a001 = ARIMA(.resid ~ 1 + pdq(0,0,1) + PDQ(0, 0, 0)),
+    a002 = ARIMA(.resid ~ 1 + pdq(0,0,2) + PDQ(0, 0, 0)),
+    a100 = ARIMA(.resid ~ 1 + pdq(1,0,0) + PDQ(0, 0, 0)),
+    a101 = ARIMA(.resid ~ 1 + pdq(1,0,1) + PDQ(0, 0, 0)),
+    a102 = ARIMA(.resid ~ 1 + pdq(1,0,2) + PDQ(0, 0, 0)),
+    a200 = ARIMA(.resid ~ 1 + pdq(2,0,0) + PDQ(0, 0, 0)),
+    a201 = ARIMA(.resid ~ 1 + pdq(2,0,1) + PDQ(0, 0, 0)),
+    a202 = ARIMA(.resid ~ 1 + pdq(2,0,2) + PDQ(0, 0, 0))) 
+
+model_resid |>
+  glance() 
+```
+
+
+```{r}
+#| echo: false
+
+# model_best |>
+#   residuals() |>
+#   ACF() |>
+#   autoplot()
+
+
+# new_data <- tibble(
+#   date = seq(
+#     max(cbe_ts$date) + months(1),
+#       max(cbe_ts$date) + months(36),
+#       by = "1 months"),
+#   month = tsibble::yearmonth(date),  
+#   time = seq(nrow(cbe_ts), length = 36),
+#   imth = rep(1:12, 3)) |>
+#   as_tsibble(index = month)
+# 
+# plot_dat <- new_data |>
+#   mutate(
+#     residuals = forecast(
+#       model_best,
+#       h = "3 years") |>
+#       pull(.mean),
+#     expected_log = forecast(
+#       elec_lm,
+#       new_data = new_data) |>
+#       pull(.mean),
+#     expected = exp(expected_log + residuals)  
+#   )
+# 
+# ggplot() +
+#   geom_line(data = cbe_ts, aes(x = date, y = elec)) +
+#   geom_line(data = plot_dat, aes(x = date, y = expected), linetype = 2)
+```
+
+
+
+
+```{r}
+#| label: tbl-ModelComparison
+#| tbl-cap: "Comparison of the AIC, AICc, and BIC values for the models fitted to the logarithm of the simulated time series."
+#| echo: false
+
+combined_models <- glance(model_resid) |> 
+  select(.model, AIC, AICc, BIC)
+
+minimum <- combined_models |>
+  reframe(
+    AIC = which(min(AIC)==AIC),
+    AICc = which(min(AICc)==AICc),
+    BIC = which(min(BIC)==BIC)
+  )
+
+combined_models |>
+  rename(Model = ".model") |>
+  round_df(1) |>
+  format_cells(rows = minimum$AIC, cols = 2, "bold") |>
+  format_cells(rows = minimum$AICc, cols = 3, "bold") |>
+  format_cells(rows = minimum$BIC, cols = 4, "bold") |>
+  display_table()
+```
+
+```{r}
+model_resid |>
+  tidy() |>
+  filter(.model == "a101") 
+
+model_resid |>
+  select(a101) |>
+  residuals() |>
+  ACF() |>
+  autoplot()
+
+model_resid |>
+  select(a101) |>
+  residuals() |>
+  PACF() |>
+  autoplot()
+
+```
+
+
+
+
+
+
+# xxxyyy
 
 ## Class Activity: Fitting ARMA Models xxxxxxxxxxxxXXXXXXXXXXxxxxxxxxx (xxx min)
 
@@ -184,8 +498,9 @@ $$
 # Read in retail sales data for "all other general merchandise stores"
 retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
   filter(naics == 442) |>
-  filter(as_date(month) >= my("Jan 1998")) |>
-  mutate(t = 1:n()) |>
+  # filter(as_date(month) >= my("Jan 1998")) |>
+  mutate(month = as_date(month)) |>
+  mutate(t = 1:n()) |> 
   mutate(std_t = (t - mean(t)) / sd(t)) |>
   mutate(
     cos1 = cos(2 * pi * 1 * t / 12),
