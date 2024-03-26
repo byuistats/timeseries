@@ -401,6 +401,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#autoregressive-ar-models" id="toc-autoregressive-ar-models" class="nav-link" data-scroll-target="#autoregressive-ar-models">Autoregressive (AR) Models</a></li>
   <li><a href="#moving-average-ma-models" id="toc-moving-average-ma-models" class="nav-link" data-scroll-target="#moving-average-ma-models">Moving Average (MA) Models</a></li>
   <li><a href="#comparison-of-ar-and-ma-models" id="toc-comparison-of-ar-and-ma-models" class="nav-link" data-scroll-target="#comparison-of-ar-and-ma-models">Comparison of AR and MA Models</a></li>
+  <li><a href="#steps-of-an-analysis" id="toc-steps-of-an-analysis" class="nav-link" data-scroll-target="#steps-of-an-analysis">Steps of an Analysis</a></li>
   </ul></li>
   <li><a href="#class-activity-model-for-the-residuals-from-the-rexburg-weather-model-15-min" id="toc-class-activity-model-for-the-residuals-from-the-rexburg-weather-model-15-min" class="nav-link" data-scroll-target="#class-activity-model-for-the-residuals-from-the-rexburg-weather-model-15-min">Class Activity: Model for the Residuals from the Rexburg Weather Model (15 min)</a>
   <ul class="collapse">
@@ -658,6 +659,51 @@ ACF and PACF of an <span class="math inline">\(AR(p)\)</span> Process
 </div>
 </div>
 </section>
+<section id="steps-of-an-analysis" class="level3">
+<h3 class="anchored" data-anchor-id="steps-of-an-analysis">Steps of an Analysis</h3>
+<p>Here are some steps you can use to guide your work in a time series analysis. Even though these are presented linearly, you may find it helpful to iterate between some of the steps as needed.</p>
+<div class="callout callout-style-default callout-warning no-icon callout-titled" title="Steps in a Time Series Analysis">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Steps in a Time Series Analysis
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>Create a time plot of the time series</li>
+<li>Determine an appropriate model for the trend and seasonality; call this Model 1
+<ul>
+<li>Regression</li>
+<li>Holt-Winters</li>
+<li>Additive / Multiplicative Decomposition</li>
+<li>Other Techniques</li>
+</ul></li>
+<li>Use AIC/AICc/BIC or other metrics to choose the best model</li>
+<li>Obtain the residuals</li>
+<li>Check the residuals of Model 1 for evidence of autocorrelation and non-stationarity
+<ul>
+<li>Time plot of the residuals</li>
+<li>ACF plot</li>
+<li>PACF plot</li>
+</ul></li>
+<li>Fit an AR/MA/ARMA model to the (stationary) residuals; call this Model 2</li>
+<li>Check the residuals of Model 2 for evidence of autocorrelation and normality
+<ul>
+<li>ACF plot</li>
+<li>PACF plot</li>
+<li>Histogram</li>
+</ul></li>
+<li>Forecast the trend and seasonality of the time series using Model 1</li>
+<li>Forecast the residuals of Model 1 using Model 2</li>
+<li>Add the two forecasts together</li>
+<li>Plot and summarize the resulting forecast</li>
+</ul>
+</div>
+</div>
+</section>
 </section>
 <section id="class-activity-model-for-the-residuals-from-the-rexburg-weather-model-15-min" class="level2">
 <h2 class="anchored" data-anchor-id="class-activity-model-for-the-residuals-from-the-rexburg-weather-model-15-min">Class Activity: Model for the Residuals from the Rexburg Weather Model (15 min)</h2>
@@ -705,7 +751,12 @@ ACF and PACF of an <span class="math inline">\(AR(p)\)</span> Process
 <span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="chapter_6_lesson_2_files/figure-html/weather1-1.png" class="img-fluid" width="672"></p>
+<div id="fig-WeatherTimePlot" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_6_lesson_2_files/figure-html/fig-WeatherTimePlot-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;1: Time plot of the monthly mean daily high temperatures in Rexburg Idaho, in degrees Fahrenheit</figcaption>
+</figure>
+</div>
 </div>
 </div>
 <p>We chose the “Reduced Linear 5” model. For convenience, we reprint the coefficients here.</p>
@@ -765,6 +816,81 @@ ACF and PACF of an <span class="math inline">\(AR(p)\)</span> Process
             + (-2.858) \cos \left( \frac{2\pi \cdot 2 t}{12} \right)
       \\
 \end{align*}\]</span></p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>num_months <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span> </span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(TIME) <span class="sc">|&gt;</span> </span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tail</span>(<span class="dv">1</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>()</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">tibble</span>( <span class="at">TIME =</span> <span class="fu">seq</span>(<span class="dv">1</span>, num_months, <span class="fl">0.01</span>) ) <span class="sc">|&gt;</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos1 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">12</span>),</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos2 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">12</span>),</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos3 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">12</span>),</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos4 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">12</span>),</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos5 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">12</span>),</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos6 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">12</span>),</span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin1 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">12</span>),</span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin2 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">12</span>),</span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin3 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">12</span>),</span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin4 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">12</span>),</span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin5 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">12</span>),</span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin6 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> TIME<span class="sc">/</span><span class="dv">12</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">zTIME =</span> (TIME <span class="sc">-</span> <span class="fu">mean</span>(TIME)) <span class="sc">/</span> <span class="fu">sd</span>(TIME)) <span class="sc">|&gt;</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> TIME)</span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true" tabindex="-1"></a>linear5_ts <span class="ot">&lt;-</span> reduced5_linear_lm <span class="sc">|&gt;</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(df) <span class="sc">|&gt;</span></span>
+<span id="cb5-26"><a href="#cb5-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
+<span id="cb5-27"><a href="#cb5-27" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(TIME, .mean) <span class="sc">|&gt;</span></span>
+<span id="cb5-28"><a href="#cb5-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">value =</span> .mean) <span class="sc">|&gt;</span></span>
+<span id="cb5-29"><a href="#cb5-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Model =</span> <span class="st">"Linear 5"</span>)</span>
+<span id="cb5-30"><a href="#cb5-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-31"><a href="#cb5-31" aria-hidden="true" tabindex="-1"></a>data_ts <span class="ot">&lt;-</span> weather_df <span class="sc">|&gt;</span> </span>
+<span id="cb5-32"><a href="#cb5-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
+<span id="cb5-33"><a href="#cb5-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">value =</span> x) <span class="sc">|&gt;</span></span>
+<span id="cb5-34"><a href="#cb5-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Model =</span> <span class="st">"Data"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(TIME, value, Model)</span>
+<span id="cb5-36"><a href="#cb5-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-37"><a href="#cb5-37" aria-hidden="true" tabindex="-1"></a>combined_ts <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(data_ts, linear5_ts) </span>
+<span id="cb5-38"><a href="#cb5-38" aria-hidden="true" tabindex="-1"></a>point_ts <span class="ot">&lt;-</span> combined_ts <span class="sc">|&gt;</span> <span class="fu">filter</span>(TIME <span class="sc">==</span> <span class="fu">floor</span>(TIME))</span>
+<span id="cb5-39"><a href="#cb5-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-40"><a href="#cb5-40" aria-hidden="true" tabindex="-1"></a>okabe_ito_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"#000000"</span>, <span class="st">"#E69F00"</span>)</span>
+<span id="cb5-41"><a href="#cb5-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-42"><a href="#cb5-42" aria-hidden="true" tabindex="-1"></a>combined_ts <span class="sc">|&gt;</span></span>
+<span id="cb5-43"><a href="#cb5-43" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> TIME, <span class="at">y =</span> value, <span class="at">color =</span> Model)) <span class="sc">+</span></span>
+<span id="cb5-44"><a href="#cb5-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb5-45"><a href="#cb5-45" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">data =</span> point_ts, <span class="at">alpha =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb5-46"><a href="#cb5-46" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb5-47"><a href="#cb5-47" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month Number"</span>,</span>
+<span id="cb5-48"><a href="#cb5-48" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Temperature (Fahrenheit)"</span>,</span>
+<span id="cb5-49"><a href="#cb5-49" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Monthly Average of Daily High Temperatures in Rexburg"</span>,</span>
+<span id="cb5-50"><a href="#cb5-50" aria-hidden="true" tabindex="-1"></a>      <span class="at">subtitle =</span> <span class="fu">paste0</span>(<span class="st">"("</span>, <span class="fu">format</span>(weather_df<span class="sc">$</span>dates <span class="sc">%&gt;%</span> <span class="fu">head</span>(<span class="dv">1</span>), <span class="st">"%b %Y"</span>), endash, <span class="fu">format</span>(weather_df<span class="sc">$</span>dates <span class="sc">%&gt;%</span> <span class="fu">tail</span>(<span class="dv">1</span>), <span class="st">"%b %Y"</span>), <span class="st">")"</span>)</span>
+<span id="cb5-51"><a href="#cb5-51" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span>    </span>
+<span id="cb5-52"><a href="#cb5-52" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_color_manual</span>(</span>
+<span id="cb5-53"><a href="#cb5-53" aria-hidden="true" tabindex="-1"></a>    <span class="at">values =</span> okabe_ito_colors[<span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(combined_ts <span class="sc">|&gt;</span> <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> <span class="fu">select</span>(Model) <span class="sc">|&gt;</span> <span class="fu">unique</span>())], </span>
+<span id="cb5-54"><a href="#cb5-54" aria-hidden="true" tabindex="-1"></a>    <span class="at">name =</span> <span class="st">""</span></span>
+<span id="cb5-55"><a href="#cb5-55" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb5-56"><a href="#cb5-56" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb5-57"><a href="#cb5-57" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb5-58"><a href="#cb5-58" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
+<span id="cb5-59"><a href="#cb5-59" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
+<span id="cb5-60"><a href="#cb5-60" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.position =</span> <span class="st">"top"</span>, <span class="co"># Position the legend at the top</span></span>
+<span id="cb5-61"><a href="#cb5-61" aria-hidden="true" tabindex="-1"></a>    <span class="at">legend.direction =</span> <span class="st">"horizontal"</span> <span class="co"># Set the legend direction to horizontal</span></span>
+<span id="cb5-62"><a href="#cb5-62" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-WeatherTimePlotWithForecast" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_6_lesson_2_files/figure-html/fig-WeatherTimePlotWithForecast-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;2: Time plot of the monthly mean daily high temperatures in Rexburg Idaho, in degrees Fahrenheit; the fitted values from the regression model are given in orange</figcaption>
+</figure>
+</div>
+</div>
+</div>
 </section>
 <section id="fitting-an-armapq-model" class="level3">
 <h3 class="anchored" data-anchor-id="fitting-an-armapq-model">Fitting an ARMA(p,q) Model</h3>
@@ -772,21 +898,16 @@ ACF and PACF of an <span class="math inline">\(AR(p)\)</span> Process
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>reduced5_linear_lm <span class="sc">|&gt;</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>(<span class="at">.vars =</span> .resid) <span class="sc">|&gt;</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">var =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>reduced5_linear_lm <span class="sc">|&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">var =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: The `...` argument of `PACF()` is deprecated as of feasts 0.2.2.
-ℹ ACF variables should be passed to the `y` argument. If multiple variables are
-  to be used, specify them using `vars(...)`.</code></pre>
-</div>
 <div class="cell-output-display">
 <div id="fig-acfResidWeather" class="quarto-figure quarto-figure-center anchored">
 <figure class="figure">
 <p><img src="chapter_6_lesson_2_files/figure-html/fig-acfResidWeather-1.png" class="img-fluid figure-img" width="672"></p>
-<figcaption class="figure-caption">Figure&nbsp;1: ACF Plot of the Residuals from the Rexburg Weather Model</figcaption>
+<figcaption class="figure-caption">Figure&nbsp;3: ACF Plot of the Residuals from the Rexburg Weather Model</figcaption>
 </figure>
 </div>
 </div>
@@ -796,19 +917,14 @@ ACF and PACF of an <span class="math inline">\(AR(p)\)</span> Process
 <summary>Show the code</summary>
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>reduced5_linear_lm <span class="sc">|&gt;</span> </span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">PACF</span>(<span class="at">.vars =</span> .resid) <span class="sc">|&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">PACF</span>() <span class="sc">|&gt;</span></span>
 <span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">var =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: The `...` argument of `PACF()` is deprecated as of feasts 0.2.2.
-ℹ PACF variables should be passed to the `y` argument. If multiple variables
-  are to be used, specify them using `vars(...)`.</code></pre>
-</div>
 <div class="cell-output-display">
 <div id="fig-pacfResidWeather" class="quarto-figure quarto-figure-center anchored">
 <figure class="figure">
 <p><img src="chapter_6_lesson_2_files/figure-html/fig-pacfResidWeather-1.png" class="img-fluid figure-img" width="672"></p>
-<figcaption class="figure-caption">Figure&nbsp;2: PACF Plot of the Residuals from the Rexburg Weather Model</figcaption>
+<figcaption class="figure-caption">Figure&nbsp;4: PACF Plot of the Residuals from the Rexburg Weather Model</figcaption>
 </figure>
 </div>
 </div>
@@ -831,29 +947,29 @@ Check Your Understanding
 </div>
 <p>Here are summaries of some ARMA models that could be constructed.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>model_resid <span class="ot">&lt;-</span> reduced5_linear_lm <span class="sc">|&gt;</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>.model) <span class="sc">|&gt;</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">auto =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">0</span><span class="sc">:</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">a000 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">a001 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">a002 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
-<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">a100 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
-<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">a101 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
-<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">a102 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">a200 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">a201 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">a202 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>))) </span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>model_resid <span class="sc">|&gt;</span></span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">glance</span>() </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>model_resid <span class="ot">&lt;-</span> reduced5_linear_lm <span class="sc">|&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>.model) <span class="sc">|&gt;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">auto =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">0</span><span class="sc">:</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">a000 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">a001 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">a002 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">a100 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">a101 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">a102 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">a200 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">a201 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">a202 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>))) </span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>model_resid <span class="sc">|&gt;</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">glance</span>() </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
 <div class="cell-output-display">
 <div id="tbl-ModelComparison" class="anchored">
 <table class="table table-striped table-sm small" data-quarto-postprocess="true">
-<caption>Table&nbsp;1: Comparison of the AIC, AICc, and BIC values for the models fitted to the logarithm of the simulated time series.</caption>
+<caption>Table&nbsp;1: Comparison of the AIC, AICc, and BIC values for the models fitted to the Rexburg weather data</caption>
 <thead>
 <tr class="header">
 <th style="text-align: center;" data-quarto-table-cell-role="th">Model</th>
@@ -931,9 +1047,12 @@ Check Your Understanding
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>model_resid <span class="sc">|&gt;</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(.model <span class="sc">==</span> <span class="st">"a101"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>model_resid <span class="sc">|&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(.model <span class="sc">==</span> <span class="st">"a101"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 3 × 6
   .model term     estimate std.error statistic p.value
@@ -942,27 +1061,41 @@ Check Your Understanding
 2 a101   ma1      -0.341       0.288   -1.18    0.238 
 3 a101   constant  0.00236     0.176    0.0134  0.989 </code></pre>
 </div>
+</div>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>model_resid <span class="sc">|&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(a101) <span class="sc">|&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>() <span class="sc">|&gt;</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">var =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-ACFofResiduals" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_6_lesson_2_files/figure-html/fig-ACFofResiduals-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;5: ACF plot of the residuals from the <span class="math inline">\(ARMA(1,1)\)</span> model</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
 <div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>model_resid <span class="sc">|&gt;</span></span>
 <span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(a101) <span class="sc">|&gt;</span></span>
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>() <span class="sc">|&gt;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">PACF</span>() <span class="sc">|&gt;</span></span>
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">var =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Response variable not specified, automatically selected `var = .resid`</code></pre>
-</div>
+</details>
 <div class="cell-output-display">
-<p><img src="chapter_6_lesson_2_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
+<div id="fig-PACFofResiduals" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_6_lesson_2_files/figure-html/fig-PACFofResiduals-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;6: PACF plot of the residuals from the <span class="math inline">\(ARMA(1,1)\)</span> model</figcaption>
+</figure>
 </div>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>model_resid <span class="sc">|&gt;</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(a101) <span class="sc">|&gt;</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">PACF</span>() <span class="sc">|&gt;</span></span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">var =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Response variable not specified, automatically selected `var = .resid`</code></pre>
-</div>
-<div class="cell-output-display">
-<p><img src="chapter_6_lesson_2_files/figure-html/unnamed-chunk-9-2.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 </section>
@@ -973,56 +1106,56 @@ Check Your Understanding
 <div class="cell">
 <details>
 <summary>Show the code</summary>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>elec_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/electricity_tx.csv"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>comments) <span class="sc">|&gt;</span></span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">month =</span> <span class="fu">my</span>(month)) <span class="sc">|&gt;</span></span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">t =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>(),</span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">std_t =</span> (t <span class="sc">-</span> <span class="fu">mean</span>(t)) <span class="sc">/</span> <span class="fu">sd</span>(t)</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos1 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos2 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos3 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos4 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos5 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos6 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin1 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin2 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin3 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin4 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
-<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin5 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>)</span>
-<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> month)</span>
-<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a>elec_plot_raw <span class="ot">&lt;-</span> elec_ts <span class="sc">|&gt;</span></span>
-<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">autoplot</span>(<span class="at">.vars =</span> megawatthours) <span class="sc">+</span></span>
-<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
-<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Megawatt-hours"</span>,</span>
-<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Texas' Industrial Electricity Use"</span></span>
-<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
-<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
-<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
-<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb16-34"><a href="#cb16-34" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-35"><a href="#cb16-35" aria-hidden="true" tabindex="-1"></a>elec_plot_log <span class="ot">&lt;-</span> elec_ts <span class="sc">|&gt;</span></span>
-<span id="cb16-36"><a href="#cb16-36" aria-hidden="true" tabindex="-1"></a>    <span class="fu">autoplot</span>(<span class="at">.vars =</span> <span class="fu">log</span>(megawatthours)) <span class="sc">+</span></span>
-<span id="cb16-37"><a href="#cb16-37" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
-<span id="cb16-38"><a href="#cb16-38" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
-<span id="cb16-39"><a href="#cb16-39" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"log(Megwatt-hours)"</span>,</span>
-<span id="cb16-40"><a href="#cb16-40" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Log of Texas' Industrial Electricity Use"</span></span>
-<span id="cb16-41"><a href="#cb16-41" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
-<span id="cb16-42"><a href="#cb16-42" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb16-43"><a href="#cb16-43" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
-<span id="cb16-44"><a href="#cb16-44" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
-<span id="cb16-45"><a href="#cb16-45" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb16-46"><a href="#cb16-46" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-47"><a href="#cb16-47" aria-hidden="true" tabindex="-1"></a>elec_plot_raw <span class="sc">|</span> elec_plot_log</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>elec_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/electricity_tx.csv"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>comments) <span class="sc">|&gt;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">month =</span> <span class="fu">my</span>(month)) <span class="sc">|&gt;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">t =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>(),</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">std_t =</span> (t <span class="sc">-</span> <span class="fu">mean</span>(t)) <span class="sc">/</span> <span class="fu">sd</span>(t)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos1 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos2 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos3 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos4 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos5 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos6 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin1 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin2 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin3 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin4 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin5 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>)</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> month)</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>elec_plot_raw <span class="ot">&lt;-</span> elec_ts <span class="sc">|&gt;</span></span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>    <span class="fu">autoplot</span>(<span class="at">.vars =</span> megawatthours) <span class="sc">+</span></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Megawatt-hours"</span>,</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Texas' Industrial Electricity Use"</span></span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a>elec_plot_log <span class="ot">&lt;-</span> elec_ts <span class="sc">|&gt;</span></span>
+<span id="cb13-36"><a href="#cb13-36" aria-hidden="true" tabindex="-1"></a>    <span class="fu">autoplot</span>(<span class="at">.vars =</span> <span class="fu">log</span>(megawatthours)) <span class="sc">+</span></span>
+<span id="cb13-37"><a href="#cb13-37" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb13-38"><a href="#cb13-38" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
+<span id="cb13-39"><a href="#cb13-39" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"log(Megwatt-hours)"</span>,</span>
+<span id="cb13-40"><a href="#cb13-40" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Log of Texas' Industrial Electricity Use"</span></span>
+<span id="cb13-41"><a href="#cb13-41" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb13-42"><a href="#cb13-42" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb13-43"><a href="#cb13-43" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb13-44"><a href="#cb13-44" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb13-45"><a href="#cb13-45" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb13-46"><a href="#cb13-46" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-47"><a href="#cb13-47" aria-hidden="true" tabindex="-1"></a>elec_plot_raw <span class="sc">|</span> elec_plot_log</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 <div class="cell-output-display">
-<p><img src="chapter_6_lesson_2_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
+<p><img src="chapter_6_lesson_2_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <!-- Check Your Understanding -->
