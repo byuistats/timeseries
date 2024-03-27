@@ -1,0 +1,271 @@
+---
+title: "Untitled"
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+```{r}
+#| echo: false
+#| warning: false
+
+
+# Read in retail sales data for "Full-Service Restaurants"
+retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
+  filter(naics == 722511) |>
+  mutate(
+    month = yearmonth(as_date(month)),
+    month_number = month(month)
+  ) |>
+  mutate(t = 1:n()) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12)
+  ) |>
+  mutate(
+    in_great_recession = ifelse(ym(month) >= my("December 2007") & month <= my("June 2009"), 1, 0),
+    after_great_recession = ifelse(ym(month) > my("June 2009"), 1, 0)
+  ) |>
+  as_tsibble(index = month)
+
+retail_ts |>
+  autoplot(.vars = sales_millions) +
+  stat_smooth(method = "lm", 
+              formula = y ~ x, 
+              geom = "smooth",
+              se = FALSE,
+              color = "#E69F00",
+              linetype = "dotted") +
+    labs(
+      x = "Month",
+      y = "Sales (Millions of U.S. Dollars)",
+      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+retail_ts |>
+  autoplot(.vars = log(sales_millions)) +
+  stat_smooth(method = "lm", 
+              formula = y ~ x, 
+              geom = "smooth",
+              se = FALSE,
+              color = "#E69F00",
+              linetype = "dotted") +
+    labs(
+      x = "Month",
+      y = "Sales (Millions of U.S. Dollars)",
+      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+
+<!-- @fig-retailSideBySidePlot shows the "Full service Restaurants" retail sales data. -->
+
+```{r}
+#| include: false
+#| label: fig-retailSideBySidePlot
+#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| fig-height: 3.5
+
+retail_plot_raw <- retail_ts |>
+    autoplot(.vars = sales_millions) +
+    labs(
+      x = "Month",
+      y = "sales_millions",
+      title = "Other General Merchandise Sales"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+retail_plot_log <- retail_ts |>
+    autoplot(.vars = log(sales_millions)) +
+    labs(
+      x = "Month",
+      y = "log(sales_millions)",
+      title = "Logarithm of Other Gen. Merch. Sales"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+retail_plot_raw | retail_plot_log
+```
+
+```{r}
+#| label: modelFitting
+#| code-fold: true
+#| code-summary: "Show the code"
+
+retail_final_lm <- retail_ts |>
+  model(retail_full = TSLM(log(sales_millions) ~  
+      (in_great_recession * std_t) + (after_great_recession * std_t) 
+      + (in_great_recession * I(std_t^2) ) + (after_great_recession * I(std_t^2) )
+      + (in_great_recession * I(std_t^3) ) + (after_great_recession * I(std_t^3) )
+      + sin1 + cos1 + sin2 + cos2 + sin3 + cos3
+      + sin4 + cos4 + sin5 + cos5 + cos6 # Note sin6 is omitted
+    )
+    ) 
+
+retail_final_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+retail_resid_df <- retail_final_lm |> 
+  residuals() |> 
+  as_tibble() |> 
+  dplyr::select(.resid) |>
+  rename(x = .resid) 
+  
+retail_resid_df |>
+  mutate(density = dnorm(x, mean(retail_resid_df$x), sd(retail_resid_df$x))) |>
+  ggplot(aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 0.02) +
+    geom_line(aes(x = x, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+skewness(retail_resid_df$x)
+
+retail_final_lm |>
+  residuals() |>
+  ACF() |> 
+  autoplot(var = .resid)
+
+retail_final_lm |>
+  residuals() |>
+  PACF() |> 
+  autoplot(var = .resid)
+```
+
+```{r}
+#| warning: false
+
+retail_no_seasonal_lm <- retail_ts |>
+  model(retail_full_quad = TSLM(log(sales_millions) ~  
+      (in_great_recession * std_t) + (after_great_recession * std_t) 
+      + (in_great_recession * I(std_t^2) ) + (after_great_recession * I(std_t^2) )
+    )
+    ) 
+retail_ts |> 
+  autoplot(.vars = sales_millions) +
+  # ggplot(mapping = aes(x = month, y = sales_millions)) +
+  # geom_line() +
+  geom_line(data = augment(retail_no_seasonal_lm),
+            aes(x = month, y = .fitted),
+            color = "#E69F00",
+            linewidth = 1
+            ) +
+  geom_line(data = augment(retail_final_lm),
+            aes(x = month, y = .fitted),
+            color = "blue",
+            alpha = 0.7,
+            # linewidth = 1
+            ) +
+  labs(
+    x = "Month",
+    y = "Sales (Millions of U.S. Dollars)",
+    title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+model_resid <- retail_final_lm |>
+  residuals() |>
+  select(-.model) |>
+  model(
+    auto = ARIMA(.resid ~ 1 + pdq(0:5,0,0:5) + PDQ(0, 0, 0)),
+    a000 = ARIMA(.resid ~ 1 + pdq(0,0,0) + PDQ(0, 0, 0)),
+    a001 = ARIMA(.resid ~ 1 + pdq(0,0,1) + PDQ(0, 0, 0)),
+    a002 = ARIMA(.resid ~ 1 + pdq(0,0,2) + PDQ(0, 0, 0)),
+    a003 = ARIMA(.resid ~ 1 + pdq(0,0,3) + PDQ(0, 0, 0)),
+    a004 = ARIMA(.resid ~ 1 + pdq(0,0,4) + PDQ(0, 0, 0)),
+    a005 = ARIMA(.resid ~ 1 + pdq(0,0,5) + PDQ(0, 0, 0)),
+    a100 = ARIMA(.resid ~ 1 + pdq(1,0,0) + PDQ(0, 0, 0)),
+    a101 = ARIMA(.resid ~ 1 + pdq(1,0,1) + PDQ(0, 0, 0)),
+    a102 = ARIMA(.resid ~ 1 + pdq(1,0,2) + PDQ(0, 0, 0)),
+    a103 = ARIMA(.resid ~ 1 + pdq(1,0,3) + PDQ(0, 0, 0)),
+    a104 = ARIMA(.resid ~ 1 + pdq(1,0,4) + PDQ(0, 0, 0)),
+    a105 = ARIMA(.resid ~ 1 + pdq(1,0,5) + PDQ(0, 0, 0)), 
+    a200 = ARIMA(.resid ~ 1 + pdq(2,0,0) + PDQ(0, 0, 0)),
+    a201 = ARIMA(.resid ~ 1 + pdq(2,0,1) + PDQ(0, 0, 0)),
+    a202 = ARIMA(.resid ~ 1 + pdq(2,0,2) + PDQ(0, 0, 0)),
+    a203 = ARIMA(.resid ~ 1 + pdq(2,0,3) + PDQ(0, 0, 0)),
+    a204 = ARIMA(.resid ~ 1 + pdq(2,0,4) + PDQ(0, 0, 0)),
+    a205 = ARIMA(.resid ~ 1 + pdq(2,0,5) + PDQ(0, 0, 0)),
+    a300 = ARIMA(.resid ~ 1 + pdq(3,0,0) + PDQ(0, 0, 0)),
+    a301 = ARIMA(.resid ~ 1 + pdq(3,0,1) + PDQ(0, 0, 0)),
+    a302 = ARIMA(.resid ~ 1 + pdq(3,0,2) + PDQ(0, 0, 0)),
+    a303 = ARIMA(.resid ~ 1 + pdq(3,0,3) + PDQ(0, 0, 0)),
+    a304 = ARIMA(.resid ~ 1 + pdq(3,0,4) + PDQ(0, 0, 0)),
+    a305 = ARIMA(.resid ~ 1 + pdq(3,0,5) + PDQ(0, 0, 0)), 
+    a400 = ARIMA(.resid ~ 1 + pdq(4,0,0) + PDQ(0, 0, 0)),
+    a401 = ARIMA(.resid ~ 1 + pdq(4,0,1) + PDQ(0, 0, 0)),
+    a402 = ARIMA(.resid ~ 1 + pdq(4,0,2) + PDQ(0, 0, 0)),
+    a403 = ARIMA(.resid ~ 1 + pdq(4,0,3) + PDQ(0, 0, 0)),
+    a404 = ARIMA(.resid ~ 1 + pdq(4,0,4) + PDQ(0, 0, 0)),
+    a405 = ARIMA(.resid ~ 1 + pdq(4,0,5) + PDQ(0, 0, 0)),
+    a500 = ARIMA(.resid ~ 1 + pdq(5,0,0) + PDQ(0, 0, 0)),
+    a501 = ARIMA(.resid ~ 1 + pdq(5,0,1) + PDQ(0, 0, 0)),
+    a502 = ARIMA(.resid ~ 1 + pdq(5,0,2) + PDQ(0, 0, 0)),
+    a503 = ARIMA(.resid ~ 1 + pdq(5,0,3) + PDQ(0, 0, 0)),
+    a504 = ARIMA(.resid ~ 1 + pdq(5,0,4) + PDQ(0, 0, 0)),
+    a505 = ARIMA(.resid ~ 1 + pdq(5,0,5) + PDQ(0, 0, 0))
+  )
+
+model_resid |> select(auto)
+
+model_resid |> 
+  glance() |>
+  filter(AIC == min(AIC) | AICc == min(AICc) | BIC == min(BIC) | .model == "auto")
+
+
+```
+
+```{r}
+
+model_resid |>
+  select(a504) |>
+  residuals() |>
+  ACF() |> 
+  autoplot(var = .resid)
+
+model_resid |>
+  select(a504) |>
+  residuals() |>
+  PACF() |> 
+  autoplot(var = .resid)
+
+```
+
