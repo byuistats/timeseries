@@ -1,0 +1,257 @@
+---
+title: "Untitled"
+---
+
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+
+```{r}
+#| echo: false
+#| warning: false
+
+
+# Read in retail sales data for "all other general merchandise stores"
+retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
+  filter(naics == 722511) |>
+  mutate(month = yearmonth(as_date(month))) |>
+  mutate(t = 1:n()) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12)
+  ) |>
+  mutate(
+    in_great_recession = ifelse(ym(month) >= my("December 2007") & month <= my("June 2009"), 1, 0),
+    after_great_recession = ifelse(ym(month) > my("June 2009"), 1, 0)
+  ) |>
+  as_tsibble(index = month)
+
+retail_ts |>
+  autoplot(.vars = sales_millions) +
+  stat_smooth(method = "lm", 
+              formula = y ~ x, 
+              geom = "smooth",
+              se = FALSE,
+              color = "#E69F00",
+              linetype = "dotted") +
+    labs(
+      x = "Month",
+      y = "Sales (Millions of U.S. Dollars)",
+      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+
+# retail |>
+#   filter(naics == 722511) |>
+#   as_tsibble(index = month) |>
+#   model(feasts::classical_decomposition(log(sales_millions), type = "add")) |>
+#   components() |>
+#   autoplot()
+
+retail_ts |>
+  autoplot(.vars = log(sales_millions)) +
+  stat_smooth(method = "lm", 
+              formula = y ~ x, 
+              geom = "smooth",
+              se = FALSE,
+              color = "#E69F00",
+              linetype = "dotted") +
+    labs(
+      x = "Month",
+      y = "Sales (Millions of U.S. Dollars)",
+      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+<!-- @fig-retailSideBySidePlot shows the "Full service Restaurants" retail sales data. -->
+```{r}
+#| include: false
+#| label: fig-retailSideBySidePlot
+#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| results: asis
+#| fig-height: 3.5
+
+retail_plot_raw <- retail_ts |>
+    autoplot(.vars = sales_millions) +
+    labs(
+      x = "Month",
+      y = "sales_millions",
+      title = "Other General Merchandise Sales"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+retail_plot_log <- retail_ts |>
+    autoplot(.vars = log(sales_millions)) +
+    labs(
+      x = "Month",
+      y = "log(sales_millions)",
+      title = "Logarithm of Other Gen. Merch. Sales"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+retail_plot_raw | retail_plot_log
+```
+
+```{r}
+#| label: ExponentialQuadraticFull1a
+#| code-fold: true
+#| code-summary: "Show the code"
+
+retail_full_quad_lm <- retail_ts |>
+  model(retail_full_quad = TSLM(log(sales_millions) ~ std_t + I(std_t^2) 
+    + (in_great_recession * std_t) + (after_great_recession * std_t) 
+    + (in_great_recession * I(std_t^2) ) + (after_great_recession * I(std_t^2) ) 
+    + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
+retail_full_quad_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+retail_resid_df <- retail_full_quad_lm |> 
+  residuals() |> 
+  as_tibble() |> 
+  dplyr::select(.resid) |>
+  rename(x = .resid) 
+  
+retail_resid_df |>
+  mutate(density = dnorm(x, mean(retail_resid_df$x), sd(retail_resid_df$x))) |>
+  ggplot(aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 0.02) +
+    geom_line(aes(x = x, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals from the Full Quadratic Model"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+skewness(retail_resid_df$x)
+
+
+retail_full_quad_lm |>
+  residuals() |>
+  ACF() |> 
+  autoplot(var = .resid)
+
+retail_full_quad_lm |>
+  residuals() |>
+  PACF() |> 
+  autoplot(var = .resid)
+
+retail_full_quad_lm |> 
+  residuals() |> 
+  acf() |>
+  autoplot(var = .resid)
+
+
+retail_ts |> scan_gaps()
+```
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| label: fig-chocolatetimeplot
+#| fig-cap: "Time plot of a portion of the chocolate search data."
+
+
+```
+
+ 
+
+The folded chunk of code below fits the model to the data and computes the estimated parameter values. 
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |>
+  mutate(
+    dates = yearmonth(ym(Month)),
+    month = month(dates),
+    year = year(dates),
+    stats_time = year + (month - 1) / 12,
+    month_seq = 1:n()
+  ) |>
+  mutate(month = factor(month)) |>
+  as_tsibble(index = dates)
+
+# Fit regression model
+chocolate_lm <- chocolate_month |>
+  model(TSLM(chocolate ~ 0 + stats_time + month))
+
+# Estimated parameter values
+param_est <- chocolate_lm |>
+  tidy() |>
+  pull(estimate)
+```
+
+
+
+
+```{r}
+chocolate_lm |>
+  residuals() |>
+  acf()
+
+chocolate_lm |>
+  residuals() |>
+  pacf()
+```
+
+```{r}
+model_resid <- chocolate_lm |>
+  residuals() |>
+  select(-.model) |>
+  model(
+    auto = ARIMA(.resid ~ 1 + pdq(0:3,0,0:3) + PDQ(0, 0, 0)),
+    a000 = ARIMA(.resid ~ 1 + pdq(0,0,0) + PDQ(0, 0, 0)),
+    a001 = ARIMA(.resid ~ 1 + pdq(0,0,1) + PDQ(0, 0, 0)),
+    a002 = ARIMA(.resid ~ 1 + pdq(0,0,2) + PDQ(0, 0, 0)),
+    a100 = ARIMA(.resid ~ 1 + pdq(1,0,0) + PDQ(0, 0, 0)),
+    a101 = ARIMA(.resid ~ 1 + pdq(1,0,1) + PDQ(0, 0, 0)),
+    a102 = ARIMA(.resid ~ 1 + pdq(1,0,2) + PDQ(0, 0, 0)),
+    a200 = ARIMA(.resid ~ 1 + pdq(2,0,0) + PDQ(0, 0, 0)),
+    a201 = ARIMA(.resid ~ 1 + pdq(2,0,1) + PDQ(0, 0, 0)),
+    a202 = ARIMA(.resid ~ 1 + pdq(2,0,2) + PDQ(0, 0, 0))) 
+
+# best order is 2, 0, 0
+# auto would pick it without running each    
+model_best <- select(model_resid, "a200")
+
+model_resid |>
+  glance() |>
+  filter(AIC == min(AIC) | AICc == min(AICc) | BIC == min(BIC) | .model == "auto")
+```
+
+

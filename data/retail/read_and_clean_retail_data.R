@@ -126,7 +126,7 @@ plot_retail_sales(retail, 443141) # Roughly additive
 plot_retail_sales(retail, 443142)
 plot_retail_sales(retail, 444)
 plot_retail_sales(retail, 4441) # Beautiful multiplicative ******
-plot_retail_sales(retail, 44412)
+plot_retail_sales(retail, 44412) ######### nice starting in 2010
 plot_retail_sales(retail, 44413) # Multiplicative
 plot_retail_sales(retail, 445)
 plot_retail_sales(retail, 4451)
@@ -152,7 +152,7 @@ plot_retail_sales(retail, 4521) # Multiplicative: Rise and fall
 plot_retail_sales(retail, 452111)
 plot_retail_sales(retail, 452112) # Multiplicative: Rise and fall
 plot_retail_sales(retail, 4529) # Multiplicative
-plot_retail_sales(retail, 45291) # Multiplicative - very nice
+plot_retail_sales(retail, 45291) # Multiplicative - very nice # especially from 2008+
 plot_retail_sales(retail, 45299)
 plot_retail_sales(retail, 453)
 plot_retail_sales(retail, 4532)
@@ -160,7 +160,7 @@ plot_retail_sales(retail, 45321)
 plot_retail_sales(retail, 45322)
 plot_retail_sales(retail, 45330)
 plot_retail_sales(retail, 454)
-plot_retail_sales(retail, 4541) # Multiplicative - nice
+plot_retail_sales(retail, 4541) # Multiplicative - nice # could use this for final model
 plot_retail_sales(retail, 45431)
 plot_retail_sales(retail, 722)
 plot_retail_sales(retail, 7224)
@@ -225,7 +225,7 @@ plot_log_retail_sales(retail, 45431)
 plot_log_retail_sales(retail, 722)
 plot_log_retail_sales(retail, 7224)
 plot_log_retail_sales(retail, 7225) # Multiplicative - Cut off before covid???
-plot_log_retail_sales(retail, 722511)
+plot_log_retail_sales(retail, 722511) # Broken linear regression line after taking the log
 
 # Decomposition plots
 decompose_retail_sales(retail, 447) # Gasoline stations
