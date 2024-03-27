@@ -372,7 +372,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="dropdown-header">Lesson 2</li>
         <li>
     <a class="dropdown-item" href="./chapter_7_lesson_2.html" rel="" target="">
- <span class="dropdown-text">TitleGoesHere</span></a>
+ <span class="dropdown-text">Seasonal ARIMA Models</span></a>
   </li>  
     </ul>
   </li>
@@ -409,6 +409,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#fitting-an-armapq-model" id="toc-fitting-an-armapq-model" class="nav-link" data-scroll-target="#fitting-an-armapq-model">Fitting an ARMA(p,q) Model</a></li>
   </ul></li>
   <li><a href="#small-group-activity-industrial-electricity-consumption-in-texas-20-min" id="toc-small-group-activity-industrial-electricity-consumption-in-texas-20-min" class="nav-link" data-scroll-target="#small-group-activity-industrial-electricity-consumption-in-texas-20-min">Small-Group Activity: Industrial Electricity Consumption in Texas (20 min)</a></li>
+  <li><a href="#small-group-activity-fitting-an-armapq-model-to-the-retail-data-30-min" id="toc-small-group-activity-fitting-an-armapq-model-to-the-retail-data-30-min" class="nav-link" data-scroll-target="#small-group-activity-fitting-an-armapq-model-to-the-retail-data-30-min">Small Group Activity: Fitting an ARMA(p,q) Model to the Retail Data (30 min)</a></li>
   <li><a href="#homework-preview-5-min" id="toc-homework-preview-5-min" class="nav-link" data-scroll-target="#homework-preview-5-min">Homework Preview (5 min)</a></li>
   </ul>
 </nav>
@@ -665,13 +666,13 @@ ACF and PACF of an <span class="math inline">\(AR(p)\)</span> Process
 <section id="analyzing-time-series-with-a-regular-seasonal-pattern" class="level3">
 <h3 class="anchored" data-anchor-id="analyzing-time-series-with-a-regular-seasonal-pattern">Analyzing Time Series with a Regular Seasonal Pattern</h3>
 <p>Here are some steps you can use to guide your work as you analyze time series with a regular seasonal pattern. Even though these are presented linearly, you may find it helpful to iterate between some of the steps as needed.</p>
-<div class="callout callout-style-default callout-warning no-icon callout-titled" title="Steps in a Time Series Analysis">
+<div class="callout callout-style-default callout-warning no-icon callout-titled" title="Analyzing a Time Series with a Regular Seasonal Pattern">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon no-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-Steps in a Time Series Analysis
+Analyzing a Time Series with a Regular Seasonal Pattern
 </div>
 </div>
 <div class="callout-body-container callout-body">
@@ -1175,9 +1176,963 @@ Check Your Understanding
 <div class="callout-body-container callout-body">
 <p>Use the Texas industrial electricity consumption data to do the following.</p>
 <ul>
-<li>Select an appropriate fitted model using the AIC, AICc, or BIC critera.</li>
-<li>Use the residuals to determine the appropriate correction for the data. <!-- -   Forecast the data for the next 5 years. --> <!-- -   Apply the appropriate correction to the forecasted values. --> <!-- -   Plot the fitted (forecasted) values along with the time series. --></li>
+<li>Select an appropriate model to fit the time series using the AIC, AICc, or BIC critera.</li>
+<li>Determine the best <span class="math inline">\(ARMA(p,q)\)</span> model for the residuals. <!-- -   Forecast the data for the next 5 years using the regression model. --> <!-- -   Forecast the residuals for the next 5 years using ARMA model. --> <!-- -   Sum the two forecasted time series and plot the combined series against the original retail sales data. --></li>
 </ul>
+</div>
+</div>
+</section>
+<section id="small-group-activity-fitting-an-armapq-model-to-the-retail-data-30-min" class="level2">
+<h2 class="anchored" data-anchor-id="small-group-activity-fitting-an-armapq-model-to-the-retail-data-30-min">Small Group Activity: Fitting an ARMA(p,q) Model to the Retail Data (30 min)</h2>
+<p>Apply what you have learned in this lesson to the retail sales data. In particular, consider full-service restaurants (NAICS code 722511).</p>
+<!-- Check Your Understanding -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Use the total retail sales for full-service restaurants to do the following.</p>
+<ul>
+<li>Select an appropriate model to fit the time series using the AIC, AICc, or BIC critera.</li>
+<li>Determine the best <span class="math inline">\(ARMA(p,q)\)</span> model for the residuals.</li>
+<li>Forecast the data for the next 5 years using the regression model.</li>
+<li>Forecast the residuals for the next 5 years using ARMA model.</li>
+<li>Sum the two forecasted time series and plot the combined series against the original retail sales data.</li>
+</ul>
+</div>
+</div>
+<p>Here is some code you can use to help you get started.</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Read in retail sales data for "Full-Service Restaurants"</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>retail_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(naics <span class="sc">==</span> <span class="dv">722511</span>) <span class="sc">|&gt;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> <span class="fu">yearmonth</span>(<span class="fu">as_date</span>(month)),</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">month_number =</span> <span class="fu">month</span>(month)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">t =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">n</span>()) <span class="sc">|&gt;</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">std_t =</span> (t <span class="sc">-</span> <span class="fu">mean</span>(t)) <span class="sc">/</span> <span class="fu">sd</span>(t)) <span class="sc">|&gt;</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos1 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos2 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos3 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos4 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos5 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">cos6 =</span> <span class="fu">cos</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">6</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin1 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">1</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin2 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">2</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin3 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">3</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin4 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">4</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>),</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">sin5 =</span> <span class="fu">sin</span>(<span class="dv">2</span> <span class="sc">*</span> pi <span class="sc">*</span> <span class="dv">5</span> <span class="sc">*</span> t <span class="sc">/</span> <span class="dv">12</span>)</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">in_great_recession =</span> <span class="fu">ifelse</span>(<span class="fu">ym</span>(month) <span class="sc">&gt;=</span> <span class="fu">my</span>(<span class="st">"December 2007"</span>) <span class="sc">&amp;</span> month <span class="sc">&lt;=</span> <span class="fu">my</span>(<span class="st">"June 2009"</span>), <span class="dv">1</span>, <span class="dv">0</span>),</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">after_great_recession =</span> <span class="fu">ifelse</span>(<span class="fu">ym</span>(month) <span class="sc">&gt;</span> <span class="fu">my</span>(<span class="st">"June 2009"</span>), <span class="dv">1</span>, <span class="dv">0</span>)</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> month)</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>retail_plot_raw <span class="ot">&lt;-</span> retail_ts <span class="sc">|&gt;</span></span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">autoplot</span>(<span class="at">.vars =</span> sales_millions) <span class="sc">+</span></span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"sales_millions"</span>,</span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Other General Merchandise Sales"</span></span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb14-38"><a href="#cb14-38" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb14-39"><a href="#cb14-39" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb14-40"><a href="#cb14-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-41"><a href="#cb14-41" aria-hidden="true" tabindex="-1"></a>retail_plot_log <span class="ot">&lt;-</span> retail_ts <span class="sc">|&gt;</span></span>
+<span id="cb14-42"><a href="#cb14-42" aria-hidden="true" tabindex="-1"></a>    <span class="fu">autoplot</span>(<span class="at">.vars =</span> <span class="fu">log</span>(sales_millions)) <span class="sc">+</span></span>
+<span id="cb14-43"><a href="#cb14-43" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb14-44"><a href="#cb14-44" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Month"</span>,</span>
+<span id="cb14-45"><a href="#cb14-45" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"log(sales_millions)"</span>,</span>
+<span id="cb14-46"><a href="#cb14-46" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Logarithm of Other Gen. Merch. Sales"</span></span>
+<span id="cb14-47"><a href="#cb14-47" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb14-48"><a href="#cb14-48" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb14-49"><a href="#cb14-49" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb14-50"><a href="#cb14-50" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb14-51"><a href="#cb14-51" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb14-52"><a href="#cb14-52" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-53"><a href="#cb14-53" aria-hidden="true" tabindex="-1"></a>retail_plot_raw <span class="sc">|</span> retail_plot_log</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-retailSideBySidePlot" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_6_lesson_2_files/figure-html/fig-retailSideBySidePlot-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;7: Time plot of the time series (left) and the natural logarithm of the time series (right)</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>retail_final_lm <span class="ot">&lt;-</span> retail_ts <span class="sc">|&gt;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">retail_full =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(sales_millions) <span class="sc">~</span>  </span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>      (in_great_recession <span class="sc">*</span> std_t) <span class="sc">+</span> (after_great_recession <span class="sc">*</span> std_t) </span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>      <span class="sc">+</span> (in_great_recession <span class="sc">*</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">2</span>) ) <span class="sc">+</span> (after_great_recession <span class="sc">*</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">2</span>) )</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>      <span class="sc">+</span> (in_great_recession <span class="sc">*</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">3</span>) ) <span class="sc">+</span> (after_great_recession <span class="sc">*</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">3</span>) )</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>      <span class="sc">+</span> sin1 <span class="sc">+</span> cos1 <span class="sc">+</span> sin2 <span class="sc">+</span> cos2 <span class="sc">+</span> sin3 <span class="sc">+</span> cos3</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>      <span class="sc">+</span> sin4 <span class="sc">+</span> cos4 <span class="sc">+</span> sin5 <span class="sc">+</span> cos5 <span class="sc">+</span> cos6 <span class="co"># Note sin6 is omitted</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>    ) </span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>retail_final_lm <span class="sc">|&gt;</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig =</span> p.value <span class="sc">&lt;</span> <span class="fl">0.05</span>) <span class="sc">|&gt;</span></span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="at">format =</span> <span class="st">"html"</span>, <span class="at">align=</span><span class="st">'ccccccc'</span>, <span class="at">escape =</span> <span class="cn">FALSE</span>, <span class="at">width =</span> <span class="cn">NA</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">FALSE</span>, <span class="st">"striped"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="tbl-modelFitting" class="anchored">
+<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<caption>Table&nbsp;2: Coefficients for the fitted model for the total sales in full-service restaurants in the United States</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">.model</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">term</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">estimate</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">std.error</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">statistic</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">p.value</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">sig</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">(Intercept)</td>
+<td style="text-align: center;">9.6959936</td>
+<td style="text-align: center;">0.0062100</td>
+<td style="text-align: center;">1561.3586384</td>
+<td style="text-align: center;">0.0000000</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">in_great_recession</td>
+<td style="text-align: center;">0.1057700</td>
+<td style="text-align: center;">0.1187801</td>
+<td style="text-align: center;">0.8904693</td>
+<td style="text-align: center;">0.3738957</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">std_t</td>
+<td style="text-align: center;">0.4905760</td>
+<td style="text-align: center;">0.0326870</td>
+<td style="text-align: center;">15.0083105</td>
+<td style="text-align: center;">0.0000000</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">after_great_recession</td>
+<td style="text-align: center;">-0.1556298</td>
+<td style="text-align: center;">0.0312565</td>
+<td style="text-align: center;">-4.9791109</td>
+<td style="text-align: center;">0.0000011</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">I(std_t^2)</td>
+<td style="text-align: center;">-0.0163208</td>
+<td style="text-align: center;">0.0458329</td>
+<td style="text-align: center;">-0.3560935</td>
+<td style="text-align: center;">0.7220097</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">I(std_t^3)</td>
+<td style="text-align: center;">-0.0102056</td>
+<td style="text-align: center;">0.0178717</td>
+<td style="text-align: center;">-0.5710498</td>
+<td style="text-align: center;">0.5683744</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">sin1</td>
+<td style="text-align: center;">-0.0000252</td>
+<td style="text-align: center;">0.0020362</td>
+<td style="text-align: center;">-0.0123921</td>
+<td style="text-align: center;">0.9901207</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">cos1</td>
+<td style="text-align: center;">-0.0360436</td>
+<td style="text-align: center;">0.0020595</td>
+<td style="text-align: center;">-17.5008207</td>
+<td style="text-align: center;">0.0000000</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">sin2</td>
+<td style="text-align: center;">-0.0037502</td>
+<td style="text-align: center;">0.0020154</td>
+<td style="text-align: center;">-1.8607818</td>
+<td style="text-align: center;">0.0637096</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">cos2</td>
+<td style="text-align: center;">0.0078111</td>
+<td style="text-align: center;">0.0020169</td>
+<td style="text-align: center;">3.8728011</td>
+<td style="text-align: center;">0.0001309</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">sin3</td>
+<td style="text-align: center;">-0.0116397</td>
+<td style="text-align: center;">0.0020098</td>
+<td style="text-align: center;">-5.7913822</td>
+<td style="text-align: center;">0.0000000</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">cos3</td>
+<td style="text-align: center;">0.0213598</td>
+<td style="text-align: center;">0.0020189</td>
+<td style="text-align: center;">10.5801523</td>
+<td style="text-align: center;">0.0000000</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">sin4</td>
+<td style="text-align: center;">0.0001229</td>
+<td style="text-align: center;">0.0020100</td>
+<td style="text-align: center;">0.0611468</td>
+<td style="text-align: center;">0.9512812</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">cos4</td>
+<td style="text-align: center;">0.0101346</td>
+<td style="text-align: center;">0.0020145</td>
+<td style="text-align: center;">5.0308564</td>
+<td style="text-align: center;">0.0000008</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">sin5</td>
+<td style="text-align: center;">0.0277666</td>
+<td style="text-align: center;">0.0020122</td>
+<td style="text-align: center;">13.7990897</td>
+<td style="text-align: center;">0.0000000</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">cos5</td>
+<td style="text-align: center;">0.0203802</td>
+<td style="text-align: center;">0.0020132</td>
+<td style="text-align: center;">10.1232890</td>
+<td style="text-align: center;">0.0000000</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">cos6</td>
+<td style="text-align: center;">0.0038084</td>
+<td style="text-align: center;">0.0014225</td>
+<td style="text-align: center;">2.6772474</td>
+<td style="text-align: center;">0.0078131</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">in_great_recession:std_t</td>
+<td style="text-align: center;">-2.5718611</td>
+<td style="text-align: center;">3.0873172</td>
+<td style="text-align: center;">-0.8330408</td>
+<td style="text-align: center;">0.4054549</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">std_t:after_great_recession</td>
+<td style="text-align: center;">0.0198043</td>
+<td style="text-align: center;">0.1413695</td>
+<td style="text-align: center;">0.1400891</td>
+<td style="text-align: center;">0.8886794</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">in_great_recession:I(std_t^2)</td>
+<td style="text-align: center;">14.8230840</td>
+<td style="text-align: center;">24.4731229</td>
+<td style="text-align: center;">0.6056883</td>
+<td style="text-align: center;">0.5451593</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">after_great_recession:I(std_t^2)</td>
+<td style="text-align: center;">0.1215930</td>
+<td style="text-align: center;">0.1888445</td>
+<td style="text-align: center;">0.6438792</td>
+<td style="text-align: center;">0.5201238</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">in_great_recession:I(std_t^3)</td>
+<td style="text-align: center;">-35.1756536</td>
+<td style="text-align: center;">60.1509944</td>
+<td style="text-align: center;">-0.5847892</td>
+<td style="text-align: center;">0.5591094</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">retail_full</td>
+<td style="text-align: center;">after_great_recession:I(std_t^3)</td>
+<td style="text-align: center;">-0.0653848</td>
+<td style="text-align: center;">0.0766366</td>
+<td style="text-align: center;">-0.8531788</td>
+<td style="text-align: center;">0.3942105</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>retail_resid_df <span class="ot">&lt;-</span> retail_final_lm <span class="sc">|&gt;</span> </span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(.resid) <span class="sc">|&gt;</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">x =</span> .resid) </span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>retail_resid_df <span class="sc">|&gt;</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">density =</span> <span class="fu">dnorm</span>(x, <span class="fu">mean</span>(retail_resid_df<span class="sc">$</span>x), <span class="fu">sd</span>(retail_resid_df<span class="sc">$</span>x))) <span class="sc">|&gt;</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> x)) <span class="sc">+</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_histogram</span>(<span class="fu">aes</span>(<span class="at">y =</span> <span class="fu">after_stat</span>(density)),</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>        <span class="at">color =</span> <span class="st">"white"</span>, <span class="at">fill =</span> <span class="st">"#56B4E9"</span>, <span class="at">binwidth =</span> <span class="fl">0.02</span>) <span class="sc">+</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">x =</span> x, <span class="at">y =</span> density)) <span class="sc">+</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>      <span class="at">x =</span> <span class="st">"Values"</span>,</span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>      <span class="at">y =</span> <span class="st">"Frequency"</span>,</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>      <span class="at">title =</span> <span class="st">"Histogram of Residuals"</span></span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>    ) <span class="sc">+</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme</span>(</span>
+<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>      <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>    )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-HistogramOfResiduals" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_6_lesson_2_files/figure-html/fig-HistogramOfResiduals-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;8: Histogram of the residuals from the fitted regression model</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>The skewness is given by the command <code>skewness</code>:</p>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">skewness</span>(retail_resid_df<span class="sc">$</span>x)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.01014588</code></pre>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>retail_final_lm <span class="sc">|&gt;</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">var =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-acfOfResiduals" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_6_lesson_2_files/figure-html/fig-acfOfResiduals-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;9: Correlogram of the residuals from the fitted regression model</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>retail_final_lm <span class="sc">|&gt;</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">PACF</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">var =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-pacfOfResiduals" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_6_lesson_2_files/figure-html/fig-pacfOfResiduals-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;10: Partial correlogram of the residuals from the fitted regression model</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="do">################################################################</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="co">#   Be sure to adjust this model to match what you did above   #</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="do">################################################################</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="co">#</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Model without any seasonal trends</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>retail_no_seasonal_lm <span class="ot">&lt;-</span> retail_ts <span class="sc">|&gt;</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="at">retail_full_quad =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(sales_millions) <span class="sc">~</span>  </span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>      (in_great_recession <span class="sc">*</span> std_t) <span class="sc">+</span> (after_great_recession <span class="sc">*</span> std_t) </span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>      <span class="sc">+</span> (in_great_recession <span class="sc">*</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">2</span>) ) <span class="sc">+</span> (after_great_recession <span class="sc">*</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">2</span>) )</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>      <span class="sc">+</span> (in_great_recession <span class="sc">*</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">3</span>) ) <span class="sc">+</span> (after_great_recession <span class="sc">*</span> <span class="fu">I</span>(std_t<span class="sc">^</span><span class="dv">3</span>) )</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>retail_ts <span class="sc">|&gt;</span> </span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> sales_millions) <span class="sc">+</span></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>  <span class="co"># ggplot(mapping = aes(x = month, y = sales_millions)) +</span></span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  <span class="co"># geom_line() +</span></span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> <span class="fu">augment</span>(retail_no_seasonal_lm),</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>            <span class="fu">aes</span>(<span class="at">x =</span> month, <span class="at">y =</span> .fitted),</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>            <span class="at">color =</span> <span class="st">"#E69F00"</span>,</span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>            <span class="at">linewidth =</span> <span class="dv">1</span></span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>            ) <span class="sc">+</span></span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> <span class="fu">augment</span>(retail_final_lm),</span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>            <span class="fu">aes</span>(<span class="at">x =</span> month, <span class="at">y =</span> .fitted),</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>            <span class="at">color =</span> <span class="st">"blue"</span>,</span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>            <span class="at">alpha =</span> <span class="fl">0.7</span>,</span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a>            <span class="co"># linewidth = 1</span></span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a>            ) <span class="sc">+</span></span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Month"</span>,</span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Sales (Millions of U.S. Dollars)"</span>,</span>
+<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="fu">paste0</span>(retail_ts<span class="sc">$</span>business[<span class="dv">1</span>], <span class="st">" ("</span>, retail_ts<span class="sc">$</span>naics[<span class="dv">1</span>], <span class="st">")"</span>)</span>
+<span id="cb21-33"><a href="#cb21-33" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb21-34"><a href="#cb21-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb21-35"><a href="#cb21-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-FittedModelPlottedOnTimePlot" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_6_lesson_2_files/figure-html/fig-FittedModelPlottedOnTimePlot-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;11: Time plot of the retail sales data for full-service restaurants; the regression curve without the seasonal terms is given in orange; the predicted values from the model are given in blue</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>model_resid <span class="ot">&lt;-</span> retail_final_lm <span class="sc">|&gt;</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>.model) <span class="sc">|&gt;</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">auto =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span><span class="sc">:</span><span class="dv">5</span>,<span class="dv">0</span>,<span class="dv">0</span><span class="sc">:</span><span class="dv">5</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">a000 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">a001 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">a002 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">a003 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">3</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">a004 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">4</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">a005 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">0</span>,<span class="dv">0</span>,<span class="dv">5</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">a100 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">a101 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-14"><a href="#cb22-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">a102 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-15"><a href="#cb22-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">a103 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">3</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-16"><a href="#cb22-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">a104 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">4</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-17"><a href="#cb22-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">a105 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>,<span class="dv">0</span>,<span class="dv">5</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)), </span>
+<span id="cb22-18"><a href="#cb22-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">a200 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-19"><a href="#cb22-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">a201 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-20"><a href="#cb22-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">a202 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-21"><a href="#cb22-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">a203 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">3</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-22"><a href="#cb22-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">a204 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">4</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-23"><a href="#cb22-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">a205 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>,<span class="dv">0</span>,<span class="dv">5</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-24"><a href="#cb22-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">a300 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">3</span>,<span class="dv">0</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-25"><a href="#cb22-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">a301 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">3</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-26"><a href="#cb22-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">a302 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">3</span>,<span class="dv">0</span>,<span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-27"><a href="#cb22-27" aria-hidden="true" tabindex="-1"></a>    <span class="at">a303 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">3</span>,<span class="dv">0</span>,<span class="dv">3</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-28"><a href="#cb22-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">a304 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">3</span>,<span class="dv">0</span>,<span class="dv">4</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-29"><a href="#cb22-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">a305 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">3</span>,<span class="dv">0</span>,<span class="dv">5</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)), </span>
+<span id="cb22-30"><a href="#cb22-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">a400 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">4</span>,<span class="dv">0</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-31"><a href="#cb22-31" aria-hidden="true" tabindex="-1"></a>    <span class="at">a401 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">4</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-32"><a href="#cb22-32" aria-hidden="true" tabindex="-1"></a>    <span class="at">a402 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">4</span>,<span class="dv">0</span>,<span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-33"><a href="#cb22-33" aria-hidden="true" tabindex="-1"></a>    <span class="at">a403 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">4</span>,<span class="dv">0</span>,<span class="dv">3</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-34"><a href="#cb22-34" aria-hidden="true" tabindex="-1"></a>    <span class="at">a404 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">4</span>,<span class="dv">0</span>,<span class="dv">4</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-35"><a href="#cb22-35" aria-hidden="true" tabindex="-1"></a>    <span class="at">a405 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">4</span>,<span class="dv">0</span>,<span class="dv">5</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-36"><a href="#cb22-36" aria-hidden="true" tabindex="-1"></a>    <span class="at">a500 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">5</span>,<span class="dv">0</span>,<span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-37"><a href="#cb22-37" aria-hidden="true" tabindex="-1"></a>    <span class="at">a501 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">5</span>,<span class="dv">0</span>,<span class="dv">1</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-38"><a href="#cb22-38" aria-hidden="true" tabindex="-1"></a>    <span class="at">a502 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">5</span>,<span class="dv">0</span>,<span class="dv">2</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-39"><a href="#cb22-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">a503 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">5</span>,<span class="dv">0</span>,<span class="dv">3</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-40"><a href="#cb22-40" aria-hidden="true" tabindex="-1"></a>    <span class="at">a504 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">5</span>,<span class="dv">0</span>,<span class="dv">4</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>)),</span>
+<span id="cb22-41"><a href="#cb22-41" aria-hidden="true" tabindex="-1"></a>    <span class="at">a505 =</span> <span class="fu">ARIMA</span>(.resid <span class="sc">~</span> <span class="dv">1</span> <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">5</span>,<span class="dv">0</span>,<span class="dv">5</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>))</span>
+<span id="cb22-42"><a href="#cb22-42" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb22-43"><a href="#cb22-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-44"><a href="#cb22-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-45"><a href="#cb22-45" aria-hidden="true" tabindex="-1"></a><span class="co"># This command indicates which model was selected by "auto"</span></span>
+<span id="cb22-46"><a href="#cb22-46" aria-hidden="true" tabindex="-1"></a><span class="co"># model_resid |&gt; select(auto)</span></span>
+<span id="cb22-47"><a href="#cb22-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb22-48"><a href="#cb22-48" aria-hidden="true" tabindex="-1"></a>model_resid <span class="sc">|&gt;</span> </span>
+<span id="cb22-49"><a href="#cb22-49" aria-hidden="true" tabindex="-1"></a>  <span class="fu">glance</span>() <span class="sc">|&gt;</span></span>
+<span id="cb22-50"><a href="#cb22-50" aria-hidden="true" tabindex="-1"></a>  <span class="co"># uncomment the next line to only show the "best" models according to these criteria</span></span>
+<span id="cb22-51"><a href="#cb22-51" aria-hidden="true" tabindex="-1"></a>  <span class="co"># filter(AIC == min(AIC) | AICc == min(AICc) | BIC == min(BIC) | .model == "auto") |&gt;</span></span>
+<span id="cb22-52"><a href="#cb22-52" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="at">format =</span> <span class="st">"html"</span>, <span class="at">align=</span><span class="st">'ccccccc'</span>, <span class="at">escape =</span> <span class="cn">FALSE</span>, <span class="at">width =</span> <span class="cn">NA</span>, <span class="at">row.names =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb22-53"><a href="#cb22-53" aria-hidden="true" tabindex="-1"></a>  <span class="fu">kable_styling</span>(<span class="at">full_width =</span> <span class="cn">FALSE</span>, <span class="st">"striped"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="tbl-ARMAmodelFitting" class="anchored">
+<table class="table table-striped table-sm small" data-quarto-postprocess="true">
+<caption>Table&nbsp;3: Results from the process of fitting an ARMA model to the residuals of the model for the total sales in full-service restaurants in the United States</caption>
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">.model</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">sigma2</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">log_lik</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">AIC</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">AICc</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">BIC</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">ar_roots</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">ma_roots</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">auto</td>
+<td style="text-align: center;">0.0003644</td>
+<td style="text-align: center;">841.5138</td>
+<td style="text-align: center;">-1667.028</td>
+<td style="text-align: center;">-1666.631</td>
+<td style="text-align: center;">-1635.677</td>
+<td style="text-align: center;">-0.5762646+0.8613026i, -0.5762646-0.8613026i, 2.2627735-0.8408307i, 2.2627735+0.8408307i</td>
+<td style="text-align: center;">-0.5154592+0.9948076i, -0.5154592-0.9948076i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a000</td>
+<td style="text-align: center;">0.0005764</td>
+<td style="text-align: center;">762.4127</td>
+<td style="text-align: center;">-1520.825</td>
+<td style="text-align: center;">-1520.793</td>
+<td style="text-align: center;">-1512.988</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a001</td>
+<td style="text-align: center;">0.0004803</td>
+<td style="text-align: center;">793.5159</td>
+<td style="text-align: center;">-1581.032</td>
+<td style="text-align: center;">-1580.966</td>
+<td style="text-align: center;">-1569.275</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">-2.382155+0i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a002</td>
+<td style="text-align: center;">0.0004782</td>
+<td style="text-align: center;">794.7146</td>
+<td style="text-align: center;">-1581.429</td>
+<td style="text-align: center;">-1581.320</td>
+<td style="text-align: center;">-1565.754</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">-1.822802+2.494324i, -1.822802-2.494324i</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a003</td>
+<td style="text-align: center;">0.0004109</td>
+<td style="text-align: center;">820.4694</td>
+<td style="text-align: center;">-1630.939</td>
+<td style="text-align: center;">-1630.775</td>
+<td style="text-align: center;">-1611.344</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">0.232624+1.346072i, -1.379822-0.000000i, 0.232624-1.346072i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a004</td>
+<td style="text-align: center;">0.0004086</td>
+<td style="text-align: center;">821.8842</td>
+<td style="text-align: center;">-1631.768</td>
+<td style="text-align: center;">-1631.538</td>
+<td style="text-align: center;">-1608.255</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">0.090446+1.334121i, -1.288012+0.000000i, 0.090446-1.334121i, 4.263380+0.000000i</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a005</td>
+<td style="text-align: center;">0.0004097</td>
+<td style="text-align: center;">821.8871</td>
+<td style="text-align: center;">-1629.774</td>
+<td style="text-align: center;">-1629.466</td>
+<td style="text-align: center;">-1602.342</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">0.096742+1.327683i, -1.295555-0.000000i, 0.096742-1.327683i, 3.658704+0.000000i, -19.273408-0.000000i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a100</td>
+<td style="text-align: center;">0.0004615</td>
+<td style="text-align: center;">800.2336</td>
+<td style="text-align: center;">-1594.467</td>
+<td style="text-align: center;">-1594.402</td>
+<td style="text-align: center;">-1582.710</td>
+<td style="text-align: center;">2.220227+0i</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a101</td>
+<td style="text-align: center;">0.0004590</td>
+<td style="text-align: center;">801.5727</td>
+<td style="text-align: center;">-1595.145</td>
+<td style="text-align: center;">-1595.036</td>
+<td style="text-align: center;">-1579.470</td>
+<td style="text-align: center;">1.709493+0i</td>
+<td style="text-align: center;">6.008737+0i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a102</td>
+<td style="text-align: center;">0.0004537</td>
+<td style="text-align: center;">803.9495</td>
+<td style="text-align: center;">-1597.899</td>
+<td style="text-align: center;">-1597.735</td>
+<td style="text-align: center;">-1578.305</td>
+<td style="text-align: center;">2.092518+0i</td>
+<td style="text-align: center;">0.291385+2.033057i, 0.291385-2.033057i</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a103</td>
+<td style="text-align: center;">0.0004091</td>
+<td style="text-align: center;">821.6652</td>
+<td style="text-align: center;">-1631.330</td>
+<td style="text-align: center;">-1631.100</td>
+<td style="text-align: center;">-1607.817</td>
+<td style="text-align: center;">-4.593936+0i</td>
+<td style="text-align: center;">0.114692+1.365411i, -1.273789+0.000000i, 0.114692-1.365411i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a104</td>
+<td style="text-align: center;">0.0003923</td>
+<td style="text-align: center;">827.7659</td>
+<td style="text-align: center;">-1641.532</td>
+<td style="text-align: center;">-1641.224</td>
+<td style="text-align: center;">-1614.100</td>
+<td style="text-align: center;">1.114879+0i</td>
+<td style="text-align: center;">0.202209+1.31577i, 0.202209-1.31577i, 1.000001+0.00000i, -1.352297+0.00000i</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a105</td>
+<td style="text-align: center;">0.0003929</td>
+<td style="text-align: center;">828.0239</td>
+<td style="text-align: center;">-1640.048</td>
+<td style="text-align: center;">-1639.651</td>
+<td style="text-align: center;">-1608.697</td>
+<td style="text-align: center;">1.103023+0i</td>
+<td style="text-align: center;">1.000002-0.000000i, -1.312010+0.000000i, 0.146005-1.323116i, 0.146005+1.323116i, 9.340958+0.000000i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a200</td>
+<td style="text-align: center;">0.0004586</td>
+<td style="text-align: center;">801.7290</td>
+<td style="text-align: center;">-1595.458</td>
+<td style="text-align: center;">-1595.349</td>
+<td style="text-align: center;">-1579.782</td>
+<td style="text-align: center;">1.741604+0i, -6.053939+0i</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a201</td>
+<td style="text-align: center;">0.0004597</td>
+<td style="text-align: center;">801.7718</td>
+<td style="text-align: center;">-1593.544</td>
+<td style="text-align: center;">-1593.380</td>
+<td style="text-align: center;">-1573.949</td>
+<td style="text-align: center;">1.707303+0i, -8.322029-0i</td>
+<td style="text-align: center;">17.35635+0i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a202</td>
+<td style="text-align: center;">0.0004424</td>
+<td style="text-align: center;">808.6177</td>
+<td style="text-align: center;">-1605.235</td>
+<td style="text-align: center;">-1605.005</td>
+<td style="text-align: center;">-1581.722</td>
+<td style="text-align: center;">1.11252+1.235597i, 1.11252-1.235597i</td>
+<td style="text-align: center;">0.478362+1.381186i, 0.478362-1.381186i</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a203</td>
+<td style="text-align: center;">0.0004020</td>
+<td style="text-align: center;">824.8516</td>
+<td style="text-align: center;">-1635.703</td>
+<td style="text-align: center;">-1635.395</td>
+<td style="text-align: center;">-1608.271</td>
+<td style="text-align: center;">-0.603528+1.04516i, -0.603528-1.04516i</td>
+<td style="text-align: center;">-0.341680+1.04375i, -1.490094-0.00000i, -0.341680-1.04375i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a204</td>
+<td style="text-align: center;">0.0003928</td>
+<td style="text-align: center;">828.0543</td>
+<td style="text-align: center;">-1640.109</td>
+<td style="text-align: center;">-1639.712</td>
+<td style="text-align: center;">-1608.757</td>
+<td style="text-align: center;">1.103352+0i, -8.074288-0i</td>
+<td style="text-align: center;">1.000000+0.00000i, -1.299607-0.00000i, 0.140388-1.33086i, 0.140388+1.33086i</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a205</td>
+<td style="text-align: center;">0.0003944</td>
+<td style="text-align: center;">827.7675</td>
+<td style="text-align: center;">-1637.535</td>
+<td style="text-align: center;">-1637.038</td>
+<td style="text-align: center;">-1602.265</td>
+<td style="text-align: center;">1.114557+0i, -1.380078+0i</td>
+<td style="text-align: center;">1.000000+0.000000i, -1.304935+0.000000i, 0.200885-1.317038i, 0.200885+1.317038i, -1.439098+0.000000i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a300</td>
+<td style="text-align: center;">0.0004588</td>
+<td style="text-align: center;">802.1164</td>
+<td style="text-align: center;">-1594.233</td>
+<td style="text-align: center;">-1594.069</td>
+<td style="text-align: center;">-1574.638</td>
+<td style="text-align: center;">1.561490-0.000000i, -1.559974+3.283859i, -1.559974-3.283859i</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a301</td>
+<td style="text-align: center;">0.0004395</td>
+<td style="text-align: center;">809.7261</td>
+<td style="text-align: center;">-1607.452</td>
+<td style="text-align: center;">-1607.222</td>
+<td style="text-align: center;">-1583.939</td>
+<td style="text-align: center;">1.489169-0.000000i, -1.438632+0.982914i, -1.438632-0.982914i</td>
+<td style="text-align: center;">-1.421429+0i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a302</td>
+<td style="text-align: center;">0.0003535</td>
+<td style="text-align: center;">844.0552</td>
+<td style="text-align: center;">-1674.110</td>
+<td style="text-align: center;">-1673.803</td>
+<td style="text-align: center;">-1646.678</td>
+<td style="text-align: center;">-0.5774685+0.8165105i, -0.5774685-0.8165105i, 1.7298062-0.0000000i</td>
+<td style="text-align: center;">-0.5791573+0.8214573i, -0.5791573-0.8214573i</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a303</td>
+<td style="text-align: center;">0.0003668</td>
+<td style="text-align: center;">840.4061</td>
+<td style="text-align: center;">-1664.812</td>
+<td style="text-align: center;">-1664.416</td>
+<td style="text-align: center;">-1633.461</td>
+<td style="text-align: center;">-0.5727277+0.8592709i, -0.5727277-0.8592709i, 1.7714851-0.0000000i</td>
+<td style="text-align: center;">-0.5205722+0.9760787i, -0.5205722-0.9760787i, -6.1372611-0.0000000i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a304</td>
+<td style="text-align: center;">0.0003475</td>
+<td style="text-align: center;">849.1941</td>
+<td style="text-align: center;">-1680.388</td>
+<td style="text-align: center;">-1679.891</td>
+<td style="text-align: center;">-1645.118</td>
+<td style="text-align: center;">-0.5791893+0.8188125i, -0.5791893-0.8188125i, 2.5938924+0.0000000i</td>
+<td style="text-align: center;">-0.6126398+0.836373i, -0.6126398-0.836373i, -0.2481801-1.785358i, -0.2481801+1.785358i</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a305</td>
+<td style="text-align: center;">0.0003467</td>
+<td style="text-align: center;">849.2092</td>
+<td style="text-align: center;">-1678.418</td>
+<td style="text-align: center;">-1677.809</td>
+<td style="text-align: center;">-1639.230</td>
+<td style="text-align: center;">1.0685662-0.0000000i, -0.5815415+0.8262367i, -0.5815415-0.8262367i</td>
+<td style="text-align: center;">1.0000003-0.0000000i, -0.6708444+0.8616216i, -0.6708444-0.8616216i, -0.4789432-1.2955584i, -0.4789432+1.2955584i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a400</td>
+<td style="text-align: center;">0.0003926</td>
+<td style="text-align: center;">828.4866</td>
+<td style="text-align: center;">-1644.973</td>
+<td style="text-align: center;">-1644.743</td>
+<td style="text-align: center;">-1621.460</td>
+<td style="text-align: center;">1.074908+0.622598i, -0.815559+1.008846i, -0.815559-1.008846i, 1.074908-0.622598i</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a401</td>
+<td style="text-align: center;">0.0003936</td>
+<td style="text-align: center;">828.5076</td>
+<td style="text-align: center;">-1643.015</td>
+<td style="text-align: center;">-1642.707</td>
+<td style="text-align: center;">-1615.583</td>
+<td style="text-align: center;">1.079994+0.6285086i, -0.818089+0.9991499i, -0.818089-0.9991499i, 1.079994-0.6285086i</td>
+<td style="text-align: center;">-39.24509+0i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a402</td>
+<td style="text-align: center;">0.0003644</td>
+<td style="text-align: center;">841.5138</td>
+<td style="text-align: center;">-1667.028</td>
+<td style="text-align: center;">-1666.631</td>
+<td style="text-align: center;">-1635.677</td>
+<td style="text-align: center;">-0.5762646+0.8613026i, -0.5762646-0.8613026i, 2.2627735-0.8408307i, 2.2627735+0.8408307i</td>
+<td style="text-align: center;">-0.5154592+0.9948076i, -0.5154592-0.9948076i</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a403</td>
+<td style="text-align: center;">0.0003546</td>
+<td style="text-align: center;">846.4790</td>
+<td style="text-align: center;">-1674.958</td>
+<td style="text-align: center;">-1674.461</td>
+<td style="text-align: center;">-1639.688</td>
+<td style="text-align: center;">1.192965+0.5326171i, -0.576099+0.8530305i, -0.576099-0.8530305i, 1.192965-0.5326171i</td>
+<td style="text-align: center;">-0.5438287+0.9807507i, -0.5438287-0.9807507i, 1.5196159+0.0000000i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a404</td>
+<td style="text-align: center;">0.0003349</td>
+<td style="text-align: center;">854.9268</td>
+<td style="text-align: center;">-1689.854</td>
+<td style="text-align: center;">-1689.244</td>
+<td style="text-align: center;">-1650.665</td>
+<td style="text-align: center;">1.006767+0.5614581i, -0.577618+0.8165707i, -0.577618-0.8165707i, 1.006767-0.5614581i</td>
+<td style="text-align: center;">1.3125320+0.9279039i, -0.5833742+0.8220838i, -0.5833742-0.8220838i, 1.3125320-0.9279039i</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a405</td>
+<td style="text-align: center;">0.0003279</td>
+<td style="text-align: center;">859.1745</td>
+<td style="text-align: center;">-1696.349</td>
+<td style="text-align: center;">-1695.616</td>
+<td style="text-align: center;">-1653.241</td>
+<td style="text-align: center;">0.8738421+0.5268527i, -0.5780314+0.8169264i, -0.5780314-0.8169264i, 0.8738421-0.5268527i</td>
+<td style="text-align: center;">0.8818289+0.6169479i, -0.5839508+0.8269183i, -0.5839508-0.8269183i, 0.8818289-0.6169479i, -3.5251890+0.0000000i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a500</td>
+<td style="text-align: center;">0.0003936</td>
+<td style="text-align: center;">828.5134</td>
+<td style="text-align: center;">-1643.027</td>
+<td style="text-align: center;">-1642.719</td>
+<td style="text-align: center;">-1615.595</td>
+<td style="text-align: center;">1.0816019+0.630746i, -0.8181991+0.996680i, -0.8181991-0.996680i, 1.0816019-0.630746i, 30.0866777+0.000000i</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a501</td>
+<td style="text-align: center;">0.0003943</td>
+<td style="text-align: center;">828.6939</td>
+<td style="text-align: center;">-1641.388</td>
+<td style="text-align: center;">-1640.991</td>
+<td style="text-align: center;">-1610.037</td>
+<td style="text-align: center;">1.063879+0.614274i, -0.782909+1.024026i, -0.782909-1.024026i, 1.063879-0.614274i, -1.633662+0.000000i</td>
+<td style="text-align: center;">-1.791808+0i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a502</td>
+<td style="text-align: center;">0.0003465</td>
+<td style="text-align: center;">849.6644</td>
+<td style="text-align: center;">-1681.329</td>
+<td style="text-align: center;">-1680.832</td>
+<td style="text-align: center;">-1646.059</td>
+<td style="text-align: center;">1.3231536+0.8089297i, -0.5790055+0.8187047i, -0.5790055-0.8187047i, 1.3231536-0.8089297i, -1.8902606+0.0000000i</td>
+<td style="text-align: center;">-0.6099102+0.8427656i, -0.6099102-0.8427656i</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a503</td>
+<td style="text-align: center;">0.0003371</td>
+<td style="text-align: center;">853.7754</td>
+<td style="text-align: center;">-1687.551</td>
+<td style="text-align: center;">-1686.941</td>
+<td style="text-align: center;">-1648.362</td>
+<td style="text-align: center;">1.1216709+0.5589489i, -0.5777129+0.8165412i, -0.5777129-0.8165412i, 1.1216709-0.5589489i, -2.8345135-0.0000000i</td>
+<td style="text-align: center;">-0.5852608+0.8227926i, -0.5852608-0.8227926i, 1.8456205-0.0000000i</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">a504</td>
+<td style="text-align: center;">0.0003174</td>
+<td style="text-align: center;">863.4734</td>
+<td style="text-align: center;">-1704.947</td>
+<td style="text-align: center;">-1704.214</td>
+<td style="text-align: center;">-1661.839</td>
+<td style="text-align: center;">0.8683242+0.5235239i, -0.5775260+0.8164740i, -0.5775260-0.8164740i, 0.8683242-0.5235239i, 2.5819029+0.0000000i</td>
+<td style="text-align: center;">0.8814017+0.5774635i, -0.5799805+0.8211971i, -0.5799805-0.8211971i, 0.8814017-0.5774635i</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">a505</td>
+<td style="text-align: center;">0.0003172</td>
+<td style="text-align: center;">864.3531</td>
+<td style="text-align: center;">-1704.706</td>
+<td style="text-align: center;">-1703.837</td>
+<td style="text-align: center;">-1657.679</td>
+<td style="text-align: center;">0.8684185+0.5163128i, -0.5776186+0.8165025i, -0.5776186-0.8165025i, 0.8684185-0.5163128i, 1.6817049-0.0000000i</td>
+<td style="text-align: center;">0.8970605+0.5529486i, -0.5822563+0.8218981i, -0.5822563-0.8218981i, 0.8970605-0.5529486i, 4.7668677+0.0000000i</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>model_resid <span class="sc">|&gt;</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(a504) <span class="sc">|&gt;</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">var =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-acfOfResidualsFromArmaModelOnTheResiduals" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_6_lesson_2_files/figure-html/fig-acfOfResidualsFromArmaModelOnTheResiduals-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;12: Correlogram of the residuals from the ARMA model fitted to the residuals from the regression model</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div class="cell">
+<details>
+<summary>Show the code</summary>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>model_resid <span class="sc">|&gt;</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(a504) <span class="sc">|&gt;</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>() <span class="sc">|&gt;</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">PACF</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">var =</span> .resid)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+<div class="cell-output-display">
+<div id="fig-pacfOfResidualsFromArmaModelOnTheResiduals" class="quarto-figure quarto-figure-center anchored">
+<figure class="figure">
+<p><img src="chapter_6_lesson_2_files/figure-html/fig-pacfOfResidualsFromArmaModelOnTheResiduals-1.png" class="img-fluid figure-img" width="672"></p>
+<figcaption class="figure-caption">Figure&nbsp;13: Partial correlogram of the residuals from the ARMA model fitted to the residuals from the regression model</figcaption>
+</figure>
+</div>
 </div>
 </div>
 </section>
