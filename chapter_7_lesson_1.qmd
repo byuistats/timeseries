@@ -61,15 +61,151 @@ source("common_functions.R")
 
 ## Class Activity: Non-seasonal ARIMA Models (xxx min)
 
-### Effect of differencing
+### Effect of Differencing
+
+
+In [Chapter 4 Lesson 2](https://byuistats.github.io/timeseries/chapter_4_lesson_2.html#McDonalds), 
+we found that if we compute the first difference of the price of McDonald's stock from July 2020 through December 2023, the differences can be modeled as white noise.
+Sometimes differencing can remove trends.
+
+Consider the case of a random walk and a linear trend with white noise errors
+
+#### Random Walk
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Consider the random walk
+
+$$
+  x_t = x_{t-1} + w_t
+$$
+
+where $\{w_t\}$ is a white noise process. 
+
+-   What is the model for the first differences of this time series?
+
+<!-- White noise -->
+
+:::
+
+
+#### Linear Trend with White Noise Errors
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Consider a time series with a linear trend and white noise errors.
+
+$$
+  x_t = a + bt + w_t
+$$
+
+where $\{w_t\}$ is a white noise process. 
+
+-   What is the model for the first differences of this time series?
+<!-- $\nabla x_t = x_t - x_{t-1} = w_t$, which is white noise. -->
+-   What is the model obtained by subtracting $a+bt$ from this series?
+<!-- $\nabla x_t = x_t - x_{t-1} = b + w_t - w_{t-1}$, which is an $MA(1)$ process -->
+-   What are some potential concerns of using differencing to eliminate a deterministic trend?
+<!-- It can lead to an unnecessarily complicated model. -->
+
+:::
+
 
 ### Fitting an ARIMA Model when the Difference Model has a Non-Zero Mean
 
+(See the last sentence in the first paragraph on page 138.)
+
+### Differencing a Time Series or the Logarithm of a Time Series
+
+If the difference of a time series demonstrates an increasing trend, taking the logarithm before differencing can eliminate the increasing variation in the differences. As an example, consider the Austrailian electricity production series given in the book.
+
+```{r}
+#| label: fig-BooksFigure7Dot1
+#| fig-cap: "Plot of Australian electricity production, first differences, and first differences of the logarithm of the series"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+pacman::p_load("tsibble", "fable", "feasts",
+    "tsibbledata", "fable.prophet",
+    "tidyverse", "patchwork")
+cbe <- read_table("data/cbe.dat") |>
+  select(elec) |>
+  mutate(
+    date = seq(
+      ymd("1958-01-01"),
+      by = "1 months",
+      length.out = n()),
+      year_month = tsibble::yearmonth(date)) |>
+  as_tsibble(index = year_month)
+
+cbe |>
+  mutate(
+    `Diff series` = elec - lag(elec),
+    `Diff log-series` = log(elec) - lag(log(elec))) |>
+  pivot_longer(
+    cols = all_of(c("elec", "Diff series", "Diff log-series"))) |>
+  mutate(name = factor(name, levels =c("elec","Diff series", "Diff log-series"))) |>
+  ggplot(aes(x = date, y = value)) +
+  geom_line() +
+  facet_wrap(~name, ncol = 1, scales = "free", strip.position = "left") +
+  labs(x = "Time", y = "") +
+  scale_x_date(breaks = "5 years", date_labels = "%Y") +
+  theme_bw()
+```
+
+
+
 ### Integrated Time Series of Order d
 
-::: {.callout-note icon=false title="Definition of an Integrated Series of Order $d$"}
+::: {.callout-note icon=false title="Definition of an Integrated Series of Order $d$, $I(d)$"}
+
+We say that a time series is **integrated of order d** if the $d^{th}$ difference of $\{x_t\}$ is a white noise process $\{w_t\}$. Expressed differently, we write this as ${\nabla^d x_t = w_t}$. We denote an integrated time series of order $d$ as $I(d)$.
 
 :::
+
+Recall that $\nabla^d \equiv \left( 1 - \mathbf{B} \right)^d$.
+So, either of the following can be used to indicate an integrated time series of order $d$:
+
+\begin{align*}
+  \nabla^d x_t &= w_t \\
+  ~\\
+  \left( 1 - \mathbf{B} \right)^d & w_t 
+\end{align*}
+
+
+#### Special Case: $I(1)$
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What model is given by the special case $I(1)$?
+<!-- Random walk -->
+
+:::
+
+
+### Second-Order Differencing and Lagged Differences
+
+A linear trend can be removed by first-order differencing. A curved trend can sometimes be eliminated by second order differencing. 
+
+In some cases, a lagged difference is more appropriate. For example, if you have monthly data and need to remove additive seasonal effects, you may want to take a difference with a lag of 12. This subtracts sequential January observations from each other. This yields the year-over-year growth. Notice that taking a lag 12 difference 
+$$  
+  \left( 1 - \mathbf{B}^{12} \right) x_t  = x_t - x_{t-12}
+$$
+
+is very different from taking the twelfth differences 
+
+\begin{align*}
+  \nabla^{12} x_t 
+    &= \left( 1 - \mathbf{B} \right)^{12} x_t \\
+    &= x_t - 12 x_{t-1} + 66 x_{t-2} - 220 x_{t-3} + 495 x_{t-2} - 792 x_{t-3} + 924 x_{t-2} \\
+    & ~~~~~~~~~~~~~~~~ - 792 x_{t-3} + 495 x_{t-2} - 220 x_{t-3} + 66 x_{t-2} - 12 x_{t-11} + x_{t-12}
+\end{align*}
 
 
 ### ARIMA Process
