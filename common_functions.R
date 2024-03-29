@@ -13,7 +13,6 @@ pacman::p_load(
   tsibble, # Tidyverse Temporal data
   tsibbledata, # Sample Tsibble datasets
 
-
   # Statistical modeling (GLS - Chpt 6-7)
   nlme, # loaded before feasts to avoid ACF() conflict
   tidymodels, # for GLS, This will also load the dependencies; broom, rsample, dials, tune, infer, workflows, modeldata, workflowsets, parsnip, yardstick, & recipies. Note: High conflict Potential
@@ -30,7 +29,6 @@ pacman::p_load(
   ggthemes, # Plot styling
   see,  # okabeito color scheme
   ggokabeito,  # colorblind palette
-
 
   # Reporting & output
   kableExtra, # Create nice-looking tables from data.frames
