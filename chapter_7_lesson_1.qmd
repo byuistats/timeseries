@@ -45,7 +45,7 @@ source("common_functions.R")
 ## Preparation
 
 -   Read Sections 7.1-7.2
-
+-   Read [Prof. Frenzel's Blog Post](https://prof-frenzel.medium.com/kb-time-series-analysis-part-4-autoregressive-models-ed824838bd4c)
 
 
 ## Learning Journal Exchange (10 min)
@@ -124,15 +124,14 @@ where $\{w_t\}$ is a white noise process.
 If the difference of a time series demonstrates an increasing trend, taking the logarithm before differencing can eliminate the increasing variation in the differences. As an example, consider the Austrailian electricity production series given in the book.
 
 ```{r}
-#| label: fig-BooksFigure7Dot1
-#| fig-cap: "Plot of Australian electricity production, first differences, and first differences of the logarithm of the series"
 #| code-fold: true
 #| code-summary: "Show the code"
+#| output: false
 
 pacman::p_load("tsibble", "fable", "feasts",
     "tsibbledata", "fable.prophet",
     "tidyverse", "patchwork")
-cbe <- read_table("data/cbe.dat") |>
+cbe <- read_table("https://byuistats.github.io/timeseries/data/cbe.dat") |>
   select(elec) |>
   mutate(
     date = seq(
@@ -141,6 +140,26 @@ cbe <- read_table("data/cbe.dat") |>
       length.out = n()),
       year_month = tsibble::yearmonth(date)) |>
   as_tsibble(index = year_month)
+
+cbe |>
+  mutate(
+    `Diff series` = elec - lag(elec),
+    `Diff log-series` = log(elec) - lag(log(elec))) |>
+  pivot_longer(
+    cols = all_of(c("elec", "Diff series", "Diff log-series"))) |>
+  mutate(name = factor(name, levels =c("elec","Diff series", "Diff log-series"))) |>
+  ggplot(aes(x = date, y = value)) +
+  geom_line() +
+  facet_wrap(~name, ncol = 1, scales = "free", strip.position = "left") +
+  labs(x = "Time", y = "") +
+  scale_x_date(breaks = "5 years", date_labels = "%Y") +
+  theme_bw()
+```
+
+```{r}
+#| label: fig-BooksFigure7Dot1
+#| fig-cap: "Plot of Australian electricity production, first differences, and first differences of the logarithm of the series"
+#| echo: false
 
 cbe |>
   mutate(
@@ -193,7 +212,10 @@ So, either of the following can be used to indicate an integrated time series of
 
 A linear trend can be removed by first-order differencing. A curved trend can sometimes be eliminated by second order differencing. 
 
-In some cases, a lagged difference is more appropriate. For example, if you have monthly data and need to remove additive seasonal effects, you may want to take a difference with a lag of 12. This subtracts sequential January observations from each other. This yields the year-over-year growth. Notice that taking a lag 12 difference 
+In some cases, a lagged difference is more appropriate. For example, if you have monthly data and need to remove additive seasonal effects, you may want to take a difference with a lag of 12. This subtracts sequential January observations from each other. This models the year-over-year growth. 
+
+Notice that taking a lag 12 difference 
+
 $$  
   \left( 1 - \mathbf{B}^{12} \right) x_t  = x_t - x_{t-12}
 $$
@@ -203,8 +225,8 @@ is very different from taking the twelfth differences
 \begin{align*}
   \nabla^{12} x_t 
     &= \left( 1 - \mathbf{B} \right)^{12} x_t \\
-    &= x_t - 12 x_{t-1} + 66 x_{t-2} - 220 x_{t-3} + 495 x_{t-2} - 792 x_{t-3} + 924 x_{t-2} \\
-    & ~~~~~~~~~~~~~~~~ - 792 x_{t-3} + 495 x_{t-2} - 220 x_{t-3} + 66 x_{t-2} - 12 x_{t-11} + x_{t-12}
+    &= x_t - 12 x_{t-1} + 66 x_{t-2} - 220 x_{t-3} + 495 x_{t-4} - 792 x_{t-5} + 924 x_{t-6} \\
+    & ~~~~~~~~~~~~~~~~~~~ - 792 x_{t-7} + 495 x_{t-8} - 220 x_{t-9} + 66 x_{t-10} - 12 x_{t-11} + x_{t-12}
 \end{align*}
 
 
@@ -214,36 +236,82 @@ is very different from taking the twelfth differences
 
 ::: {.callout-note icon=false title="Definition of an ARIMA Process"}
 
-:::
-
-
-#### IMA 
-
-::: {.callout-note icon=false title="Definition of an ARIMA Process"}
+A time series is said to follow an **$ARIMA(p,d,q)$ process** if the $d^{th}$ differences of the time series follow an $ARMA(p,q)$ process.
 
 :::
 
+Suppose we let $y_t = \left( 1 - \mathbf{B} \right)^d x_t$. The series $\{y_t\}$ follows an $ARMA(p,q)$ process if
+$\theta_p \left(\mathbf{B} \right) y_t = \phi_q \left(\mathbf{B} \right)$.
 
-#### ARI
+Substituting, we find that $\{x_t\}$ follows an $ARIMA(p,d,q)$ process if
 
-::: {.callout-note icon=false title="Definition of an ARIMA Process"}
+$$
+    \theta_p \left(\mathbf{B} \right) \left( 1 - \mathbf{B} \right)^d x_t = \phi_q \left(\mathbf{B} \right) w_t
+$$
+
+where $\theta_p \left(\mathbf{B} \right)$ and $\phi_q \left(\mathbf{B} \right)$ are polynomials of orders $p$ and $q$, respectively.
+
+
+#### Special Case: $IMA(d,q)$ Process
+
+::: {.callout-note icon=false title="Definition of an IMA Process"}
+
+A time series $\{x_t\}$ follows an **$IMA(d,q)$ process** if it can be expressed as:
+
+$$
+    \left( 1 - \mathbf{B} \right)^d x_t = \phi_q \left(\mathbf{B} \right) w_t
+$$
+
+Note that $IMA(d,q) \equiv ARIMA(0,d,q)$.
 
 :::
-
-
-#### Simulating an ARIMA Process
-
 
 <!-- Check Your Understanding -->
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
-TheInitialPromptGoesHere
-
--   Question1
--   Question2
+-   Solve for $x_t$ in an $IMA(1,1)$ process.
+<!-- $x_t = x_{t-1} + w_t + \beta w_{t-1}$ -->
 
 :::
+
+#### Special Case: $ARI(p,d)$ Process
+
+::: {.callout-note icon=false title="Definition of an ARI Process"}
+
+A time series $\{x_t\}$ follows an **$ARI(p,d)$ process** if it can be expressed as:
+
+$$
+    \theta_p \left(\mathbf{B} \right) \left( 1 - \mathbf{B} \right)^d x_t = w_t
+$$
+
+Note that $ARI(p,d) \equiv ARIMA(p,d,0)$.
+
+:::
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Solve for $x_t$ in an $ARI(1,1)$ process.
+<!-- $x_t = \alpha x_{t-1} + x_{t-1} - \alpha x_{t-2} + w_t $ -->
+
+:::
+
+
+<!-- #### Simulating an ARIMA Process -->
+
+
+<!-- <!-- Check Your Understanding --> -->
+
+<!-- ::: {.callout-tip icon=false title="Check Your Understanding"} -->
+
+<!-- TheInitialPromptGoesHere -->
+
+<!-- -   Question1 -->
+<!-- -   Question2 -->
+
+<!-- ::: -->
 
 
 
@@ -257,17 +325,17 @@ TheInitialPromptGoesHere
 
 
 
-## Small Group Activity: SectionTitle (xxx min)
+<!-- ## Small Group Activity: SectionTitle (xxx min) -->
 
 
-<!-- Check your Understanding -->
+<!-- <!-- Check your Understanding --> -->
 
-::: {.callout-tip icon=false title="Check Your Understanding"}
+<!-- ::: {.callout-tip icon=false title="Check Your Understanding"} -->
 
--   Question1
--   Question2
+<!-- -   Question1 -->
+<!-- -   Question2 -->
 
-:::
+<!-- ::: -->
 
 
 
@@ -460,13 +528,31 @@ The ARIMA(0,1,1)(0,0,2)[12] model brings an intriguing complexity to forecasting
 
 A detailed use case for this model could involve monthly sales data for a retail company with prominent seasonal patterns, such as increased sales during holidays and a predictable off-season. The model would smooth out random fluctuations on a month-to-month basis while also capturing the impact of the sales cycles known to repeat yearly. The double seasonal moving average terms allow for modeling the nuanced pattern that might occur at the end of the year and then again in the subsequent year, acknowledging that such effects can have a two-year cycle. This is particularly useful when a single year’s data reflects an anomaly, ensuring the forecasting model is not overly influenced by one-off events.
 
-Data Science 101: don’t neglect model fitting and diagnostic checks!
-Model Fitting and Comparison: Once potential models are identified, they are fitted to the data, and their performance is evaluated using metrics like the Akaike Information Criterion (AIC) or Bayesian Information Criterion (BIC). Lower values of these metrics generally indicate a better model fit, providing a balance between model complexity and goodness of fit.
-Residual Analysis: After fitting the model, the residuals, or the differences between the observed values and the model’s predictions, are analyzed. This step is crucial as ideally, residuals should exhibit properties similar to white noise, indicating that the model has captured the underlying patterns effectively.
-Diagnostic Checks: The model undergoes various diagnostic checks, including tests for residual autocorrelation (like the Ljung-Box test), stationarity, and normality. These checks ensure that no significant information is left unexplained by the model.
-Cross-Validation: To assess the predictive performance of the model, time series cross-validation is employed. This involves fitting the model on a training dataset and then evaluating its forecasts on a validation dataset, providing a robust measure of its forecasting capabilities.
-Sensitivity Analysis: The model’s sensitivity to various parameters and underlying assumptions is tested. This analysis is essential for understanding how changes in the data or model assumptions might impact the forecasts, thereby assessing the robustness of the model.
-Case Study in R
+## Data Science 101: don’t neglect model fitting and diagnostic checks!
+
+### Model Fitting and Comparison: 
+
+Once potential models are identified, they are fitted to the data, and their performance is evaluated using metrics like the Akaike Information Criterion (AIC) or Bayesian Information Criterion (BIC). Lower values of these metrics generally indicate a better model fit, providing a balance between model complexity and goodness of fit.
+
+### Residual Analysis: 
+
+After fitting the model, the residuals, or the differences between the observed values and the model’s predictions, are analyzed. This step is crucial as ideally, residuals should exhibit properties similar to white noise, indicating that the model has captured the underlying patterns effectively.
+
+### Diagnostic Checks: 
+
+The model undergoes various diagnostic checks, including tests for residual autocorrelation (like the Ljung-Box test), stationarity, and normality. These checks ensure that no significant information is left unexplained by the model.
+
+### Cross-Validation: 
+
+To assess the predictive performance of the model, time series cross-validation is employed. This involves fitting the model on a training dataset and then evaluating its forecasts on a validation dataset, providing a robust measure of its forecasting capabilities.
+
+### Sensitivity Analysis: 
+
+The model’s sensitivity to various parameters and underlying assumptions is tested. This analysis is essential for understanding how changes in the data or model assumptions might impact the forecasts, thereby assessing the robustness of the model.
+
+
+## Case Study in R
+
 Admittedly, I had my doubts about using a real dataset instead of a pre-packaged educational one. However, I’m now confident that working with real-world data is a great lesson for understanding the practical implications of auto.arima and our decision-making processes. Therefore, we will be looking at New home sales demand in the USA for the last 60 years, pulled from ‘www.huduser.gov', but you can also download it from my GitHub: 📁 New Homes Sold Data.
 
 I’ll be utilizing the ‘tseries’ libraries, a more comprehensive time series package suitable for a broader range of tasks, including data manipulation, visualization, and forecasting. If you’re dealing with financial data like stock prediction, I suggest using the ‘xts’ library, which is specifically designed for high-frequency time series data, such as financial data. It’s more efficient than the ‘tseries’ package when working with large time series datasets.
