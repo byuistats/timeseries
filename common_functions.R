@@ -97,6 +97,29 @@ display_table <- function(df, min_col_width = "0in") {
     column_spec(1:ncol(df), width_min = min_col_width)
 }
 
+display_arima_models <- function(models_ts) {
+  # Identify "best" models
+  extrema <- models_ts |>
+    reframe(
+      sigma2 = which(min(sigma2)==sigma2),
+      log_lik = which(max(log_lik)==log_lik),
+      AIC = which(min(AIC)==AIC),
+      AICc = which(min(AICc)==AICc),
+      BIC = which(min(BIC)==BIC)
+    )
+  # Format the table
+  models_ts |>
+    select(-ar_roots, -ma_roots) |>
+    rename(Model = ".model") |>
+    round_df(1) |>
+    format_cells(rows = unique(extrema$sigma2), cols = 2, "bold") |>
+    format_cells(rows = unique(extrema$log_lik), cols = 3, "bold") |>
+    format_cells(rows = unique(extrema$AIC), cols = 4, "bold") |>
+    format_cells(rows = unique(extrema$AICc), cols = 5, "bold") |>
+    format_cells(rows = unique(extrema$BIC), cols = 6, "bold") |>
+    display_table()
+}
+
 # Rounds a value to a specific number of places and returns a character string
 round_as_text <- function(x, places) {
   return(as.character(round(x,12)))
