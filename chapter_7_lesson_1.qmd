@@ -59,7 +59,7 @@ source("common_functions.R")
 -   Sign the Learning Journal review sheet for your peer
 
 
-## Class Activity: Non-seasonal ARIMA Models (xxx min)
+## Class Activity: Non-seasonal ARIMA Models (15 min)
 
 ### Effect of Differencing
 
@@ -299,7 +299,7 @@ Note that $ARI(p,d) \equiv ARIMA(p,d,0)$.
 :::
 
 
-#### Simulating an ARIMA Process
+### Simulating an ARIMA Process
 
 We can simulate data from the ARIMA process
 
@@ -328,22 +328,22 @@ This is an ARIMA(1,1,1) process with parameters $\alpha = 0.5$ and $\beta = 0.3$
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
 -   Modify the code above to simulate from an $ARIMA(2,1,2)$ process with parameters $\alpha_1 = 0.5$, $\alpha_2 = 0.2$, $\beta_1 = 0.4$, and $\beta_2 = 0.1$.
-<!-- $$(1 - \alpha_1 B - \alpha_2 B^2) (1-B) x_t = (1+\beta_1 B + \beta_2 B^2) w_t$$ -->
+
+<!-- $$(1 - \alpha_1 B - \alpha_2 B^2) (1-B) x_t = (1 + \beta_1 B + \beta_2 B^2) w_t$$ -->
 
 :::
 
 
 
-## Class Activity: Fitting an ARIMA Process (xxx min)
+## Class Activity: Fitting an ARIMA Process - Exchange Rates (10 min)
 
-The data file [exchange_rates.parquet](https://byuistats.github.io/timeseries/data/exchange_rates.parquet) gives the exchange rates for foreign currencies. Each value is the amount in the foreign currency that is equivalent to one U. S. dollar.
+The data file [exchange_rates.parquet](https://byuistats.github.io/timeseries/data/exchange_rates.parquet) gives the exchange rates for foreign currencies. The daily-observed values in the time series are the amount in the foreign currency equivalent to one U. S. dollar. We will consider the exchange rates to convert one dollar into Euros.
 
 ```{r}
+#| label: tbl-exchangeRatesTS
+#| tbl-cap: "Select values of the time series representing the exchange rate to convert US$1 into Euros"
 #| code-fold: true
 #| code-summary: "Show the code"
-
-# BEAUTIFUL ARIMA Model
-# EXCHANGE RATES: USD.EUR (1 USD = ? EUR)
 
 exchange_ts <- rio::import("data/exchange_rates.parquet") |>
   filter(currency == "USD.EUR") |>
@@ -351,13 +351,39 @@ exchange_ts <- rio::import("data/exchange_rates.parquet") |>
   na.omit()
 
 exchange_ts |>
+  display_partial_table(6,3)
+```
+
+
+```{r}
+#| label: fig-exchangeRateTimePlot
+#| fig-cap: "Time plot of the exchange rate to convert US$1 into Euros"
+#| code-fold: true
+#| code-summary: "Show the code"
+ 
+exchange_ts |>
   autoplot(.vars = rate) + labs(title = exchange_ts$currency[1])
+```
 
-acf(exchange_ts$rate, main = paste("ACF of", exchange_ts$currency[1]))
 
-pacf(exchange_ts$rate, main = paste("ACF of", exchange_ts$currency[1]))
+```{r}
+#| label: fig-exchangeRateACFpacf
+#| fig-cap: "Correlogram and partial correlogram for the time series representing the exchange rate to convert US$1 into Euros"
+#| code-fold: true
+#| code-summary: "Show the code"
 
-exchange_ts
+acf_plot <- exchange_ts |> select(rate) |> ACF() |> autoplot(var = .resid)
+
+pacf_plot <- exchange_ts |> select(rate) |> PACF() |> autoplot(var = .resid)
+
+acf_plot | pacf_plot
+
+```
+
+
+
+```{r}
+# Fit the ARIMA Model
 
 exchange_model <- exchange_ts |>
   model(
@@ -381,31 +407,91 @@ exchange_model <- exchange_ts |>
     a210 = ARIMA(rate ~ 1 + pdq(2,1,0) + PDQ(0, 0, 0)),
     a211 = ARIMA(rate ~ 1 + pdq(2,1,1) + PDQ(0, 0, 0)),
     a212 = ARIMA(rate ~ 1 + pdq(2,1,2) + PDQ(0, 0, 0))
-    ) 
+    )
+```
 
-exchange_model |>
-  glance() 
+Here is one way to determine which model is selected by the "auto" process.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 
 exchange_model |>
   select(auto)
+```
 
-#####
+We now examine all the fitted models to determine the value of the residual mean squared error (`sigma2`), log-likelihood, AIC, AICc, and BIC. For the log-likelihood, larger values are preferable. For all other measures, smaller values are preferred.
 
-# Hide this command
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| output: false
+
+exchange_model |>
+  glance()
+```
+
+
+```{r}
+#| label: tbl-exchangeRateSeveralFittedModels
+#| tbl-cap: "Values used in the model selection process for the time series representing the exchange rate to convert US$1 into Euros"
+#| echo: false
+
 exchange_model |>
   glance() |>
   display_arima_models()
+```
 
-#####
+Suppose we choose to apply the "auto" model, which is $ARIMA(1,1,1)$.
+The model parameters are summarized here:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| output: false
+
+exchange_model |>
+  select(auto) |>
+  coefficients()
+```
+
+```{r}
+#| echo: false
+
+exchange_model |>
+  select(auto) |>
+  coefficients() |>
+  display_table()
+```
+
+
+The following plots give the acf and pacf of the residuals from this model.
+
+```{r}
+#| label: fig-exchangeRateResidACFpacf
+#| fig-cap: "Correlogram and Partial Correlogram for the residuals from the ARIMA(1,1,1) model for the daily exchange rates to convert US$1 into Euros"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
 
 model_resid <- exchange_model |>
   select(auto) |>
   residuals()
 
-acf(model_resid$.resid, main = paste("ACF of", exchange_ts$currency[1]))
+acf_plot <- model_resid |> ACF() |> autoplot(var = .resid)
 
-pacf(model_resid$.resid, main = paste("ACF of", exchange_ts$currency[1]))
+pacf_plot <- model_resid |> PACF() |> autoplot(var = .resid)
 
+acf_plot | pacf_plot
+```
+
+Here is a histogram of the residuals from our model.
+
+```{r}
+#| label: fig-exchangeRateResidHistogram
+#| fig-cap: "Histogram of the residuals from the ARIMA(1,1,1) model for the daily exchange rates to convert US$1 into Euros"
+#| code-fold: true
+#| code-summary: "Show the code"
 
 model_resid |>
   mutate(density = dnorm(.resid, mean(model_resid$.resid), sd(model_resid$.resid))) |>
@@ -424,6 +510,57 @@ model_resid |>
     )
 ```
 
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Write the fitted model:
+$$
+  x_t = ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+$$
+-   Does the model provide an appropriate fit for the data?
+
+:::
+
+Here is a forecast for the next 7 days based on our model.
+
+```{r}
+temps_forecast <- exchange_model |>
+  select(auto) |>
+  forecast(h = "7 days")
+
+temps_forecast |>
+  autoplot(exchange_ts, level = 95) +
+  geom_line(aes(y = .fitted, color = "Fitted"),
+    data = augment(exchange_model)) +
+  scale_color_discrete(name = "") +
+  labs(
+    x = "Date",
+    y = "Exchange Rate",
+    title = "Exchange Rate for Converting US$1 to Euros",
+    subtitle = "7-Day Forecast Based on our AR(1,1,1) Model"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+
+
+
+
+
+
+
+
+
+## Small-Group Activity: Fitting an ARIMA Process - Microsoft Stock Prices (20 min)
+
+A time series given the daily closing price for Microsoft (MSFT) stock is given below. To handle the gaps in the data, we define a new variable, `t`, which gives the observation number.
 
 ```{r}
 #| code-fold: true
@@ -448,6 +585,31 @@ stock_ts <- df_stock |>
   arrange(dates) |>
   mutate(t = 1:n()) |>
   as_tsibble(index = t, key = NULL)
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Using the daily closing prices of Microsoft stock, do the following.
+
+-   Make a time plot of the data.
+-   Create a correlogram and partial correlogram of the stock prices.
+-   Fit candidate $ARIMA(p,d,q)$ models to the data.
+-   Choose the "best" model, and justify your selection.
+-   Generate a correlagram and partial correlogram of the residuals from your chosen model.
+-   Make a histogram of the residuals from your model.
+-   Did your your model account for the  the time series?
+-   Predict the value 15 trading days in the future.
+
+:::
+
+
+```{r}
+#| include: false
+#| echo: false
+#| eval: false
 
 # Generate time series plot using plot_ly
 plot_ly(stock_ts, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') |>
@@ -492,10 +654,9 @@ stock_model |>
 stock_model |>
   glance() |>
   display_arima_models()
-```
 
+####
 
-```{r}
 model_resid <- stock_model |>
   select(auto) |>
   residuals()
@@ -521,10 +682,8 @@ model_resid |>
       plot.title = element_text(hjust = 0.5)
     )
 
-```
+######
 
-
-```{r}
 stock_ts$diff = stock_ts$value - lag(stock_ts$value) 
 stock_ts |>
   na.omit() |>
@@ -550,21 +709,6 @@ stock_ts |>
 
 
 
-
-
-
-
-<!-- ## Small Group Activity: SectionTitle (xxx min) -->
-
-
-<!-- <!-- Check your Understanding --> -->
-
-<!-- ::: {.callout-tip icon=false title="Check Your Understanding"} -->
-
-<!-- -   Question1 -->
-<!-- -   Question2 -->
-
-<!-- ::: -->
 
 
 

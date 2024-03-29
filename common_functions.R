@@ -54,7 +54,17 @@ endash <- "–"
 round_df <- function(df, digits) {
   nums <- vapply(df, is.numeric, FUN.VALUE = logical(1))
   df[,nums] <- round(df[,nums], digits = digits)
-  (df)
+  return(df)
+}
+
+
+# THIS IS NOT WORKING RIGHT>>>>
+autoround_df <- function(df) {
+  nums <- vapply(df, is.numeric, FUN.VALUE = logical(1))
+  df[,nums] <- round(df[,nums], digits = 6 + floor(-log(abs(min(df[,nums])), base = 10)))
+  # return(df)
+
+  return(df |> round_df(1))
 }
 
 # Used to create a table with ellipses in the middle
@@ -111,7 +121,7 @@ display_arima_models <- function(models_ts) {
   models_ts |>
     select(-ar_roots, -ma_roots) |>
     rename(Model = ".model") |>
-    round_df(1) |>
+    autoround_df() |>
     format_cells(rows = unique(extrema$sigma2), cols = 2, "bold") |>
     format_cells(rows = unique(extrema$log_lik), cols = 3, "bold") |>
     format_cells(rows = unique(extrema$AIC), cols = 4, "bold") |>
