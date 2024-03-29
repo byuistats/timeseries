@@ -1,0 +1,278 @@
+---
+title: "Great Resource"
+---
+
+
+
+
+# Great Resource
+
+https://prof-frenzel.medium.com/kb-time-series-analysis-part-4-autoregressive-models-ed824838bd4c
+
+
+
+
+# KB Time-Series Analysis — Part 4 — Autoregressive Models
+
+Gear up for an in-depth exploration of Autoregressive Models, the benchmark for advanced time series forecasting. Today, we’ll uncover their fundamental building blocks (AR and MA) and discuss their elegant integration into the ARIMA model, before we round it off with a hands-on R case study. Are you ready? Let’s go! 
+
+### Need for Time Series Analysis
+
+Time series analysis is fundamentally the study of data that captures how things evolve over time. Whether it’s predicting stock market trends in investment management, anticipating housing market shifts in real estate, or optimizing inventory in operations, the ability to forecast future events based on historical data is invaluable. This analysis often revolves around identifying patterns such as trends, which signify a general direction over a period, or seasonality, which reflects regular, predictable changes tied to seasonal factors. Understanding these basic concepts is the foundation for any professional looking to make informed predictions and decisions in their respective fields.
+
+
+## Time Series Analysis Workflow
+
+To make the most of this article, I suggest familiarizing yourself with my previous writings on the topic.
+
+### Fundamentals of Autoregressive (AR) Models
+
+The basic principle behind an AR model is its use of past data points to predict future values. Mathematically, this involves a model where the value of a variable at a certain time is expressed as a linear combination of its previous values. This formulation hinges on the assumption that historical patterns have a bearing on future trends.
+
+To illustrate, consider a simple AR model, AR(1), where the prediction for a time series at time t is a function of its value at t-1, plus an error term. This error term accounts for randomness or unpredictability in the data. As the model complexity increases, so does the number of past values it considers. An AR(2) model, for instance, would incorporate the values at both t-1 and t-2 in its predictions.
+
+In practice, the effectiveness of an AR model is largely dependent on the nature of the time series data at hand. For time series with strong historical dependence, AR models can be remarkably proficient at capturing the underlying patterns. However, they have limitations, particularly when dealing with non-stationary data, where statistical properties like the mean and variance change over time.
+
+### Moving Average (MA) Models: Complementing AR Models
+
+Unlike AR models that rely on past values of the variable itself, MA models use past error terms as predictors. These error terms are the differences between the actual values and the model’s predicted values. An MA model, essentially, tries to capture the ‘shocks’ or ‘surprises’ in the time series data, which are then used to forecast future values.
+
+The mathematical formulation of an MA model is straightforward. In an MA(1) model, for instance, the value at time t is a function of the average of the error terms at times t-1 and t. As with AR models, increasing the order of an MA model increases its complexity and the number of past error terms it considers.
+
+AR models excel in scenarios where the value of a series is highly dependent on its previous values. In contrast, MA models are more useful for modeling series where the impact of a random shock or event dissipates over time. In the messy world of real-world data, there’s no single champion. Each model brings its own set of skills to the table, and their effectiveness hinges on the specific characteristics of the data we’re trying to understand.
+
+One of the most powerful applications in time series analysis is combining AR and MA models, leading to the development of ARMA (Autoregressive Moving Average) models. ARMA models combine both the reliance of a series on its own past (as in AR) and the influence of random shocks (as in MA). In practice, ARMA models are widely used in economic and financial forecasting, where both historical trends and random events play significant roles in shaping future outcomes.
+
+### Integrated Models: Tackling Non-Stationarity through Differencing
+
+The effectiveness of AR and MA models hinges on the stationarity of the data being analyzed. Applying differencing can make them applicable to a wider range of data by removing trends and seasonal structures. The degree of differencing required can range from none to one or more. If the data is already stationary, no differencing is needed. However, if the data exhibits non-stationarity, such as a trend or seasonality, one or more differencing steps may be necessary to make the data stationary.
+
+Practical examples of differencing in action can be observed in economic data analysis. Consider a time series representing a country’s quarterly GDP growth. This series might exhibit trends and seasonal patterns, making it non-stationary. By applying differencing, these elements are minimized, revealing a clearer picture of the underlying economic conditions and trends. Data transformation aligns the data with the requirements of forecasting models, thereby enabling more accurate predictions of future economic trends.
+
+## Introducing ARIMA Models: The Ducati of Forecasting Models
+
+ARIMA (Autoregressive Integrated Moving Average) models stand as a comprehensive tool, integrating the concepts of AR, MA, and differencing. ARIMA models are notable for their ability to model a wide range of time series data, including non-stationary series, by incorporating differencing directly into their structure.
+
+In the ARIMA(p,d,q) framework, ‘p’ denotes the number of autoregressive terms, ‘d’ the number of nonseasonal differences needed to achieve stationarity, and ‘q’ the number of lagged forecast errors in the prediction equation.
+
+
+### ARIMA Model and Parameters
+
+The d parameter is the degree of differencing required to make the time series stationary. This involves subtracting the previous value from the current value d times. For example, a first-order difference (d=1) would be sufficient if the series has a stable mean but a varying variance. To determine the right d value, the Augmented Dickey-Fuller (ADF) test can be employed. This test checks for the presence of a unit root in the series, indicating non-stationarity. The number of differencing required to achieve stationarity, noted by the ADF test, will guide your appropriate choice for d.
+
+The q parameter indicates the order of the moving average part. This specifies the number of lagged forecast errors that the model uses. A model with q=1 uses the previous forecast error in predicting future values (see MA(1) model). To determine the q values, you will need the Autocorrelation Function (ACF) plot. ACF measures the correlation between time series observations at different time lags. For an MA model, the plot will show significant correlations up to the lag equal to the order of the MA process, suggesting a suitable value for your q.
+
+Lastly, the p parameter denotes the order of the autoregressive part, representing the number of lagged terms of the series included in the model. For instance, an ARIMA model with p=1 includes one lagged value of the series (see AR(1) model). To determine the appropriate p values, you can utilize tools like the Partial Autocorrelation Function (PACF). The PACF plot helps identify the extent of the lag in an autoregressive model by showing the correlation of the series with its own lagged values, controlling for the values of the time series at all shorter lags. The point where the PACF chart crosses the significance threshold for the first time indicates an appropriate value for p.
+
+## How to Read ACF and PACF Plots
+
+When interpreting Autocorrelation Function (ACF) and Partial Autocorrelation Function (PACF) plots, the goal is to identify the appropriate number of autoregressive (AR) terms (p) and moving average (MA) terms (q) for an ARIMA model. If you observe a tailing off in the ACF plot, this suggests an AR (Autoregressive) model is appropriate. In this case, the point where PACF cuts off will indicate the order ‘p’ for your AR(p) model. If the tailing off occurs in the PACF plot, it points towards an MA (Moving Average) model. Should both ACF and PACF plots show tailing off, this is indicative of an ARMA (Autoregressive Moving Average) model being a suitable choice.
+
+### AR process
+
+Example: AR(2) process
+
+In an AR process, you’ll typically notice the ACF diminishing gradually in a geometric pattern. Meanwhile, the PACF will show significance only at a limited number of initial lags. In our example, you observe two significant lags in the PACF, followed by a notable decrease in significance, it suggests an AR process of order 2, or AR(2). This means the current value in the series is influenced by its two immediate past values.
+
+### MA process
+
+Example: MA(1) process
+
+Opposite to the AR process, an MA process is indicated by a PACF that declines geometrically while the ACF plot shows a few significant lags. In our example, you see the PACF changing somewhat gradually and the ACF presenting two significant lags before it diminishes, you’re likely looking at an MA(1) process. Note that ACF plots usually start at 0. This pattern suggests that autocorrelations after the initial lags are not significant and thus, don’t add valuable predictive information.
+
+### ARMA process
+
+
+Example: ARMA(1,1) process
+
+Differentiating between AR and MA processes is usually straightforward, but real-world data often presents more complex scenarios. When both the ACF and PACF plots do not clearly show tailing off or cutting off it’s an indication to consider an ARMA model. The ARMA model combines elements of both AR and MA models, allowing for more flexibility in capturing the data’s characteristics.
+
+To determine the AR part (p value) in an ARMA model, examine the PACF plot above. The spikes at specific lags suggest an AR(1) or AR(3) model. Similarly, for the MA part (q value), we see the spikes at lags 1 and 3 would indicate an MA(1) or MA(3).
+
+Experimenting with various combinations of p and q, such as ARMA(1,1), ARMA(1,3), ARMA(3,1), and ARMA(3,3), is the most practical approach here. Through this experimentation, you assess each model’s performance using diagnostic tools and select the best model based on criteria like the RMSE or AIC (Akaike Information Criterion). In the end, it’s a process of trial and error to find the optimal ARMA model configuration for your specific data set.
+
+## Types of ARIMA Models
+
+As you’ve likely gathered, it can be a bit of a maze with all the ARIMA models available. That’s why I’ve put together a clear guide to the most common ones you’re likely to encounter, along with their practical use cases.
+
+### 1: The White Noise Model — ARIMA(0,0,0)
+
+This model assumes that the time series is completely random. The values are uncorrelated, and each value is not influenced by past values. It’s often used as a null hypothesis against which more complex models are tested. In financial markets, for example, the white noise model can serve as a benchmark to show that a particular stock’s returns are purely random, suggesting there are no patterns to exploit for profit.
+
+### 2: The Random Walk Model — ARIMA(0,1,0)
+
+The random walk model posits that the current observation is equal to the previous one plus a random error term. If you’re examining stock prices, this model would suggest that today’s price is yesterday’s price plus some random change, or ‘drift’, which is the average change over time. This model is commonly applied in financial time series where you expect a degree of continuity along with random variation.
+
+### 3: The Simple Exponential Smoothing Model — ARIMA(0,1,1)
+
+This ARIMA model captures patterns in time series that lack a trend and are better smoothed over time. It’s akin to placing a weighted average on past errors to predict future values. Retail businesses might use this model for inventory forecasting where sales volume is steady and seasonal or trend-based changes are minimal.
+
+### 4: The First-Order Autoregressive Model — ARIMA(1,0,0)
+
+Here, the present value is a function of the immediate previous value with a constant term added. This constant could represent a systematic, expected change in the data over time, which is not due to the past values. An ARIMA(1,0,0) might be used to forecast electricity demand where a stable, predictable pattern emerges over time.
+
+### 5: The Mixed Model — ARIMA(1,1,1)
+
+This model integrates both AR and MA components. It works well for data that shows signs of both autoregressive and moving average properties. An example use case would be for analyzing and forecasting economic metrics like unemployment rates, where both past values and past forecast errors play a role in shaping current figures.
+
+### 6: The Differenced First-Order Autoregressive Model — ARIMA(1,1,0)
+
+This model is a hybrid that accounts for changes in the mean level of a series over time. The ‘differencing’ aspect helps stabilize the mean, while the AR component models the autocorrelation. This might be used in weather forecasting, where temperature data could have a trend (seasonality) that needs differencing to reveal patterns in temperature changes over successive days.
+
+### 7: The Exponential Smoothing with Growth Model — ARIMA(0,1,1)
+
+This model extends simple exponential smoothing by including a constant to capture trends, essentially smoothing with a ‘drift’. It’s suitable for data with noisy fluctuations around a slowly varying mean. Retailers might use it to forecast sales that have a slow growth or decline over time, where the most recent observations are weighted more heavily.
+
+### 8: The Linear Exponential Smoothing Model — ARIMA(0,2,1) or (0,2,2)
+
+These ARIMA models add an additional layer of differencing, making them suitable for data that shows curvature or a change in the trend. They’re akin to fitting a linear trend to the data. An application could be in the context of tracking the progression of a new product’s sales, where you expect initial rapid growth that stabilizes over time.
+
+### 9: The Damped-Trend Linear Exponential Smoothing Model — ARIMA(1,1,2)
+
+This model captures scenarios where trends are present but are expected to plateau or ‘dampen’ as time progresses. It’s particularly useful when forecasting long-term trends that are expected to slow down in the future, like the saturation of a new market after an initial phase of rapid growth.
+
+### 10: The Seasonal Moving Average Model with Nonseasonal Smoothing — ARIMA(0,1,1)(0,0,2)[12]
+
+The ARIMA(0,1,1)(0,0,2)[12] model brings an intriguing complexity to forecasting. This model is essentially a nonseasonal ARIMA model with an added seasonal moving average component. The nonseasonal part, ARIMA(0,1,1), suggests that the data, once differenced, can be smoothed using one lag of the forecast errors — indicative of a simple exponential smoothing approach. The seasonal component, (0,0,2)[12], adds a layer to account for seasonal effects at lags 12 and 24, which might be significant in a yearly cycle, hence the [12] indicating a seasonal period of 12.
+
+A detailed use case for this model could involve monthly sales data for a retail company with prominent seasonal patterns, such as increased sales during holidays and a predictable off-season. The model would smooth out random fluctuations on a month-to-month basis while also capturing the impact of the sales cycles known to repeat yearly. The double seasonal moving average terms allow for modeling the nuanced pattern that might occur at the end of the year and then again in the subsequent year, acknowledging that such effects can have a two-year cycle. This is particularly useful when a single year’s data reflects an anomaly, ensuring the forecasting model is not overly influenced by one-off events.
+
+## Data Science 101: don’t neglect model fitting and diagnostic checks!
+
+### Model Fitting and Comparison: 
+
+Once potential models are identified, they are fitted to the data, and their performance is evaluated using metrics like the Akaike Information Criterion (AIC) or Bayesian Information Criterion (BIC). Lower values of these metrics generally indicate a better model fit, providing a balance between model complexity and goodness of fit.
+
+### Residual Analysis: 
+
+After fitting the model, the residuals, or the differences between the observed values and the model’s predictions, are analyzed. This step is crucial as ideally, residuals should exhibit properties similar to white noise, indicating that the model has captured the underlying patterns effectively.
+
+### Diagnostic Checks: 
+
+The model undergoes various diagnostic checks, including tests for residual autocorrelation (like the Ljung-Box test), stationarity, and normality. These checks ensure that no significant information is left unexplained by the model.
+
+### Cross-Validation: 
+
+To assess the predictive performance of the model, time series cross-validation is employed. This involves fitting the model on a training dataset and then evaluating its forecasts on a validation dataset, providing a robust measure of its forecasting capabilities.
+
+### Sensitivity Analysis: 
+
+The model’s sensitivity to various parameters and underlying assumptions is tested. This analysis is essential for understanding how changes in the data or model assumptions might impact the forecasts, thereby assessing the robustness of the model.
+
+
+## Case Study in R
+
+Admittedly, I had my doubts about using a real dataset instead of a pre-packaged educational one. However, I’m now confident that working with real-world data is a great lesson for understanding the practical implications of auto.arima and our decision-making processes. Therefore, we will be looking at New home sales demand in the USA for the last 60 years, pulled from ‘www.huduser.gov', but you can also download it from my GitHub: 📁 New Homes Sold Data.
+
+I’ll be utilizing the ‘tseries’ libraries, a more comprehensive time series package suitable for a broader range of tasks, including data manipulation, visualization, and forecasting. If you’re dealing with financial data like stock prediction, I suggest using the ‘xts’ library, which is specifically designed for high-frequency time series data, such as financial data. It’s more efficient than the ‘tseries’ package when working with large time series datasets.
+
+I’ve compiled a quick guide to the process, hoping it proves useful.
+
+
+### ARIMA Coding Steps
+
+```{r}
+#| eval: false
+
+# Load necessary libraries
+library(forecast)
+library(tseries)
+
+# Data Loading-------------
+data <- read.csv("NewHomesSold.csv", header = TRUE)
+data$Month <- as.Date(as.yearmon(data$Month, "%m/%d/%Y"))
+start_year <- year(data$Month[1])
+data_ts <- ts(data$NewSold_US, start=c(start_year,1), frequency=12)
+
+# Data Splitting for Forecast-------------
+forecast_length <- 6
+train_data <- ts(data_ts[1:(length(data_ts) - forecast_length)], start=c(start_year,1), frequency=12)
+test_data <- ts(data_ts[(length(data_ts) - (forecast_length-1)):length(data_ts)], start=c(start_year + (length(data_ts) - forecast_length) %/% 12, (length(data_ts) - forecast_length) %% 12 + 1), frequency=12)
+
+# Data Visualization-------------
+plot(train_data, main="Training Data - New Homes Sold in the US", xlab="Year", ylab="Number of Homes Sold", col = 'blue')
+
+# Time Series Decomposition-------------
+decomposed_data <- stl(train_data, s.window="periodic")
+plot(decomposed_data)
+```
+
+### New Home Sold
+
+Decomposition: New Home Sold
+The decomposition of the time series for new home sales in the USA reveals pronounced seasonality, potentially linked to cyclical factors like the fiscal calendar and climatic conditions that influence home buying behaviors. The trend, more indicative of the long-term market direction, reflecting the underlying growth or contraction within the housing market. It integrates the impact of nationwide economic policies, lending practices, demographic trends, or policy changes. The residuals, though seemingly random, are insightful, potentially indicating extraordinary events or data inconsistencies that call for additional further analysis.
+
+```{r}
+#| eval: false
+
+# Stationarity Checks-------------
+# ADF Test
+adf.test(train_data, alternative="stationary")
+
+# KPSS Test
+kpss.test(train_data)
+
+# AR/MA Process Identification-------------
+acf(train_data, main = "ACF for Time Series")
+pacf(train_data, main = "PACF for Time Series")
+```
+
+The interpretation of the ADF and KPSS test results present an interesting conflict. The ADF test, with a statistic of -2.2495 and a p-value of 0.4727, does not provide enough evidence to confirm stationarity, while the KPSS test contradicts this with a statistic of 0.91496 and a p-value of 0.01, suggesting non-stationarity. These conflicting results are a common challenge in time series analysis, prompting a closer look at the data and potentially, the application of differencing or transformation methods to achieve stationarity, a key assumption in many forecasting models.
+
+
+ACF and PACF Plot — New Home Sold
+The ACF chart for the US new home sales time series displays a gradual decline in autocorrelation, but the correlation remains positive across many lags, indicative of a trend that may need to be addressed by differencing in the ARIMA model. The PACF chart reveals a sharp drop after the first lag and insignificant correlations afterward, suggesting the autoregressive part of our model should likely include one lag (p=1). Given these observations, I would lean towards an ARIMA(1,0,0) model, where p is 1, and q is likely to be 0, indicating no moving average term is necessary. The seasonal pattern in the ACF may also guide us to include seasonal terms in the ARIMA model, adjusting the q-value accordingly to model the observed persistence in autocorrelation.
+
+```{r}
+#| eval: false
+
+# ARIMA Model Building-------------
+# Auto ARIMA model
+auto_arima_model <- auto.arima(train_data)
+summary(auto_arima_model)
+checkresiduals(auto_arima_model)
+
+# Manual ARIMA model
+manual_arima_model <- arima(train_data, order=c(1,0,0))
+summary(manual_arima_model)
+checkresiduals(manual_arima_model)
+
+# Forecasting and Model Evaluation-------------
+# Auto ARIMA Forecast
+forecast_auto <- forecast(auto_arima_model, h=forecast_length)
+plot(forecast_auto)
+lines(test_data, col='red')
+
+# Manual ARIMA Forecast
+forecast_manual <- forecast(manual_arima_model, h=forecast_length)
+plot(forecast_manual)
+lines(test_data, col='blue')
+
+# Calculating RMSE for Auto ARIMA (testing data)
+rmse_auto <- round(sqrt(mean((forecast_auto$mean - test_data)^2)), 3)
+# RMSE_Testing: 67.538
+
+# Calculating RMSE for Manual ARIMA (testing data)
+rmse_manual <- round(sqrt(mean((forecast_manual$mean - test_data)^2)), 3)
+# RMSE_Testing: 72.629
+```
+
+The auto.arimafunction in R automatically selected an ARIMA(1,1,2)(1,0,2)[12] model, integrating both non-seasonal and seasonal components. This model, with its mix of autoregressive and moving average parameters, is reflective of the complex patterns in housing market data we discussed earlier. By comparison, the manually specified ARIMA(1,0,0) model is simpler, capturing only the immediate past value’s influence without adjusting for seasonality or additional lagged effects. This auto ARIMA model outperforms the manual ARIMA with an AIC score of 7615 versus 7672 — lower is typically better in model selection. RMSE values tell us a similar story, the auto model’s RMSE of 46.7 is preferable to the manual’s 48.5, indicating closer fits to the historical data. However, the Ljung-Box test flags potential autocorrelation in the residuals for both models, with p-values suggesting that even the sophisticated auto model may not fully account for all the data’s complexity. Another reason for further analysis.
+
+
+Forecast manual ARIMA
+
+Forecast auto ARIMA
+Important Notes
+In our analysis, we opted for a six-month forecasting window because ARIMA models generally excel in short-term forecasting but may not perform as well for long-term predictions. This limitation is due to the model’s inherent design, which is more attuned to capturing short-term trends and patterns.
+The KPSS and ADF tests, commonly used to check for stationarity in time series data, have their limitations. They might not always detect weak non-stationarity. These tests operate under specific assumptions and might miss subtle trends or other non-stationary elements in the data. This limitation should be considered when interpreting test results and deciding on the appropriate modeling approach.
+The auto.arima() function's methodology sometimes leads to unexpected differencing. It follows a heuristic approach, selecting ARIMA parameters through a stepwise process. This can result in the inclusion of a differencing term even when it might not be strictly necessary. For a more rigorous analysis (computationally expensive!), consider changing the default parameters of the functionauto.arima(diff_train_data, stepwise=FALSE, approximation=FALSE, max.p=5, max.d=0, max.q=5, max.P=2, max.D=2, max.Q=2). This method may be more adept at identifying weak non-stationarity that KPSS and ADF tests miss. However, it's important to be vigilant about overfitting, particularly when the model starts to focus more on the noise rather than the underlying trend in the data. To mitigate this, a manual approach to model specification is often beneficial.
+ARIMA models are not a one-size-fits-all solution for time series analysis. They may not be the best choice for data with strong seasonal patterns or non-linear characteristics. In such cases, exploring extensions like Seasonal ARIMA (SARIMA) or integrating ARIMA with machine learning techniques can be more effective.
+I have taken a simple train-test split at the forecasting period. I recommend using alternative resampling methods to improve the robustness of your model. Options like Rolling forecast evaluation, Time series bootstrapping, or Time series cross-validation can provide a more comprehensive understanding of the model’s performance and its applicability to different data scenarios. This approach helps in mitigating the risk of overfitting and enhances the model’s generalizability.
+
+
+
+
+
+Prof. Frenzel
+Written by Prof. Frenzel
