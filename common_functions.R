@@ -22,7 +22,7 @@ pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite d
                multilevelmod, # for GLS
                broom.mixed    # for GLS
 )
-################# WARNING: DO NOT USE mosaic. IT MESSES UP THE DECOMPOSITION.
+################# WARNING: DO NOT USE mosaic. IT MESSES UP THE DECOMPOSITION. #need to test loading this in the front, might be ok
 
 # Palette ----
 palette("okabeito")
