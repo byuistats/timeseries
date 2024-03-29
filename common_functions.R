@@ -4,11 +4,12 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite dplyr::select()
                nlme,
                tidymodels,    # for GLS
-               tidyverse, kableExtra,
-               tsibble, fable,
-               feasts, tsibbledata,
-               fable.prophet,
-               patchwork,
+               tidyverse,
+               kableExtra, # Nice display tables
+               tsibble, fable, # Timeseries stuff
+               feasts, tsibbledata, # Timeseries stuff
+               fable.prophet, # Timeseries stuff
+               patchwork, # Multiple Plots in a single display area
                ggthemes,
                see,   # okabeito color scheme
                ggokabeito, # colorblind palette
