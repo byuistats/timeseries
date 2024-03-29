@@ -105,6 +105,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.NZD") %>%
@@ -113,6 +114,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.VES") %>%
@@ -121,6 +123,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.GBP") %>%
@@ -129,6 +132,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.TRY") %>%
@@ -137,6 +141,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.CHF") %>%
@@ -145,6 +150,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.BRL") %>%
@@ -153,6 +159,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.JPY") %>%
@@ -161,6 +168,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.ZAR") %>%
@@ -169,6 +177,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.HKD") %>%
@@ -177,6 +186,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.ARS") %>%
@@ -185,6 +195,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.AUD") %>%
@@ -193,6 +204,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.PKR") %>%
@@ -201,6 +213,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.CNY") %>%
@@ -209,6 +222,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.CLP") %>%
@@ -217,6 +231,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.EUR") %>%
@@ -225,6 +240,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.INR") %>%
@@ -233,6 +249,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.MXN") %>%
@@ -241,6 +258,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.RUB") %>%
@@ -249,6 +267,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.CAD") %>%
@@ -257,6 +276,7 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 
 usd1_ts <- usd1_exchange_updated %>%
   filter(currency == "USD.UAH") %>%
@@ -265,4 +285,5 @@ usd1_ts <- usd1_exchange_updated %>%
   na.omit()
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 

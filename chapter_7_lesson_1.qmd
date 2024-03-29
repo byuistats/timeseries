@@ -317,6 +317,195 @@ Note that $ARI(p,d) \equiv ARIMA(p,d,0)$.
 
 ## Class Activity: Fitting an ARIMA Process (xxx min)
 
+The data file [exchange_rates.parquet](https://byuistats.github.io/timeseries/data/exchange_rates.parquet) gives the exchange rates for foreign currencies. Each value is the amount in the foreign currency that is equivalent to one U. S. dollar.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# BEAUTIFUL ARIMA Model
+# EXCHANGE RATES: USD.EUR (1 USD = ? EUR)
+
+exchange_ts <- rio::import("data/exchange_rates.parquet") |>
+  filter(currency == "USD.EUR") |>
+  as_tsibble(index = date) |>
+  na.omit()
+
+exchange_ts |>
+  autoplot(.vars = rate) + labs(title = exchange_ts$currency[1])
+
+acf(exchange_ts$rate, main = paste("ACF of", exchange_ts$currency[1]))
+
+pacf(exchange_ts$rate, main = paste("ACF of", exchange_ts$currency[1]))
+
+exchange_ts
+
+exchange_model <- exchange_ts |>
+  model(
+    auto = ARIMA(rate ~ 1 + pdq(0:2,0:1,0:2) + PDQ(0, 0, 0)),
+    
+    a000 = ARIMA(rate ~ 1 + pdq(0,0,0) + PDQ(0, 0, 0)),
+    a001 = ARIMA(rate ~ 1 + pdq(0,0,1) + PDQ(0, 0, 0)),
+    a002 = ARIMA(rate ~ 1 + pdq(0,0,2) + PDQ(0, 0, 0)),
+    a100 = ARIMA(rate ~ 1 + pdq(1,0,0) + PDQ(0, 0, 0)),
+    a101 = ARIMA(rate ~ 1 + pdq(1,0,1) + PDQ(0, 0, 0)),
+    a102 = ARIMA(rate ~ 1 + pdq(1,0,2) + PDQ(0, 0, 0)),
+    a200 = ARIMA(rate ~ 1 + pdq(2,0,0) + PDQ(0, 0, 0)),
+    a201 = ARIMA(rate ~ 1 + pdq(2,0,1) + PDQ(0, 0, 0)),
+    a202 = ARIMA(rate ~ 1 + pdq(2,0,2) + PDQ(0, 0, 0)),
+    
+    a011 = ARIMA(rate ~ 1 + pdq(0,1,1) + PDQ(0, 0, 0)),
+    a012 = ARIMA(rate ~ 1 + pdq(0,1,2) + PDQ(0, 0, 0)),
+    a110 = ARIMA(rate ~ 1 + pdq(1,1,0) + PDQ(0, 0, 0)),
+    a111 = ARIMA(rate ~ 1 + pdq(1,1,1) + PDQ(0, 0, 0)),
+    a112 = ARIMA(rate ~ 1 + pdq(1,1,2) + PDQ(0, 0, 0)),
+    a210 = ARIMA(rate ~ 1 + pdq(2,1,0) + PDQ(0, 0, 0)),
+    a211 = ARIMA(rate ~ 1 + pdq(2,1,1) + PDQ(0, 0, 0)),
+    a212 = ARIMA(rate ~ 1 + pdq(2,1,2) + PDQ(0, 0, 0))
+    ) 
+
+exchange_model |>
+  glance() 
+
+exchange_model |>
+  select(auto)
+
+model_resid <- exchange_model |>
+  select(auto) |>
+  residuals()
+
+acf(model_resid$.resid, main = paste("ACF of", exchange_ts$currency[1]))
+
+pacf(model_resid$.resid, main = paste("ACF of", exchange_ts$currency[1]))
+
+hist(model_resid$.resid)
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Set symbol and date range
+symbol <- "MSFT"                # Abercrombie & Fitch stock trading symbol
+date_start <- "2020-01-01"
+date_end <- "2024-03-28"
+
+# Fetch stock prices
+df_stock <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
+
+# Transform data into tsibble
+stock_ts <- df_stock |>
+  mutate(
+    dates = date, 
+    value = close
+  ) |>
+  dplyr::select(dates, value) |>
+  as_tibble() |> 
+  arrange(dates) |>
+  mutate(t = 1:n()) |>
+  as_tsibble(index = t, key = NULL)
+
+# Generate time series plot using plot_ly
+plot_ly(stock_ts, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') |>
+  layout(
+    xaxis = list(title = "Date"),
+    yaxis = list(title = "Value"),
+    title = paste0("Time Plot of ", symbol, " Daily Closing Price (", format(ymd(date_start), "%d %b %Y"), " - ", format(ymd(date_end), "%d %b %Y"),")")
+  )
+
+stock_model <- stock_ts |>
+  model(
+    auto = ARIMA(value ~ 1 + pdq(0:2,0:1,0:2) + PDQ(0, 0, 0)),
+    
+    a000 = ARIMA(value ~ 1 + pdq(0,0,0) + PDQ(0, 0, 0)),
+    a001 = ARIMA(value ~ 1 + pdq(0,0,1) + PDQ(0, 0, 0)),
+    a002 = ARIMA(value ~ 1 + pdq(0,0,2) + PDQ(0, 0, 0)),
+    a100 = ARIMA(value ~ 1 + pdq(1,0,0) + PDQ(0, 0, 0)),
+    a101 = ARIMA(value ~ 1 + pdq(1,0,1) + PDQ(0, 0, 0)),
+    a102 = ARIMA(value ~ 1 + pdq(1,0,2) + PDQ(0, 0, 0)),
+    a200 = ARIMA(value ~ 1 + pdq(2,0,0) + PDQ(0, 0, 0)),
+    a201 = ARIMA(value ~ 1 + pdq(2,0,1) + PDQ(0, 0, 0)),
+    a202 = ARIMA(value ~ 1 + pdq(2,0,2) + PDQ(0, 0, 0)),
+    
+    a011 = ARIMA(value ~ 1 + pdq(0,1,1) + PDQ(0, 0, 0)),
+    a012 = ARIMA(value ~ 1 + pdq(0,1,2) + PDQ(0, 0, 0)),
+    a110 = ARIMA(value ~ 1 + pdq(1,1,0) + PDQ(0, 0, 0)),
+    a111 = ARIMA(value ~ 1 + pdq(1,1,1) + PDQ(0, 0, 0)),
+    a112 = ARIMA(value ~ 1 + pdq(1,1,2) + PDQ(0, 0, 0)),
+    a210 = ARIMA(value ~ 1 + pdq(2,1,0) + PDQ(0, 0, 0)),
+    a211 = ARIMA(value ~ 1 + pdq(2,1,1) + PDQ(0, 0, 0)),
+    a212 = ARIMA(value ~ 1 + pdq(2,1,2) + PDQ(0, 0, 0))
+    ) 
+
+stock_model |>
+  glance() 
+
+stock_model |>
+  select(auto)
+
+#########
+
+combined_models <- stock_model |>
+  glance() |>
+  select(-ar_roots, -ma_roots)
+
+extrema <- combined_models |>
+  reframe(
+    sigma2 = which(min(sigma2)==sigma2),
+    log_lik = which(max(log_lik)==log_lik),
+    AIC = which(min(AIC)==AIC),
+    AICc = which(min(AICc)==AICc),
+    BIC = which(min(BIC)==BIC)
+  )
+
+combined_models |>
+  rename(Model = ".model") |>
+  round_df(1) |>
+  format_cells(rows = unique(extrema$sigma2), cols = 2, "bold") |>
+  format_cells(rows = unique(extrema$log_lik), cols = 3, "bold") |>
+  format_cells(rows = unique(extrema$AIC), cols = 4, "bold") |>
+  format_cells(rows = unique(extrema$AICc), cols = 5, "bold") |>
+  format_cells(rows = unique(extrema$BIC), cols = 6, "bold") |>
+  display_table()
+
+##########
+
+model_resid <- stock_model |>
+  select(auto) |>
+  residuals()
+
+acf(model_resid$.resid, main = "ACF of Residuals from ARIMA Model")
+
+pacf(model_resid$.resid, main = "ACF of Residuals from ARIMA Model")
+
+hist(model_resid$.resid)
+
+```
+
+
+```{r}
+stock_ts$diff = stock_ts$value - lag(stock_ts$value) 
+stock_ts |>
+  na.omit() |>
+  autoplot(.vars = diff) + 
+    labs(
+      title = paste("Time Plot of Differences in Daily", symbol, "Stock Prices"),
+      subtitle = 
+        paste0(
+          format(ymd(date_start), "%d %b %Y"),
+            " - ",
+          format(ymd(date_end), "%d %b %Y")
+          ),
+      x = "Date",
+      y = "Difference",
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+```
 
 
 
