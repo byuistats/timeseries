@@ -299,19 +299,38 @@ Note that $ARI(p,d) \equiv ARIMA(p,d,0)$.
 :::
 
 
-<!-- #### Simulating an ARIMA Process -->
+#### Simulating an ARIMA Process
+
+We can simulate data from the ARIMA process
+
+$$
+  x_t = 0.5 x_{t-1} + x_{t-1} - 0.5 x_{t-2} + w_t + 0.3 w_{t-1}
+$$
+
+using the following R code.
+
+```{r}
+set.seed(1)
+n <- 10000
+x <- rnorm(n)
+w <- rnorm(n)
+for (i in 3:n) {
+  x[i] <- 0.5 * x[i - 1] + x[i - 1] - 0.5 * x[i - 2] + w[i] + 0.3 * w[i - 1]
+}
+arima(x, order = c(1, 1, 1))
+```
+
+This is an ARIMA(1,1,1) process with parameters $\alpha = 0.5$ and $\beta = 0.3$.
 
 
-<!-- <!-- Check Your Understanding --> -->
+<!-- Check Your Understanding -->
 
-<!-- ::: {.callout-tip icon=false title="Check Your Understanding"} -->
+::: {.callout-tip icon=false title="Check Your Understanding"}
 
-<!-- TheInitialPromptGoesHere -->
+-   Modify the code above to simulate from an $ARIMA(2,1,2)$ process with parameters $\alpha_1 = 0.5$, $\alpha_2 = 0.2$, $\beta_1 = 0.4$, and $\beta_2 = 0.1$.
+<!-- $$(1 - \alpha_1 B - \alpha_2 B^2) (1-B) x_t = (1+\beta_1 B + \beta_2 B^2) w_t$$ -->
 
-<!-- -   Question1 -->
-<!-- -   Question2 -->
-
-<!-- ::: -->
+:::
 
 
 
@@ -370,6 +389,15 @@ exchange_model |>
 exchange_model |>
   select(auto)
 
+#####
+
+# Hide this command
+exchange_model |>
+  glance() |>
+  display_arima_models()
+
+#####
+
 model_resid <- exchange_model |>
   select(auto) |>
   residuals()
@@ -378,7 +406,22 @@ acf(model_resid$.resid, main = paste("ACF of", exchange_ts$currency[1]))
 
 pacf(model_resid$.resid, main = paste("ACF of", exchange_ts$currency[1]))
 
-hist(model_resid$.resid)
+
+model_resid |>
+  mutate(density = dnorm(.resid, mean(model_resid$.resid), sd(model_resid$.resid))) |>
+  ggplot(aes(x = .resid)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 0.001) +
+    geom_line(aes(x = .resid, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
 ```
 
 
@@ -446,31 +489,13 @@ stock_model |>
 
 #########
 
-combined_models <- stock_model |>
+stock_model |>
   glance() |>
-  select(-ar_roots, -ma_roots)
+  display_arima_models()
+```
 
-extrema <- combined_models |>
-  reframe(
-    sigma2 = which(min(sigma2)==sigma2),
-    log_lik = which(max(log_lik)==log_lik),
-    AIC = which(min(AIC)==AIC),
-    AICc = which(min(AICc)==AICc),
-    BIC = which(min(BIC)==BIC)
-  )
 
-combined_models |>
-  rename(Model = ".model") |>
-  round_df(1) |>
-  format_cells(rows = unique(extrema$sigma2), cols = 2, "bold") |>
-  format_cells(rows = unique(extrema$log_lik), cols = 3, "bold") |>
-  format_cells(rows = unique(extrema$AIC), cols = 4, "bold") |>
-  format_cells(rows = unique(extrema$AICc), cols = 5, "bold") |>
-  format_cells(rows = unique(extrema$BIC), cols = 6, "bold") |>
-  display_table()
-
-##########
-
+```{r}
 model_resid <- stock_model |>
   select(auto) |>
   residuals()
@@ -479,7 +504,22 @@ acf(model_resid$.resid, main = "ACF of Residuals from ARIMA Model")
 
 pacf(model_resid$.resid, main = "ACF of Residuals from ARIMA Model")
 
-hist(model_resid$.resid)
+
+model_resid |>
+  mutate(density = dnorm(.resid, mean(model_resid$.resid), sd(model_resid$.resid))) |>
+  ggplot(aes(x = .resid)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 2) +
+    geom_line(aes(x = .resid, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
 
 ```
 
