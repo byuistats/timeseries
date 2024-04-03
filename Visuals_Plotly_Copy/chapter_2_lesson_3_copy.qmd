@@ -1,0 +1,459 @@
+---
+title: "Exploration of Autocorrelation Concepts"
+subtitle: "Chapter 2: Lesson 3"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+
+library(tidyverse)
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+```{r}
+#| include: false
+
+get_data_for_cov_table <- function(offset = 1) {
+  x1 <- get_toy_data()
+  
+  # build a data frame
+  df <- data.frame(t = 1:length(x1),
+                   x = x1,
+                   y = lead(x1, offset)) |>
+    mutate(
+      xx = x - mean(x),
+      xx2 = xx^2,
+      yy = y - mean(x),
+      # yy2 = yy^2,
+      xy = xx * yy
+    ) |> 
+    dplyr::select(t, x, y, xx, xx2, yy, xy)
+  
+  return(df)
+}
+
+make_cov_table_df <- function(df, offset=1, decimals_1st_order = 5, decimals_2nd_order = 5) {
+  # Color vector
+  oi_colors <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#F5C710", "#CC79A7", "#999999")
+  
+  df_summary <- df |> 
+    summarize(
+      x = sum(x),
+      y = sum(y, na.rm = TRUE),
+      xx = sum(xx),
+      yy = sum(yy, na.rm = TRUE),
+      xx2 = sum(xx2),
+      # yy2 = sum(yy2, na.rm = TRUE),
+      xy = sum(xy, na.rm = TRUE)
+    ) |> 
+    # round_df(3) |> 
+    mutate(t = paste0("sum")) |> 
+    mutate(
+      t = paste0("sum"),
+      x = round_to_places(x, 1),
+      y = round_to_places(y, 1),
+      xx = round_to_places(xx, decimals_1st_order),
+      xx2 = round_to_places(xx2, decimals_2nd_order),
+      yy = round_to_places(yy, decimals_1st_order),
+      # yy2 = round_to_places(yy2, decimals_2nd_order),
+      xy = round_to_places(xy, decimals_2nd_order)
+    ) |> 
+    dplyr::select(t, x, y, xx, xx2, yy, xy)
+  
+  out <- df |>
+    mutate(
+      t = as.character(t),
+      x = round_to_places(x, 1),
+      y = round_to_places(y, 1),
+      xx = round_to_places(xx, decimals_1st_order),
+      xx2 = round_to_places(xx2, decimals_2nd_order),
+      yy = round_to_places(yy, decimals_1st_order),
+      # yy2 = round_to_places(yy2, decimals_2nd_order),
+      xy = round_to_places(xy, decimals_2nd_order)
+    ) |> 
+    mutate(
+      x = cell_spec(x, 
+                    color = case_when(
+                      is.na(x) ~ "#999999",
+                      TRUE ~ oi_colors[( row_number() + 0 ) %% 9 + 1]
+                    )
+      ),
+      y = cell_spec(y, 
+                    color = case_when(
+                      is.na(y) ~ "#999999",
+                      TRUE ~ oi_colors[( row_number() + offset ) %% 9 + 1]
+                    )
+      )
+    ) |> 
+    mutate(
+      # x = ifelse(row_number() > nrow(.) - offset, paste0("[",x,"]"), x),
+      y = ifelse(row_number() > nrow(.) - offset, NA, y),
+    ) |> 
+    replace(., is.na(.), "—") |>
+    bind_rows(df_summary) |> 
+    rename(
+      "x_t" = x,
+      "x_{t+k}" = y,
+      # paste0("x_{t+", offset, "}") = y,
+      "x_t-mean(x)" = xx, 
+      "(x_t-mean(x))^2" = xx2, 
+      "x_{t+k}-mean(x)" = yy,
+      # "(x_{t+k}-mean(x))^2" = yy2, 
+      "(x-mean(x))(x_{t+k}-mean(x))" = xy
+    )
+  
+  return(out)
+}
+
+# Compute summary values
+compute_summaries <- function(df, digits = 4) {
+  df |> 
+    summarize(
+      mean_x = mean(x),
+      mean_y = mean(y, na.rm = TRUE),
+      ss_x = sum(xx2),
+      # ss_y = sum(yy2, na.rm = TRUE),
+      ss_xy = sum(xy, na.rm = TRUE),
+      c_0 = sum(xx2) / nrow(.),
+      c_k = sum(xy, na.rm = TRUE) / nrow(.),
+      r_k = c_k / c_0
+    ) |> 
+    round_df(digits)
+}
+
+```
+
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_2_lesson_3_outcomes.qmd >}}
+
+
+
+
+
+## Preparation
+
+-   Read Sections 2.2.5 and 2.3-2.5 (No new reading assignment)
+
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+-   What would you add to your learning journal after reading your partner's?
+-   What would you recommend your partner add to their learning journal?
+-   Sign the Learning Journal review sheet for your peer
+
+
+## Correlograms (10 mins)
+
+In the previous lesson, we used the following time series as an example.
+Here are the values in that time series:
+
+```{r}
+#| echo: false
+
+# simulate correlated normal random data
+x1 <- get_toy_data()
+
+cat("x <- c(",paste(x1, collapse = ", "),")")
+```
+
+-   The table below gives the sample autocorrelation function, acf, for this data set. You may recognize some of these values from the previous lesson. 
+
+```{r}
+#| echo: false
+
+df <- data.frame(x = x1)
+
+z <- acf(df$x, plot=FALSE, type = "correlation") 
+# acf(df$x, plot=TRUE, type = "correlation") ## Solution
+
+z$acf |> 
+  data.frame() |> 
+  round_df(3) |> 
+  rename("acf" = "z.acf") |> 
+  mutate(
+    k = row_number() - 1,
+    acf = as.character(acf)
+  ) |> 
+  pivot_wider(names_from = k, values_from = acf) |> 
+  # mutate("4" = "_____") |> 
+  display_table()
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Use the acf values to sketch the correlogram for these data in your Learning Journal. The figure below can help you begin.
+
+```{r}
+#| echo: false
+
+ggplotly(ggplot(data = df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +
+  # geom_col() +
+  ylim(-1, 1) +
+  scale_x_continuous(breaks = 0:9) + 
+  geom_segment(aes(x = 0, y = 0, xend = 0, yend = 1)) + 
+  geom_segment(aes(x = 0, y = 0, xend = 9, yend = 0)) + ## Hack
+  geom_hline(yintercept = 0, linetype = "solid", linewidth=1, color = "black") +
+  geom_hline(yintercept = (2.6/4.2), linetype = "dashed", linewidth=1, color = "#0072B2") +  # Texbooks says these lines should be at (-0.1 +/- 2/sqrt(10)). Used +/-(2.6/4.2), based on measurements made visually with a ruler from the figure generated by R.
+  geom_hline(yintercept = (-2.6/4.2), linetype = "dashed", linewidth=1, color = "#0072B2") +
+  labs(x = "Lag", y = "ACF") +
+  # theme_bw()   
+  # theme(panel.grid.major.x = element_blank(), panel.grid.major.y = element_blank())
+  theme_bw() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  ))
+```
+
+<!-- -   Finish a partially-created correlogram with the r_k values computed -->
+
+-   Are any of the autocorrelations statistically significant? If so, which one(s)?
+
+:::
+
+## Application: Chocolate Search Trends (10 min)
+
+Recall the Google Trends data for the term "chocolate" from the last lesson.
+The cleaned data are available in the file <a href="data/chocolate.csv" download>chocolate.csv</a>.
+
+### Import the chocolate search data and convert to tsibble format
+
+Use the code below to import the data and convert it into a time series (tsibble) object.
+
+```{r}
+#| warning: false
+
+# load packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("tsibble", "fable",
+               "feasts", "tsibbledata",
+               "fable.prophet", "tidyverse",
+               "patchwork", "rio")
+
+# read in the data from a csv and make the tsibble
+# change the line below to include your file path
+chocolate_month_ts <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |>
+  mutate(
+    dates = yearmonth(ym(Month)),
+    month = month(dates),
+    year = year(dates),
+    value = chocolate
+  ) |> 
+  dplyr::select(dates, month, year, value) |>
+  as_tsibble(index = dates)
+
+choc_decompose <- chocolate_month_ts |>
+    model(feasts::classical_decomposition(value,
+        type = "add"))  |>
+    components()
+
+autoplot(choc_decompose) |> ggplotly()
+```
+
+Here are the values of the acf for the chocolate search data:
+
+```{r}
+acf(chocolate_month_ts$value, plot=FALSE, type = "correlation", lag.max = 25)
+```
+
+Here is the associated correlogram:
+
+```{r}
+
+acf(chocolate_month_ts$value, plot = FALSE, type = "correlation", lag.max = 25)
+
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What does the information displayed in this correlogram suggest?
+
+:::
+
+If we consider only the random component of this time series, the correlogram is:
+
+```{r}
+result <- acf(choc_decompose$random |> na.omit(), plot=FALSE, type = "correlation", lag.max = 25)
+
+acf_plot_data <- data.frame(
+  lag = result$lag,
+  acf = result$acf
+)
+
+# Plot ACF using ggplot
+ggplotly(ggplot(acf_plot_data, aes(x = lag, y = acf)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Lag", y = "ACF") +
+  ggtitle("Autocorrelation Function (ACF)") +
+  theme_minimal())
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do the spikes in the correlogram tell us about this time series?
+-   Is there evidence of autocorrelation in the data after removing the trend and seasonal variation?
+
+:::
+
+
+## Small Group Activity: BYU-Idaho On-Campus Enrollment (25 min)
+
+The official number of on-campus BYU-Idaho students each semester is given in the file <a href="https://byuistats.github.io/timeseries/data/byui_enrollment.csv" download>byui_enrollment.csv</a>. 
+
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Do the following:
+
+-   Create a tsibble with the BYU-Idaho enrollment data. (Hint: There are three semesters in a year, so treat the enrollments as observations taken every four months in January, May, and September.)
+-   Plot the decomposition of this time series.
+-   Describe the trend.
+-   Describe the seasonal component.
+-   Is there evidence of seasonal variation? If so, propose an explanation for the seasonal variation.
+-   Create the correlogram for these data. 
+    -   What do you observe?
+    -   Does the correlogram support the statement you made about the seasonal component?
+-   Is there evidence of autocorrelation in the data after removing the trend and seasonal variation?
+
+:::
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+## Homework
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_2_3.qmd" download="homework_2_3.qmd"> homework_2_3.qmd </a>
+
+:::
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Correlograms</a>
+
+::: {#Solutions style="display:none;"}
+
+Solutions to correlogram activity
+
+```{r}
+x <- c( 4.4, 4.2, 4.2, 4, 4.4, 4.7, 4.9, 5.3, 5.4, 5.5 )
+acf(x, plot=FALSE, type = "correlation")
+acf(x, plot=TRUE, type = "correlation")
+```
+
+:::
+
+
+<a href="javascript:showhide('Solutions2')"
+style="font-size:.8em;">BYU-Idaho Enrollment</a>
+
+::: {#Solutions2 style="display:none;"}
+
+Solutions to BYU-Idaho Enrollment Activity
+
+
+```{r}
+#| warning: false
+
+
+# read in the data from a csv and make the tsibble
+
+# Method 1:
+enrollment_df <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv")
+start_date <- lubridate::ymd("2019-05-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(enrollment_df)-1) * 4,
+                by = "4 months")
+enrollment_ts <- tibble(
+    dates = tsibble::yearmonth(date_seq),
+    semester = pull(enrollment_df, semester),
+    enrollment = pull(enrollment_df, enrollment)
+  ) |>
+  dplyr::select(semester, dates, enrollment) |>
+  as_tsibble(index = dates)
+
+# Method 2:
+enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
+  mutate(
+    dates = yearmonth(ym(paste(year, term * 4 - 3)))
+  ) |>
+  dplyr::select(semester, dates, enrollment) |>
+  as_tsibble(index = dates) 
+
+# Compute and plot the decomposition
+enrollment_decompose <- enrollment_ts |>
+    model(feasts::classical_decomposition(enrollment,
+        type = "add"))  |>
+    components()
+autoplot(enrollment_decompose) |> ggplotly()
+```
+
+
+```{r}
+ggplotly(ACF(enrollment_decompose$enrollment, type = "correlation"))
+```
+
+
+```{r}
+acf(enrollment_decompose$enrollment, plot=FALSE, type = "correlation")
+```
+
+
+```{r}
+acf(enrollment_decompose$enrollment, plot=TRUE, type = "correlation")
+```
+
+
+```{r}
+acf(enrollment_decompose$random |> na.omit(), plot=TRUE, type = "correlation")
+```
+
+:::

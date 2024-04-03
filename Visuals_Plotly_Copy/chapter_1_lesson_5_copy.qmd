@@ -1,0 +1,1126 @@
+---
+title: "Multiplicative Models"
+subtitle: "Chapter 1: Lesson 5"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+pacman::p_load(data.table) # for transpose
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_1_lesson_5_outcomes.qmd >}}
+
+## Preparation
+
+-   Review Sections 1.5.1-1.5.3
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+-   What would you add to your learning journal after reading your partner's?
+-   What would you recommend your partner add to their learning journal?
+-   Sign the Learning Journal review sheet for your peer
+
+
+## Class Activity: Comparing Models in the Textbook Versus R (2 min)
+
+Both the textbook and R use the same model in the additive case:
+
+$$
+  x_t = m_t + s_t + z_t
+$$
+
+However, there is a discrepancy in the definitions for the mulitplicative models. The textbook defines the multiplicative model as
+
+$$
+  x_t = m_t \cdot s_t + z_t
+$$ but R defines the multiplicative model as
+
+$$
+  x_t = m_t \cdot s_t \cdot z_t
+$$ You can investigate R's definition by executing this command in RStudio.
+
+```{r}
+#| eval: false
+
+?classical_decomposition
+```
+
+
+
+## Class Activity: Exploring Simulated Time Series Data (10 min)
+
+So far, you have learned how to estimate a trend using aggregated data (i.e., an annual average) or a moving average. We will compute the seasonal effect and use this to get the random component. 
+
+### Additive Model
+
+The code hidden below simulates 10 years of a monthly time series with a linear trend and seasonal variation based on an additive model. Because the data are simulated, we know exactly which functions were used to create it, and we can observe what happens when we decompose this function.
+
+#### Table 1: Simulated Data (Additive Model)
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+# Set random seed for reproducibility
+set.seed(20) 
+
+# Set parameters & initialize vectors
+num_years <- 10
+n <- 12 * num_years
+sigma <- .75
+a <- 0.05
+b <- 1
+c <- 0.5
+trend <- seasonal <- x_t <- rep(0,n)
+time_seq <- seq(1,n)
+
+# Generate correlated error terms
+w <- rnorm(n + 4, 0, 1)
+z = w + lead(w,1) + lead(w,2) + lead(w,3) + lead(w,4)
+z  = head(z, n) / 2
+
+# Get date
+year_seq <- lubridate::year(today()) - num_years  + (time_seq - 1) %/% 12
+month_seq <- (time_seq - 1) %% 12 + 1
+date_seq <- ymd(paste0(year_seq,"-",month_seq,"-01"))
+
+# Get data
+for (t in 1:n) {
+  trend[t] <- a * t + 10
+  seasonal[t] <- b * sin(t / 12 * 2 * pi * 1)  + c * cos(t / 12 * 2 * pi * 3)
+  x_t[t] <- trend[t] + seasonal[t] + z[t]
+}
+
+x_df <- data.frame(x_t = x_t, trend = trend, seasonal = seasonal)
+
+start_year <- lubridate::year(today()) - num_years
+start_date <- lubridate::ymd(paste0(start_year,"-01-01"))
+
+# start_date <- lubridate::ymd("1958-01-01")
+date_seq <- seq(start_date,
+    start_date + months(nrow(x_df)-1),
+    by = "1 months")
+
+x_df_ts <- x_df |>
+  mutate(
+    date = date_seq,
+    month = tsibble::yearmonth(date)
+  ) |>
+  select(date, month, trend, seasonal, x_t) |> 
+  as_tsibble(index = month)
+```
+
+```{r}
+#| echo: false
+
+x_df_ts |>
+  rename(
+    Date = date,
+    Month = month,
+    "Trend, $$m_t$$" = trend,
+    "Seasonal, $$s_t$$" = seasonal,
+    "Data, $$x_t$$" = x_t
+  ) |>
+  display_partial_table(6,2)
+```
+
+
+
+The code above has generated simulated data, where the trend is linear with equation
+
+$$
+  m_t = \frac{t}{20}
+$$
+
+and the seasonal effect follows the function
+
+$$
+  s_t = \sin \left( \frac{t\pi}{6} \right) + \frac{1}{2}\cos\left(\frac{t \pi}{18} \right) 
+$$
+
+Letting $t$ represent the month number across 10 years, we simulate a time series. Click on the tabs below to compare the actual construction of the time series (using the components generated in the code above) to the decomposition in R.
+
+::: panel-tabset
+#### Actual Construction (Additive)
+
+Here is a plot of the components of the simulated data.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+
+trend_plot <- ggplotly(ggplot(x_df_ts, aes(x=month, y=trend)) + 
+                         geom_line() +
+                         labs(title="", 
+                              x=NULL, 
+                              y="TREND") +
+                         theme(plot.title = element_text(hjust = 0.5)))
+
+seasonal_plot <- ggplotly(ggplot(x_df_ts, aes(x=month, y=seasonal)) + 
+                             geom_line() +
+                             labs(title="", 
+                                  x=NULL, 
+                                  y="Seasonal") +
+                             theme(plot.title = element_text(hjust = 0.5)))
+
+error_plot <- ggplotly(ggplot(x_df_ts, aes(x = month, y = x_t - trend - seasonal)) + 
+                          geom_line() +
+                          labs(title="", 
+                               x=NULL, 
+                               y="Random") +
+                          theme(plot.title = element_text(hjust = 0.5)))
+
+x_plot <- ggplotly(ggplot(x_df_ts, aes(x=month, y=x_t)) + 
+                      geom_line() +
+                      labs(title="True (Simulated) Values", 
+                           x=NULL,  
+                           y="$$x_t$$") +
+                      theme(plot.title = element_text(hjust = 0.5)))
+
+
+
+fig <- subplot(x_plot, trend_plot, seasonal_plot, error_plot, nrows = 4, titleY = TRUE, titleX = TRUE )
+
+fig
+
+```
+
+#### Decomposition (Additive)
+
+Now, we use R to decompose the time series $\{x_t\}$.
+
+```{r}
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+
+x_decompose <- x_df_ts |>
+    model(feasts::classical_decomposition(x_t,
+        type = "add"))  |>
+    components()
+
+ggplotly(autoplot(x_decompose))
+```
+
+```{r}
+#| include: false
+i <- c(0:n)
+# a <- 0
+x_t <- a*i + b*sin(i/12*2*pi) + c*cos(i/12*2*pi*3)
+
+df <- data.frame(i, x_t)
+
+ggplotly(ggplot(df, aes(x=i, y=x_t)) + 
+  geom_line() +
+  labs(title="Plot of Function", 
+       x="i", 
+       y="$$x_t$$"))
+```
+:::  
+<!-- End of panel-tabset -->
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   How does the (estimated) decomposition compare to the theoretical values above?
+    -   How well is the trend estimated?
+    -   How well is the seasonal effect estimated?
+    -   How well is the random effect estimated?
+-   Make changes to the simulated data and observe the effect on the plots
+:::
+
+### Multiplicative Model
+
+We now simulate data and apply R's multiplicative model. This implies that the error term, $z_t$, has a mean of 1, rather than 0.
+
+#### Table 2: Simulated Data (Multiplicative Model)
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Set random seed for reproducibility
+set.seed(123) 
+
+# Set parameters & initialize vectors
+num_years <- 10
+n <- 12 * num_years
+sigma <- .75
+a <- 0.03
+b <- 1
+c <- 0.5 
+trend <- seasonal <- x_t <- rep(0,n)
+time_seq <- seq(1,n)
+
+# Generate correlated error terms
+w <- rnorm(n + 4, 0.2, 0.1) # Changed to a mean of 1 and sd of 0.03
+z = w + lead(w,1) + lead(w,2) + lead(w,3) + lead(w,4)
+z  = head(z, n)
+
+# Get date
+year_seq <- lubridate::year(today()) - num_years  + (time_seq - 1) %/% 12
+month_seq <- (time_seq - 1) %% 12 + 1
+date_seq <- ymd(paste0(year_seq,"-",month_seq,"-01"))
+
+# Get data
+for (t in 1:n) {
+  trend[t] <- exp(a * t)
+  seasonal[t] <- exp( b * sin(t / 12 * 2 * pi * 1)  + c * cos(t / 12 * 2 * pi * 3) + 1 )
+  x_t[t] <- trend[t] * seasonal[t] * z[t] # Note R's definition of the mult. model
+}
+
+x_df <- data.frame(x_t = x_t, trend = trend, seasonal = seasonal)
+
+start_year <- lubridate::year(today()) - num_years
+start_date <- lubridate::ymd(paste0(start_year,"-01-01"))
+
+# start_date <- lubridate::ymd("1958-01-01")
+date_seq <- seq(start_date,
+    start_date + months(nrow(x_df)-1),
+    by = "1 months")
+
+x_df_ts <- x_df |>
+  mutate(
+    date = date_seq,
+    month = tsibble::yearmonth(date)
+  ) |>
+  select(date, month, trend, seasonal, x_t) |>
+  as_tsibble(index = month)
+```
+
+```{r}
+#| echo: false
+
+x_df_ts |>
+  rename(
+    Date = date,
+    Month = month,
+    "Trend, $$m_t$$" = trend,
+    "Seasonal, $$s_t$$" = seasonal,
+    "Data, $$x_t$$" = x_t
+  ) |>
+  display_partial_table(6,2)
+```
+
+The code above simulated data, where the trend is exponential with equation
+
+$$
+  m_t = e^{0.03 t}
+$$
+
+and the seasonal effect follows the function
+
+$$
+  s_t = \sin \left( \frac{t\pi}{6} \right) + \frac{1}{2}\cos\left(\frac{t \pi}{18} \right) + 1
+$$
+
+Letting $t$ represent the month number across 10 years, we simulate a time series with multiplicative effects. Click on the tabs below to compare the actual construction of the time series (using the components generated in the code above) to the decomposition in R.
+
+::: panel-tabset
+#### Actual Construction (Multiplicative)
+
+Here is a plot of the components of the simulated data.
+
+```{r}
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+
+trend_plot <- ggplotly(ggplot(x_df_ts, aes(x=month, y=trend)) + 
+                         geom_line() +
+                         labs(title="", 
+                              x=NULL, 
+                              y="TREND") +
+                         theme(plot.title = element_text(hjust = 0.5)))
+
+seasonal_plot <- ggplotly(ggplot(x_df_ts, aes(x=month, y=seasonal)) + 
+                             geom_line() +
+                             labs(title="", 
+                                  x=NULL, 
+                                  y="Seasonal") +
+                             theme(plot.title = element_text(hjust = 0.5)))
+
+error_plot <- ggplotly(ggplot(x_df_ts, aes(x = month, y = x_t - trend - seasonal)) + 
+                          geom_line() +
+                          labs(title="", 
+                               x=NULL, 
+                               y="Random") +
+                          theme(plot.title = element_text(hjust = 0.5)))
+
+x_plot <- ggplotly(ggplot(x_df_ts, aes(x=month, y=x_t)) + 
+                      geom_line() +
+                      labs(title="True (Simulated) Values", 
+                           x=NULL,  
+                           y="$$x_t$$") +
+                      theme(plot.title = element_text(hjust = 0.5)))
+
+
+
+fig <- subplot(x_plot, trend_plot, seasonal_plot, error_plot, nrows = 4, titleY = TRUE, titleX = TRUE )
+
+fig
+```
+
+#### Decomposition (Multiplicative)
+
+Now, we use R to decompose the time series $\{x_t\}$.
+
+```{r}
+#| warning: false
+#| code-fold: true
+#| code-summary: "Show the code"
+
+x_decompose <- x_df_ts |>
+    model(feasts::classical_decomposition(x_t,
+        type = "mult"))  |>
+    components()
+
+ggplotly(autoplot(x_decompose))
+```
+
+
+
+```{r}
+#| include: false
+i <- c(0:n)
+# a <- 0
+x_t <- a*i + b*sin(i/12*2*pi) + c*cos(i/12*2*pi*3)
+
+df <- data.frame(i, x_t)
+
+ggplotly(ggplot(df, aes(x=i, y=x_t)) + 
+  geom_line() +
+  labs(title="Plot of Function", 
+       x="i", 
+       y="$$x_t$$"))
+```
+:::  
+<!-- End of panel-tabset -->
+
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+
+-   How does the (estimated) decomposition compare to the theoretical values above?
+    -   How well is the trend estimated?
+    -   How well is the seasonal effect estimated?
+    -   How well is the random effect estimated?
+-   Make changes to the simulated data and observe the effect on the plots
+
+:::
+
+
+
+
+
+
+
+
+### Which Model Should I Use: Additive or Multiplicative?
+
+Compare the following two time series.
+
+```{r}
+#| echo: false
+
+# Read and clean rexburg weather data
+rexburg_day <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") |>
+  mutate(date_seq = dates) |>
+  mutate(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = rexburg_airport_high
+  ) |>
+  dplyr::select(-date_seq, -imputed) |>
+  tibble()
+
+rexburg_daily_ts <- rexburg_day |>
+  mutate(index = dates) |>
+  as_tsibble(index = index)
+
+rexburg_annual_ts <- summarise(index_by(rexburg_daily_ts, year), value = mean(value))
+
+rexburg_weather_plot <- ggplotly(autoplot(rexburg_daily_ts, .vars = value) +
+  labs(
+    x = "Date",
+    y = "High Temp (F)",
+    title = "Daily High Temperature in Rexburg, Idaho"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+
+# mp <- autoplot(rexburg_daily_ts, .vars = value) +
+#   labs(y = "high temperature")
+# yp <- autoplot(rexburg_annual_ts) +
+#   labs(y = "high temperature")
+# # +
+# #   scale_x_continuous(breaks = seq(1900, 2010, by = 2))
+# mp / yp
+
+
+
+# S&P 500
+
+replaceCommas<-function(x){
+  x<-as.numeric(gsub("\\,", "", x))
+}
+
+sp500_dat <- rio::import("https://byuistats.github.io/timeseries/data/sp500.csv") |>
+  mutate(dates = mdy(Date))
+
+sp500_day <- sp500_dat |>
+  mutate(date_seq = dates) |>
+  mutate(
+    dates = date_seq,
+    year = lubridate::year(date_seq),
+    month = lubridate::month(date_seq),
+    value = replaceCommas(Close)
+  ) |>
+  dplyr::select(-date_seq) |>
+  tibble()
+
+sp500_ts <- sp500_day |>
+  mutate(index = dates) |>
+  as_tsibble(index = index)
+
+# sp500_annual_ts <- summarise(index_by(sp500_ts, year), value = mean(value))
+# 
+# temp <- sp500_ts |> filter(month == 7 & day(dates) == 1) |> 
+#   select(Date, year) 
+# 
+# temp2 <- sp500_annual_ts |> 
+#   right_join(temp)
+
+sp500_plot <- ggplotly(autoplot(sp500_ts, .vars = value) +
+  labs(
+    x = "Date",
+    y = "Closing Price",
+    title = "Daily Closing Price of the S&P 500 Stock Index"
+  )  +
+  theme(plot.title = element_text(hjust = 0.5)))
+
+
+
+fig <- subplot(rexburg_weather_plot, sp500_plot, nrows = 2, titleY = TRUE, titleX = TRUE )
+
+fig
+```
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+Complete a table like the following in your Learning Journal to compare characteristics of these two time series. Be sure to include a sketch of the respective time plots.
+
+|                                          | Rexburg Temperature | S&P 500 Closing Price |
+|------------------------------------------|---------------------|-----------------------|
+| Deterministic or stochastic trend?       |                     |                       |
+| Is there a seasonal effect?              |                     |                       |
+| Is there evidence of cycles?             |                     |                       |
+| Does the variation get bigger over time? |                     |                       |
+| Additive or multiplicative model?        |                     |                       |
+:::
+
+<!-- ## POSSIBLY: DEMONSTRATE THAT TWO UNRELATED TIME SERIES WILL BE CORRELATED IF THEY BOTH CONTAIN A TREND---------- -->
+
+<!-- Compare Rexburg weather and Basel, Switzerland Weather. (Better yet, Melbourne, Austrailia) -->
+
+
+## Small Group Activity: Apple's Quarterly Revenue (30 min)
+
+The code below imports and plots the quarterly revenue for Apple Inc. (in billions of U.S. dollars).
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_ts <- rio::import("https://byuistats.github.io/timeseries/data/apple_revenue.csv") |>
+  mutate(
+    dates = mdy(date),
+    year = lubridate::year(dates),
+    quarter = lubridate::quarter(dates),
+    value = revenue_billions
+  ) |>
+  dplyr::select(dates, year, quarter, value)  |> 
+  arrange(dates) |>
+  mutate(index = tsibble::yearquarter(dates)) |>
+  as_tsibble(index = index) |>
+  dplyr::select(index, dates, year, quarter, value) |>
+  rename(revenue = value) # rename value to emphasize data context
+
+ggplotly(autoplot(apple_ts, .vars = revenue) +
+  labs(
+    x = "Quarter",
+    y = "Apple Revenue, Billions $US",
+    title = "Apple's Quarterly Revenue, Billions of U.S. Dollars"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you notice?
+    -   Does it seem like there is a trend in the time series?
+    -   Is there evidence of a seasonal effect? If so, during which quarter(s) are the revenues particularly high? particularly low?
+    -   Can you attribute a reason for this behavior?
+
+-   Is an additive or multiplicative model more appropriate? Why?
+
+:::
+
+
+We want to find the seasonally adjusted series for a multiplicative model. This is a multi-step process.
+
+### Centered Moving Average 
+
+First, we compute the centered moving average, $\hat m_t$. 
+
+```{r}
+#| include: false
+
+# computes the 4-quarter centered moving average (m_hat)
+apple_ts <- apple_ts |> 
+  mutate(
+    m_hat = (
+          (1/2) * lag(revenue, 2)
+          + lag(revenue, 1)
+          + revenue
+          + lead(revenue, 1)
+          + (1/2) * lead(revenue, 2)
+        ) / 4
+  )
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Write a mutate statement that will compute the 4-quarter moving average for the variable "revenue" in the tsibble apple_ts. You can use the mutate statement from [Chapter 1 Lesson 4](https://byuistats.github.io/timeseries/chapter_1_lesson_4.html#centered-moving-average) as a starting point.
+
+```{r}
+#| eval: false
+
+# computes the 4-quarter centered moving average (m_hat)
+apple_ts <- apple_ts |> 
+  mutate(
+    m_hat = 
+      # Your code goes here
+  )
+```
+
+:::
+
+```{r}
+#| echo: false
+
+# Defines example quarter to illustrate computation of m_hat
+sample_year <- 2007
+sample_qtr <- 1
+
+row_of_sample_m_hat <- apple_ts |>
+  as.data.frame() |>
+  mutate(row_num = row_number()) |>
+  filter(year == sample_year & quarter == sample_qtr) |>
+  dplyr::select(row_num) |>
+  pull()
+
+sample_quarter <- apple_ts |> 
+    as.data.frame() |>
+    mutate(
+      quarter_text = case_when(
+        quarter == 1 ~ "first",
+        quarter == 2 ~ "second",
+        quarter == 3 ~ "third",
+        quarter == 4 ~ "fourth",
+        TRUE ~ "--ERROR--" 
+        )
+    ) |>
+    filter(row_number() == row_of_sample_m_hat) |>
+    dplyr::select(quarter_text) |>
+    pull()
+```
+
+To emphasize the computation of the centered moving average, the observed data values that were used to find $\hat m_t$ for the `r sample_quarter` quarter of `r sample_year` are shown in <span style="color:#009E73;">green</span> in the table below. 
+
+### Estimated Quarterly Multiplicative Effect
+
+The centered moving average, $\hat m_t$, is then used to compute the quarterly multiplictive effect, $\hat s_t$:
+
+$$
+  \hat s_t = \dfrac{ x_t }{ \hat m_t }
+$$
+
+#### Table 3: Computation of the Centered Moving Average, $\hat m_t$, and the Estimated Quarterly Multiplicative Effect, $\hat s_t$
+
+```{r}
+#| echo: false
+
+apple_shat_ts <- apple_ts |>
+  dplyr::select(index, year, quarter, revenue, m_hat) |>
+  mutate(s_hat = revenue / m_hat)
+
+apple_shat_ts |>
+  round_df(3) |>
+  mutate(
+    m_hat = as.character(m_hat),
+    s_hat = as.character(s_hat),
+  ) |> 
+  mutate(
+    m_hat = ifelse(row_number() %in% c(4,6,8), "______", m_hat),
+    s_hat = ifelse(row_number() <= 7, "______", s_hat),
+    revenue = as.character(revenue)
+    # adjusted_s_hat = ifelse(row_number() <= 12, "", adjusted_s_hat),
+    # seasonally_adjusted_x = ifelse(row_number() <= 12, "", seasonally_adjusted_x)
+  ) |>
+  convert_df_to_char(3) |>
+  dplyr::select(index, revenue, m_hat, s_hat) |> 
+  rename(
+    quarter = index,
+    "Revenue $$x_t$$" = revenue,
+    "$$ \\hat m_t $$" = m_hat,
+    "$$ \\hat s_t $$" = s_hat
+  ) |>
+  color_specific_cell(row_num = row_of_sample_m_hat, col_num = 3, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat-2, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat-1, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat+1, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = row_of_sample_m_hat+2, col_num = 2, color = "#009E73") |>
+  display_partial_table(14, 5)
+```
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Working with your assigned partner, fill in the missing values of $\hat m_t$ in the table above. 
+-   Then, find the missing values of $\hat s_t$. 
+
+:::
+
+
+
+
+
+
+### Seasonally Adjusted Factors
+
+Next, we need to compute the mean (across years) of $\hat s_t$ by quarter. To help us calculate this, it can be convenient to organize the values of $\hat s_t$ in a table, where the rows give the year and the columns give the quarter.
+
+The overall mean of these means will be reasonably close to, but not exactly one.
+We adjust these values by dividing the quarterly means by the overall mean.
+
+#### Table 4: Computation of the Seasonally Adjusted Factors, $\bar s_t$
+
+```{r}
+#| echo: false
+#| warning: false
+
+# Compute s_hat
+apple_shat_ts2 <- apple_shat_ts |>
+  data.frame() |>
+  mutate(quarter = paste0("Q",quarter)) |>
+  round_df(3) # Round df to make the computations simpler
+
+wider_df <- apple_shat_ts2 |>
+  dplyr::select(year, quarter, s_hat) |>
+  pivot_wider(values_from = "s_hat", names_from = "quarter")
+
+wider_df2 <- wider_df %>%
+  round_df(3)
+
+wider_df3 <- wider_df2 |>
+  # Hide bar_s_t values for November and December
+  # mutate(Q1 = ifelse(row_number() == 1, "______", Q1)) |>
+  # mutate(Q2 = ifelse(row_number() == 1, "______", Q2)) |>
+  mutate(Q3 = ifelse(row_number() == 1, "______", Q3)) |>
+  mutate(Q4 = ifelse(row_number() == 1, "______", Q4)) |>
+  mutate(Q1 = ifelse(row_number() == 2, "______", Q1)) |>
+  mutate(Q2 = ifelse(row_number() == 2, "______", Q2)) |>
+  mutate(Q3 = ifelse(row_number() == 2, "______", Q3)) |>
+  rename(Year = year)
+
+column_sum <- wider_df3 |>
+  pivot_longer(cols = c("Q1", "Q2", "Q3", "Q4"), values_to = "revenue", names_to = "quarter") |>
+  mutate(revenue = as.numeric(revenue)) |>
+  group_by(quarter) |>
+  summarise(sum = sum(revenue, na.rm = TRUE))
+
+wider_df3 |>
+  color_specific_cell(1, 4, "#0072B2") |>
+  color_specific_cell(1, 5, "#0072B2") |>
+  color_specific_cell(2, 2, "#0072B2") |>
+  color_specific_cell(2, 3, "#0072B2") |>
+  color_specific_cell(2, 4, "#0072B2") |>
+  rbind(c("Mean", rep("______",4))) |>
+  color_last_row2("#0072B2") |>
+  rbind(c("$$ \\bar s_t $$", rep("$$~$$ ______",4))) |>
+  color_last_row2("#0072B2") |>
+  display_table()
+```
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   The table above gives the values of $\hat s_t$. Fill in the missing values in the first two rows of the table above. (Note you already computed these.)
+-   The second-to-last row (labeled "Mean") gives the values of $\bar s_t$. Find the mean of the $\hat s_t$ values for each quarter. Call these means $\bar {\hat s_t}$. To simplify your computations, the sum of the values visible in the table above is summarized here: 
+
+```{r} 
+#| echo: false
+
+column_sum |> 
+  mutate(Quarter = "Partial Sum") |>
+  pivot_wider(values_from = "sum", names_from = "quarter") |>
+  display_table()
+```
+
+-   Compute the mean of the $\bar {\hat s_t}$ values. Call this number $\bar {\bar {\hat s_t}}$ (This number should be relatively close to 1.)
+-   Divide each of the $\bar {\hat s_t}$ values by $\bar {\bar {\hat s_t}}$ to get $\bar s_t$, the seasonally adjusted factor for quarter $t$. (Note that the mean of the $\bar s_t$ values will be 1.)
+
+$$ \bar s_t = \frac{ \left( \bar {\hat s_t} \right) }{ \left( \bar {\bar {\hat s_t}} \right) } $$
+
+:::
+
+### Random Component and the Seasonally Adjusted Time Series
+
+Using R's definition of the multiplicative model, we calculate the random component by dividing the values in the time series by the product of the trend and the seasonally adjusted factor:
+
+$$
+  \text{random component} = \dfrac{ x_t }{ \hat m_t \cdot \bar s_t }
+$$
+
+The seasonally adjusted series is computed by dividing the respective observed values by $\bar s_t$:
+
+$$
+  \text{seasonally adjusted series} = \dfrac{ x_t }{ \bar s_t }
+$$
+
+Use these equations to calculate the values missing from the table below. The adjusted seasonal effect $\bar s_t$ (s_bar) was computed in the last row of the previous table.
+
+#### Table 5: Computation of the Random Component and the Seasonally Adjusted Time Series
+
+```{r}
+#| echo: false
+#| warning: false
+
+num_blank_rows <- 7
+num_addl_rows <- 3
+
+# Compute s_hat
+apple_ts2 <- apple_ts |>
+  mutate(s_hat = revenue / m_hat) 
+
+# Compute the unadjusted_s_bar and s_bar
+adj_s_bar_df <- apple_ts2 |>
+  data.frame() |>
+  group_by(quarter) |>
+  summarize(unadjusted_s_bar = mean(s_hat, na.rm = TRUE)) |>
+  mutate(s_bar_bar = mean(unadjusted_s_bar)) |>
+  mutate(s_bar = unadjusted_s_bar / s_bar_bar) |>
+  dplyr::select(quarter, s_bar, s_bar_bar)
+
+# Get seasonally adjusted time series
+adjusted_ts <- apple_ts2 |>
+  left_join(adj_s_bar_df, by = join_by(quarter)) |>
+  mutate(random = revenue / ( m_hat * s_bar) ) |> 
+  mutate(seasonally_adjusted_x = revenue / s_bar) |>
+  dplyr::select(-s_bar_bar) |>
+  as.data.frame() |>
+  dplyr::select(index, revenue, m_hat, s_hat, s_bar, random, seasonally_adjusted_x) 
+
+additional_rows_from_adjusted_ts <- head(adjusted_ts,num_blank_rows + num_addl_rows) |> 
+  tail(num_addl_rows) |> 
+  convert_df_to_char(3)
+
+adjusted_ts |>
+  as_tibble() |>
+  round_df(3) |>
+  filter(row_number() <= num_blank_rows) |>
+  mutate(
+    s_hat = "______",
+    s_bar = "______",
+    random = "______",
+    seasonally_adjusted_x = "______"
+  ) |> 
+  convert_df_to_char() |>
+  bind_rows(additional_rows_from_adjusted_ts) |>
+  dplyr::select(index, revenue, m_hat, s_hat, s_bar, random, seasonally_adjusted_x) |>
+  rename(
+    Quarter = index, 
+    "Revenue $$x_t$$" = revenue,
+    "$$ \\hat m_t $$" = m_hat, 
+    "$$ \\hat s_t $$" = s_hat, 
+    "$$ \\bar s_t $$" = s_bar,
+    Random = random,
+    "Seasonally Adjusted $$x_t$$" = seasonally_adjusted_x
+  ) |>
+  display_partial_table(num_blank_rows + num_addl_rows, 0)
+```
+
+
+
+
+
+
+## Class Activity: Computing the Multiplicative Decomposition in R (3 min)
+
+The R code below calculates the decomposition, including the seasonally adjusted time series, beginning with the tsibble `apple_ts`.
+
+#### Table 6: First Few Rows of the Decomposition of the Apple Revenue Time Series
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_decompose <- apple_ts |>
+  model(feasts::classical_decomposition(revenue,
+          type = "mult"))  |>
+  components()
+
+apple_decompose |>
+  head(8) |>
+  display_table()
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+ggplotly(autoplot(apple_decompose))
+```
+
+
+The figure below illustrates the original time series (in black), the centered moving average $\hat m_t$ (in blue), and the seasonally adjusted series (in red).
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+p <- apple_decompose |>
+  ggplot() +
+  geom_line(data = apple_decompose, aes(x = index, y = revenue), color = "black") +
+  geom_line(data = apple_decompose, aes(x = index, y = season_adjust), color = "#D55E00") +
+  geom_line(data = apple_decompose, aes(x = index, y = trend), color = "#0072B2") +
+  labs(
+    x = "Quarter",
+    y = "Quarterly Revenue, Billions",
+    title = "Apple Inc. Quarterly Revenue (in Billions of U.S. Dollars)"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplotly(p)
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Do you observe a trend in the time series?
+    -   What does this trend suggest?
+-   In what quarter does Apple tend to have the greatest revenue?
+    -   What would explain this phenomenon?
+
+:::
+
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+
+
+## Homework
+
+::: {.callout-note icon="false"}
+## Download Assignment
+
+<!-- ## need to update href link to correct files when we get them -->
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_1_5.qmd" download="homework_1_5.qmd"> homework_1_5.qmd </a>
+:::
+
+
+
+
+
+
+
+
+
+
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">Moving Average</a>
+
+::: {#Solutions1 style="display:none;"}
+
+This code can be used to compute the four-quarter centered moving average.
+
+```{r}
+#| eval: false
+
+# computes the 4-quarter centered moving average (m_hat)
+apple_ts <- apple_ts |> 
+  mutate(
+    m_hat = (
+          (1/2) * lag(revenue, 2)
+          + lag(revenue, 1)
+          + revenue
+          + lead(revenue, 1)
+          + (1/2) * lead(revenue, 2)
+        ) / 4
+  )
+```
+
+:::
+
+
+
+
+
+<a href="javascript:showhide('Solutions2')"
+style="font-size:.8em;">Tables 4 and 5</a>
+
+::: {#Solutions2 style="display:none;"}
+
+Solutions for the computations from this lesson
+
+#### Table 5: (Solutions)
+
+```{r}
+#| echo: false
+
+adjusted_ts |> 
+  round_df(3) |>
+  filter(row_number() <= num_blank_rows) |>
+  mutate(
+    s_hat = cell_spec(s_hat, color = "#E69F00"),
+    s_bar = cell_spec(s_bar, color = "#009E73"),
+    random = cell_spec(random, color = "#009E73"),
+    seasonally_adjusted_x = cell_spec(seasonally_adjusted_x, color = "#009E73")
+  ) |>
+  convert_df_to_char() |>
+  bind_rows(additional_rows_from_adjusted_ts) |>
+  rename(
+    Quarter = index, 
+    "Revenue $$x_t$$" = revenue,
+    "$$ \\hat m_t $$" = m_hat, 
+    "$$ \\hat s_t $$" = s_hat, 
+    "$$ \\bar s_t $$" = s_bar,
+    Random = random,
+    "Seasonally Adjusted $$x_t$$" = seasonally_adjusted_x
+  ) |>
+  display_table()
+```
+
+#### Table 4: (Solutions)
+
+```{r}
+#| echo: false
+#| warning: false
+
+# Compute s_hat
+apple_shat_ts2 <- apple_shat_ts |>
+  data.frame() |>
+  mutate(quarter = paste0("Q",quarter)) |>
+  round_df(3) # Round df to make the computations simpler
+
+wider_df <- apple_shat_ts2 |>
+  dplyr::select(year, quarter, s_hat) |>
+  pivot_wider(values_from = "s_hat", names_from = "quarter")
+
+wider_df2 <- wider_df %>%
+  round_df(3)
+
+wider_df3 <- wider_df2 |>
+  rename(Year = year)
+
+column_sum <- wider_df3 |>
+  pivot_longer(cols = c("Q1", "Q2", "Q3", "Q4"), values_to = "revenue", names_to = "quarter") |>
+  mutate(revenue = as.numeric(revenue)) |>
+  group_by(quarter) |>
+  summarise(mean = mean(revenue, na.rm = TRUE)) |>
+  group_by() |> 
+  mutate(
+    grand_mean = mean(mean),
+    adjusted = mean / grand_mean
+  ) |>
+  dplyr::select(-grand_mean) |> 
+  # mutate(Year = "Mean") |>
+  # pivot_wider(names_from = quarter, values_from = c("mean", "adjusted")) |>
+  convert_df_to_char(3) |>
+  dplyr::select(-quarter) |>
+  transpose() |>
+  rename(Q1 = V1, Q2 = V2, Q3 = V3, Q4 = V4) |>
+  mutate(Year = c("Mean","$$ \\bar s_t $$")) |>
+  dplyr::select(Year, Q1:Q4)
+
+wider_df3 |>
+  convert_df_to_char() |>
+  color_specific_cell(1, 4, "#0072B2") |>
+  color_specific_cell(1, 5, "#0072B2") |>
+  color_specific_cell(2, 2, "#0072B2") |>
+  color_specific_cell(2, 3, "#0072B2") |>
+  color_specific_cell(2, 4, "#0072B2") |>
+  rbind(column_sum |> head(1)) |>
+  color_last_row2("#0072B2") |>
+  rbind(column_sum |> tail(1)) |>
+  color_last_row2("#0072B2") |>
+  display_table()
+```
+:::
+
+
+
+
+
+
+
+
+```{r}
+#| include: false
+
+# R's solutions -- matches the values above :)
+apple_decompose
+```
+
+
+

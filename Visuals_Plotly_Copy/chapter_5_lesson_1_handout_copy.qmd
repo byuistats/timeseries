@@ -1,0 +1,241 @@
+---
+title: "Linear Models, GLS, and Seasonal Indicator Variables"
+subtitle: "Chapter 5: Lesson 1 Handout"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+
+
+```{r}
+# Read in Women's Clothing Retail Sales data
+retail_ts <- rio::import("data/retail_by_business_type.parquet") |>
+  filter(naics == 44812) |>
+  filter(month >= yearmonth(my("Jan 2004")) & month <= yearmonth(my("Dec 2006"))) 
+```
+
+
+```{r, fig.width=6, fig.asp=0.6}
+#| echo: false
+
+# Read in Women's Clothing Retail Sales data
+retail_ts <- rio::import("data/retail_by_business_type.parquet") |>
+  filter(naics == 44812) |>
+  filter(month >= yearmonth(my("Jan 2004")) & month <= yearmonth(my("Dec 2006"))) |>
+  mutate(month_seq = 1:n()) |>
+  mutate(year = year(month)) |>
+  mutate(month_num = month(month)) |>
+  as_tsibble(index = month)
+
+# Number of years of data we are considering...it would be better if this was computed from the data
+number_of_years <- 3
+
+retail_scatter_plot <- ggplot(retail_ts, aes(month_seq, sales_millions)) +
+  # data points
+  geom_point(color = "#56B4E9", size = 2) +
+  # x-axis
+  geom_segment(x = 0, xend = number_of_years * 12 + 0.75, y = 0, yend = 0,
+               arrow = arrow(length = unit(0.25, "cm"))) +
+  geom_text(x = number_of_years * 12 + 0.75, y = 200, label = "x") +
+  # scale_x_continuous(breaks = 1:(number_of_years * 12)) +
+  scale_x_continuous(breaks = seq(0, (number_of_years * 12), by = 2)) +
+  # y-axis
+  geom_segment(x = 0, xend = 0, y = 0, yend = 5400,
+               arrow = arrow(length = unit(0.25, "cm"))) +
+  geom_text(x = 0.5, y = 5500, label = "y") +
+  ylim(0,5500) +
+  # labels and formatting
+  labs(
+    x = "Month, t",
+    y = "Sales (in Millions of U.S. Dollars)",
+    title = paste0(
+      "Retail Sales: Women's Clothing in Millions (",
+      min(retail_ts$year),
+      "-",
+      max(retail_ts$year),
+      ")")
+  ) +
+  theme_minimal() +
+  theme(panel.grid.minor.x = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Fit regression model
+model <- lm(sales_millions ~ month_seq, data = retail_ts)
+
+# Create data frame for the regression line
+reg_line_df <- data.frame(month_seq = c(0, number_of_years * 12 + 1)) |>
+  mutate(sales_millions = coef(model)[1] + coef(model)[2] * month_seq)
+
+# Create data frame with line that goes through origin
+# and is parallel to regression line
+zero_int_reg_line_df <- data.frame(month_seq = c(0, number_of_years * 12 + 1)) |>
+  mutate(sales_millions = coef(model)[2] * month_seq)
+
+arrow_df0 <- retail_ts |>
+  mutate(
+    arrow_start = coef(model)[2] * month_seq,
+    deviation = sales_millions - arrow_start
+  ) |>
+  as_tibble()
+
+arrow_df <- arrow_df0 |>
+  group_by(month_num) |>
+  summarize(
+    mean_deviation = mean(deviation),
+    .groups = 'drop'
+  ) %>%
+  right_join(arrow_df0, by = "month_num") |>
+  arrange(month)
+
+# Display scatterplot with regression line
+p <- retail_scatter_plot +
+  # regression line
+  geom_line(data = reg_line_df, linetype = "dashed", linewidth = 1, color = "#F0E442") 
+  # # line through the origin, parallel to regression line
+  # geom_line(data = zero_int_reg_line_df, linewidth = 1, color = "#D55E00") +
+  # # Vertical arrows
+  # geom_segment(aes(x = month_seq, xend = month_seq,
+  #                  y = arrow_df$arrow_start, yend = arrow_df$arrow_start + arrow_df$mean_deviation),
+  #              arrow = arrow(length = unit(0.25, "cm")),
+  #              color = "#009E73")
+
+y_intercept_retail <- coef(model)[1] |> round(0)
+slope_retail <- coef(model)[2] |> round(0)
+
+ggplotly(p)
+```
+
+Use the estimated regression equation 
+$$
+  \hat x_t = `r y_intercept_retail` + `r slope_retail` ~ t
+$$
+to do the following:
+
+-   Find the equation for the line parallel to the regression line that passes through the origin.
+-   Compute the deviation of each observed point from the line you just obtained.
+-   Compute the value of $\hat \beta_i$ for each month, where $i = 1, 2, \ldots, 12$.
+-   Compute the estimate of the time series for $t = 1, 2, \ldots, 36$.
+-   Predict the value of the time series for the next six months.
+
+
+
+
+::: {.callout-tip appearance="minimal"}
+
+```{r}
+#| results: asis
+#| echo: false
+
+retail_df1 <- retail_ts |>
+  as_tibble() |>
+  mutate(month_text = format(month, "%b %Y")) |>
+  rename(t = month_seq) |>
+  dplyr::select(month_text, month_num, t, sales_millions) |>
+  mutate(
+    alpha1_t = slope_retail * t,
+    deviation = sales_millions - alpha1_t
+  )
+
+retail_df2 <- retail_df1 |>
+  group_by(month_num) |>
+  summarize(
+    mean_deviation = mean(deviation) |> round(2),
+    .groups = 'drop'
+  ) |>
+  right_join(retail_df1, by = "month_num") |>
+  arrange(t)
+
+retail_pred_df <- rio::import("data/retail_by_business_type.parquet") |>
+  filter(naics == 44812) |>
+  filter(month >= yearmonth(my("Jan 2007")) & month <= yearmonth(my("Jun 2007"))) |>
+  mutate(month_seq = (1:n()) + nrow(retail_df1)) |>
+  mutate(year = year(month)) |>
+  mutate(month_num = month(month)) |>
+  mutate(month_text = format(month, "%b %Y")) |>
+  as_tibble() |>
+  mutate(month_text = format(month, "%b %Y")) |>
+  rename(t = month_seq) |>
+  dplyr::select(month_text, month_num, t, sales_millions) |>
+  mutate(
+    alpha1_t = slope_retail * t,
+    deviation = sales_millions - alpha1_t
+  ) |> 
+  mutate(
+    sales_millions = as.integer(NA),
+    deviation = as.numeric(NA)
+  ) |>
+  left_join(retail_df2 |> select(month_num, mean_deviation) |> unique(), by = join_by(month_num))  |>
+  dplyr::select(month_text, t, #month_num, 
+                sales_millions, alpha1_t, deviation, mean_deviation)
+
+retail_df3 <- retail_df2 |>
+  dplyr::select(month_text, t, #month_num, 
+                sales_millions, alpha1_t, deviation, mean_deviation) |>
+  bind_rows(retail_pred_df) |>
+  mutate(estimate = alpha1_t + mean_deviation) |>
+  replace_na_with_char(emdash) |>
+  rename(
+    "$$Date$$" = month_text,
+    "$$t$$" = t,
+    # "$$i$$" = month_num,
+    "$$x_t$$" = sales_millions,
+    "$$\\hat \\alpha_1 t$$" = alpha1_t,
+    "$$x_t - \\hat \\alpha_1 t$$" = deviation,
+    "$$\\hat\\beta_i$$" = mean_deviation,
+    "$$\\hat x_t$$" = estimate
+  )
+
+retail_df4 <- retail_df3 |>
+  replace_cells_with_char(rows = c(2, 14, 26), cols = 6:7)  |>
+  replace_cells_with_char(rows = c(3:5, 15:17, 27:29), cols = 4:7) |>
+  replace_cells_with_char(rows = 38, cols = 6:7) |>
+  replace_cells_with_char(rows = 39:41, cols = c(4,6:7))
+
+retail_df4 |>
+  head(24) |>
+  display_table() |>
+  column_spec(1:3, width_min = "0.35in") |>
+  column_spec(4:ncol(retail_df3), width_min = "1in")
+  
+retail_df4 |>
+  tail(12+6) |>
+  display_table() |>
+  column_spec(1:3, width_min = "0.35in") |>
+  column_spec(4:7, width_min = "1in")
+  
+
+```
+:::

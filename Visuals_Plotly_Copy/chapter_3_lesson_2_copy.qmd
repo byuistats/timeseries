@@ -1,0 +1,985 @@
+---
+title: "Exponential Smoothing"
+subtitle: "Chapter 3: Lesson 2"
+format: html
+editor: source
+sidebar: true
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_3_lesson_2_outcomes.qmd >}}
+
+
+
+
+## Preparation
+
+-   Read Section 3.4.1
+
+
+
+## Learning Journal Exchange (10 mins)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+## Class Discussion: Theory Supporting the EWMA
+
+Our objective is to predict a future value given the first $n$ observations of a time series. One example would be to forecast sales of an existing product in a stable market.
+
+We assume the following about the time series:
+
+-   There is no systematic trend or seasonal effects (or that these have been removed).
+
+-   The mean is non-stationary (can change), but we have no idea about the direction.
+
+
+
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+Match the following definitions to the appropriate term.
+
+::: {style="display: flex;"}
+<div>
+
+1.  A future observation of a time series
+2.  Model assumed in EWMA agorithm
+3.  Non-stationary mean
+4.  Random correlated error terms
+5.  A fixed constant between 0 and 1
+
+</div>
+
+<div>
+
+A.  $\alpha$
+B.  $\mu_t$
+C.  $w_t$
+D.  $x_{n+k}$
+E.  $x_t = \mu_t + w_t$
+
+</div>
+:::
+:::
+
+The idea is that we will use past observations to predict future observations. Our best prediction of future observations under this model is the mean of the estimate at the time of the last observation. In symbols, if we want to predict the value of the time series at time $n+k$, we use our estimate of the time series at time $n$:
+
+$$
+\hat x_{n+k \mid n} = a_n, ~~~~~~~~~~~~~~~~~~\text{where}~~ k = 1, 2, 3, \ldots ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ (3.16)
+$$ Here are three equivalent expressions that define the EWMA estimation technique:
+
+```{=tex}
+\begin{align}
+  a_t &= \alpha x_t + (1-\alpha) a_{t-1} & (3.15) \\
+  a_t &= \alpha (x_t - a_{t-1} ) + a_{t-1} & (3.17) \\
+  a_t &= \alpha x_t + \alpha(1-\alpha) x_{t-1} + \alpha(1-\alpha)^2 x_{t-2} + \alpha(1-\alpha)^3 x_{t-3} + \cdots & (3.18) 
+\end{align}
+```
+We assume that $a_1 = x_1$.
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   What happens if $\alpha$ is close to 1?
+-   What happens if $\alpha$ is close to 0?
+-   What is a common "compromise" value for $\alpha$?
+-   Show that Equation (3.15) and (3.17) are equivalent.
+-   How would you show that Equation (3.18) is equivalent to Equation (3.17)?
+:::
+
+## Class Activity: Practice Applying the EWMA (20 min)
+
+We will use the following data to practice applying the Exponentially Weighted Moving Average (EWMA) technique.
+
+```{r}
+#| echo: false
+
+# simulate correlated normal random data
+x1 <- get_toy_data()
+
+cat("x <- c(",paste(x1, collapse = ", "),")")
+```
+
+Start filling @tbl-at-et by calculating the values of $a_t$ for each value of $x_t$.
+
+
+```{r}
+#| label: tbl-at-et
+#| tbl-cap: "Calculation of $a_t$ and $e_t$ for a sample time series "
+#| echo: false
+
+alpha <- 0.2
+
+ewma_toy_df <- data.frame(t = 1:length(x1), x_t = x1, a_t = x1) |>
+  mutate(
+    a_t_computation = "",
+    e_t = as.numeric(NA),
+    e_t_computation = ""
+  )
+
+ewma_toy_df$a_t_computation[1] = paste0("$$",ewma_toy_df$x_t[1], "$$")
+
+for (t in 2:length(x1)) {
+  ewma_toy_df$a_t[t] <- alpha * ewma_toy_df$x_t[t] + (1 - alpha) * ewma_toy_df$a_t[t-1]
+  ewma_toy_df$a_t_computation[t] <- paste("$$", alpha, "\\cdot", ewma_toy_df$x_t[t], "+", "(1 - ",alpha,") \\cdot", round(ewma_toy_df$a_t[t-1],3), "=", round(ewma_toy_df$a_t[t],3), "$$")
+  ewma_toy_df$e_t[t] <- ewma_toy_df$x_t[t] - ewma_toy_df$a_t[t-1]
+  ewma_toy_df$e_t_computation[t] <- paste("$$", ewma_toy_df$x_t[t], "-", round(ewma_toy_df$a_t[t-1],3), "=", round(ewma_toy_df$e_t[t],3), "$$")
+}
+
+ewma_toy_df |>
+  dplyr::select(t, x_t, a_t, e_t) |>
+  blank_out_cells_in_df() |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$e_t$$" = e_t
+  ) |>
+  display_table("0.5in") |>
+  column_spec(3:4, width_min = "2.25in")
+```
+
+
+
+
+### One-Step-Ahead Prediction Errors 
+
+#### Definition
+
+If we have a time series $\{x_1, x_2, \ldots, x_n\}$ and start with $a_1 = x_1$, we can compute the value of $a_t$ if $2 \le t \le n$.
+We define the one-step-ahead prediction error, $e_t$ as
+
+$$
+  e_t = x_t - \hat x_{t|t-1} = x_t - a_{t-1}
+$$
+
+#### Calculation of $\alpha$ in R
+
+R uses the one-step-ahead prediction error to estimate $\alpha$. It chooses $\alpha$ to minimize
+
+$$
+  SS1PE = \sum_{t=2}^n e_t^2 = e_2^2 + e_3^2 + e_4^2 + \cdots + e_n^2
+$$
+
+where $a_1 = x_1$.
+
+If the mean of a long time series has not changed much, then this will produce a value of $\alpha$ that is unduly small. A small value of $\alpha$ prevents the model from responding to rapid future changes in the time series.
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+
+-   If the mean of the process does not change much, what is the optimal value of $\alpha$? 
+
+<!-- Answer: $\frac{1}{n}$ -->
+
+:::
+
+
+#### Computation of the One-Step-Ahead Prediction Errors
+
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+
+-   Compute $e_t$ for the 10 values of $x$ given in the table above. Add these values to the table.
+-   Compute *SS1PE* for these data.
+
+:::
+
+
+
+
+
+
+
+
+
+
+
+## Class Activity: Highway Speeds in New York City (15 mins)
+
+::: columns
+::: {.column width="45%"}
+The Bruckner Expressway (I-278) cuts through the Bronx in New York City. Traffic sensors record the speed of cars every 5 minutes between Stratford Avenue and Castle Hill Avenue.
+
+The data from 7/2/2022 through 7/17/2022 are contained in the file <a href="data/ny_speeds.csv" download>ny_speeds.csv</a>. (Source: City of New York Department of Transportation. Online Links: [http://a841‐dotweb01.nyc.gov/datafeeds](https://data.beta.nyc/dataset/nyc-real-time-traffic-speed-data-feed-archived).) These data have been cleaned to align the observations with five minute intervals.
+
+We will read these data into a tsibble.
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+![Google Map showing the location of the data collection.](images/ny_speed_google_map_small.png){#fig-map}
+:::
+:::
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+# Read the ny_speeds data
+ny_speeds_dat <- rio::import("https://byuistats.github.io/timeseries/data/ny_speeds.csv")
+
+ny_speeds_tb <- ny_speeds_dat |>
+  mutate(
+    year = lubridate::year(date),
+    month = lubridate::month(date),
+    #
+    day = lubridate::day(date),
+    hour = lubridate::hour(date),
+    min = lubridate::minute(date)
+  ) |>
+  rename(speed = Speed) |>
+  dplyr::select(date, year, month, day, hour, min, speed) |>
+  tibble()
+
+ny_speeds_ts <- ny_speeds_tb |>
+  mutate(index = date) |>
+  as_tsibble(index = index)
+```
+
+Here are the first few lines of the tsibble:
+
+```{r}
+#| echo: false
+
+ny_speeds_ts |> head(10)
+```
+
+Here is a time plot of the data:
+
+```{r}
+#| label: fig-speed-ts-plot
+#| fig-cap: "Time series plot of the traffic speed data from July 2 through July 17, 2022"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+p <- autoplot(ny_speeds_ts, .vars = speed) +
+  labs(
+    x = "Date / Time",
+    y = "Traffic Speed (mph)",
+    title = "Bruckner Expressway Traffic Speed"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplotly(p)
+```
+
+```{r}
+#| echo: false
+
+num_days_to_plot <- 2
+
+num_days_in_ts <- ny_speeds_ts |>
+  as.data.frame() |>
+  summarize(diff = round(max(date) - min(date), 1)) |>
+  mutate(diff = as.numeric(diff)) |>
+  dplyr::select(diff) |>
+  pull()
+```
+
+The data set spans `r num_days_in_ts` days. 
+There is a strong daily pattern, which can be seen by the `r num_days_in_ts` pairs of peaks and valleys. It might be easier to see if we look at the observations from the first `r num_days_to_plot` days.
+
+```{r}
+#| label: fig-speed-ts-plot-two-days
+#| fig-cap: "Time series plot of the first two days of the traffic speed data"
+#| echo: false
+
+p <- autoplot(ny_speeds_ts |> head(288 * num_days_to_plot), .vars = speed) +
+  labs(
+    x = "Date / Time",
+    y = "Traffic Speed (mph)",
+    title = paste0("Bruckner Expressway Traffic Speed (First ",num_days_to_plot," Days)")
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplotly(p)
+```
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   What do you no notice about this time series?
+-   During what parts of the day does the traffic flow tend to be slowest? fastest? What is the reason for this behavior?
+:::
+
+
+Next, we compute the decomposition. We expect that that traffic will fluctuate with daily seasonality. The number of five-minute periods in a day is:
+
+$$
+\underbrace{\frac{60}{5}}_{\substack{\text{Number of} \\ \text{5-minute periods} \\ \text{per hour}}} \cdot \underbrace{24}_{\substack{\text{Number of} \\ \text{hours} \\ \text{per day}}} = ~~ 288~~\text{five-minute periods per day}
+$$
+
+That is, the time series will follow a cycle that repeats every 288 five-minute intervals. Due to the complexity of the time series, we will indicate this to R in our function call. (Try replacing "speed \~ season(288)" in the classical_decomposition command with "speed" and see what happens!)
+
+```{r}
+#| label: fig-speed-decomposition
+#| fig-cap: "Additive decomposition of the traffic speed time series" 
+#| warning: false
+
+ny_speeds_decompose <- ny_speeds_ts |>
+    model(feasts::classical_decomposition(speed ~ season(288),
+        type = "add"))  |>
+    components()
+
+ggplotly(autoplot(ny_speeds_decompose))
+```
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   Working with your partner, identify evidence of the daily seasonal component of the speed data.
+-   How do you explain the sharp downward spikes in the data?
+-   Does there seem to be a trend in the data? Justify your answer.
+-   Why is there no estimate for the trend or the random component for the first half of the first day and the last half of the last day?
+:::
+
+```{r}
+#| include = FALSE 
+
+speed_plot <- ny_speeds_decompose |> 
+  filter((index) <= mdy_hm("7/3/2022 12:00")) |> 
+  na.omit() |> 
+  dplyr::select(speed) |> 
+  autoplot(.vars = speed)
+rand_plot <- ny_speeds_decompose |> 
+  filter((index) <= mdy_hm("7/3/2022 12:00")) |> 
+  na.omit() |> 
+  dplyr::select(random) |> 
+  autoplot(.vars = random)
+
+fig <- subplot(speed_plot, rand_plot, nrows = 2, titleY = TRUE, titleX = TRUE )
+
+fig
+
+
+```
+
+
+Here is a plot of the decomposition for the first 4 days of the time series (July 2, 2022 at 0:00 to July 6, 2022 at 0:00).
+
+```{r}
+#| label: fig-speed-decomposition_four-days
+#| fig-cap: "Additive decomposition of the first four days of the traffic speed time series" 
+#| code-fold: true
+#| code-summary: "Show the code"
+
+ny_speeds_decompose |> 
+  filter((index) <= mdy_hm("7/6/2022 0:00")) |> 
+  autoplot() |> ggplotly()
+```
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   Consider the seasonal variation. Around what time of day are the speeds highest? When are the speeds lowest?
+:::
+
+::: {.callout-warning}
+## Applying the EWMA when there is a trend and/or seasonal variation
+
+One assumption for the EWMA is that there is no trend or seasonal variation. If present, we need to eliminate the  trend and seasonal variation before applying the EWMA algorithm. In this case, we decompose the time series and compute the EWMA for the random component. Finally, we add the trend and seasonal components back in to get the EWMA estimate for the time series.
+:::
+
+These data demonstrate distinct seasonal variation. We will need to apply the EWMA algorithm to the random component and later add the seasonal component and trend to our EWMA estimate.
+
+
+```{r}
+#| include: false
+
+# Functions for use in this lesson only.
+
+# Computes the ewma for a variable called random. This is specifically written for the NYC data
+# future: make this so that the variable name could be passed
+compute_ewma_ts <- function(ts, alpha_value = 0.2) {
+  first_non_na_row_number <- ny_speeds_decompose |>
+    data.frame() |> 
+    mutate(n = row_number()) |> 
+    na.omit() |> 
+    head(1) |> 
+    dplyr::select(n) |> 
+    pull() # 145
+  
+  ewma_ts <- ts |>
+    mutate(date_time = paste0(month(index), "/", day(index), "/", year(index), " ", hour(index), ":", right(paste0("0",minute(index)),2) )) |>
+    mutate(a_t_work = "", a_t = random) |> 
+    mutate(rownum = row_number())
+
+  ewma_ts$a_t_work[first_non_na_row_number] <- paste0(as.character(round(ewma_ts$random[first_non_na_row_number],3)), " =")
+  for (t in (first_non_na_row_number + 1):nrow(ewma_ts)) {
+    ewma_ts$a_t[t] <- alpha_value * ewma_ts$random[t] + (1 - alpha_value) * ewma_ts$a_t[t-1]
+    ewma_ts$a_t_work[t] <- paste0(alpha_value, " * (", round(ewma_ts$random[t],3), ") + (1 - ", alpha_value, ") * (", round(ewma_ts$a_t[t-1], 3), ") = ")
+  }
+  
+  return(ewma_ts)
+}
+
+print_head_ewma_ts <- function(ts, decimals = 3, num_rows = 6) {
+  ts |>
+    data.frame() |> 
+    dplyr::select(date_time, random, a_t_work, a_t) |>
+    rename(
+      "Date-Time" = date_time,
+      "Random $$ \\hat z_t $$" = random,
+      "Computation of $$ a_t $$" = a_t_work,
+      "$$a_t$$" = a_t
+    ) |>
+    na.omit() |>
+    convert_df_to_char(decimals) |>
+    head(num_rows) |>
+    display_table()
+}
+
+plot_ewma_full_ts <- function(ts, alpha = 0.2) {
+  ts |> 
+    autoplot(.vars = random) +
+    geom_line(data = ts, aes(x = index, y = a_t), color = "#D55E00", linewidth = 1) +
+    labs(
+      x = "Time",
+      y = "Random",
+      title = paste0("Random Component and EWMA (α = ", alpha, ")"),
+      subtitle = "(All Dates)"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+}
+
+plot_ewma_head_ts <- function(ts, alpha = 0.2) {
+  temp <- ts |>
+    filter(index <= mdy_hm("7/2/2022 16:00")) |>
+    na.omit() 
+  
+  temp |>
+    autoplot(.vars = random) +
+    geom_line(data = temp, aes(x = index, y = a_t), color = "#D55E00", linewidth = 1) +
+    labs(
+      x = "Time",
+      y = "Random",
+      title = paste0("Random Component and EWMA (α = ", alpha, ")"),
+      subtitle = "(7/2/2022 from 12:00-16:00)"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+}
+```
+
+We demonstrate the computation of the EWMA for a few choices of $\alpha$.
+
+::: panel-tabset
+
+```{r}
+#| echo: false
+alpha <- 0.01
+```
+
+#### EWMA with $\alpha = `r alpha`$
+
+::: {.callout-note icon=false title="EWMA"}
+
+
+```{r}
+#| label: tbl-speed-random-ewma-alpha1
+#| tbl-cap: "Illustration of the computation of the EWMA"
+#| echo: false
+# ny_speeds_random_ewma_ts |>
+temp_df <- compute_ewma_ts(ny_speeds_decompose, alpha) 
+temp_df |>
+  print_head_ewma_ts()
+```
+
+Here is a plot showing the EWMA for the random component for all the data.
+
+```{r}
+#| label: fig-speed-random-ewma-alpha1
+#| fig-cap: "EWMA superimposed on the random component of the traffic data time series"
+#| echo: false
+#| warning: false
+
+temp_df |>
+  plot_ewma_full_ts(alpha) |> ggplotly()
+
+```
+
+Here is a plot of the EWMA against the random component for four hours:
+
+```{r}
+#| label: fig-speed-random-ewma-alpha1-partial
+#| fig-cap: "EWMA superimposed on the random component of the traffic data for a four-hour period"
+#| echo: false
+#| warning: false
+
+temp_df |>
+  plot_ewma_head_ts(alpha) |> ggplotly()
+
+```
+
+:::
+
+```{r}
+#| echo: false
+alpha <- 0.05
+```
+
+#### EWMA with $\alpha = `r alpha`$
+
+::: {.callout-note icon=false title="EWMA"}
+
+
+```{r}
+#| label: tbl-speed-random-ewma-alpha2
+#| tbl-cap: "Illustration of the computation of the EWMA"
+#| echo: false
+# ny_speeds_random_ewma_ts |>
+temp_df <- compute_ewma_ts(ny_speeds_decompose, alpha) 
+temp_df |>
+  print_head_ewma_ts()
+```
+
+Here is a plot showing the EWMA for the random component for all the data.
+
+```{r}
+#| label: fig-speed-random-ewma-alpha2
+#| fig-cap: "EWMA superimposed on the random component of the traffic data time series"
+#| echo: false
+#| warning: false
+
+temp_df |>
+  plot_ewma_full_ts(alpha) |> ggplotly()
+
+```
+
+Here is a plot of the EWMA against the random component for four hours:
+
+```{r}
+#| label: fig-speed-random-ewma-alpha2-partial
+#| fig-cap: "EWMA superimposed on the random component of the traffic data for a four-hour period"
+#| echo: false
+#| warning: false
+
+temp_df |>
+  plot_ewma_head_ts(alpha) |> ggplotly()
+
+```
+
+:::
+
+```{r}
+#| echo: false
+alpha <- 0.2
+```
+
+#### EWMA with $\alpha = `r alpha`$
+
+::: {.callout-note icon=false title="EWMA"}
+
+
+```{r}
+#| label: tbl-speed-random-ewma-alpha3
+#| tbl-cap: "Illustration of the computation of the EWMA"
+#| echo: false
+# ny_speeds_random_ewma_ts |>
+temp_df <- compute_ewma_ts(ny_speeds_decompose, alpha) 
+temp_df |>
+  print_head_ewma_ts()
+```
+
+Here is a plot showing the EWMA for the random component for all the data.
+
+```{r}
+#| label: fig-speed-random-ewma-alpha3
+#| fig-cap: "EWMA superimposed on the random component of the traffic data time series"
+#| echo: false
+#| warning: false
+
+temp_df |>
+  plot_ewma_full_ts(alpha) |> ggplotly()
+
+```
+
+Here is a plot of the EWMA against the random component for four hours:
+
+```{r}
+#| label: fig-speed-random-ewma-alpha3-partial
+#| fig-cap: "EWMA superimposed on the random component of the traffic data for a four-hour period"
+#| echo: false
+#| warning: false
+
+temp_df |>
+  plot_ewma_head_ts(alpha) |> ggplotly()
+
+```
+
+:::
+
+```{r}
+#| echo: false
+alpha <- 0.75
+```
+
+#### EWMA with $\alpha = `r alpha`$
+
+::: {.callout-note icon=false title="EWMA"}
+
+
+```{r}
+#| label: tbl-speed-random-ewma-alpha4
+#| tbl-cap: "Illustration of the computation of the EWMA"
+#| echo: false
+# ny_speeds_random_ewma_ts |>
+temp_df <- compute_ewma_ts(ny_speeds_decompose, alpha) 
+temp_df |>
+  print_head_ewma_ts()
+```
+
+Here is a plot showing the EWMA for the random component for all the data.
+
+```{r}
+#| label: fig-speed-random-ewma-alpha4
+#| fig-cap: "EWMA superimposed on the random component of the traffic data time series"
+#| echo: false
+#| warning: false
+
+temp_df |>
+  plot_ewma_full_ts(alpha) |> ggplotly()
+
+```
+
+Here is a plot of the EWMA against the random component for four hours:
+
+```{r}
+#| label: fig-speed-random-ewma-alpha4-partial
+#| fig-cap: "EWMA superimposed on the random component of the traffic data for a four-hour period"
+#| echo: false
+#| warning: false
+
+temp_df |>
+  plot_ewma_head_ts(alpha) |> ggplotly()
+
+```
+
+:::
+
+:::
+
+Once we have obtained the EWMA for the random component, we can add to it the trend and seasonality to get the EWMA for the original speed data. The raw data are plotted in black, the trend in blue, the seasonal component in yellow, and the EWMA is plotted in orange. The green curve is the sum of EWMA, the seasonal component, and the trend.
+
+```{r}
+#| label: fig-speed-random-ewma-decomposed-all
+#| fig-cap: "Components of the EWMA superimposed on the random component of the New York traffic data"
+#| echo: false
+#| warning: false
+
+plot_ewma_speed_full_ts <- function(ts, alpha = 0.2) {
+  ts |> 
+    mutate(Speed = speed) |>
+    autoplot(.vars = Speed) +
+    geom_line(data = ts, aes(x = index, y = a_t + seasonal + trend), color = "#009E73", linewidth = 1) +
+    geom_line(data = ts, aes(x = index, y = seasonal), color = "#F0E442", linewidth = 1) +
+    geom_line(data = ts, aes(x = index, y = a_t), color = "#D55E00", linewidth = 1) +
+    geom_line(data = ts, aes(x = index, y = trend), color = "#56B4E9", linewidth = 1) +
+    labs(
+      x = "Time",
+      # y = "Speed",
+      title = paste0("EWMA for Speed (α = ", alpha, ")"),
+      subtitle = "(All Dates)"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+}
+
+plot_ewma_speed_head_ts <- function(ts, alpha = 0.2) {
+  temp <- ts |>
+    filter(index <= mdy_hm("7/2/2022 16:00")) |>
+    na.omit() 
+  
+  temp |>
+    filter(index <= mdy_hm("7/2/2022 16:00")) |>
+    na.omit() |>
+    mutate(Speed = speed) |>
+    autoplot(.vars = Speed) +
+    geom_line(data = temp, aes(x = index, y = a_t + seasonal + trend), color = "#009E73", linewidth = 1) +
+    geom_line(data = temp, aes(x = index, y = seasonal), color = "#F0E442", linewidth = 1) +
+    geom_line(data = temp, aes(x = index, y = a_t), color = "#D55E00", linewidth = 1) +
+    geom_line(data = temp, aes(x = index, y = trend), color = "#56B4E9", linewidth = 1) +
+    labs(
+      x = "Time",
+      # y = "Speed",
+      title = paste0("EWMA for Speed (α = ", alpha, ")"),
+      subtitle = "(7/2/2022 from 12:00-16:00)"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+}
+
+alpha <- 0.2
+compute_ewma_ts(ny_speeds_decompose, alpha) |>
+  plot_ewma_speed_full_ts() |> ggplotly()
+```
+
+Here is the plot for four hours of data:
+
+```{r}
+#| label: fig-speed-random-ewma-decomposed-four-hours
+#| fig-cap: "Components of the EWMA superimposed on the random component of the New York traffic data, four hours only"
+#| echo: false
+#| warning: false
+
+compute_ewma_ts(ny_speeds_decompose, alpha) |>
+  plot_ewma_speed_head_ts() |> ggplotly()
+```
+
+## Class Activity: EWMA in R (10 min)
+
+We will compute the EWMA for the random component of the New York highway speed data in R.
+We have already decomposed the model, so we have isolated the estimated values for the random component. This is a portion of the tsibble `ny_speeds_decompose`:
+
+```{r}
+#| label: tbl-speed-random-EWMA
+#| tbl-cap: "A portion of the tsibble containing the EWMA for the random component of the traffic data"
+#| echo: false
+
+num_header_footer_rows <- 3
+num_extra_na_rows <- 1
+num_body_rows <- 3
+
+table1 <- ny_speeds_decompose |> convert_df_to_char() |> head(288 / 2 + num_body_rows) |> concat_partial_table(num_header_footer_rows, num_body_rows + num_extra_na_rows) |>
+  convert_df_to_char()
+table2 <- ny_speeds_decompose |> convert_df_to_char() |> row_of_vdots()
+table3 <- ny_speeds_decompose |> convert_df_to_char() |> tail(288 / 2 + num_body_rows) |> concat_partial_table(num_body_rows + num_extra_na_rows, num_header_footer_rows)
+
+bind_rows(table1, table2, table3) |>
+  display_table()
+```
+
+::: {.callout-warning}
+
+When applying EWMA to the random component of the time series, delete the variable `.model` and all `NA` values from the data frame. If you neglect this step, there will be errors in the code below.
+:::
+
+We drop the variable `.model` and omit all NA values. (Remember the first half-day and the last half-day in the time series do not yield estimates for the random component.)
+
+```{r}
+ny_speeds_random <- ny_speeds_decompose |>
+  na.omit() |>                                # Omit all NA values
+  select(-.model)                             # Eliminate the variable .model
+```
+
+The following code can be used to execute the EWMA algorithm on the random component using $\alpha = 0.2$.
+
+```{r}
+ny_speeds_model1 <- ny_speeds_random |>
+  model(Additive = ETS(random ~
+                         trend("A", alpha = 0.2, beta = 0) +
+                         error("A") + season("N"),
+                       opt_crit = "amse", nmse = 1))
+report(ny_speeds_model1)
+```
+
+Now, we calculate the value of *SS1PE*.
+
+```{r}
+sum(components(ny_speeds_model1)$remainder^2, na.rm = TRUE)
+```
+
+<!-- Here is a plot of the time series with the EWMA superimposed. -->
+
+<!-- ```{r} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: "Show the code" -->
+
+<!-- augment(ny_speeds_model1) |> -->
+<!--   ggplot(aes(x = index, y = random)) + -->
+<!--   geom_line() + -->
+<!--   geom_line(aes(y = .fitted, color = "Fitted")) + -->
+<!--   labs(color = "") -->
+<!-- ``` -->
+
+
+
+
+
+<!-- Fit the model with alpha unspecified -->
+
+```{r}
+#| include: false
+
+ny_speeds_model0 <- ny_speeds_random |>
+  model(Additive = ETS(random ~
+                         trend("A", beta = 0) +
+                         error("A") +
+                         season("N"),
+                       opt_crit = "amse", nmse = 1))
+report(ny_speeds_model0)
+
+alpha_est <- ny_speeds_model0[[1]][[1]][["fit"]][["par"]][["estimate"]][1] |> round(4)
+
+min_ss1pe <- sum(components(ny_speeds_model0)$remainder^2, na.rm = TRUE) |> round(2)
+
+options(scipen = 999) # Turn off scientific notation
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Modify the code analyzing the New York traffic speed data by deleting the argument `alpha = 0.2`. 
+<!-- This will allow R to optimize $\alpha$ by minimizing the *SS1PE*. -->
+    -   What value of $\alpha$ is obtained?
+    -   What is the value of the *SS1PE* for this value of $\alpha$?
+-   Choose values of $\alpha$ slightly less than and slightly greater than `r alpha_est`. 
+    -   Can you find a value of $\alpha$ that gives you a smaller *SS1PE* than `r min_ss1pe`?
+
+:::
+
+```{r}
+#| echo: false
+#| include: false 
+
+ny_speeds_random <- ny_speeds_decompose |>
+  na.omit() |>
+  select(index, random)
+```
+
+
+```{r}
+#| echo: false
+#| include: false 
+
+ny_speeds_ts
+autoplot(ny_speeds_ts, .vars = speed) +
+  labs(x = "Time", y = "Speed")
+ny_speeds_model1 <- ny_speeds_ts |>
+  model(Additive = ETS(speed ~
+                         trend("A", alpha = 0.1429622, beta = 0) +
+                         error("A") +
+                         season("N"),
+                       opt_crit = "amse", nmse = 1))
+augment(ny_speeds_model1) |>
+  ggplot(aes(x = index, y = speed)) +
+  geom_line() +
+  geom_line(aes(y = .fitted, color = "Fitted")) +
+  labs(color = "")
+ny_speeds_model0 <- ny_speeds_ts |>
+  model(Additive = ETS(speed ~
+                         trend("A", alpha = 0.2, beta = 0) +
+                         error("A") +
+                         season("N"),
+                       opt_crit = "amse", nmse = 1))
+sum(components(ny_speeds_model0)$remainder^2, na.rm = TRUE)
+
+```
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_3_2.qmd" download="homework_3_2.qmd"> homework_3_2.qmd </a>
+
+:::
+
+
+
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">Matching Activity</a>
+
+::: {#Solutions1 style="display:none;"}
+Solutions to matching activity:
+
+1.  D
+2.  E
+3.  B
+4.  C
+5.  A
+:::
+
+<a href="javascript:showhide('Solutions2')"
+style="font-size:.8em;">Class Activity: Practice Applying the EWMA</a>
+
+::: {#Solutions2 style="display:none;"}
+
+```{r}
+#| label: tbl-at-et-solution
+#| tbl-cap: "Calculation of $a_t$ and $e_t$ for a sample time series: Solution for @tbl-at-et"
+#| echo: false
+
+alpha <- 0.2
+
+ewma_toy_df |>
+  dplyr::select(t, x_t, a_t_computation, e_t_computation) |>
+  mutate(
+    t = paste("$$", t, "$$"),
+    x_t = paste("$$", x_t, "$$")
+  ) |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t_computation,
+    "$$e_t$$" = e_t_computation
+  ) |>
+  blank_out_one_cell_in_df(row_num = 1, col_num = 4, decimals = 3) |>
+  display_table("0.75in")
+```
+
+The value of *SS1PE* is 
+$$
+  \sum\limits_{t=2}^n e_t^2 
+    = (`r round(ewma_toy_df$e_t[2],3)`)^2 + (`r round(ewma_toy_df$e_t[3],3)`)^2 + \cdots + (`r round(ewma_toy_df$e_t[nrow(ewma_toy_df)-1],3)`)^2 + (`r round(ewma_toy_df$e_t[nrow(ewma_toy_df)],3)`)^2 
+    = `r ewma_toy_df |> mutate(e_t2 = e_t^2) |> summarize(sum = sum(e_t2, na.rm = TRUE)) |> dplyr::select(sum) |> pull() |> round(3)`
+$$
+
+:::
+

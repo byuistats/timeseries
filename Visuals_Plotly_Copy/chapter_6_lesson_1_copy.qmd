@@ -1,0 +1,770 @@
+---
+title: "Moving Average (MA) Models"
+subtitle: "Chapter 6: Lesson 1"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+## Learning Outcomes
+
+{{< include outcomes/_chapter_6_lesson_1_outcomes.qmd >}}
+
+
+
+
+## Preparation
+
+-   Read Sections 6.1-6.4
+
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+## Class Activity: Introduction to Moving Average (MA) Models (15 min)
+
+### Stationary Processes
+
+In previous chapters, we have explored how to identify and remove the trend and seasonal components of a time series. After the trend and seasonal component have been properly removed, the residual should be stationary. However, these residual components may still contain autocorrelation. 
+
+In this chapter, we will explore stationary models that are appropriate when there are no obvious trends or seasonal elements. Combining the fitted stationary model with the estimated trend and seasonal components can improve our ability to make forecasts. We will build on the autoregressive (AR) models we learned in Chapter 4.
+
+### Strictly Stationary Series
+
+First, we define a strictly stationary series.
+
+::: {.callout-note icon=false title="Definition of Strict Stationarity"}
+
+A time series model $\{x_t\}$ is said to be **strictly stationary** if the joint distribution of the random variables 
+$x_{t_1}, x_{t_2}, \ldots, x_{t_n}$ is the same as the joint distribution of 
+$x_{t_1+m}, x_{t_2+m}, \ldots, x_{t_n+m}$ for all $t_1, t_2, \ldots, t_n$ and $m$, so that the distribution of the values in the time series is the same after an arbitrary time shift.
+
+:::
+
+If a time series is strictly stationary, then its mean and variance are constant in time. Hence, the autocovariance $cov(x_t, x_s)$ depends only on the lag, $k = | t - s |$. We can therefore denote the covariance function as $\gamma(k) = cov(x_t, x_{t+k})$.
+
+**Note:** It is possible that a series could have a constant mean and variance in time and the autocovariance depends only on the lag, but the series is not strictly stationary. This is called **second-order stationary**.
+
+We will focus on the second-order properties of the time series, even though all the series we will explore in this chapter are strictly stationary.
+
+**Note:** if a white noise process is Gaussian, the stochastic process is completely determined by the mean and covariance structure. This is similar to how a (univariate or multivariate) normal distribution is completely specified by the mean and variance-covariance matrix.
+
+The concept of stationarity is a property of time series models. When we use certain models, we are assuming stationarity. Before we apply these models, it is important to check for stationarity in the time series. In other words, we check to see if there is evidence of a trend or seasonality and if so, we remove these components.
+We can use methods such as decomposition, Holt-Winters, or regression to remove the trend and seasonality. Hence, it is typically reasonable to consider the residual series as a stationary series.
+Typically the models in this chapter are applied to the residual series from a regression or similar analysis.
+
+
+### Moving Average (MA) Models
+
+Recall in [Chapter 4, Lesson 3](https://byuistats.github.io/timeseries/chapter_4_lesson_3.html#ARdefinition), we learned the definition of an AR model:
+
+::: {.callout-note icon=false title="Definition of an Autoregressive (AR) Model"}
+
+The time series $\{x_t\}$ is an **autoregressive process of order $p$**, denoted as $AR(p)$, if
+$$
+  x_t = \alpha_1 x_{t-1} + \alpha_2 x_{t-2} + \alpha_3 x_{t-3} + \cdots + \alpha_{p-1} x_{t-(p-1)} + \alpha_p x_{t-p} + w_t ~~~~~~~~~~~~~~~~~~~~~~~ (4.15)
+$$
+
+where $\{w_t\}$ is white noise and the $\alpha_i$ are the model parameters with $\alpha_p \ne 0$.
+
+:::
+
+The $AR(p)$ model can be expressed in terms of the backward shift operator:
+$$
+   \left( 1 - \alpha_1 \mathbf{B} - \alpha_2 \mathbf{B}^2 - \cdots - \alpha_p \mathbf{B}^p \right) x_t = w_t
+$$
+
+Now, we consider a different, but related model, the moving average (MA) model
+
+::: {.callout-note icon=false title="Definition of a Moving Average (MA) Model"}
+
+We say that a time series $\{x_t\}$ is a **moving average process of order $q$**, denoted as $MA(q)$, if each term in the time series is a linear combination of the current white noise term and the $q$ most recent past white noise terms. 
+
+It is given as:
+$$
+  x_t = w_t + \beta_1 w_{t-1} + \beta_2 w_{t-2} + \beta_3 w_{t-3} + \cdots + \beta_{q-1} w_{t-(q-1)} + \beta_q w_{t-q} ~~~~~~~~~~~~~~~~~~~~~~~ (6.1)
+$$
+
+where $\{w_t\}$ is white noise with zero mean and variance $\sigma_w^2$, and the $\beta_i$ are the model parameters with $\beta_q \ne 0$.
+
+:::
+
+
+<!-- In the check your understanding below, -->
+<!-- The students write the MA model in terms -->
+<!-- of the backward shift operator. -->
+
+
+
+<!-- Check your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Write Equation (6.1) in terms of the backward shift operator. Your answer will be of the form:
+
+$$
+  x_t 
+    = (\text{some}~q^{th}~\text{degree polynomial in}~\mathbf{B}) w_t
+    = \phi_q(\mathbf{B}) w_t
+$$
+
+:::
+
+
+::: {.callout-caution icon=false title="Note"}
+
+An $MA(q)$ process is comprised of a finite summation of stationary white noise terms. Hence, an $MA(q)$ process will be stationary with a time-invariante mean and autocovariance.
+
+The mean and variance of $\{x_t\}$ are easily derived. The mean must be zero, because each term is a sum of scaled white noise terms with mean zero.
+
+The variance of an $MA(q)$ process is ${ \sigma_w^2 \left( 1 + \beta_1^2 + \beta_2^2 + \beta_3^2 + \cdots + \beta_{q-1}^2 + \beta_q^2 \right) }$. This can be seen, because the white noise terms are independent with the same variance.
+
+So, the autocorrelation function is
+
+$$
+  \rho(k) =
+  cor(x_t, x_{t+k}) =
+    \begin{cases}
+      1, & k=0 \\
+      ~\\
+      \dfrac{ \sum\limits_{i=0}^{q-k} \beta_i \beta_{i+k} }{ \sum\limits_{i=0}^q \beta_i^2 }, & k = 1, 2, \ldots, q \\
+      ~\\
+      0, & k > q
+    \end{cases}
+$$
+where $\beta_0 = 1$.
+
+Note that the autocorrelation function is zero if $k>q$, because $x_t$ and $x_{t+k}$ would be independent weighted summations of white noise processes and hence the covariance between them would be zero.
+
+:::
+
+We now define an invertible $MA$ process.
+
+::: {.callout-note icon=false title="Definition of an Invertible $MA$ Process"}
+
+An $MA$ process is said to be **invertible** if it can be expressed as a stationary autoregressive process (of infinite order) with no error term.
+
+:::
+
+#### Example of an Invertible MA Process
+
+Recall that 
+$$
+  (1-x)(1 + x + x^2 + x^3 + \cdots) = 1
+$$
+
+or, 
+
+$$
+  (1-x)^{-1} = (1 + x + x^2 + x^3 + \cdots)
+$$
+if $|x|<1$.
+
+Now, note that the $MA$ process 
+
+$$
+  x_t = \left( 1 - \beta \mathbf{B} \right) w_t
+$$
+
+can be written as:
+
+\begin{align*}
+  \left( 1 - \beta \mathbf{B} \right)^{-1} x_t &= w_t \\
+  \left( 1 + \beta \mathbf{B} + \beta^2 \mathbf{B}^2 + \beta^3 \mathbf{B}^3 + \cdots \right) x_t &= w_t \\
+  x_t + \beta x_{t-1} + \beta^2 x_{t-2} + \beta^3 x_{t-3} + \cdots &= w_t \\
+  x_t &= \left( -\beta x_{t-1} - \beta^2 x_{t-2} - \beta^3 x_{t-3} - \cdots \right) + w_t
+\end{align*}
+
+assuming that $|\beta|<1$. Note that this series will not converge unless $|\beta|<1$. 
+
+We have just shown that the $MA$ process 
+$$
+  x_t = \left( 1 - \beta \mathbf{B} \right) w_t
+$$
+is invertible.
+
+
+::: {.callout-note icon=false title="Theorem: Invertibility of an $MA(q)$ Process"}
+
+The $MA(q)$ process 
+$$
+  x_t = \phi_q(\mathbf{B}) w_t
+$$
+will be invertible if the solutions to the equation
+$$
+  \phi_q(\mathbf{B}) = 0
+$$
+are all greater than 1 in absolute value.
+
+:::
+
+<a id="FittedModelWillBeInvertible">Does</a> this remind you of the test for the stationarity of an $AR(p)$ model?
+
+Note that the autocovariance function (acvf) will identify a unique $MA(q)$ process only if the process is invertible. Fortunately, the algorithm R uses to estimate an $MA(q)$ process always leads to an invertible model.
+
+
+## Class Activity: Simulating an $MA(q)$ Model (5 min)
+
+The textbook gives a simulation of an $MA(3)$ process:
+
+$$
+  x_t = w_t + \beta_1 w_{t-1} + \beta_2 w_{t-2} + \beta_3 w_{t-3}
+$$
+
+where $\beta_1 = 0.7$, $\beta_1 = 0.5$, and $\beta_3 = 0.2$. This shiny app allows you to simulate from this process.
+
+
+```{=html}
+ <iframe id="MA3Simulation" src="https://posit.byui.edu/content/edfd752d-58f2-468e-8695-a28a5b4eec6f" style="border: none; width: 100%; height: 1030px" frameborder="0"></iframe>
+```
+
+
+<!-- The code below is replaced by the shiny app above. -->
+
+
+
+<!-- ```{r} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: "Show the code" -->
+
+<!-- pacman::p_load("tsibble", "fable", "feasts", -->
+<!--     "tsibbledata", "fable.prophet", "tidyverse", -->
+<!--     "patchwork", "slider", "urca") -->
+
+<!-- # define the parameters of the simulation -->
+<!-- beta1 <- 0.7 -->
+<!-- beta2 <- 0.5 -->
+<!-- beta3 <- 0.2 -->
+
+<!-- # function to compute the autocorrelation -->
+<!-- rho <- function(k, beta) { -->
+<!--   q <- length(beta) - 1 -->
+<!--   if (k > q) ACF <- 0 else { -->
+<!--     s1 <- 0; s2 <- 0 -->
+<!--     for (i in 1:(q-k+1)) s1 <- s1 + beta[i] * beta[i+k] -->
+<!--     for (i in 1:(q+1)) s2 <- s2 + beta[i]^2 -->
+<!--     ACF <- s1 / s2} -->
+<!--   ACF -->
+<!-- } -->
+
+<!-- # create the tibble -->
+<!-- acf_dat <- tibble( -->
+<!--   order = 0:10, -->
+<!--   betas = list(c(1, beta1, beta2, beta3)), -->
+<!--   rho.k = map2_dbl(order, betas, ~rho(.x, .y))) -->
+
+<!-- # generate the autocorrelation plot -->
+<!-- acf_dat |> -->
+<!--   ggplot(aes(x = order, y = rho.k)) + -->
+<!--   geom_hline(yintercept = 0, color = "darkgrey") + -->
+<!--   geom_point() + -->
+<!--   labs(y = expression(rho[k]), x = "lag k") + -->
+<!--     labs( -->
+<!--       x = "Time", -->
+<!--       y = "ACF", -->
+<!--       title = "Theoretical ACF for the Simulated MA(3) Process" -->
+<!--     ) + -->
+<!--     theme_bw() + -->
+<!--     theme( -->
+<!--       plot.title = element_text(hjust = 0.5) -->
+<!--     ) -->
+<!-- ``` -->
+
+<!-- Now, we simulate data from this process. -->
+
+<!-- ```{r} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: "Show the code" -->
+
+<!-- set.seed(1234) -->
+<!-- dat <- tibble( -->
+<!--   w = rnorm(1000), -->
+<!--   betas = list(c(beta1, beta2, beta3))) |> -->
+<!--   mutate( -->
+<!--     w_lag = slide(w, ~.x, .before = 3, .after = -1), -->
+<!--     w_lag = map(w_lag, ~rev(.x)), -->
+<!--     t = 1:n()) |> -->
+<!--   slice(-c(1:3)) |> -->
+<!--   mutate( -->
+<!--     lag_betas = map2_dbl( -->
+<!--       w_lag, -->
+<!--       betas, -->
+<!--       \(.x, .y) sum(.x *.y)), -->
+<!--     x = w + lag_betas) |> -->
+<!--   tsibble::as_tsibble(index = t) -->
+<!-- autoplot(dat, .var = x) -->
+<!-- ``` -->
+
+<!-- Here is the acf function computed from the simulated data. -->
+
+<!-- ```{r} -->
+<!-- #| code-fold: true -->
+<!-- #| code-summary: "Show the code" -->
+
+<!-- dat |> -->
+<!--   ACF(y = x) |> -->
+<!--   autoplot() -->
+<!-- ``` -->
+
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the simulation above to do the following:
+
+-   Generate the theoretical acf plot for the $MA(3)$ model
+$$
+  x_t = w_t - 0.7 w_{t-1} + 0.5 w_{t-2} - 0.2 w_{t-3}
+$$
+-   How does the value of the $\beta$'s affect the acf?
+-   Simulate 1000 observations from this $MA(3)$ process.
+    -   Give the time plot of the simulated data
+    -   Plot the acf of the simulated data.
+-   Compare the acf from the simulated data with the theoretical acf.
+  
+:::
+
+
+## Class Activity: Identifying AR and MA Models from the ACF and PACF (5 min)
+
+#### AR Process
+
+Recall that on page 81, the textbook states that in general, the partial autocorrelation at lag $k$ is the $k^{th}$ coefficient of a fitted $AR(k)$ model.
+This implies that if the underlying process is $AR(p)$, then all the coefficients $\alpha_k$ will equal 0 whenever $k>p$. So, an $AR(p)$ process will result in partial correlations that are zero after lag $p$. So, we can look at the correlogram of partial autocorrelations to determine the order of an appropriate $AR$ process to model a time series.
+
+#### MA Process
+
+Similarly, for an $MA(q)$ process, the coefficients $\beta_k$ will equal 0 whenever $k > q$. Hence, an $MA(q)$ process will demonstrate autocorrelations that are 0 after lag $q$. So, considering the correlogram of autocorrelations, we can assess if an $MA(q)$ model would be appropriate. 
+
+Bless their hearts, the textbook authors give a bad example in Section 6.4.2. They even state that it is "not a realistic realisation." MA processes naturally arise in ratios of observed data. Multi-period asset returns (i.e. ratios of some previous term's value) tend to follow an MA process.
+
+For example, if there are 252 trading days in a year, then the daily series of year-over-year returns (this year's value divided by last year's value) follows an $MA(252-1)$ process. If we are comparing values observed to those from one week ago, we would have an $MA(7-1)$ process.
+
+#### Comparison 
+::: {.callout-note icon=false title="ACF and PACF of an $AR(p)$ Process"}
+
+We can use the pacf and acf plots to assess if an $AR(p)$ or $MA(q)$ model is appropriate. 
+For an $AR(p)$ or $MA(q)$ process, we observe the following:
+
+<center>
+
+|      | AR(p)                  | MA(q)                  |
+|------|------------------------|------------------------|
+| ACF  | Tails off              | Cuts off after lag $q$ |
+| PACF | Cuts off after lag $p$ | Tails off              |
+
+</center>
+
+<!-- https://people.cs.pitt.edu/~milos/courses/cs3750/lectures/class16.pdf -->
+
+<!-- |      | AR(p)                  | MA(q)                  | ARMA(p,q)                | -->
+<!-- |------|------------------------|------------------------|--------------------------| -->
+<!-- | ACF  | Tails off              | Cuts off after lag $q$ | Tails off                | -->
+<!-- | PACF | Cuts off after lag $p$ | Tails off              | Tails off                | -->
+
+:::
+
+
+## Class Activity: Fitting an $MA(q)$ Model to GDP Year-Over-Year Ratios (5 min)
+
+To fit an $MA(q)$ model, we look at the acf to determine if it cuts off after $q$ lags.
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# gdp_ts <- rio::import("https://byuistats.github.io/timeseries/data/gdp_fred.csv") |>
+gdp_ts <- rio::import("data/gdp_fred.csv") |>
+  select(-comments) |>
+  mutate(year_over_year = gdp_millions / lag(gdp_millions, 4)) |>
+  mutate(quarter = yearquarter(mdy(quarter))) |>
+  filter(quarter >= yearquarter(my("Jan 1990")) & quarter < yearquarter(my("Jan 2025"))) |>
+  na.omit() |>
+  mutate(t = 1:n()) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  as_tsibble(index = quarter)
+
+
+gdp_df <- as.data.frame(gdp_ts)
+
+ggplotly(ggplot(gdp_df, aes(x = index(gdp_ts), y = gdp_millions)) +
+  geom_line() +
+  labs(
+    x = "Quarter",
+    y = "GDP (Millions of $US)",
+    title = "U.S. Gross Domestic Product (GDP) in Millions of Dollars"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)))
+
+ggplotly(ggplot(gdp_df, aes(x = index(gdp_ts), y = year_over_year)) +
+  geom_line() +
+  stat_smooth(method = "lm", 
+              formula = y ~ x, 
+              geom = "smooth",
+              se = FALSE,
+              color = "#E69F00",
+              linetype = "dotted") +
+  labs(
+    x = "Quarter",
+    y = "Ratio",
+    title = "Year-Over-Year Change in U.S. GDP"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)))
+
+gdp_ts |>
+  select(year_over_year) |>
+  acf() 
+
+gdp_ts |>
+  select(year_over_year) |>
+  pacf()
+```
+
+
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What process would you use to model the year-over-year GDP ratios?
+-   Modify the code below to implement your model.
+```{r}
+#| eval: false
+
+gdp_ma <- gdp_ts |>
+  model(arima = ARIMA(year_over_year ~ 1 + pdq(0,0,1) + PDQ(0, 0, 0)))
+
+tidy(gdp_ma)
+
+gdp_ma |>
+  residuals() |>
+  ACF() |>
+  autoplot()
+```
+-   What are the values of the model coefficients?
+-   Based on the acf of the residuals, is the MA model you identified a good fit to the data?
+
+:::
+
+
+
+
+## Small-Group Activity: Fitting an $MA(q)$ Model to the Trade Data (15 min)
+
+
+#### Vessels Cleared in Foreign Trade for United States
+
+In the homework for Chapter 1 Lesson 5, you explored data on the thousands of net tons cleared in foreign trade for the United States each month from January 1902 to December 1940. The code below computes the year-over-year change in the amount of cargo cleared for trade. This is stored in the variable `ratio`.
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+vessels_ts <- rio::import("https://byuistats.github.io/timeseries/data/Vessels_Trade_US.csv") |>
+  # filter(-comments) |>
+  mutate(
+    date = yearmonth(dmy(date)),
+    ratio = vessels / lag(vessels, 12)
+  ) |>
+  na.omit() |>
+  as_tsibble(index = date)
+
+vessels_ts <- as.data.frame(vessels_ts)
+
+ggplotly(ggplot(vessels_ts, aes(x = index(vessels_ts), y = ratio)) +
+  geom_line() +
+  labs(
+    x = "Month",
+    y = "Ratio",
+    title = "Year-Over-Year Change in Net Tons on Vessels Cleared for Trade"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Practice applying an $MA(q)$ model using the year-over-year amounts.
+
+-   Determine which MA model is most appropriate for these data.
+-   Fit the model you deem most appropriate.
+-   Assess the appropriateness of applying your model to the data.
+
+:::
+
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_6_1.qmd" download="homework_6_1.qmd"> homework_6_1.qmd </a>
+
+:::
+
+
+
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">MA(q) process in terms of the backward shift operator</a>
+  
+::: {#Solutions1 style="display:none;"}
+  
+\begin{align*}
+  x_t 
+    &= w_t + \beta_1 w_{t-1} + \beta_2 w_{t-2} + \beta_3 w_{t-3} + \cdots + \beta_{q-1} w_{t-(q-1)} + \beta_q w_{t-q} \\
+    &= w_t + \beta_1 \mathbf{B} w_t + \beta_2 \mathbf{B}^2 w_t + \beta_3 \mathbf{B}^3 w_t + \cdots + \beta_{q-1} \mathbf{B}^{q-1} w_t + \beta_q \mathbf{B}^{q} w_t \\
+    &= \left( 1 + \beta_1 \mathbf{B} + \beta_2 \mathbf{B}^2  + \beta_3 \mathbf{B}^3  + \cdots + \beta_{q-1} \mathbf{B}^{q-1}  + \beta_q \mathbf{B}^{q} \right) w_t \\
+    &= \phi_q(\mathbf{B}) w_t
+\end{align*}
+
+:::
+
+
+
+
+<a href="javascript:showhide('Solutions2')"
+style="font-size:.8em;">Simulating an MA(3) process</a>
+  
+::: {#Solutions2 style="display:none;"}
+
+Set the values of the parameters $n$, $\beta_1$, $\beta_2$, and $\beta_3$ in the simulation to the following:
+$$
+n = 1000, ~~~~~~~~~~~
+\beta_1 = -0.7, ~~~~~~~~~~~
+\beta_2 = 0.5, ~~~~~~~~~~~
+\beta_3 = -0.2
+$$
+
+:::
+
+
+
+
+
+
+
+<a href="javascript:showhide('Solutions3')"
+style="font-size:.8em;">Class Activity: Fitting an MA(q) Model to GDP Year-Over-Year Ratios</a>
+  
+::: {#Solutions3 style="display:none;"}
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What process would you use to model the year-over-year GDP ratios?
+
+Based on the acf, an $MA(3)$ model seems most appropriate.
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+gdp_ts |>
+  select(year_over_year) |>
+  acf()
+
+gdp_ts |>
+  select(year_over_year) |>
+  pacf()
+```
+
+
+
+
+-   Modify the code below to implement your model.
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+gdp_ma <- gdp_ts |>
+  # Changed 1 to a 3 on the next line
+  model(arima = ARIMA(year_over_year ~ 1 + pdq(0,0,3) + PDQ(0, 0, 0))) 
+```
+-   What are the values of the model coefficients?
+
+The values of the coefficients are given in the table below:
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+tidy(gdp_ma)
+```
+
+-   Based on the acf of the residuals, is the MA model you identified a good fit to the data?
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+gdp_ma |>
+  residuals() |>
+  ACF(var = .resid) |>
+  autoplot()
+```
+
+None of the acf values are significant. The $MA(3)$ model seems appropriate.
+
+```{r}
+#| echo: false
+
+coeffs <- tidy(gdp_ma) |>
+  # filter(term != "constant") |>
+  select(estimate) |>
+  pull()
+```
+
+
+We can write the estimated model as:
+$$
+  x_t = `r coeffs[4]` + `r coeffs[1]` \mathbf{B} + `r coeffs[2]` \mathbf{B}^2 + `r coeffs[3]` \mathbf{B}^3
+$$
+
+The absolute values of the roots of the right-hand side of this equation are:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+coeffs <- tidy(gdp_ma) |>
+  # filter(term != "constant") |>
+  select(estimate) |>
+  pull()
+
+abs(polyroot(c(coeffs |> tail(1), coeffs |> head(-1))))
+```
+
+The model is invertible. (As mentioned [previously](#FittedModelWillBeInvertible), the process by which these are constructed guarantees they will be invertible.)
+
+:::
+
+:::
+
+
+
+
+<a href="javascript:showhide('Solutions4')"
+style="font-size:.8em;">Small-Group Activity: Fitting an MA(q) Model to the Trade Data</a>
+  
+::: {#Solutions4 style="display:none;"}
+    
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+vessels_ts <- rio::import("https://byuistats.github.io/timeseries/data/Vessels_Trade_US.csv") |>
+  # filter(-comments) |>
+  mutate(
+    date = yearmonth(dmy(date)),
+    ratio = vessels / lag(vessels, 12)
+  ) |>
+  na.omit() |>
+  as_tsibble(index = date)
+
+vessels_ts <- as.data.frame(vessels_ts)
+
+# Plot using ggplot
+ggplotly(ggplot(vessels_ts, aes(x = index(vessels_ts), y = ratio)) +
+  geom_line() +
+  labs(
+    x = "Month",
+    y = "Ratio",
+    title = "Year-Over-Year Change in Net Tons on Vessels Cleared for Trade"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)))
+
+
+
+vessels_ts |>
+  select(ratio) |>
+  acf()
+
+vessels_ts |>
+  select(ratio) |>
+  pacf()
+
+
+vessels_ts <- as_tsibble(vessels_ts, index = date)
+
+
+gdp_ma <- vessels_ts |>
+  model(arima = ARIMA(ratio ~ 1 + pdq(0,0,12) + PDQ(0, 0, 0)))
+
+tidy(gdp_ma)
+
+gdp_ma |>
+  residuals() |>
+  ACF() |>
+  autoplot()
+```
+
+
+
+:::
+
+

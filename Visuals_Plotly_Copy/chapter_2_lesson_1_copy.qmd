@@ -1,0 +1,597 @@
+---
+title: "Covariance and Correlation"
+subtitle: "Chapter 2: Lesson 1"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+library(ggplot2)
+library(plotly)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+## Learning Outcomes
+
+{{< include outcomes/chapter_2_lesson_1_outcomes.qmd >}}
+
+
+
+## Preparation
+
+-   Read Sections 2.1-2.2.2 and 2.2.4
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+-   What would you add to your learning journal after reading your partner's?
+-   What would you recommend your partner add to their learning journal?
+-   Sign the Learning Journal review sheet for your peer
+
+## Class Activity: Variance and Standard Deviation (10 min)
+
+We will explore the variance and standard deviation in this section.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do the standard deviation and the variance measure?
+
+:::
+
+The following code simulates observations of a random variable. We will use these data to explore the variance and standard deviation.
+
+```{r}
+# Set random seed
+set.seed(2412)
+
+# Specify means and standard deviation
+n <- 5        # number of points
+mu <- 10      # mean
+sigma <- 3    # standard deviation
+
+# Simulate normal data
+sim_data <- data.frame(x = round(rnorm(n, mu, sigma), 1)) |> 
+  arrange(x)
+```
+
+```{r}
+#| echo: false
+
+# Convert to character string
+# Initialize empty character vector
+five_vals <- sim_data$x[1]
+# Simulate normal data
+for(t in 2:n){
+  five_vals <- paste(five_vals, sim_data$x[t], sep=", ")
+}
+```
+
+The data simulated by this process are:
+
+<center>`r five_vals`</center>
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Find the sample mean of these numbers. <!-- `r mean(sim_data$x)`. -->
+-   What are some ways to interpret the mean?
+
+:::
+
+The variance and standard deviation are individual numbers that summarize how far the data are from the mean. We first compute the deviations from the mean, $x - \bar x$. This is the directed distance from the mean to each data point.
+
+```{r}
+#| echo: false
+#| warning: false
+temp <- sim_data |> 
+  mutate(deviations = x - mean(x)) |> 
+  arrange(desc(x))
+
+mean_x <- mean(temp$x)
+min_x <- floor(min(temp$x))
+max_x <- ceiling(max(temp$x))
+range <- max_x - min_x
+lower <- min_x - range / 10
+upper <- max_x + range / 10
+
+ticks <- ceiling(lower):floor(upper)
+ticks_df <- data.frame(x = ticks, y = -1)
+
+
+# Plot deviations from the mean
+ggplot(temp, aes(x = x, y = 0)) +
+  # x-axis
+  annotate("segment", x = lower, xend = upper, y = -1, yend = -1, colour = "black", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+  
+  # Add tick marks and labels          
+  annotate("segment", x = ticks, xend = ticks, y = -1.25, yend = -0.75, colour = "black", linewidth = 0.5) +
+
+  geom_text(aes(x = upper, y = -1, label = "x"), size = 4, hjust = -1, vjust = 0, color = "black") +
+  
+  geom_text(data = ticks_df, aes(x = x, y = y, label = x), size = 4, vjust = 2, color = "black") +
+  
+  # Deviations from the mean arrows and lines
+  geom_segment(aes(x = mean_x, xend = x, y = 1:n, yend = 1:n), colour = okabeito_colors_list[2], linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+  geom_segment(aes(x = x, xend = x, y = 0.25, yend = 1:n - 0.25), colour = okabeito_colors_list[2], linewidth = 0.5, linetype = "dashed") +
+  geom_text(aes(x = (mean_x + x)/2, y = 1:n, label = round(deviations, 2)), size = 3, vjust = -0.5) +
+  
+  # Marker for the mean
+  annotate("segment", x = mean_x, xend = mean_x, y = -2.5, yend = -1.25, colour = okabeito_colors_list[1], linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+  geom_segment(aes(x = mean_x, xend = mean_x, y = -0.75, yend = n + 1), colour = okabeito_colors_list[1], linewidth = 0.5, linetype = "dashed") +
+  # Add xbar
+  geom_label(
+    label=expression(bar(x) == " "),
+    x=mean_x-0.1,
+    y=-2.6,
+    color = okabeito_colors_list[1],parse = TRUE,label.size = NA, fill=NA)+
+  # add mean value
+  geom_label(
+    label=paste0(round(mean_x, 2)),
+    x=mean_x+0.3,
+    y=-2.6,
+    color = okabeito_colors_list[1],label.size = NA, fill=NA)+
+  geom_point(size = 3, color = okabeito_colors_list[2]) + 
+  geom_text(aes(x = x, y = rep(0,n), label = x), size = 3, vjust = 1.75) +
+  
+  # theme
+  theme_void() +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+     
+  theme(aspect.ratio = 0.4) +
+  labs(title = "Deviations from the Mean", 
+       x = "Value",
+       y = "")
+```
+
+We can summarize this information in a table:
+
+#### Table 1: Deviations from the mean
+
+```{r}
+#| echo: false
+sim_data |> 
+  mutate(
+    xx = x - mean(x),
+    extra1 = " ",
+    extra2 = " ",
+    extra3 = " ",
+    extra4 = " "
+    ) |> 
+  rename(
+    "$$x_t$$" = x,
+    "$$x_t-\\bar x$$" = xx,
+    " " = extra1,
+    "  " = extra2,
+    "   " = extra3,
+    "    " = extra4
+  ) |>
+  display_table("0.75in")
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+How can we obtain one number that summarizes how spread out the data are from the mean? We may try averaging the deviations from the mean.
+
+-   What is the average deviation from the mean?
+-   Will we get the same value with other data sets, or is this just a coincidence?
+-   What could you do to prevent this from happening?
+-   Apply your idea. Compute the resulting value that summarizes the spread. What do you get?
+-   What is the relationship between the sample variance and the sample standard deviation?
+-   Use a table like the one above to verify that the sample variance is `r var(sim_data$x)`.
+-   Show that the sample standard deviation is `r sd(sim_data$x) |> round(4)`.
+
+:::
+
+## Class Activity: Covariance and Correlation (15 min)
+
+```{=html}
+ <iframe id="CoAndCo" src="https://posit.byui.edu/content/564c2e71-3d0b-43a6-8c6f-d402125c8b28" style="border: none; width: 100%; height: 2200px" frameborder="0"></iframe>
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you get if you multiply the equations for $r$, $s_x$, and $s_y$ together?
+
+:::
+
+$$
+  r \cdot s_x \cdot s_y 
+    =
+      \frac{\sum\limits_{t=1}^n (x - \bar x)(y - \bar y)}{\sqrt{\sum\limits_{t=1}^n (x - \bar x)^2} \sqrt{\sum\limits_{t=1}^n (y - \bar y)^2}} 
+      \cdot 
+      \sqrt{ \frac{\sum\limits_{t=1}^n (x - \bar x)^2}{n-1} }
+      \cdot 
+      \sqrt{ \frac{\sum\limits_{t=1}^n (y - \bar y)^2}{n-1} }
+    =
+      ?
+$$
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Use the numerical values above to confirm your result. Any discrepancy is due to roundoff error.
+
+:::
+
+
+## Team Activity: Computational Practice (15 min)
+
+```{r}
+#| echo: false
+
+# Set random seed
+set.seed(300)
+
+# Specify means and correlation coefficient
+n <- 6              # number of points
+mu <- c(3, 1)       # mean vector (mu_x, mu_y)
+sigma_x <- 3.5      # standard deviation x
+sigma_y <- 2        # standard deviation y
+rho <- -0.85          # correlation coefficient
+
+# Define variance-covariance matrix
+sigma <- matrix(
+  c(sigma_x^2,
+    rho*sigma_x*sigma_y,
+    rho*sigma_x*sigma_y,
+    sigma_y^2),
+  nrow = 2)
+
+# Simulate bivariate normal data
+mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) |> 
+  data.frame() |> 
+  rename(x = X1, y = X2) |> 
+  round_df(1)
+```
+
+#### Table 3: Computational Practice
+
+The table below contains values of two time series $\{x_t\}$ and $\{y_t\}$ observed at times $t = 1, 2, \ldots, 6$. We will use these values to practice finding the means, standard deviations, correlation coefficient, and covariance without using built-in R functions.
+
+```{r}
+#| echo: false
+
+cov_dat <- mvn_data_6 |> 
+  mutate(t = row_number()) |> 
+  dplyr::select(t, x, y) |> 
+  mutate(
+    xx = x - mean(x),
+    xx2 = xx^2,
+    yy = y - mean(y),
+    yy2 = yy^2,
+    xy = (x - mean(x)) * (y - mean(y))
+    ) 
+
+cov_dat_summary <- cov_dat |> 
+  summarize(
+    x = sum(x),
+    y = sum(y),
+    xx = sum(xx),
+    xx2 = sum(xx2),
+    yy = sum(yy),
+    yy2 = sum(yy2),
+    xy = sum(xy)
+  ) |> 
+  round_df(5) |>
+  mutate(across(everything(), as.character)) |> 
+  mutate(t = "sum")
+
+temp <- cov_dat |> 
+  round_df(5) |>
+  mutate(across(everything(), as.character)) |> 
+  bind_rows(cov_dat_summary)
+
+temp |> 
+  blank_out_cells_in_df(ncols_to_keep = 3, nrows_to_keep = 1) |>
+  bind_rows(temp |> tail(1) |> blank_out_cells_in_df(ncols_to_keep = 0, nrows_to_keep = 0) |> mutate(t = "$$~$$")) |> 
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$y_t$$" = y,
+    "$$x_t-\\bar x$$" = xx, 
+    "$$(x_t - \\bar x)^2$$" = xx2, 
+    "$$y_t-\\bar y$$" = yy,
+    "$$(y_t-\\bar y)^2$$" = yy2, 
+    "$$(x_t - \\bar x)(y_t-\\bar y)$$" = xy
+  ) |>
+  display_table()
+```
+
+Use the table above to determine these values:
+
+::: columns
+::: {.column width="30%"}
+
+-   $\bar x =$
+
+-   $\bar y =$
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
+-   $s_x =$
+
+-   $s_y =$
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
+-   $r =$
+
+-   $\\cov(x,y) =$
+
+:::
+:::
+
+Here is a scatterplot of the data.
+
+<center>
+
+```{r fig.asp=0.75}
+#| echo: false
+#| warning: false
+
+cov_dat <- cov_dat |> 
+  mutate(
+    sign = case_when(
+      xy > 0 ~ "positive", 
+      xy < 0 ~ "negative",
+      TRUE ~ "zero")
+  ) 
+  
+ggplotly(ggplot(cov_dat, aes(x = x, y = y)) +
+  geom_point(size = 2) +
+  labs(x="x", y="y") +
+  theme_bw() +  
+  ggtitle(paste0("Data for Computational Practice (n = ",n,")")) + 
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+</center>
+
+
+
+### Summary
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Working with your partner, prepare to explain the following concepts to the class:
+
+-   Variance
+-   Standard deviation
+-   Correlation
+-   Covariance
+
+:::
+
+## Computations in R (5 min)
+
+Use these commands to load the data from the previous activity into R.
+```{r}
+#| echo: false
+x <- mvn_data_6$x
+y <- mvn_data_6$y
+cat("x <- c(", paste(mvn_data_6$x, collapse = ", "),")")
+cat("y <- c(", paste(mvn_data_6$y, collapse = ", "),")")
+```
+
+We can use R to compute the mean, variance, standard deviation, correlation coefficient, and covariance.
+
+#### Mean, $\bar x$
+```{r}
+mean(x)
+```
+
+
+#### Variance, $s_x^2$
+```{r}
+var(x)
+```
+
+
+#### Standard Deviation, $s_x$
+```{r}
+sd(x)
+```
+
+
+#### Correlation Coefficient, $r$
+```{r}
+cor(x, y)
+```
+
+
+#### Covariance, $\\cov(x,y)$
+```{r}
+cov(x, y)
+```
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+## Homework
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_2_1.qmd" download="homework_2_1.qmd"> homework_2_1.qmd </a>
+
+:::
+
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Class Activity: Variance and Standard Deviation</a>
+
+::: {#Solutions style="display:none;"}
+Solutions to Class Activity: Variance and Standard Deviation
+
+```{r}
+#| echo: false
+temp <- sim_data |> 
+  mutate(
+    xx = x - mean(x),
+    xx2 = (x - mean(x))^2,
+    ) 
+
+temp2 <- temp |> 
+  bind_rows(colSums(temp)) |>
+  round_df(5) |>
+  mutate(Solution = ifelse(row_number() == n(), "Sum", "")) |>
+  dplyr::select(Solution, x, xx, xx2) |>
+  data.frame()
+
+ssx <- temp2[nrow(temp2), ncol(temp2)]
+
+temp2 |> 
+  rename(
+    "$$x_t$$" = x,
+    "$$x_t-\\bar x$$" = xx, 
+    "$$(x_t-\\bar x)^2$$" = xx2
+  ) |>
+  display_table()
+```
+
+
+
+The variance of these values is $s^2 = \frac{`r ssx`}{`r nrow(temp)` - 1} = `r var(x)`$.
+
+The standard deviation is $s = \sqrt{s^2} = \sqrt{`r var(x)`} = `r sd(x) |> round(3)`$.
+:::
+
+<a href="javascript:showhide('Solutions2')"
+style="font-size:.8em;">Team Activity: Computational Practice</a>
+
+::: {#Solutions2 style="display:none;"}
+Solutions to Team Activity: Computational Practice
+
+#### Table 3: Computational Practice
+
+```{r}
+#| echo: false
+
+cov_dat <- mvn_data_6 |> 
+  mutate(t = row_number()) |> 
+  dplyr::select(t, x, y) |> 
+  mutate(
+    xx = x - mean(x),
+    xx2 = xx^2,
+    yy = y - mean(y),
+    yy2 = yy^2,
+    xy = (x - mean(x)) * (y - mean(y))
+    ) 
+
+cov_dat_summary <- cov_dat |> 
+  summarize(
+    x = sum(x),
+    y = sum(y),
+    xx = sum(xx),
+    xx2 = sum(xx2),
+    yy = sum(yy),
+    yy2 = sum(yy2),
+    xy = sum(xy)
+  ) |> 
+  round_df(5) |>
+  mutate(across(everything(), as.character)) |> 
+  mutate(t = "sum")
+
+temp <- cov_dat |> 
+  round_df(5) |>
+  mutate(across(everything(), as.character)) |> 
+  bind_rows(cov_dat_summary)
+
+temp |> 
+  # blank_out_cells_in_df(ncols_to_keep = 3, nrows_to_keep = 1) |>
+  # bind_rows(temp |> tail(1) |> blank_out_cells_in_df(ncols_to_keep = 0, nrows_to_keep = 0) |> mutate(t = "$$~$$")) |> 
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$y_t$$" = y,
+    "$$x_t-\\bar x$$" = xx, 
+    "$$(x_t - \\bar x)^2$$" = xx2, 
+    "$$y_t-\\bar y$$" = yy,
+    "$$(y_t-\\bar y)^2$$" = yy2, 
+    "$$(x_t - \\bar x)(y_t-\\bar y)$$" = xy
+  ) |>
+  display_table()
+```
+
+
+::: columns
+::: {.column width="30%"}
+
+-   $\bar x = `r mean(mvn_data_6$x)`$
+
+-   $\bar y = `r mean(mvn_data_6$y)`$
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
+-   $s_x = `r sd(mvn_data_6$x)`$
+
+-   $s_y = `r sd(mvn_data_6$y)`$
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
+-   $r = `r cor(mvn_data_6$x, mvn_data_6$y)`$
+
+-   $\\cov(x,y) = `r cov(mvn_data_6$x, mvn_data_6$y)`$
+
+:::
+:::
+
+
+:::
+

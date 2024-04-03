@@ -1,0 +1,451 @@
+---
+title: "Course Introduction"
+subtitle: "Chapter 1: Lesson 1"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+library(plotly)
+library(ggplot2)
+```
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_1_lesson_1_outcomes.qmd >}}
+
+
+
+## Introduction to the course structure and Canvas (30 min)
+
+-   Introduction of teacher(s)
+-   Introduction of students
+-   Syllabus
+-   Software: R and RStudio
+-   Textbook
+    -   Cowpertwait, P. S. P., & Metcalfe, A. V. (2009). *Introductory Time Series with R*. Springer. ISBN 978-0-387-88697-8; e-ISBN 978-0-387-88698-5; DOI 10.1007/978-0-387-88698-5.
+-   [Supplement to the Textbook](https://byuistats.github.io/timeseries_supplement)
+    -   Modern R code
+    -   Time Series (TS) Notebook for in-class activities
+-   Lesson cadence
+    -   Read assigned section(s) from the textbook
+        -   Assigned sections listed in the TS notebook
+    -   Reading Journals
+        -   Record your learning
+        -   Include all of the following from the assigned reading: vocabulary terms, nomenclature, models, important concepts, and your questions
+        -   Review another student's learning journal at the beginning of class
+    -   In-class Activities
+    -   Homework
+-   Assessment Structure
+    -   Daily Homework, Multi-week Projects, Three Exams
+-   Grading Categories
+    -   Reading Journal (10%)
+    -   Homework (40%)
+    -   Projects (25%)
+    -   Exams (25%)
+-   Grades: 93% = A
+-   Calendar
+-   Team structure for class activities
+    -   Random assignment, frequent changes, partner with each student in the class
+    -   We are all in this together
+
+## Class Activity: Google Trends (Searches for "Chocolate") (10 min)
+
+Google Trends allows you to download a time series showing the proportional number of searches for a given term. The month with the highest number of searches has a value of 100. The values for the other months are given as a percentage of the peak month's value. The following table illustrates the data, as given by Google Trends.
+
+```{r}
+#| echo: false
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("tidyverse", "rio","mosaic")
+chocolate_raw <- rio::import("https://byuistats.github.io/timeseries/data/chocolate_raw.csv") 
+
+# Prints a few rows of the chocolate_raw data file.
+
+temp <- chocolate_raw
+temp[1,1] <- "Category:"
+temp[1,2] <- paste0("All categories", strrep(" ",12))
+
+temp2 <- temp |> 
+  head(16) |> 
+  bind_rows(data.frame(V1 = "⋮   ", V2 = "⋮")) |> 
+  bind_rows(temp |> tail(3)) |> 
+  mutate(
+    V1 = 
+      case_when(
+        row_number() == 3 ~ paste0(V1, strrep(" ",4)),
+        row_number() > 3 ~ paste0(V1, strrep(" ",2)),
+        TRUE ~ V1
+      )
+  )
+
+temp2 |> 
+  rename(" " = "V1", "   " = "V2") |> print(row.names = FALSE)
+
+```
+
+The cleaned version of the data used for this demonstration are available in the file <a href="data/chocolate.csv" download>chocolate.csv</a>. We can read this directly into a data frame using the command 
+
+`chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv")`
+
+In Lesson 3, we will practice converting data like this into a time series (tsibble) object.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("tsibble", "fable",
+               "feasts", "tsibbledata",
+               "fable.prophet", "tidyverse",
+               "patchwork", "rio")
+
+# read in the data from a csv and make the tsibble
+# change the line below to include your file path
+chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv")
+start_date <- lubridate::ymd("2004-01-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(chocolate_month)-1),
+                by = "1 months")
+chocolate_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = dplyr::pull(chocolate_month, chocolate)
+)
+chocolate_month_ts <- chocolate_tibble |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index)
+
+chocolate_month_ts |> head()
+```
+
+For now, we will use the tsibble object (which in this case is called *chocolate_month_ts*) to explore the time series. Here is a plot of the time series representing the proportional frequency of searches for the term "chocolate."
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+ ggplotly(autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you notice about this plot?
+
+:::
+
+::: panel-tabset
+#### Characteristics
+
+#### Trend
+
+The red line represents the mean for each year. The point for this line was positioned to align with July of the year.
+
+```{r}
+#| echo: false
+
+
+chocolate_annual_ts <- summarise(index_by(chocolate_month_ts, year), value = mean(value))
+
+temp <- chocolate_month_ts |> 
+  filter(month == 7) |> 
+  dplyr::select(-value) |> 
+  right_join(chocolate_annual_ts, by = join_by(year))
+
+ggplotly(autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_line(data = temp, 
+            aes(x = index, y = value),
+            color = "#D55E00"))
+```
+
+:::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you observe about the number of searches for "chocolate" each month?
+-   What might be causing this trend?
+
+::::
+
+#### Seasonality / Cycles
+
+Consider the data for the last few years:
+
+```{r}
+#| echo: false
+
+                            ####################### FUTURE MAINTENANCE ###################
+first_year_selected <- 2020 # Increase this in future semesters, so the figure shows each year clearly. There should be a major vertical line for January of each year, and the shape of the monthly pattern should be clearly evident.
+
+lastfew_plot <- ggplotly(autoplot(chocolate_month_ts |> filter(dates >= lubridate::mdy(paste0("07/01/", first_year_selected))), .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for Chocolate (Select Months)"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+lastfew_plot
+```
+
+:::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Which month tends to have the greatest number of Google searches for "chocolate"?
+-   Which month has the second greatest number of Google searches for "chocolate"?
+-   When do the fewest number of Google searches for "chocolate" occur?
+-   How can you explain these observations?
+
+::::
+
+#### Autocorrelation
+
+**Autocorrelation** is a fancy word that means that sequential values in a sequence of data are related in some way.
+
+Consider searches in successive months. Are they independent?
+
+```{r test}
+#| echo: false
+
+                        ####################### FUTURE MAINTENANCE ###################
+example_year <- 2023   # Change this in future semesters to be the last full year with data.
+
+lastfew_plot
+```
+
+:::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Think about what you know about the reported number of searches in December compared to the following February. The reported number of searches for "chocolate" in December `r example_year-1` is `r chocolate_month_ts |> filter(year == example_year - 1, month == 12) |> data.frame() |> dplyr::select(value) |> pull()`. Does it make sense that the reported number of searches in February `r example_year` is `r chocolate_month_ts |> filter(year == example_year, month == 2) |> data.frame() |> dplyr::select(value) |> pull()` ? Given the value from December, is the value in the following February independent and completely random?
+-   The value reported by Google for June `r example_year` is `r chocolate_month_ts |> filter(year == example_year, month == 6) |> data.frame() |> dplyr::select(value) |> pull()`. Based on what you have observed in the data, do you think the value for July `r example_year` will be close to or far from this value? Justify your answer.
+
+::::
+
+:::
+
+Discuss these vocabulary terms in the context of the Google Trends ("Chocolate") example: - Time series - Sampling interval - Autocorrelation (or serial dependence) - Trend - Seasonal variation - Cycle
+
+```{r}
+#| include: false
+
+# TS Plot (Monthly and Annual)
+
+mp <- ggplotly(autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+yp <- ggplotly(autoplot(chocolate_annual_ts, .vars = value) +
+  labs(
+    x = "Year",
+    y = "Searches",
+    title = "Mean Annual Google Searches for 'Chocolate'"
+  ) +
+  scale_x_continuous(breaks = seq(2004, max(chocolate_month_ts$year), by = 2)) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+```{r}
+mp
+```
+
+
+## Class Activity: S&P 500 (10 min)
+
+The time series plot below illustrates the daily closing prices of the standard and Poor's 500 stock index (S&P 500).
+
+```{r}
+#| echo: false
+
+##################### S&P 500
+
+replaceCommas<-function(x){
+  x<-as.numeric(gsub("\\,", "", x))
+}
+
+sp500_dat <- rio::import("https://byuistats.github.io/timeseries/data/sp500.csv") |>
+  mutate(dates = mdy(Date))
+
+sp500_day <- sp500_dat |>
+  mutate(date_seq = dates) |>
+  mutate(
+    dates = date_seq,
+    year = lubridate::year(date_seq),
+    month = lubridate::month(date_seq),
+    value = replaceCommas(Close)
+  ) |>
+  dplyr::select(-date_seq) |>
+  tibble()
+
+sp500_ts <- sp500_day |>
+  mutate(index = dates) |>
+  as_tsibble(index = index)
+
+sp500_annual_ts <- summarise(index_by(sp500_ts, year), value = mean(value))
+
+temp <- sp500_ts |> filter(month == 7 & day(dates) == 1) |> 
+  dplyr::select(Date, year) 
+
+temp2 <- sp500_annual_ts |> 
+  right_join(temp, by = join_by(year))
+
+ggplotly(autoplot(sp500_ts, .vars = value) +
+  labs(
+    x = "Date",
+    y = "Closing Price",
+    title = "Daily Closing Price of the S&P 500 Stock Index"
+  )  +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+::: panel-tabset
+#### Characteristics
+
+#### Trend
+
+The red line represents the mean for each year. The point for this line was positioned to align with July of the year.
+
+```{r}
+#| echo: false
+
+##################### S&P 500
+
+replaceCommas<-function(x){
+  x<-as.numeric(gsub("\\,", "", x))
+}
+
+sp500_dat <- rio::import("https://byuistats.github.io/timeseries/data/sp500.csv") |>
+  mutate(dates = mdy(Date))
+
+sp500_day <- sp500_dat |>
+  mutate(date_seq = dates) |>
+  mutate(
+    dates = date_seq,
+    year = lubridate::year(date_seq),
+    month = lubridate::month(date_seq),
+    value = replaceCommas(Close)
+  ) |>
+  dplyr::select(-date_seq) |>
+  tibble()
+
+sp500_ts <- sp500_day |>
+  mutate(index = dates) |>
+  as_tsibble(index = index)
+
+sp500_annual_ts <- summarise(index_by(sp500_ts, year), value = mean(value))
+
+temp <- sp500_ts |> filter(month == 7 & day(dates) == 1) |> 
+  dplyr::select(Date, year) 
+
+temp2 <- sp500_annual_ts |> 
+  right_join(temp, by = join_by(year))
+
+ggplotly(autoplot(sp500_ts, .vars = value) +
+  labs(
+    x = "Date",
+    y = "Closing Price",
+    title = "Daily Closing Price of the S&P 500 Stock Index"
+  )  +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  geom_smooth(formula = y ~ x, method = "loess", color = "#D55E00"))
+```
+
+:::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you observe about the value of the S&P 500 over time?
+-   What might be causing this trend?
+
+::::
+
+#### Seasonality / Cycles
+
+:::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Are there regularly-occurring seasonal trends in the data?
+-   Are there some random (stochastic) business cycles observable in the data?
+-   How can you explain these observations?
+
+::::
+
+#### Autocorrelation
+
+:::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Consider closing prices in successive days. Are they independent?
+-   Why would there be autocorrelation in the data?
+
+::::
+
+:::
+
+Discuss these vocabulary terms in the context of the S&P 500 example: 
+
+- Time series 
+- Sampling interval 
+- Autocorrelation (or serial dependence) 
+- Trend 
+- Seasonal variation 
+- Cycle 
+- Deterministic vs. Stochastic
+
+## Recap (5 min)
+
+-   What is time series data?
+    -   Define "time series" (e.g. observations collected sequentially over time)
+-   Examples of time series data
+-   Why ordinary regression fails -- correlated error terms
+-   Examples of time series from different domains:
+    -   Daily credit card balance
+    -   Daily closing stock prices
+    -   Monthly sales figures
+    -   Yearly global temperature measurements
+    -   Secondly wave heights in an ocean buoy
+    -   Weekly unemployment rates
+    -   Quarterly GDP estimates
+-   Importance of context and subject matter knowledge
+-   Role of models (explanation, prediction, simulation)
+-   Are there any questions on the course or time series data?
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+## Homework
+
+::: {.callout-note icon=false}
+
+## Download Assignment
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_1_1.qmd" download="homework_1_1.qmd"> homework_1_1.qmd </a>
+
+## Preparation for the next class meeting
+
+-   Update R and RStudio
+-   Access
+    -   Canvas course
+    -   Time Series Notebook (Quarto file)
+-   Purchase the textbook
+-   Read sections 1.1-1.4 and 1.5.1-1.5.3 in the textbook
+-   Obtain a Learning Journal
+-   Prepare to share your Learning Journal with another student in the next class meeting
+
+:::
+
+

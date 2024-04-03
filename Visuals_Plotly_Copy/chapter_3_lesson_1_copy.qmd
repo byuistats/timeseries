@@ -1,0 +1,867 @@
+---
+title: "Leading Variables and Associated Variables"
+subtitle: "Chapter 3: Lesson 1"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+library(ggplot2)
+library(plotly)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_3_lesson_1_outcomes.qmd >}}
+
+
+
+
+## Preparation
+
+-   Read Sections 3.1-3.2
+    -   Note: There is a typo in the book on page 47. Equation (3.5) gives the *sample ccf*, not the sample acf.
+
+
+## Learning Journal Exchange (10 mins)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+## Small Group Discussion: Why Forecast? (5 min)
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Why are we interested in forecasting a time series?
+-   Give an example of a forecast for a time series that you have been interested in lately.
+-   Explain why there can be several suitable models for a given time series.
+
+:::
+
+
+
+
+
+
+
+
+
+## Class Discussion: Definition of the Sample CCVF and Sample CCF (5 min)
+
+
+### Sample Cross-Covariance Function (ccvf)
+
+In Chapter 2, Lesson 2, we explored the covariance of a time series with itself, shifted by $k$ units of time. Now, we will consider a similar idea, where we compare one time series as being related to a shift of $k$ time units relative to another time series.
+When one time series leads another, we can sometimes use the one that leads to predict the one that lags--at least in the short term. 
+
+The sample cross-covariance function (ccvf) is defined as:
+
+$$
+  c_k(x,y) = \frac{1}{n} \sum\limits_{t=1}^{n-k} \left(x_{t+k} - \bar x \right) \left( y_t - \bar y \right)
+$$
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What does the notation $x_{t+k}$ mean?
+-   Explain the concept of the ccvf.
+-   Compare and contrast the ccvf to the acvf.
+-   Describe the quantity $c_k(x,y)$ to your partner. 
+    -   Explain every component of the expression.
+    -   Discuss how to compute each part.
+    -   In your own words, explain what the result means.
+-   Give the expression for the ccvf of a time series with itself, $c_k(x,x)$.
+    -   What is this function called?
+-   Find an expression for $c_0(x,x)$.
+
+<a href="javascript:showhide('SelectSolutions')"
+style="font-size:.8em;">Selected Solutions</a>
+  
+::: {#SelectSolutions style="display:none;"}
+
+We can compute the ccvf of a time series with itself:
+
+$$
+  c_k(x,x) = \frac{1}{n} \sum_{t=1}^{n-k} \left( x_{t+k} - \bar x \right) \left( x_t - \bar x \right)
+$$
+
+In particular, if $k=0$, this reduces to:
+
+$$
+  c_0(x,x) = \frac{1}{n} \sum_{t=1}^{n-k} \left( x_{t} - \bar x \right)^2
+$$    
+
+:::
+
+:::
+
+
+### Sample Cross-Correlation Function (ccf)
+
+We define the sample cross-correlation function to help us identify when one variable leads another and by how many time periods.
+*Note that $r_k$, given in the book as Equation (3.5), is misidentified there as the sample acf.*
+
+$$
+  r_k(x,y) = 
+    \frac{
+        c_k(x,y)
+    }{
+        \sqrt{ c_0(x,x) \cdot c_0(y,y) }
+    }
+$$
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Work with your assigned partner to do the following:
+
+-   Describe the quantity $r_k(x,y)$ to your partner. 
+    -   Explain every component of the expression.
+    -   Discuss how to compute each part.
+    -   In your own words, explain what the result means.
+-   What are the bounds on the values of $r_k$?
+
+:::
+
+## Small Group Activity: Computing the Sample CCF (20 min)
+
+```{r}
+#| echo: false
+
+set.seed(2887) # Gives integer mean for y
+n <- 10
+k <- 2
+
+# x <- c(17, 18, 21, 23, 16, 17, 20, 23, 24, 21, 18, 17)
+
+x <- rep(20, n + k)
+for(i in 2:length(x)) {
+  x[i] = x[i-1] + sample(-3:3, 1)
+}
+
+z <- sample(-2:2, n + k, replace = TRUE)
+toy_df <- data.frame(x = x, z = z) |>
+  mutate(y = round(1.5 * lag(x, k) + z - 15), 0) |>
+  mutate(t = row_number()) |>
+  na.omit() |>
+  dplyr::select(t, x, y)
+
+# mean(toy_df$x)
+# mean(toy_df$y)
+
+toy_ts <- toy_df |>
+  mutate(
+    dates = yearmonth( my(paste(row_number(), year(now()) - 1) ) )
+  ) |>
+  as_tsibble(index = dates)
+```
+
+
+Suppose we have collected 10 values each from two time series. You can use the following command to read the values into R.
+
+```{r}
+#| echo: false
+
+# build a string that gives the data
+xy_string <- rep("",4)
+xy_string[1] <- "sample_df <- data.frame("
+xy_string[2] <- paste0("  x = c(", paste(toy_df$x , collapse = ", "), "), ")
+xy_string[3] <- paste0("  y = c(", paste(toy_df$y , collapse = ", "), ") ")
+xy_string[4] <- ")"
+xystr <- paste(xy_string, "\n", collapse="")
+
+#| echo: false
+cat(xystr)
+```
+
+#### Figure 1: Superimposed plot of two simulated time series
+
+```{r}
+#| echo: false
+
+toy_plot <- toy_ts |>
+  autoplot(.vars = x) +
+  geom_line(data = toy_ts, aes(x = dates, y = y), color = "#E69F00") +
+  labs(
+    x = "Time",
+    y = "Value of x (in black) and y (in orange)",
+    title = paste0("Two Time Series Illustrating a Lag")
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+ggplotly(toy_plot)
+  
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Complete Tables 1 and 2 to calculate $c_k$ for the given values of $k$.
+
+```{r}
+#| echo: false
+
+make_ck_table <- function (df) {
+  temp <- df |>
+    mutate(t = as.character(row_number())) |>
+    mutate(xx = x - mean(x)) |>
+    mutate(xx2 = (x - mean(x))^2) |>
+    mutate(yy = y - mean(y)) |>
+    mutate(yy2 = yy^2) |>
+    mutate(x_4y = (lag(x,4) - mean(x)) * (y - mean(y))) |>
+    mutate(x_3y = (lag(x,3) - mean(x)) * (y - mean(y))) |>
+    mutate(x_2y = (lag(x,2) - mean(x)) * (y - mean(y))) |>
+    mutate(x_1y = (lag(x,1) - mean(x)) * (y - mean(y))) |>
+    mutate(x0y = (lag(x,0) - mean(x)) * (y - mean(y))) |>
+    mutate(x1y = (lead(x,1) - mean(x)) * (y - mean(y))) |>
+    mutate(x2y = (lead(x,2) - mean(x)) * (y - mean(y))) |>
+    mutate(x3y = (lead(x,3) - mean(x)) * (y - mean(y))) |>
+    mutate(x4y = (lead(x,4) - mean(x)) * (y - mean(y)))
+  
+  c0xx_times_n <- sum(temp$xx2)
+  c0yy_times_n <- sum(temp$yy2)
+  sum <- sum_of_columns(temp)
+  c_k <- sum_of_columns_divided_by_n(temp, "$$c_k$$")
+  r_k <- sum_of_columns_divided_by_n(temp, "$$r_k$$", sqrt(c0xx_times_n * c0yy_times_n))
+  
+  out_df <- temp |>
+    bind_rows(sum) |>
+    bind_rows(c_k) |>
+    bind_rows(r_k) |>
+    convert_df_to_char() |>
+    mutate_if(is.character, replace_na, "—") |>
+    rename(
+      "$$t$$" = t,
+      "$$x_t$$" = x,
+      "$$y_t$$" = y,
+      "$$x_t - \\bar x$$" = xx,
+      "$$(x_t - \\bar x)^2$$" = xx2,
+      "$$y_t - \\bar y$$" = yy,
+      "$$(y_t - \\bar y)^2$$" = yy2,
+      "$$~k=-4~$$" = x_4y,
+      "$$~k=-3~$$" = x_3y,
+      "$$~k=-2~$$" = x_2y,
+      "$$~k=-1~$$" = x_1y,
+      "$$~k=0~$$" = x0y,
+      "$$~k=1~$$" = x1y,
+      "$$~k=2~$$" = x2y,
+      "$$~k=3~$$" = x3y,
+      "$$~k=4~$$" = x4y
+    ) %>% 
+    blank_out_one_cell_in_df(row_num = nrow(.)-1, col_num = 2) %>% 
+    blank_out_one_cell_in_df(row_num = nrow(.)-1, col_num = 3) %>% 
+    blank_out_one_cell_in_df(row_num = nrow(.)-1, col_num = 4) %>% 
+    blank_out_one_cell_in_df(row_num = nrow(.)-1, col_num = 5) %>% 
+    blank_out_one_cell_in_df(row_num = nrow(.)-1, col_num = 6) %>% 
+    blank_out_one_cell_in_df(row_num = nrow(.)-1, col_num = 7) %>% 
+    blank_out_one_cell_in_df(row_num = nrow(.), col_num = 2) %>% 
+    blank_out_one_cell_in_df(row_num = nrow(.), col_num = 3) %>% 
+    blank_out_one_cell_in_df(row_num = nrow(.), col_num = 4) %>% 
+    blank_out_one_cell_in_df(row_num = nrow(.), col_num = 5) %>% 
+    blank_out_one_cell_in_df(row_num = nrow(.), col_num = 6) %>% 
+    blank_out_one_cell_in_df(row_num = nrow(.), col_num = 7) 
+  
+  return(out_df)
+}
+
+toy_solution <- make_ck_table(toy_df)
+```
+
+#### Table 1: Computation of squared deviations
+
+```{r}
+#| echo: false
+
+toy_solution[,1:7] |> 
+  head(-2) |> 
+  blank_out_cells_in_df(ncols_to_keep = 5, nrows_to_keep = 0) |>
+  display_table()
+```
+
+#### Table 2: Computation of $c_k$ and $r_k$ for select values of $k$
+
+```{r}
+#| echo: false
+
+temp_df <- toy_solution[,c(1,4,6,8:16)] 
+temp_df[,4:9] <- ""
+temp <- df <- temp_df |> 
+  blank_out_cells_in_df(ncols_to_keep = 3, nrows_to_keep = 10) 
+temp_df[1,8] <- "-1"
+temp_df |>
+  display_table()
+```
+
+
+
+-   Use the figure below as a guide to plot the ccf values.
+
+#### Figure 2: Plot of the Sample CCF
+
+```{r}
+#| echo: false
+
+df <- data.frame(x = -4:4)
+ggplotly(ggplot(data = df, aes(x = x, y = acf(x, plot = FALSE)$acf)) +
+  # geom_col() +
+  ylim(-1, 1) +
+  scale_x_continuous(breaks = -4:4) + 
+  # geom_segment(aes(x = 0, y = 0, xend = -4, yend = 1)) + 
+  # geom_segment(aes(x = 0, y = 0, xend = 4, yend = 0)) + ## Hack
+  geom_hline(yintercept = 0, linetype = "solid", linewidth=1, color = "black") +
+  geom_hline(yintercept = (0.62), linetype = "dashed", linewidth=1, color = "#0072B2") +  # Texbooks says these lines should be at (-0.1 +/- 2/sqrt(10)). Used +/-(2.6/4.2), based on measurements made visually with a ruler from the figure generated by R.
+  geom_hline(yintercept = (-0.62), linetype = "dashed", linewidth=1, color = "#0072B2") +
+  labs(x = "Lag", y = "CCF") +
+  # theme_bw()   
+  # theme(panel.grid.major.x = element_blank(), panel.grid.major.y = element_blank())
+  theme_bw() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.y = element_blank()
+  ))
+```
+
+-   Are any of the ccf values statistically significant? If so, which one(s)?
+
+:::
+
+
+
+
+
+
+
+
+
+## Small-Group Activity: Single Family Housing Starts and Completions (10 min)
+
+The U. S. Census Bureau publishes monthly counts of the number of building permits issued for new housing construction, the number of housing units started, and the number of housing units completed. We will consider the number of single-family units started and completed each month.
+
+#### Figure 3: Time series plot of new single housing starts and completions in the U.S.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# read and clean the data
+housing <- rio::import("https://byuistats.github.io/timeseries/data/housing.csv") |>
+  rename(
+    permits = permits_single_family,
+    starts = starts_single_family,
+    completions = completions_single_family
+  ) |>
+  mutate(date = my(month)) |>
+  mutate(month = yearmonth(date)) |>
+  dplyr::select(month, permits, starts, completions)  |>
+  as_tsibble(index = month)
+
+ggplotly(autoplot(housing, .vars = starts) +
+  geom_line(data = housing, aes(x = month, y = completions), color = "#E69F00") +
+  labs(
+    x = "Month",
+    y = "Housing Units (Thousands)",
+    title = "U.S. Single-Family Housing Starts and Completions"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+```{r}
+#| echo: false
+
+# Bounds for housing data
+start_month <- min(housing$month)
+end_month <- max(housing$month)
+
+```
+
+The plot above illustrates the number of single-family dwellings started and completed each month from `r paste(month(start_month, label=TRUE, abbr=FALSE), year(start_month))` through `r paste(month(end_month, label=TRUE, abbr=FALSE), year(end_month))`.
+
+We decompose these time series to remove the trend and seasonal component. Then, we compute the sample ccf for the random components.
+
+#### Figure 4: CCF plot of random component of new single housing starts and completions in the U.S.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+starts_r_ts <- model(housing, feasts::classical_decomposition(starts)) |>
+  components() |>
+  select(month, random) |>
+  rename(random_starts = random)
+
+completions_r_ts <- model(housing, feasts::classical_decomposition(completions)) |>
+    components() |>
+  select(month, random) |>
+  rename(random_completions = random)
+
+random_joint <- starts_r_ts |>
+  right_join(completions_r_ts, by = join_by(month))
+
+ggplotly(autoplot(random_joint, .vars = random_starts) +
+  geom_line(data = random_joint, aes(x = month, y = random_completions), color = "#E69F00") +
+  labs(
+    x = "Month",
+    y = "Random Component (Thousands)",
+    title = "Random Component",
+    subtitle = "U.S. Single-Family Housing Starts and Completions"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  ))
+```
+
+#### Figure 5: ACF for the random components of the housing starts and completions
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+acf_starts <- ACF(random_joint, y = random_starts) |> autoplot() +
+    labs(title = "ACF of Random Component of Single-Family Housing Starts")
+acf_completions <- ACF(random_joint, y = random_completions) |> autoplot() +
+    labs(title = "ACF of Random Component of Single-Family Housing Completions")
+
+
+subplot(
+  acf_starts, acf_completions, 
+  nrows = 2, 
+  titleX = TRUE, 
+  shareX = FALSE
+)
+
+
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you observe in the acf plots for the two variables?
+    -   Does this fit your understanding of the autocorrelation that will exist in these variables? Why or why not?
+
+:::
+
+#### Figure 6: CCF for random components of the housing starts and completions 
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+p <- random_joint %>%
+  CCF(y = random_completions, x = random_starts) %>%
+  autoplot() +
+  labs(
+    title = "CCF for Random Component of Housing Starts (x) and Completions (y)",
+    subtitle = "Single-Family Units in the U.S."
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+ggplotly(p)
+```
+
+
+#### Table 3: CCF for Random Components of Housing Starts (x) and Housing Completions (y)
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| eval: false
+
+random_joint |>
+  CCF(y = random_completions, x = random_starts)
+```
+
+```{r}
+#| echo: false
+
+temp_df <- random_joint |>
+  CCF(y = random_completions, x = random_starts) |>
+  filter(lag <= 12 & lag >= -12) |>
+  as_tibble() |>
+  convert_df_to_char(3) |>
+  pivot_wider(names_from = lag, values_from = ccf) |>
+  mutate(lag = "ccf")
+
+temp_df |>
+  dplyr::select(lag, "-12M":"0M") |>
+  display_table()
+
+temp_df |>
+  dplyr::select(lag, "0M":"12M") |>
+  display_table()
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you observe in the ccf?
+    -   For what value of $k$ is the ccf maximized?
+-   Using any tool, except pre-defined functions in R, verify the values of the ccf for the housing starts and completions data for $k=-2$, $k=-1$, and $k=0$ months.
+
+:::
+
+
+## Class Activity: Maximum Solar Angle and Daily High Temperature (5 min)
+
+In this example, we examine the relationship between the maximum angle the sun makes with the horizon (at midday) and the daily high temperature in Rexburg, Idaho. The maximum angle of the sun is related to the amount of heat a given area on the earth is able to absorb. If the angle is higher, we would expect warmer temperatures.
+
+We can compute the maximum angle the sun makes with the horizon (the angle at solar noon) for any given day. 
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# functions for angle conversions
+deg2rad <- function (x) {x / 180 * base::pi}
+rad2deg <- function (x) {x / base::pi * 180}
+
+# Read and clean rexburg weather data
+rexburg_daily_ts <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") |>
+  mutate(year_month_day = ymd(dates)) |>
+  mutate(
+    days_since_ref_date = as.integer(year_month_day - mdy("12/31/2010")),
+    declination = 23.45 * sin(deg2rad(360 * (284+days_since_ref_date)/365.25)),
+    max_solar_angle = (sin(deg2rad(43.825386)) * sin(deg2rad(declination)) 
+                       + cos(deg2rad(43.825386)) * cos(deg2rad(declination)) * cos(0)) 
+                      |> asin() 
+                      |> rad2deg()
+  ) |>
+  rename(high_temp = rexburg_airport_high) |>
+  select(year_month_day, max_solar_angle, high_temp) |>
+  as_tsibble(index = year_month_day)
+
+rexburg_daily_ts %>% head
+```
+
+The angle of the sun at solar noon is based on a deterministic formula, not daily measurements. Consequently, it is composed only of a seasonal component with period 365.25 days. If we remove the seasonal component before computing the ccf, the random component will be zero. So, even though we usually remove the trend and seasonal component before computing the ccf, we will not do it in this example.
+
+The figure below illustrates the daily high temperature in Rexburg, Idaho (in black) and the angle of the sun with the horizon at solar noon (in red) over a 7-year span.
+
+#### Figure 7: Daily high temperature in Rexburg, Idaho and the maximum solar angle
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+p <- rexburg_daily_ts |>
+  filter(year(year_month_day) > 2016) |>
+  autoplot(.vars = high_temp) +
+  geom_line(aes(x = year_month_day, y = max_solar_angle), color = "#D55E00", linewidth = 2) +
+  scale_y_continuous(sec.axis = sec_axis(~., name = "Max Solar Angle (in degrees)")) +
+  labs(
+    x = "Date",
+    y = "High Temp (F)",
+    title = "Daily High Temperature in Rexburg, Idaho"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplotly(p)
+```
+
+Notice that the orange curve "leads" the black time series. The peaks and valleys first occur in the maximum solar angle and then days later in the daily high temperatures.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Plot the decomposition of the Rexburg temperature data. (Hint: include the model statement `high_temp ~ season(365.25)` to help R identify the seasonality.)
+
+<a href="javascript:showhide('SelectSolutions2')"
+style="font-size:.8em;">Selected Solutions</a>
+  
+::: {#SelectSolutions2 style="display:none;"}
+
+#### Figure 8: Decomposition of Rexburg's daily high temperature time series
+
+```{r}
+#| echo: false
+#| warning: false
+
+daily_decompose <- rexburg_daily_ts  |>
+  model(feasts::classical_decomposition(high_temp ~ season(365.25),
+                                        type = "add"))  |>
+  components()
+
+daily_decompose |> 
+  autoplot() |> ggplotly()
+```
+
+:::
+
+:::
+
+
+#### Figure 9: ACF and CCF plots for maximum solar angle and daily high temperature in Rexburg, Idaho
+
+```{r}
+acf_solar <- ACF(rexburg_daily_ts, y = max_solar_angle) |> autoplot() +
+    labs(title = "Maximum Solar Angle")
+acf_temp <- ACF(rexburg_daily_ts, y = high_temp) |> autoplot() +
+    labs(title = "Daily High Temperature")
+joint_ccf_plot <- rexburg_daily_ts |>
+  CCF(x = max_solar_angle, y = high_temp) |> autoplot() +   # Note: x lags y; x predicts y
+  labs(title = "CCF Plot")
+(acf_solar + acf_temp) / joint_ccf_plot
+```
+
+
+
+
+
+#### Table 4: CCF for maximum solar angle and daily high temperature in Rexburg, Idaho
+
+```{r}
+#| echo: false
+
+temp <- rexburg_daily_ts |>
+  CCF(x = max_solar_angle, y = high_temp) |>
+  convert_df_to_char(decimals = 4) |>
+  mutate(" " = " ") |>
+  dplyr::select(" ", lag, ccf)
+
+knitr::kable(
+  list(temp[2:19,], temp[20:37,], temp[38:55,], temp[56:73,]),
+  caption = 'Values of ccf',
+  booktabs = TRUE,
+  row.names = FALSE
+)
+```
+
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you observe in the acf plots for the two variables?
+    -   Does this fit your understanding of the autocorrelation that will exist in these variables? Why or why not?
+-   What do you observe in the ccf?
+    -   For what value of $k$ is the ccf maximized?
+
+:::
+
+
+
+<!-- ```{r} -->
+
+
+<!-- rexburg_daily_ts |> autoplot(.vars = high_temp) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- #| warning: false -->
+<!-- rexburg_daily_ts |> -->
+<!--   model(feasts::classical_decomposition(high_temp ~ season(365.25), -->
+<!--                                         type = "add"))  |> -->
+<!--   components() |> -->
+<!--   autoplot() -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- #| eval: false -->
+
+<!-- solar_decompose <- rexburg_daily_ts |>  -->
+<!--   model(feasts::classical_decomposition(max_solar_angle), type = "add") |> -->
+<!--   components() -->
+<!-- temp_decompose <- model(rexburg_daily_ts, feasts::classical_decomposition(high_temp)) |> -->
+<!--     components() -->
+<!-- solar_random <- ACF(solar_decompose, random) |> autoplot() -->
+<!-- temp_random <- ACF(temp_decompose, random) |> autoplot() -->
+<!-- random_decompose <- dplyr::select(solar_decompose, quarter, random_app = random) |> -->
+<!--     left_join(dplyr::select(temp_decompose, quarter, random_act = random)) -->
+<!-- joint_ccf_random <- random_decompose |> -->
+<!--     CCF(y = random_app, x = random_act) |> autoplot() -->
+<!-- (solar_random + temp_random) / joint_ccf_random -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- #| eval: false -->
+
+<!-- joint_ccf_random <- random_decompose |> -->
+<!--     CCF(y = random_app, x = random_act) |> autoplot() -->
+<!-- joint_ccf_random -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- #| eval: false -->
+
+<!-- random_decompose |> -->
+<!--     CCF(y = random_app, x = random_act) -->
+<!-- ``` -->
+
+
+
+Compare the two plots below. The tab on the left shows the relationship between the maximum solar angle on a specific day with the high temperature for that day. The tab on the right provides a scatter plot of the maximum solar angle from 28 days ago and the daily high temperature for the current day.
+
+#### Figure 10: Scatter plots of maximum solar angle and daily high temperatures for Rexburg Idaho showing the difference in the correlation when the data are lagged
+
+::: panel-tabset
+#### Not Lagged
+
+```{r}
+#| warning: false
+#| echo: false
+
+ggplotly(ggplot(data = rexburg_daily_ts, aes(x = max_solar_angle, y = high_temp)) +
+  geom_point() +  
+  labs(
+    x = "Maximum Solar Angle",
+    y = "High Temperature",
+    title = "Comparison of Maximum Solar Angle and Daily High Temperature"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+#### Lagged 
+
+```{r}
+#| warning: false
+#| echo: false
+
+ggplotly(ggplot(data = rexburg_daily_ts, aes(x = lag(max_solar_angle, 28), y = high_temp)) +
+  geom_point() +  
+  labs(
+    x = "Maximum Solar Angle, 28 Days Prior",
+    y = "High Temperature",
+    title = "Comparison of Lagged Maximum Solar Angle and Daily High Temperature"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+:::
+
+
+
+
+
+
+## Summary
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Working with your partner, prepare to explain the following concepts to the class:
+ 
+-   Cross-covariance
+-   Cross-correlation 
+-   Cross-correlation function
+-   Why do we care about the cross-correlation function? When would it be used?
+-   How is the cross-correlation function related to the autocorrelation function?
+
+:::
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+## Homework
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_3_1.qmd" download="homework_3_1.qmd"> homework_3_1.qmd </a>
+
+:::
+
+
+
+
+<!-- <a href="javascript:showhide('Solutions')" -->
+<!-- style="font-size:.8em;">Class Activity</a> -->
+
+<!-- ::: {#Solutions style="display:none;"} -->
+
+
+<!-- ::: -->
+
+
+
+
+
+<a href="javascript:showhide('Solutions2')"
+style="font-size:.8em;">Class Activity</a>
+
+::: {#Solutions2 style="display:none;"}
+
+## Solutions to Class Activity
+
+#### Table 1: Computation of squared deviations
+
+```{r}
+#| echo: false
+
+toy_solution[,1:7] |> 
+  head(-2) |> 
+  blank_out_cells_in_df(ncols_to_keep = 5, nrows_to_keep = 0) |>
+  display_table()
+```
+
+#### Table 2: Computation of $c_k$ and $r_k$ for select values of $k$
+
+```{r}
+#| echo: false
+
+toy_solution[,c(1,4,6,8:16)] |> display_table()
+```
+
+#### Figure 2: Plot of the Sample CCF
+
+```{r}
+#| echo: false
+
+toy_ts |> 
+  CCF(x = x, y = y) |>
+  autoplot() |> ggplotly()
+```
+
+
+:::

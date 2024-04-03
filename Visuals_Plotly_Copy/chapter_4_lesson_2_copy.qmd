@@ -1,0 +1,1547 @@
+---
+title: "White Noise and Random Walks: Part 2"
+subtitle: "Chapter 4: Lesson 2"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_4_lesson_2_outcomes.qmd >}}
+
+
+
+
+## Preparation
+
+-   Read Sections 4.3.3-4.3.7 and 4.4
+
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+## Class Activity: Differencing a Time Series (15 min)
+
+```{r, results='asis'}
+#| echo: false
+
+set.seed(6)
+n <- 8
+d_operator <- data.frame(t = c(1:n), x = sample(1:15, n, replace = FALSE)) |>
+  mutate(diff = t - n)
+
+# Computes the value of the "power_on_d"^th difference from x_n
+d_value <- function(power_on_d = 0) {
+  out <- d_operator |> #### Note the use of this global variable
+    filter(diff == -power_on_d) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+
+ts_val <- function(t_value) {
+  out <- d_operator |> #### Note the use of this global variable
+    filter(t == t_value) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+```
+
+
+### Example: McDonald's Stock Prices
+
+Computing the difference between successive terms of a random walk leads to a discrete white noise series. 
+
+\begin{align*}
+x_t &= x_{t-1} + w_t \\
+x_t - x_{t-1} &= w_t
+\end{align*}
+
+In many cases, differencing sequential terms of a non-stationary process can lead to a stationary process of differences.
+We can use the code below to obtain the daily closing stock prices for any publicly-traded company. 
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Set symbol and date range
+symbol <- "MCD"
+company <- "McDonald's"
+date_start <- "2020-07-01"
+date_end <- "2024-01-01"
+
+# Fetch stock prices (can be used to get new data)
+stock_df <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
+
+# Transform data into tsibble
+stock_ts <- stock_df %>%
+  mutate(
+    dates = date, 
+    value = adjusted
+  ) %>%
+  dplyr::select(dates, value) %>%
+  as_tibble() %>% 
+  arrange(dates) |>
+  mutate(diff = value - lag(value)) |>
+  as_tsibble(index = dates, key = NULL)
+```
+
+```{r}
+#| echo: false
+
+# Store data in a static file for future use
+stock_df |> rio::export("data/stock_price_mcd.parquet")
+```
+
+The time plot in @fig-example-stock-price-plot presents the closing price of `r company` stock from `r format(ymd(date_start), "%d/%m/%Y")` to `r format(ymd(date_end), "%d/%m/%Y")`.
+@fig-example-stock-difference-plot gives the differences in the closing prices of the stock as a time series.
+
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-example-stock-price-plot
+#| fig-cap: "Plot of the daily closing price of the stock"
+#| fig.asp: 0.61
+
+plot_ly(stock_ts, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') %>%
+  layout(
+    xaxis = list(title = paste0("Dates (", format(ymd(date_start), "%d/%m/%Y"), " to ", format(ymd(date_end), "%d/%m/%Y"), ")" ) ),
+    yaxis = list(title = "Closing Price (US$)"),
+    title = paste0("Time Plot of ", symbol, " Daily Closing Price")
+  )
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-example-stock-difference-plot
+#| fig-cap: "Plot of the stock price differences"
+#| fig.asp: 0.61
+
+# Generate time series plot using plot_ly
+plot_ly(stock_ts, x = ~dates, y = ~diff, type = 'scatter', mode = 'lines') %>%
+  layout(
+    xaxis = list(title = paste0("Dates (", format(ymd(date_start), "%d/%m/%Y"), " to ", format(ymd(date_end), "%d/%m/%Y"), ")" ) ),
+    yaxis = list(title = "Closing Price (US$)"),
+    title = paste0("Difference of ", symbol, " Daily Closing Price")
+  )
+
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+@fig-example-stock-correlogram is the correlogram for the original `r company` stock price time series.
+@fig-example-diff-correlogram gives the correlogram for the differences in successive closing stock prices.
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-example-stock-correlogram
+#| fig-cap: "Correlogram of the stock prices"
+#| fig.asp: 0.61
+
+acf(stock_ts$value, plot=TRUE, type = "correlation", lag.max = 25)
+```
+
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-example-diff-correlogram
+#| fig-cap: "Correlogram of the stock prices"
+#| fig.asp: 0.61
+
+acf(stock_ts$diff |> na.omit(), plot=TRUE, type = "correlation", lag.max = 25)
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+@fig-example-stock-difference-histogram is a histogram of the differences.
+On the right, we give the variance of the differences in the stock prices. This is a simple measure of the volatility of the stock, or in other words, how much the price changes in a day.
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+<!-- Nothing in column 1 -->
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-example-stock-difference-histogram
+#| fig-cap: "Histogram of the stock price differences"
+#| warning: false
+#| fig.asp: 0.61
+
+# Histogram of differences in stock prices
+p <- stock_ts |>
+  mutate(
+    density = dnorm(diff, mean(stock_ts$diff, na.rm = TRUE), sd(stock_ts$diff, na.rm = TRUE))
+  ) |>
+  ggplot(aes(x = diff)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 1) +
+    geom_line(aes(x = diff, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Difference",
+      y = "Frequency",
+      title = "Histogram of Difference in the Closing Stock Prices"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+ggplotly(p)
+```
+
+The variance of the differences is `r var(stock_ts$diff, na.rm = TRUE)|> round(3)`.
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+
+Notice that the values in the correlogram of the stock prices start at 1 and slowly decay as $k$ increases. There are no significant autocorrelations in the differenced values. This is exactly what we would expect from a random walk. It is also interesting that the differences are nearly normally distributed.
+
+
+### Defintion of the Difference Operator
+
+<a id="#DifferenceOperator">Differencing</a> nonstationary time series often leads to a stationary series, so we will define a formal operator to express this process.
+
+::: {.callout-note icon=false title="Definition of the Difference Operator"}
+
+The **difference operator**, $\nabla$, is defined as:
+
+$$\nabla x_t = x_t - x_{t-1} = (1-\mathbf{B}) x_t$$
+
+Higher-order differencing can be denoted
+
+$$\nabla^n x_t = (1-\mathbf{B})^n x_t$$
+
+:::
+
+To see what this expression gives us, note that $\nabla$ gives a new time series that is comprised of the differences between successive terms of the original time series. The operator $\nabla^2$ generates a time series that is comprised of the differences between successive terms of the *differenced* time series. It is the difference of the differences, or the second difference.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Consider the following time series, where $n=`r n`$:
+
+<center>
+```{r, results='asis'}
+#| echo: false
+
+cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+```
+</center>
+
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+-   Find the first differences, $\nabla x_t$
+-   Find the second differences, $\nabla^2 x_t$.
+-   Fill in the missing steps:
+\begin{align*}
+\nabla^2 x_8 &= (1-\mathbf{B} )^2 x_8 \\
+  &= (1-\mathbf{B} ) \left[ (1-\mathbf{B} ) x_8 \right] \\
+  &  ~~~~~~~~~~~~~~~~~~~~~~ ⋮ \\
+  &= (x_8-x_7)-(x_7-x_6)
+\end{align*}
+and check that this is equal to the last term in the sequence of second differences.
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+
+d_operator |>
+  dplyr::select(-diff) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    "$$\\nabla^2 x_t$$" = diff2
+  ) |>
+  replace_na_with_char("") |>
+  replace_cells_with_char(rows = 1:8, cols = 3:4) |>
+  display_table("0.5in")
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+:::
+<!-- End of Check your understanding -->
+
+
+### Small-Group Activity: Computing Differences
+
+<a id="#RepeatedDifferences">The</a> difference operator can be helpful in identifying the functional underpinnings of a trend.
+If a function is linear, then the first differences of equally-spaced values will be constant. If a function is quadratic, then the second differences of equally-spaced values will be constant. If a function is cubic, then the third differences of equally-spaced values will be constant, and so on. 
+
+Compute the differences specified below.
+
+
+
+
+#### Linear 
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+#| fig-width: 4
+
+linear_fcn <- function(t) { return(5 + 2.5 * t) }
+
+df_linear <- data.frame(t = 1:9) |>
+  mutate(x = linear_fcn(t)) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  mutate(diff3 = diff2 - lag(diff2)) 
+
+p <- df_linear |>
+  ggplot(aes(x = t, y = x)) +
+  geom_function(fun = linear_fcn, color = "#D55E00", xlim=c(0.8, 9.2)) +
+  geom_point() +
+  scale_x_continuous(breaks=seq(1, 9, by = 1)) +
+  scale_y_continuous(breaks=seq(0, 30, by = 5)) +
+  coord_cartesian(ylim = c(0,30)) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank()) +
+  labs(
+    title = "Linear Function",
+    subtitle = "x = 2.5 t + 5"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+ggplotly(p)
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+
+df_linear |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    " " = diff2, 
+    "  " = diff3
+  ) |>
+  replace_na_with_char("") |>
+  replace_cells_with_char(rows = 1:9, cols = 3:5, new_char = "") |>
+  display_table("0.5in")
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+
+ 
+#### Quadratic 
+
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+#| fig-width: 4
+
+quadratic_fcn <- function(t) { return(2 * (t - 4.75)^2 - 13.125) }
+
+df_quadratic <- data.frame(t = 1:9) |>
+  mutate(x = quadratic_fcn(t)) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  mutate(diff3 = diff2 - lag(diff2))
+
+p <- df_quadratic |>
+  ggplot(aes(x = t, y = x)) +
+  geom_function(fun = quadratic_fcn, color = "#D55E00", xlim=c(0.8, 9.2)) +
+  geom_point() +
+  scale_x_continuous(breaks=seq(1, 9, by = 1)) +
+  scale_y_continuous(breaks=seq(-15, 30, by = 5)) +
+  coord_cartesian(ylim = c(-14,26)) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank()) +
+  labs(
+    title = "Quadratic Function",
+    subtitle = "x = 2 (t - 4.75)^2 - 13.125"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+ggplotly(p)
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+
+df_quadratic |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    "$$\\nabla^2 x_t$$" = diff2,
+    "  " = diff3
+  ) |>
+  replace_na_with_char("") |>
+  replace_cells_with_char(rows = 1:9, cols = 3:5, new_char = "") |>
+  display_table("0.5in")
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+#### Cubic 
+
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+#| fig-width: 4
+
+cubic_fcn <- function(t) { return((t - 5.5) * (t - 2) * (t - 7) / 10) }
+
+df_cubic <- data.frame(t = 1:9) |>
+  mutate(x = cubic_fcn(t)) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  mutate(diff3 = diff2 - lag(diff2)) 
+
+p <- df_cubic |>
+  ggplot(aes(x = t, y = x)) +
+  geom_function(fun = cubic_fcn, color = "#D55E00", xlim=c(0.8, 9.2)) +
+  geom_point() +
+  scale_x_continuous(breaks=seq(1, 9, by = 1)) +
+  scale_y_continuous(breaks=seq(-5, 8, by = 1)) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank()) +
+  labs(
+    title = "Cubic Function",
+    subtitle = "x = (t - 2)(t - 7)(t - 5.5)/10"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+ggplotly(p)
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+
+df_cubic |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    "$$\\nabla^2 x_t$$" = diff2,
+    "$$\\nabla^3 x_t$$" = diff3
+  ) |>
+  replace_na_with_char("") |>
+  replace_cells_with_char(rows = 1:9, cols = 3:5, new_char = "") |>
+  display_table("0.5in")
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+
+## Small-Group Activity: Differencing Stock Prices (15 min)
+
+In this activity, you will apply what you have learned to a new stock.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Modify the code used to get the prices of `r company` stock</a> to download closing stock prices for a different publicly-traded company over a time period of your choice. 
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| eval: false
+
+# Set symbol and date range
+symbol <- "MCD"               # Stock trading symbol for McDonald's
+date_start <- "2020-07-01"
+date_end <- "2024-01-01"
+
+# Fetch stock prices (can be used to get new data)
+stock_df <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
+
+# Transform data into tsibble
+stock_ts <- stock_df %>%
+  mutate(
+    dates = date, 
+    value = adjusted
+  ) %>%
+  dplyr::select(dates, value) %>%
+  as_tibble() %>% 
+  arrange(dates) |>
+  mutate(diff = value - lag(value)) |>
+  as_tsibble(index = dates, key = NULL)
+
+
+plot_ly(stock_ts, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') %>%
+  layout(
+    xaxis = list(title = paste0("Dates (", format(ymd(date_start), "%d/%m/%Y"), " to ", format(ymd(date_end), "%d/%m/%Y"), ")" ) ),
+    yaxis = list(title = "Closing Price (US$)"),
+    title = paste0("Time Plot of ", symbol, " Daily Closing Price")
+  )
+
+# Generate time series plot using plot_ly
+plot_ly(stock_ts, x = ~dates, y = ~diff, type = 'scatter', mode = 'lines') %>%
+  layout(
+    xaxis = list(title = paste0("Dates (", format(ymd(date_start), "%d/%m/%Y"), " to ", format(ymd(date_end), "%d/%m/%Y"), ")" ) ),
+    yaxis = list(title = "Closing Price (US$)"),
+    title = paste0("Difference of ", symbol, " Daily Closing Price")
+)
+
+# Autocorrelation function for stock prices
+acf(stock_ts$value, plot=TRUE, type = "correlation", lag.max = 25)
+
+# Autocorrelation function for differences
+acf(stock_ts$diff |> na.omit(), plot=TRUE, type = "correlation", lag.max = 25)
+
+# Histogram of differences in stock prices
+p <- stock_ts |>
+  mutate(
+    density = dnorm(diff, mean(stock_ts$diff, na.rm = TRUE), sd(stock_ts$diff, na.rm = TRUE))
+  ) |>
+  ggplot(aes(x = diff)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 color = "white", fill = "#56B4E9", binwidth = 1) +
+  geom_line(aes(x = diff, y = density)) +
+  theme_bw() +
+  labs(
+    x = "Difference",
+    y = "Frequency",
+    title = "Histogram of Difference in the Closing Stock Prices"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+ggplotly(p)
+
+# Variance of the differences
+var(stock_ts$diff, na.rm = TRUE)|> round(3)
+```
+
+Do the following.
+
+-   Indicate which company you have chosen, the stock symbol, and the time period.
+-   Create a time plot of the daily closing stock prices.
+-   Produce a time plot of the differences in the daily closing stock prices.
+-   Create a correlogram of the stock prices
+-   Create a correlogram of the differences
+-   Generate a histogram of the difference in the stock prices and superimpose the corresponding normal density.
+-   Compute the variance of the differences
+-   Compare your results with those from the other teams of students.
+
+:::
+
+
+
+<!-- This should be a stock where the ACF of the first differences is significant for k=1, but not for k>1. -->
+<!-- This should be a stock where the ACF of the first differences is significant for k=1, but not for k>1. -->
+<!-- This should be a stock where the ACF of the first differences is significant for k=1, but not for k>1. -->
+<!-- ~~~ -->
+<!--                                     This is very hard to find                                          -->
+<!-- ~~~ -->
+<!-- The correlogram for the residuals from the Holt-Winters model match the correlogram for the differences. Why?  -->
+<!-- The correlogram for the residuals from the Holt-Winters model match the correlogram for the differences. Why?  -->
+<!-- The correlogram for the residuals from the Holt-Winters model match the correlogram for the differences. Why?  -->
+<!-- It's like there is no improvement in the fit of the model after doing Holt-Winters. -->
+<!-- It's like there is no improvement in the fit of the model after doing Holt-Winters. -->
+<!-- It's like there is no improvement in the fit of the model after doing Holt-Winters. -->
+
+
+## Optional Activity: Integrated Autoregressive Model (10 min)
+
+
+<a href="javascript:showhide('IntegratedAutoregressiveModel')"
+style="font-size:.8em;">Click here for further information about Section 4.4.2 in the book</a>
+
+::: {#IntegratedAutoregressiveModel style="display:none;"}
+
+This is a time plot of the quarterly exchange rate (UK Pounds to NZ Dollars, 1991-2000). This is the data set given in the textbook.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+z <- read_table("data/pounds_nz.dat")
+date_seq <- seq(
+    lubridate::ymd("1991-01-01"),
+    by = "3 months",
+    length.out = nrow(z))
+z_ts <- z |>
+    mutate(
+        date = date_seq,
+        quarter = tsibble::yearquarter(date)) |>
+    as_tsibble(index = quarter)
+p <- z_ts |>
+  autoplot(.vars = xrate) +
+    labs(
+      title = paste("Time Plot of Exchange Rates"),
+      subtitle = "(UK Pounds to NZ Dollars, 1991-2000)",
+      x = "Quarter",
+      y = "Exchange Rate"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+ggplotly(p)
+```
+
+Consider the correlogram of the first differences in the exchange rates.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+p <- z_ts |>
+    mutate(diff = xrate - lag(xrate)) |>
+    ACF(diff) |>
+    autoplot() +
+    labs(
+      title = paste("Correlogram of First Differences of Exchange Rates"),
+      x = "Lag",
+      y = "Difference"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+ggplotly(p)
+```
+
+Notice that for a lag of $k=1$, there is still a significant autocorrelation in the differences. This suggests that a more sophisticated model might be necessary. Note that for $k>1$, the autocorrelations in the differences are not significant. So, a random walk might be a good model for the differences.
+
+We can add an additional terms to the random walk model using the slope estimate from Holt-Winters. Assume the next term in the time series can be modeled as the previous term plus an estimated slope plus a white noise component. This gives us the first equation below. We will use the Holt-Winters update equation to estimate the slope. This is the second equation below.
+
+$$
+\begin{cases}
+~~~x_t     = x_{t-1} + b_{t-1} + w_t \\
+   b_{t-1} = \beta \left( x_{t-1} - x_{t-2} \right) + (1-\beta) b_{t-2}
+\end{cases}
+$$
+
+We can constrain the Holt-Winters parameters $\alpha=1$ and $\gamma=0$, and find the estimated value of $\beta$.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+z_model <- z_ts |>
+    model(Additive = ETS(xrate ~
+        trend("A", alpha = 1) +
+        error("A") + season("N", gamma = 0),
+        opt_crit = "amse", nmse = 1)) 
+
+z_model |>
+  coef()
+```
+
+```{r}
+#| include: false
+
+beta_value <- z_model |>
+  coef() |>
+  filter(term == "beta") |>
+  select(estimate) |>
+  pull()
+
+Z.ts <- ts(z, st = 1991, fr = 4)
+Z.hw <- HoltWinters(Z.ts, alpha = 1, gamma = FALSE) # changed from book
+```
+
+**Note**: The value of beta obtained using the feasts model() statement is `r beta_value |> round(3)`. This is slightly different than the value obtained using the base R HoltWinters() command: `r Z.hw$beta |> round(3)`. This is likely due to differences in the implementation of the Holt-Winters model, including the initial conditions.
+
+This leads to the system of equations:
+
+$$
+\begin{cases}
+~~~x_t     = x_{t-1} + b_{t-1} + w_t \\
+   b_{t-1} = `r beta_value |> round(3)` \left( x_{t-1} - x_{t-2} \right) + `r 1 - beta_value |> round(3)` ~ b_{t-2}
+\end{cases}
+$$
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Start with the fitted system of equations
+$$
+\begin{cases}
+~~~x_t     = x_{t-1} + b_{t-1} + w_t \\
+   b_{t-1} = `r beta_value |> round(3)` \left( x_{t-1} - x_{t-2} \right) + `r 1 - beta_value |> round(3)` ~ b_{t-2}
+\end{cases}
+$$
+Show that it can be written as
+$$
+  \left( 1 - \mathbf{B})^2 x_t = (1 - `r 1 - beta_value |> round(3)` \mathbf{B} \right) w_t
+$$
+by completing the following steps.
+
+-   Write the system of equations in terms of the backward shift operator.
+-   Solve for the term $\mathbf{B} b_t$ in the first equation and substitute the resulting expression into the second equation.
+-   Combine like terms and simplify.
+
+:::
+
+We will examine the residuals from the Holt-Winters model:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+z_hw <- z_model |>
+        residuals()
+
+p <- ACF(z_hw, .resid) |>
+    autoplot() +
+    labs(
+      title = paste("Correlogram of Residuals from Holt-Winters Filtering"),
+      x = "Date",
+      y = "ACF"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+ggplotly(p)
+```
+
+Notice that there are no significant autocorrelations, so we conclude that the Holt-Winters model yields reasonable estimates of the time series.
+
+
+::: 
+<!-- End of Integrated Autoregressive Model -->
+<!-- End of Integrated Autoregressive Model -->
+<!-- End of Integrated Autoregressive Model -->
+<!-- End of Integrated Autoregressive Model -->
+<!-- End of Integrated Autoregressive Model -->
+<!-- End of Integrated Autoregressive Model -->
+<!-- End of Integrated Autoregressive Model -->
+<!-- End of Integrated Autoregressive Model -->
+<!-- End of Integrated Autoregressive Model -->
+
+
+
+
+## Class Activity: Random Walk with Drift (15 min)
+
+<!-- This should be a stock with a fairly linear trend over time. -->
+<!-- This should be a stock with a fairly linear trend over time. -->
+<!-- This should be a stock with a fairly linear trend over time. -->
+<!-- This should be a stock with a fairly linear trend over time. -->
+<!-- This should be a stock with a fairly linear trend over time. -->
+<!-- This should be a stock with a fairly linear trend over time. -->
+
+We will now consider the daily closing price of Abercrombie & Fitch stock (Symbol = ANF). Here is a time series plot of the closing stock prices.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Set symbol and date range
+symbol <- "ANF"                # Abercrombie & Fitch stock trading symbol
+date_start <- "2023-05-01"
+date_end <- "2024-02-20"
+
+# Fetch stock prices
+df_stock <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
+
+# Transform data into tsibble
+df_tsibble <- df_stock |>
+  mutate(
+    dates = date, 
+    value = close
+  ) |>
+  dplyr::select(dates, value) |>
+  as_tibble() |> 
+  arrange(dates) |>
+  as_tsibble(index = dates, key = NULL)
+
+# Generate time series plot using plot_ly
+plot_ly(df_tsibble, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') |>
+  layout(
+    xaxis = list(title = "Date"),
+    yaxis = list(title = "Value"),
+    title = paste0("Time Plot of ", symbol, " Daily Closing Price (", format(ymd(date_start), "%d %b %Y"), " - ", format(ymd(date_end), "%d %b %Y"),")")
+  )
+```
+
+We now generate a time plot and a correlogram of the differences. (No stock prices are recorded on weekends or holidays. Due to the gaps in the data, we will use the base R `acf` command, rather than the feasts `ACF` command.)
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+df_tsibble$diff = df_tsibble$value - lag(df_tsibble$value) 
+p <- df_tsibble |>
+  na.omit() |>
+  autoplot(.vars = diff) + 
+    labs(
+      title = paste("Time Plot of Differences in Daily", symbol, "Stock Prices"),
+      subtitle = 
+        paste0(
+          format(ymd(date_start), "%d %b %Y"),
+            " - ",
+          format(ymd(date_end), "%d %b %Y")
+          ),
+      x = "Date",
+      y = "Difference",
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+ggplotly(p)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+acf(df_tsibble$diff |> na.omit(), main = paste("ACF of First Difference of", symbol, "Stock Prices"))
+```
+
+There is no significant autocorrelation in the differences. They appear to be modeled reasonably well by white noise. 
+
+We now compute the mean and standard deviation of the differences.
+
+```{r}
+mean_diff <- df_tsibble$diff |> mean(na.rm = TRUE)
+sd_diff <- df_tsibble$diff |> sd(na.rm = TRUE)
+n_diff <- df_tsibble$diff |> na.omit() |> length()
+```
+
+The mean of the differences is `r mean_diff |> round(3)`. The standard deviation of the differences is `r sd_diff |> round(3)`. There are `r n_diff` differences.
+
+We can use the t-distribution to create a 95% confidence interval for the drift parameter. 
+The critical $t$ value is given by
+`qt(0.975, df = `r n_diff` - 1)`, yielding a value of $t^*_{0.975} = `r qt(0.975, df = n_diff - 1) |> round(3)`$.
+
+So, our 95% confidence interval is computed as:
+$$
+  \left(
+    \bar x - t^*_{0.975} \cdot \frac{s}{\sqrt{n}}
+    , ~
+    \bar x + t^*_{0.975} \cdot \frac{s}{\sqrt{n}}
+  \right)
+$$
+$$
+  \left(
+    `r mean_diff |> round(3)` - `r qt(0.975, df = n_diff - 1) |> round(3)` \cdot  \frac{`r sd_diff |> round(3)`}{\sqrt{`r n_diff`}}
+    , ~
+    `r mean_diff |> round(3)` + `r qt(0.975, df = n_diff - 1) |> round(3)` \cdot  \frac{`r sd_diff |> round(3)`}{\sqrt{`r n_diff`}}
+  \right)
+$$
+$$
+  (`r (mean_diff - qt(0.975, df = n_diff - 1) * sd_diff / sqrt(n_diff)) |> round(3)`
+  , ~
+  `r (mean_diff + qt(0.975, df = n_diff - 1) * sd_diff / sqrt(n_diff)) |> round(3)`)
+$$
+
+This confidence interval does not contain 0, so we conclude that there is evidence of a positive drift in the price of Abercrombie & Fitch stock over this period.
+
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the McDonald's stock price data to do the following.
+
+-   What is the estimate of the drift parameter?
+-   What is the standard deviation of the differences?
+-   What is the 95% confidence interval for the drift parameter?
+-   Is there evidence to suggest that the time series can be modeled as a random walk with drift? Why or why not?
+
+:::
+
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+::: {.callout-note icon=false icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_4_2.qmd" download="homework_4_2.qmd"> homework_4_2.qmd </a>
+
+:::
+
+
+
+
+
+
+<a href="javascript:showhide('Solutions3')"
+style="font-size:.8em;">Difference Operator</a>
+  
+::: {#Solutions3 style="display:none;"}
+
+<center>
+```{r, results='asis'}
+#| echo: false
+
+cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+```
+</center>
+
+Check Your Understanding Solutions:
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+-   The values of the first differences are:
+$$
+\nabla x_t = 
+\{
+`r ts_val(2) - ts_val(1)`,
+~~
+`r ts_val(3) - ts_val(2)`,
+~~
+`r ts_val(4) - ts_val(3)`,
+~~
+`r ts_val(5) - ts_val(4)`,
+~~
+`r ts_val(6) - ts_val(5)`,
+~~
+`r ts_val(7) - ts_val(6)`,
+~~
+`r ts_val(8) - ts_val(7)`\}$$
+
+-   The values of the second differences are:
+$$
+\nabla^2 x_t =
+\{
+`r (ts_val(3) - ts_val(2)) - (ts_val(2) - ts_val(1))`,
+~~
+`r (ts_val(4) - ts_val(3)) - (ts_val(3) - ts_val(2))`,
+~~
+`r (ts_val(5) - ts_val(4)) - (ts_val(4) - ts_val(3))`,
+~~
+`r (ts_val(6) - ts_val(5)) - (ts_val(5) - ts_val(4))`,
+~~
+`r (ts_val(7) - ts_val(6)) - (ts_val(6) - ts_val(5))`,
+~~
+`r (ts_val(8) - ts_val(7)) - (ts_val(7) - ts_val(6))`\}$$
+
+- By substitution, we get:
+
+\begin{align*}
+(1-\mathbf{B} )^2 x_8 
+&= (1-\mathbf{B} ) \left[ (1-\mathbf{B} ) x_8 \right] \\
+&= (1-\mathbf{B} ) ( x_8 - x_7 ) \\
+&= ( x_8 - x_7 ) - \mathbf{B} ( x_8 - x_7 ) \\
+&= ( x_8 - x_7 ) - ( x_7 - x_6 ) \\
+&= ( \nabla x_8 ) - ( \nabla x_7 ) \\
+&= \nabla ( \nabla x_8 ) \\
+&= \nabla^2 x_8 
+\end{align*}
+
+
+$$
+  \nabla^2 x_8 
+    = \nabla \left( \nabla x_8 \right)
+    = ( x_8 - x_7 ) - ( x_7 - x_6 ) 
+    = (`r ts_val(8)` - `r ts_val(7)`) - (`r ts_val(7)` - `r ts_val(6)`) \\
+    = `r (ts_val(8) - ts_val(7)) - (ts_val(7) - ts_val(6))`
+$$
+This is the value of the last term in the sequence of second differences.
+
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+
+d_operator |>
+  dplyr::select(-diff) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    "$$\\nabla^2 x_t$$" = diff2
+  ) |>
+  replace_na_with_char("") |>
+  # replace_cells_with_char(rows = 1:8, cols = 3:4) |>
+  display_table("0.5in")
+```
+
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+:::
+<!-- End of solution -->
+
+
+
+
+<!-- Solutions at the bottom of the page -->
+
+<a href="javascript:showhide('Solutions5')"
+style="font-size:.8em;">Computing Differences</a>
+
+::: {#Solutions5 style="display:none;"}
+
+#### Linear 
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+#| fig-width: 4
+
+linear_fcn <- function(t) { return(5 + 2.5 * t) }
+
+df_linear <- data.frame(t = 1:9) |>
+  mutate(x = linear_fcn(t)) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  mutate(diff3 = diff2 - lag(diff2)) 
+
+p <- df_linear |>
+  ggplot(aes(x = t, y = x)) +
+  geom_function(fun = linear_fcn, color = "#D55E00", xlim=c(0.8, 9.2)) +
+  geom_point() +
+  scale_x_continuous(breaks=seq(1, 9, by = 1)) +
+  scale_y_continuous(breaks=seq(0, 30, by = 5)) +
+  coord_cartesian(ylim = c(0,30)) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank()) +
+  labs(
+    title = "Linear Function",
+    subtitle = "x = 2.5 t + 5"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+ggplotly(p)
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+
+df_linear |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    " " = diff2, 
+    "  " = diff3
+  ) |>
+  replace_na_with_char("") |>
+  replace_cells_with_char(rows = 1:9, cols = 4:5, new_char = "") |>
+  display_table("0.5in")
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+
+ 
+#### Quadratic
+
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+#| fig-width: 4
+
+quadratic_fcn <- function(t) { return(2 * (t - 4.75)^2 - 13.125) }
+
+df_quadratic <- data.frame(t = 1:9) |>
+  mutate(x = quadratic_fcn(t)) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  mutate(diff3 = diff2 - lag(diff2))
+
+p <- df_quadratic |>
+  ggplot(aes(x = t, y = x)) +
+  geom_function(fun = quadratic_fcn, color = "#D55E00", xlim=c(0.8, 9.2)) +
+  geom_point() +
+  scale_x_continuous(breaks=seq(1, 9, by = 1)) +
+  scale_y_continuous(breaks=seq(-15, 30, by = 5)) +
+  coord_cartesian(ylim = c(-14,26)) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank()) +
+  labs(
+    title = "Quadratic Function",
+    subtitle = "x = 2 (t - 4.75)^2 - 13.125"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+ggplotly(p)
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+
+df_quadratic |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    "$$\\nabla^2 x_t$$" = diff2,
+    "  " = diff3
+  ) |>
+  replace_na_with_char("") |>
+  replace_cells_with_char(rows = 1:9, cols = 5, new_char = "") |>
+  display_table("0.5in")
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+#### Cubic
+
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+#| fig-width: 4
+
+cubic_fcn <- function(t) { return((t - 5.5) * (t - 2) * (t - 7) / 10) }
+
+df_cubic <- data.frame(t = 1:9) |>
+  mutate(x = cubic_fcn(t)) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  mutate(diff3 = diff2 - lag(diff2)) 
+
+p <- df_cubic |>
+  ggplot(aes(x = t, y = x)) +
+  geom_function(fun = cubic_fcn, color = "#D55E00", xlim=c(0.8, 9.2)) +
+  geom_point() +
+  scale_x_continuous(breaks=seq(1, 9, by = 1)) +
+  scale_y_continuous(breaks=seq(-5, 8, by = 1)) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank()) +
+  labs(
+    title = "Cubic Function",
+    subtitle = "x = (t - 2)(t - 7)(t - 5.5)/10"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+ggplotly(p)
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+
+df_cubic |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    "$$\\nabla^2 x_t$$" = diff2,
+    "$$\\nabla^3 x_t$$" = diff3
+  ) |>
+  replace_na_with_char("") |>
+  # replace_cells_with_char(rows = 1:9, cols = 3:5, new_char = "") |>
+  display_table("0.5in")
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+:::
+<!-- End of Solution -->
+
+
+
+
+
+
+
+<!-- Solutions at the bottom of the page -->
+
+<a href="javascript:showhide('SolutionsHW')"
+style="font-size:.8em;">Integrated Autoregressive Model</a>
+
+::: {#SolutionsHW style="display:none;"}
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Start with this fitted system of equations. Show that it can be written as
+$$
+  (1 - \mathbf{B})^2 x_t = (1 - `r 1 - beta_value |> round(3)`) w_t
+$$
+by completing the following steps.
+
+-   Write the system of equations in terms of the backward shift operator.
+$$
+\begin{cases}
+~~~x_t     = x_{t-1} + b_{t-1} + w_t \\
+   b_{t-1} = `r beta_value |> round(3)` \left( x_{t-1} - x_{t-2} \right) + `r 1 - beta_value |> round(3)` ~ b_{t-2}
+\end{cases}
+$$
+$$
+\begin{cases}
+~~~x_t     = \mathbf{B} x_{t} + \mathbf{B} b_{t} + w_t \\
+   \mathbf{B} b_{t} = `r beta_value |> round(3)` \left( \mathbf{B} x_{t} - \mathbf{B}^2 x_{t} \right) + `r 1 - beta_value |> round(3)` ~ \mathbf{B}^2 b_{t}
+\end{cases}
+$$
+
+-   Solve for the term $\mathbf{B}b_t$ in the first equation and substitute the resulting expression into the second equation.
+
+Solving for $\mathbf{B} b_{t}$:
+$$
+\mathbf{B} b_{t} = x_t -\mathbf{B} x_{t} - w_t = (1-\mathbf{B}) x_t - w_t
+$$
+First, we simplify the second equation:
+\begin{align*}
+  \mathbf{B} b_{t}
+    &= `r beta_value |> round(3)` \left( \mathbf{B} x_{t} - \mathbf{B}^2 x_{t} \right) + `r 1 - beta_value |> round(3)` ~ \mathbf{B}^2 b_{t}  \\
+    &= `r beta_value |> round(3)` \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t}   + `r 1 - beta_value |> round(3)` ~ \mathbf{B} \left[ \mathbf{B} b_{t} \right]
+\end{align*}
+Substitutingthe expression for $\mathbf{B} b_{t}$ into the second equation:
+\begin{align*}
+  (1-\mathbf{B}) x_t - w_t
+    &= `r beta_value |> round(3)` \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t}   + `r 1 - beta_value |> round(3)` ~ \mathbf{B} \left[ (1-\mathbf{B}) x_t - w_t \right]  \\
+    &= `r beta_value |> round(3)` \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t}   + `r 1 - beta_value |> round(3)` ~ \mathbf{B} (1-\mathbf{B}) x_t - `r 1 - beta_value |> round(3)` ~ \mathbf{B} w_t \\
+    &= \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t} - `r 1 - beta_value |> round(3)` ~ \mathbf{B} w_t   \\
+\end{align*}
+
+-   Combine like terms and simplify.
+
+Combining like terms:
+\begin{align*}
+  (1-\mathbf{B}) x_t - w_t
+    &= \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t} - `r 1 - beta_value |> round(3)` ~ \mathbf{B} w_t   \\
+  (1-\mathbf{B}) x_t - \left(  1 - \mathbf{B} \right) \mathbf{B} x_{t}
+    &=  w_t - `r 1 - beta_value |> round(3)` ~ \mathbf{B} w_t   \\
+  \left( 1-\mathbf{B} \right) \left(  1 - \mathbf{B} \right) x_{t}
+    &=  \left( 1 - `r 1 - beta_value |> round(3)` ~ \mathbf{B} \right) w_t   \\
+  \left( 1-\mathbf{B} \right)^2 x_{t}
+    &=  \left( 1 - `r 1 - beta_value |> round(3)` ~ \mathbf{B} \right) w_t   \\
+\end{align*}
+
+This is a special case of the ARIMA models in Chapter 7.
+:::
+
+:::
+<!-- End of solution for Holt Winters Fitting -->
+
+
+
+
+<!-- Solutions at the bottom of the page -->
+
+<a href="javascript:showhide('Solutions4')"
+style="font-size:.8em;">McDonald's Drift Parameter</a>
+
+::: {#Solutions4 style="display:none;"}
+
+Solutions to Class Activity
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the McDonald's stock price data to do the following.
+
+-   What is the estimate of the drift parameter?
+
+As seen above, there is no significant autocorrelation in the differences of the McDonald's stock prices. They appear to be modeled well by white noise. 
+
+We now compute the mean and standard deviation of the differences.
+
+```{r}
+#| echo: false
+
+mean_diff <- stock_ts$diff |> mean(na.rm = TRUE)
+sd_diff <- stock_ts$diff |> sd(na.rm = TRUE)
+n_diff <- stock_ts$diff |> na.omit() |> length()
+```
+
+```{r}
+mean(stock_ts$diff, na.rm = TRUE)
+```
+
+-   What is the standard deviation of the differences?
+
+```{r}
+sd(stock_ts$diff, na.rm = TRUE)
+```
+
+-   What is the 95% confidence interval for the drift parameter?
+
+The number of differences, $n$, is given by:
+
+```{r}
+length(stock_ts$diff |> na.omit())
+```
+
+The mean of the differences is `r mean_diff |> round(3)`. The standard deviation of the differences is `r sd_diff |> round(3)`. There are `r n_diff` differences.
+
+We can use the t-distribution to create a 95% confidence interval for the drift parameter. 
+The critical $t$ value is given by
+`qt(0.975, df = `r n_diff` - 1)`, yielding a value of $t^*_{0.975} = `r qt(0.975, df = n_diff - 1) |> round(3)`$.
+
+So, our 95% confidence interval is computed as:
+$$
+  \left(
+    \bar x - t^*_{0.975} \cdot \frac{s}{\sqrt{n}}
+    , ~
+    \bar x + t^*_{0.975} \cdot \frac{s}{\sqrt{n}}
+  \right)
+$$
+$$
+  \left(
+    `r mean_diff |> round(3)` - `r qt(0.975, df = n_diff - 1) |> round(3)` \cdot  \frac{`r sd_diff |> round(3)`}{\sqrt{`r n_diff`}}
+    , ~
+    `r mean_diff |> round(3)` + `r qt(0.975, df = n_diff - 1) |> round(3)` \cdot  \frac{`r sd_diff |> round(3)`}{\sqrt{`r n_diff`}}
+  \right)
+$$
+$$
+  (`r (mean_diff - qt(0.975, df = n_diff - 1) * sd_diff / sqrt(n_diff)) |> round(3)`
+  , ~
+  `r (mean_diff + qt(0.975, df = n_diff - 1) * sd_diff / sqrt(n_diff)) |> round(3)`)
+$$
+
+
+-   Is there evidence to suggest that the time series can be modeled as a random walk with drift? Why or why not?
+
+If this confidence contains 0, we cannot conclude that there is evidence of a positive drift in the price of McDonald's stock over the period.
+
+:::
+
+
+:::

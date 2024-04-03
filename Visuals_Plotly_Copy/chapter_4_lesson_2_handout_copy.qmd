@@ -1,0 +1,360 @@
+---
+title: "White Noise and Random Walks: Part 2 -- Handout"
+subtitle: "Chapter 4: Lesson 2"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+#### Difference Operator
+
+Let $\{x_t\}$ be a time series with the following values. 
+
+<center>
+```{r, results='asis'}
+#| echo: false
+
+set.seed(6)
+n <- 8
+d_operator <- data.frame(t = c(1:n), x = sample(1:15, n, replace = FALSE)) |>
+  mutate(diff = t - n)
+
+#cat( paste( paste0("$x_{t", ifelse(d_operator$t==n,"",d_operator$t-n), "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+
+cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+
+# Computes the value of the "power_on_d"^th difference from x_n
+d_value <- function(power_on_d = 0) {
+  out <- d_operator |> #### Note the use of this global variable
+    filter(diff == -power_on_d) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+
+ts_val <- function(t_value) {
+  out <- d_operator |> #### Note the use of this global variable
+    filter(t == t_value) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+```
+</center>
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+-   Find the first differences, $\nabla x_t$
+-   Find the second differences, $\nabla^2 x_t$.
+-   Fill in the missing steps:
+\begin{align*}
+\nabla^2 x_8 &= (1-\mathbf{B} )^2 x_8 \\
+  &= (1-\mathbf{B} ) \left[ (1-\mathbf{B} ) x_8 \right] \\
+  &  ~~~~~~~~~~~~~~~~~~~~~~ ⋮ \\
+  &= (x_8-x_7)-(x_7-x_6)
+\end{align*}
+and check that this is equal to the last term in the sequence of second differences.
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+
+d_operator |>
+  dplyr::select(-diff) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    "$$\\nabla^2 x_t$$" = diff2
+  ) |>
+  replace_na_with_char("") |>
+  replace_cells_with_char(rows = 1:8, cols = 3:4) |>
+  display_table("0.5in")
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+
+#### Computing Differences
+
+::: {.callout-tip appearance="minimal"}
+
+<!-- ##### Linear Function -->
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+#| fig-width: 3
+
+linear_fcn <- function(t) { return(5 + 2.5 * t) }
+
+df_linear <- data.frame(t = 1:9) |>
+  mutate(x = linear_fcn(t)) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  mutate(diff3 = diff2 - lag(diff2)) 
+
+p <- df_linear |>
+  ggplot(aes(x = t, y = x)) +
+  geom_function(fun = linear_fcn, color = "#D55E00", xlim=c(0.8, 9.2)) +
+  geom_point() +
+  scale_x_continuous(breaks=seq(1, 9, by = 1)) +
+  scale_y_continuous(breaks=seq(0, 30, by = 5)) +
+  coord_cartesian(ylim = c(0,30)) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank()) +
+  labs(
+    title = "Linear Function",
+    subtitle = "x = 2.5 t + 5"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+ggplotly(p)
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+
+df_linear |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    " " = diff2, 
+    "  " = diff3
+  ) |>
+  replace_na_with_char("") |>
+  replace_cells_with_char(rows = 1:9, cols = 3:5, new_char = "") |>
+  display_table("0.5in")
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+
+ 
+<!-- ##### Quadratic Function -->
+
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+#| fig-width: 3
+
+quadratic_fcn <- function(t) { return(2 * (t - 4.75)^2 - 13.125) }
+
+df_quadratic <- data.frame(t = 1:9) |>
+  mutate(x = quadratic_fcn(t)) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  mutate(diff3 = diff2 - lag(diff2))
+
+p <- df_quadratic |>
+  ggplot(aes(x = t, y = x)) +
+  geom_function(fun = quadratic_fcn, color = "#D55E00", xlim=c(0.8, 9.2)) +
+  geom_point() +
+  scale_x_continuous(breaks=seq(1, 9, by = 1)) +
+  scale_y_continuous(breaks=seq(-15, 30, by = 5)) +
+  coord_cartesian(ylim = c(-14,26)) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank()) +
+  labs(
+    title = "Quadratic Function",
+    subtitle = "x = 2 (t - 4.75)^2 - 13.125"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+
+ggplotly(p)
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+
+df_quadratic |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    "$$\\nabla^2 x_t$$" = diff2,
+    "  " = diff3
+  ) |>
+  replace_na_with_char("") |>
+  replace_cells_with_char(rows = 1:9, cols = 3:5, new_char = "") |>
+  display_table("0.5in")
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+<!-- ##### Cubic Function -->
+
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+#| fig-width: 3
+
+cubic_fcn <- function(t) { return((t - 5.5) * (t - 2) * (t - 7) / 10) }
+
+df_cubic <- data.frame(t = 1:9) |>
+  mutate(x = cubic_fcn(t)) |>
+  mutate(diff1 = x - lag(x)) |>
+  mutate(diff2 = diff1 - lag(diff1)) |>
+  mutate(diff3 = diff2 - lag(diff2)) 
+
+p <- df_cubic |>
+  ggplot(aes(x = t, y = x)) +
+  geom_function(fun = cubic_fcn, color = "#D55E00", xlim=c(0.8, 9.2)) +
+  geom_point() +
+  scale_x_continuous(breaks=seq(1, 9, by = 1)) +
+  scale_y_continuous(breaks=seq(-5, 8, by = 1)) +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank()) +
+  labs(
+    title = "Cubic Function",
+    subtitle = "x = (t - 2)(t - 7)(t - 5.5)/10"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+ggplotly(p)
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| echo: false
+
+df_cubic |>
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$\\nabla x_t$$" = diff1,
+    "$$\\nabla^2 x_t$$" = diff2,
+    "$$\\nabla^3 x_t$$" = diff3
+  ) |>
+  replace_na_with_char("") |>
+  replace_cells_with_char(rows = 1:9, cols = 3:5, new_char = "") |>
+  display_table("0.5in")
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+
+:::
+<!-- End of callout box -->

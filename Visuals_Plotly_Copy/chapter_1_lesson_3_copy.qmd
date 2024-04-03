@@ -1,0 +1,391 @@
+---
+title: "Averages for Time Series"
+subtitle: "Chapter 1: Lesson 3"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_1_lesson_3_outcomes.qmd >}}
+
+
+
+## Preparation
+
+-   Read Sections 1.5.1-1.5.3
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+-   What would you add to your learning journal after reading your partner's?
+-   What would you recommend your partner add to their learning journal?
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+## Team Activity: Moving Averages (30 min)
+
+### Derivation
+
+
+
+```{r}
+#| echo: false
+
+plot_n_values <- function(start = 1, n = 12, numeric_t_labels = TRUE) {
+  # This function will plot a few points of a simulated time series
+  # It is used to motivate the derivation of the centered moving average
+  
+  # Set random seed
+  set.seed(6 + numeric_t_labels)
+  
+  lower <- start + !numeric_t_labels
+  upper <- start + n - 1 + !numeric_t_labels
+  
+  all_data <- data.frame(x = max(1,(lower-1)):(upper+1)) |> 
+    mutate(use_data = numeric_t_labels) |>
+    mutate(t_label1 = paste0("t=",x)) |>
+    mutate(
+      t_label2 = case_when(
+            x == (n + 1) / 2 + 1 ~ "t",
+            x < (n + 1) / 2 + 1 ~ paste0("t",x - ((n + 1) / 2 + 1)),
+           TRUE ~ paste0("t+",x - ((n + 1) / 2 + 1))
+          ) # case_when
+    ) |>
+    mutate(t_label = ifelse(use_data, t_label1, t_label2)) |>
+    mutate(data_label = ifelse(use_data, paste0("x[",x,"]"), paste0("x[",t_label,"]"))) |>
+    mutate(y = sample(seq(2,3,0.05), n(), replace = TRUE)) |>
+    filter(x >= lower - 1)
+  
+  trimmed_data <- all_data %>% 
+    filter(x >= lower & x <= upper)
+  
+  ticks <- ceiling(lower):floor(upper)
+  ticks_df <- data.frame(x = ticks, y = 0)
+  
+  
+  # Plot deviations from the mean
+  ggplot(trimmed_data, aes(x = x, y = y)) +
+    # y-axis
+    annotate("segment", x = 0, xend = 0, y = -1, yend = 4, colour = "black", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+    geom_text(aes(x = 0, y = 4, label = "x[t]"), size = 4, vjust = 0.5, hjust = -0.5, color = "black") +
+    # x-axis
+    annotate("segment", x = -1, xend = upper+2, y = 0, yend = 0, colour = "black", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+    geom_text(aes(x = upper+2, y = 0, label = "t"), size = 4, hjust = -1, vjust = 0, color = "black") +
+    
+    # Add tick marks and labels          
+    annotate("segment", x = ticks, xend = ticks, y = -0.25, yend = 0.25, colour = "black", linewidth = 0.5) +
+    geom_text(aes(x = x, y = 0, label = t_label), size = 4, vjust = 2, color = "black") +
+    
+    # Gives the small data labels above the tick marks
+    geom_text(aes(x = x, y = y, label = data_label), size = 3, vjust = 2) +
+    
+    # Add the points above
+    geom_point(size = 3, color = okabeito_colors_list[2]) + 
+    geom_line(color = okabeito_colors_list[2]) + 
+    geom_line(data = all_data, aes(x = x, y = y), color = okabeito_colors_list[2]) +
+  
+    
+    # theme
+    theme_void() +
+    theme(axis.title.y = element_blank()) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+       
+    theme(aspect.ratio = 0.25) +
+    labs(title = "Hypothetical Observations of a Time Series", 
+         x = "Value",
+         y = "")
+}
+```
+
+Data representing some value have been collected each month for a few years. This plot represents the first 12 observations in this time series.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Suppose you wanted to compute the mean of the observations from the first year ($t = 1$ to $t=12$.) What is the formula you would use to compute this mean? Write this expression without a summation symbol. 
+-   To what value of $t$ should this mean be assigned? (If you were to plot this mean on a time plot, where should it go?)
+
+:::
+
+```{r}
+#| echo: false
+# plot_n_values(start = 1, n = 12, numeric_t_labels = TRUE)
+
+plot_n_values(start = 1, n = 12, numeric_t_labels = TRUE)
+
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Suppose you want to compute the mean of one year's worth of observations, beginning at month $t=2$. Write the formula you would use to compute this mean without using a summation symbol. 
+-   To what value of $t$ should this mean be assigned? (If you were to plot this mean on a time plot, where should it go?)
+
+:::
+
+```{r}
+#| echo: false
+plot_n_values(start = 2, n = 12, numeric_t_labels = TRUE)
+
+
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Note that neither of the two means above are appropriately located on an integer value of $t$.
+-   Give the formula that combines the two means above to give one mean that is centered on an integer value of $t$. Do not include a summation symbol in your formula. (Hint: try averaging the two means.)
+-   Upon what value of $t$ is your new mean centered?
+
+:::
+
+We will now adjust this moving average adjusted so it is centered on any given value of $t$, not just $t=7$.
+
+```{r}
+#| echo: false
+plot_n_values(start = 1, n = 13, numeric_t_labels = FALSE)
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Consider the values $x_{t-6}$, $x_{t-5}$, $x_{t-4}$, $x_{t-3}$, $x_{t-2}$, $x_{t-1}$, $x_{t}$, $x_{t+1}$, $x_{t+2}$, $x_{t+3}$, $x_{t+4}$, and $x_{t+5}$.
+    -   Give an expression for the mean of the values. 
+    -   Where will this mean be centered?
+-   Consider the values $x_{t-5}$, $x_{t-4}$, $x_{t-3}$, $x_{t-2}$, $x_{t-1}$, $x_{t}$, $x_{t+1}$, $x_{t+2}$, $x_{t+3}$, $x_{t+4}$, $x_{t+5}$, and $x_{t+6}$.
+    -   Give an expression for the mean of the values. 
+    -   Where will this mean be centered?
+-   We now combine these two means by averaging them.
+    -   Give an expression for the mean of these two means.
+    -   Where will this combined mean be centered?
+
+:::
+
+
+### Application: Google Trends Searches for "Chocolate"
+
+Recall the Google Trends data for the term "chocolate" given in the file <a href="data/chocolate.csv" download>chocolate.csv</a>.
+
+```{r}
+# load packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("tsibble", "fable",
+               "feasts", "tsibbledata",
+               "fable.prophet", "tidyverse",
+               "patchwork", "rio")
+
+# read in the data from a csv and make the tsibble
+# change the line below to include your file path
+chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv")
+start_date <- lubridate::ymd("2004-01-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(chocolate_month)-1),
+                by = "1 months")
+chocolate_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = pull(chocolate_month, chocolate)
+)
+chocolate_month_ts <- chocolate_tibble |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index)
+
+```
+
+
+```{r}
+#| echo: false
+chocolate_month_ts <- chocolate_month_ts %>% 
+  mutate(
+    m_hat = (
+          (1/2) * lag(value,6)
+          + lag(value,5)
+          + lag(value,4)
+          + lag(value,3)
+          + lag(value,2)
+          + lag(value,1)
+          + value
+          + lead(value,1)
+          + lead(value,2)
+          + lead(value,3)
+          + lead(value,4)
+          + lead(value,5)
+          + (1/2) * lead(value,6)
+        ) / 12
+  )
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Using any tool (except R functions that automate the process) compute the centered moving average for the chocolate data. To help your check yourself, the value of $\hat m$ in month 7 should be `r chocolate_month_ts %>% data.frame() %>% filter(row_number() == 7) %>% dplyr::select(m_hat) %>% pull() %>% round(4)`.
+-   Create a plot of your centered moving average. Here are some examples of ways you could display your centered moving average.
+
+:::
+
+```{r}
+#| echo: false
+#| warning: false
+
+# generate the plots
+
+plain <- ggplotly(autoplot(chocolate_month_ts, .vars = m_hat) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Centered Moving Average"
+  ) +
+  scale_y_continuous(limits = c(25, 100)) +
+  theme(plot.title = element_text(hjust = 0.5)))
+
+
+fancy <- ggplotly(autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Google Searches for 'Chocolate'"
+  ) +
+  geom_line(aes(x = dates, y = m_hat), color = "#D55E00") +
+  theme(plot.title = element_text(hjust = 0.5)))
+
+subplot(
+  plain, fancy, 
+  nrows = 2, 
+  titleX = TRUE, 
+  shareX = FALSE
+)
+
+```
+
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What does the centered moving average reveal about the chocolate search time series?
+-   Suppose the chocolate data were reported daily. How would you compute the moving average? (Note: there are 365 days in a year.)
+
+:::
+
+
+
+
+
+
+
+
+## Estimating the Seasonal Effect: Side-by-Side Box Plots by Month (10 min)
+
+To better visualize the effect of seasonal variation, we can make box plots by month.
+
+```{r}
+ggplotly(ggplot(chocolate_month_ts, aes(x = factor(month), y = value)) +
+    geom_boxplot() +
+  labs(
+    x = "Month Number",
+    y = "Searches",
+    title = "Boxplots of Google Searches for 'Chocolate' by Month"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   What do you observe?
+-   Which months tend to have the most searches? Which months tend to have the fewest seraches?
+    -   Can you provide an explanation for this?
+:::
+
+
+
+
+
+### Summary
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What does the centered moving average tell us?
+-   Why is a centered moving average helpful when there are seasonal effects?
+-   For the chocolate search data, answer the following questions:
+    -   How many values of $t$ were not assigned a value of the centered moving average?
+    -   Interpret that number in years.
+    -   Does this number depend on the length of the time series?
+
+:::
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+
+## Homework
+
+::: {.callout-note icon=false}
+
+## Download Assignment
+
+<!-- ## need to update href link to correct files when we get them -->
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_1_3.qmd" download="homework_1_3.qmd"> homework_1_3.qmd </a>
+
+:::
+
+
+
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Team Activity</a>
+
+::: {#Solutions style="display:none;"}
+
+Solution to Team Activity:
+
+If you stored your centered moving average in a variable called "m_hat" in the "chocolate_month_ts" tsibble, you can generate the superimposed plot with the R command:
+
+```{r}
+ggplotly(autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Google Searches for 'Chocolate'"
+  ) +
+  geom_line(aes(x = dates, y = m_hat), color = "#D55E00") +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+:::
+

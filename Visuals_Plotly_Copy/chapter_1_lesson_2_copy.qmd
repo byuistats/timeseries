@@ -1,0 +1,396 @@
+---
+title: "Plots Trends, and Seasonal Variation"
+subtitle: "Chapter 1: Lesson 2"
+format: html
+editor: source
+sidebar: false
+#filters:
+#  - shinylive
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+## Learning Outcomes
+
+{{< include outcomes/chapter_1_lesson_2_outcomes.qmd >}}
+
+## Preparation
+
+-   Read Sections 1.1-1.4 and 1.5.1-1.5.3
+
+## Learning Journal Exchange (15 min)
+
+-   Review another student's journal
+-   What would you add to your learning journal after reading your partner's?
+-   What would you recommend your partner add to their learning journal?
+-   Sign the Learning Journal review sheet for your peer
+
+## Vocabulary and Nomenclature Matching Activity (15 min)
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+Working with a partner, match the definitions on the left with the terms on the right.
+
+<!-- Code Source: https://bookdown.org/yihui/rmarkdown-cookbook/multi-column.html -->
+
+#### Vocabulary Matching
+
+::: {style="display: flex;"}
+<div>
+
+1.  A figure with time on the horizontal axis and the value of a random variable on the vertical axis
+2.  A systematic change in a time series that does not appear to be periodic
+3.  Repeated pattern within each year (or any other fixed time period)
+4.  Repeated pattern that does not correspond to some fixed natural period
+5.  Observations in which values are related to lagged observations of the same variable
+6.  Random trend that does not follow a discernible or predictable pattern
+7.  Can be modeled with mathematical functions, facilitating the long-term prediction of the behavior
+
+</div>
+
+<div>
+
+A.  Cycle
+B.  Correlated (Serially Dependent) Data
+C.  Deterministic Trend
+D.  Seasonal Variation
+E.  Stochastic Trend
+F.  Time Plot
+G.  Trend
+
+</div>
+:::
+
+#### Nomenclature Matching
+
+::: {style="display: flex;"}
+<div>
+
+8.  Discrete observations of a time series, taken at times $1, 2, \ldots, n$.
+9.  Number of observations of a time series
+10. Lead time
+11. The trend as observed at time $t$
+12. The seasonal effect, as observed at time $t$
+13. The error term (a sequence of correlated random variables with mean zero), as observed at time $t$
+14. Centered moving average for obsrvations made monthly
+15. Estimate of monthly additive effect
+16. Estimate of monthly multiplicative effect
+
+</div>
+
+<div>
+
+H.  $n$
+I.  $k$
+J.  $m_t$
+K.  $\hat m_t$
+L.  $s_t$
+M.  $\hat s_t = x_t - \hat m_t ~~~~~~~~~~~~~~~~~~~~~~~~~$
+N.  $\hat s_t = \dfrac{x_t}{\hat m_t}$
+O.  $\{x_t\}$
+P.  $z_t$
+
+</div>
+:::
+
+where $\hat m_t = \dfrac{\frac{1}{2}x_{t-6} + x_{t-5} + \cdots + x_{t-1} + x_t + x_{t+1} + \cdot + x_{t+5} + \frac{1}{2} x_{t+6}}{12}$.
+
+#### Additional Nomenclature Matching
+
+::: {style="display: flex;"}
+<div>
+
+17. Forecast made at time $t$ for a future value $k$ time units in the future $~~~~~~~~~~~~~~~~~~~~~~$
+18. Additive decomposition model
+19. Additive decomposition model after taking the logarithm
+20. Multiplicative decomposition model
+21. Seasonally adjusted mean for the month corresponding to time $t$
+22. Seasonal adjusted series (additive seasonal effect)
+23. Seasonal adjusted series (multiplicative seasonal effect)
+
+</div>
+
+<div>
+
+Q.  $\bar s_t$
+R.  $x_t = m_t + s_t + z_t$
+S.  $x_t = m_t \cdot s_t + z_t$
+T.  $\log(x_t) = m_t + s_t + z_t$
+U.  $x_t - \bar s_t$
+V.  $\frac{x_t}{\bar s_t}$
+W.  $\hat x_{t+k \mid t}$
+
+</div>
+:::
+:::
+
+## Comparison of Deterministic and Stochastic Time Series (10 min)
+
+### Stochastic Time Series
+
+The following app illustrates a few realizations of a stochastic time series.
+
+```{=html}
+ <iframe id="stochastic" src="https://posit.byui.edu/content/728a7ddc-97d2-44ee-9977-fc648102b986" style="border: none; width: 100%; height: 500px" frameborder="0"></iframe>
+```
+-   If a stochastic time series displays an upward trend, can we conclude that trend will continue in the same direction? Why or why not?
+
+### Deterministic Time Series
+
+The figure below illustrates realizations of a deterministic time series. The data fluctuate around a sine curve.
+
+```{=html}
+ <iframe id="deterministic" src="https://posit.byui.edu/content/4d25268b-d562-455c-ac47-5a9871770e7c" style="border: none; width: 100%; height: 550px" frameborder="0"></iframe>
+```
+<!-- <a href="javascript:showhide('Meme')" -->
+
+<!-- style="font-size:.8em;">Meme</a> -->
+
+<!-- ::: {#Meme style="display:none;"} -->
+
+<!-- ![](images/MobiusMeme.png) -->
+
+<!-- ::: -->
+
+## Class Activity: Importing Data and Creating a tsibble Object (5 min)
+
+Recall the Google Trends data for the term "chocolate" from the last lesson. The cleaned data are available in the file <a href="data/chocolate.csv" download>chocolate.csv</a>. Here are the first few rows of the csv:
+
+![https://byuistats.github.io/timeseries/data/chocolate.csv](images/chocolate_csv_image.png)
+
+### Import the Data
+
+Use the code below to import the chocolate data and convert it into a time series (tsibble) object. You can click on the clipboard icon in the upper right-hand corner of the box below to copy the code.
+
+```{r}
+# load packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load("tsibble", "fable",
+               "feasts", "tsibbledata",
+               "fable.prophet", "tidyverse",
+               "patchwork", "rio")
+
+# read in the data from a csv
+chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv")
+
+# define the first date in the time series
+start_date <- lubridate::ymd("2004-01-01")  
+
+# create a sequence of dates, one month apart, starting with start_date
+date_seq <- seq(start_date,
+                start_date + months(nrow(chocolate_month)-1),
+                by = "1 months")
+
+# create a tibble including variables dates, year, month, value
+chocolate_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),        # gets the year part of the date
+  month = lubridate::month(date_seq),      # gets the month
+  value = pull(chocolate_month, chocolate) # gets the value of the ts 
+)
+
+# create a tsibble where the index variable is the year/month
+chocolate_month_ts <- chocolate_tibble |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index)
+
+# generate the ts plot
+choc_plot <- ggplotly(autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+
+choc_plot
+```
+
+### Explore R commands summarizing time series data
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   What does each of the following R commands give us? <!-- -   class(chocolate_month_ts) -->
+    -   head(chocolate_month_ts, 1)
+    -   tail(chocolate_month_ts, 1)
+    -   guess_frequency(chocolate_month_ts$index)
+:::
+
+## Estimating the Trend: Annual Aggregation (10 min)
+
+To help visualize what is happening with a time series, we can simply aggregate the data in the time series to the annual level by computing the mean of the observations in a given year. This can make it easier to spot a trend.
+
+For the chocolate data, when we average the data for each year, we get:
+
+```{r}
+#| include: false
+
+chocolate_annual_ts <- summarise(
+    index_by(chocolate_month_ts, year), 
+    value = mean(value)
+  ) 
+
+chocolate_annual_ts
+```
+
+```{r}
+#| echo: false
+
+chocolate_annual_ts |>
+  as.data.frame() |>
+  concat_partial_table(nrow_head = 6, nrow_tail= 3, decimals = 4) |>
+  display_table()
+```
+
+The first plot is the time series plot of the raw data, and the second plot is a time series plot of the annual means.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# monthly plot
+mp <- ggplotly(autoplot(chocolate_month_ts, .vars = value) +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+
+# yearly plot
+yp <- ggplotly(autoplot(chocolate_annual_ts, .vars = value) +
+  labs(
+    x = "Year",
+    y = "Searches",
+    title = "Mean Annual Google Searches for 'Chocolate'"
+  ) +
+  scale_x_continuous(breaks = seq(2004, max(chocolate_month_ts$year), by = 2)) +
+  theme(plot.title = element_text(hjust = 0.5)))
+
+subplot(mp, yp, nrows = 2)
+```
+
+If you want to superimpose these plots, it would make sense to align the mean value for the year with the middle of the year. Here is a plot superimposing the annual mean aligned with July 1 (in blue) on the values of the time series (in black).
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: true
+
+chocolate_annual_ts <- summarise(
+    index_by(chocolate_month_ts, year), 
+    value = mean(value)
+  ) |>
+  mutate(index = tsibble::yearmonth( mdy(paste0("7/1/",year)) )) |>
+  as_tsibble(index = index)
+
+# combined plot
+ggplotly(autoplot(chocolate_month_ts, .vars = value) +
+  geom_line(data = chocolate_annual_ts, 
+            aes(x = index, y = value), 
+            color = "#56B4E9") +
+  labs(
+    x = "Month",
+    y = "Searches",
+    title = "Relative Number of Google Searches for 'Chocolate'"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+-   What do the annually-aggregated data tell us about the trend?
+-   What do you observe in the trend?
+-   What do you suspect is causing this trend?
+:::
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+## Homework
+
+::: {.callout-note icon="false"}
+## Download Assignment
+
+<!-- ## need to update href link to correct files when we get them -->
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_1_2.qmd" download="homework_1_2.qmd"> homework_1_2.qmd </a>
+:::
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Matching</a>
+
+::: {#Solutions style="display:none;"}
+
+::: {.callout-tip icon="false" title="Check Your Understanding"}
+
+Matching Solutions
+
+#### Vocabulary Matching
+
+|                                                                                                       |                                         |
+|-------------------------------------------------------------------------------------------------------|-----------------------------------------|
+| 1\. A figure with time on the horizontal axis and the value of a random variable on the vertical axis | F. Time Plot                            |
+| 2\. A systematic change in a time series that does not appear to be periodic                          | G. Trend                                |
+| 3\. Repeated pattern within each year (or any other fixed time period)                                | D. Seasonal Variation                   |
+| 4\. Repeated pattern that does not correspond to some fixed natural period                            | A. Cycle                                |
+| 5\. Observations in which values are related to lagged observations of the same variable              | B. Correlated (Serially Dependent) Data |
+| 6\. Random trend that does not follow a discernible or predictable pattern                            | E. Stochastic Trend                     |
+| 7\. Can be modeled with mathematical functions, facilitating the long-term prediction of the behavior | C. Deterministic Trend                  |
+
+#### Nomenclature Matching
+
+|                                                                                                         |                                       |
+|---------------------------------------------------------------------------------------------------------|---------------------------------------|
+| 8\. Discrete observations of a time series, taken at times $1, 2, \ldots, n$.                           | O. $\{x_t\}$                          |
+| 9\. Number of observations of a time series                                                             | H. $n$                                |
+| 10\. Lead time                                                                                          | I. $k$                                |
+| 11\. The trend as observed at time $t$                                                                  | J. $m_t$                              |
+| 12\. The seasonal effect, as observed at time $t$                                                       | L. $s_t$                              |
+| 13\. The error term (a sequence of correlated random variables with mean zero), as observed at time $t$ | P. $z_t$                              |
+| 14\. Centered moving average for obsrvations made monthly                                               | K. $\hat m_t$                         |
+| 15\. Estimate of monthly additive effect                                                                | M. $\hat s_t = x_t - \hat m_t$        |
+| 16\. Estimate of monthly multiplicative effect                                                          | N. $\hat s_t = \dfrac{x_t}{\hat m_t}$ |
+
+#### Additional Nomenclature Matching
+
+|                                                                                |                                  |
+|--------------------------------------------------------------------------------|----------------------------------|
+| 17\. Forecast made at time $t$ for a future value $k$ time units in the future | W. $\hat x_{t+k \mid t}$         |
+| 18\. Additive decomposition model                                              | R. $x_t = m_t + s_t + z_t$       |
+| 19\. Additive decomposition model after taking the logarithm                   | T. $\log(x_t) = m_t + s_t + z_t$ |
+| 20\. Multiplicative decomposition model                                        | S. $x_t = m_t \cdot s_t + z_t$   |
+| 21\. Seasonally adjusted mean for the month corresponding to time $t$          | Q. $\bar s_t$                    |
+| 22\. Seasonal adjusted series (additive seasonal effect)                       | U. $x_t - \bar s_t$              |
+| 23\. Seasonal adjusted series (multiplicative seasonal effect)                 | V. $\frac{x_t}{\bar s_t}$        |
+:::
+
+:::

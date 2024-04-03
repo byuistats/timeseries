@@ -1,0 +1,763 @@
+---
+title: "Autocorrelation Concepts"
+subtitle: "Chapter 2: Lesson 2"
+format: html
+editor: source
+sidebar: false
+---
+```{r}
+#| include: false
+source("common_functions.R")
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+```{r}
+#| include: false
+
+get_data_for_cov_table <- function(offset = 1) {
+  # set random number generator seed
+  set.seed(997)
+  
+  # set parameters
+  n <- 10
+  rho <- 0.99
+  mu <- 0
+  sigma <- 3
+  
+  # build population correlation matrix
+  tmp.r <- matrix(rho, n, n)
+  tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
+  
+  # simulate correlated normal random data
+  x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1) 
+  
+  # build a data frame
+  df <- data.frame(t = 1:length(x1),
+                   x = x1,
+                   y = lead(x1, offset)) %>%
+    mutate(
+      xx = x - mean(x),
+      xx2 = xx^2,
+      yy = y - mean(x),
+      # yy2 = yy^2,
+      xy = xx * yy
+    ) %>% 
+    dplyr::select(t, x, y, xx, xx2, yy, xy)
+  
+  return(df)
+}
+
+make_cov_table_df <- function(df, offset=1, decimals_1st_order = 5, decimals_2nd_order = 5) {
+  # Color vector
+  oi_colors <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#F5C710", "#CC79A7", "#999999")
+  
+  df_summary <- df %>% 
+    summarize(
+      x = sum(x),
+      y = sum(y, na.rm = TRUE),
+      xx = sum(xx),
+      yy = sum(yy, na.rm = TRUE),
+      xx2 = sum(xx2),
+      # yy2 = sum(yy2, na.rm = TRUE),
+      xy = sum(xy, na.rm = TRUE)
+    ) %>% 
+    # round_df(3) %>% 
+    mutate(t = paste0("sum")) %>% 
+    mutate(
+      t = paste0("sum"),
+      x = round_as_text(x, 1),
+      y = round_as_text(y, 1),
+      xx = round_as_text(xx, decimals_1st_order),
+      xx2 = round_as_text(xx2, decimals_2nd_order),
+      yy = round_as_text(yy, decimals_1st_order),
+      # yy2 = round_as_text(yy2, decimals_2nd_order),
+      xy = round_as_text(xy, decimals_2nd_order)
+    ) %>% 
+    dplyr::select(t, x, y, xx, xx2, yy, xy)
+  
+  out <- df %>%
+    mutate(
+      t = as.character(t),
+      x = round_as_text(x, 1),
+      y = round_as_text(y, 1),
+      xx = round_as_text(xx, decimals_1st_order),
+      xx2 = round_as_text(xx2, decimals_2nd_order),
+      yy = round_as_text(yy, decimals_1st_order),
+      # yy2 = round_as_text(yy2, decimals_2nd_order),
+      xy = round_as_text(xy, decimals_2nd_order)
+    ) %>% 
+    mutate(
+      x = cell_spec(x, 
+                    color = case_when(
+                      is.na(x) ~ "#999999",
+                      TRUE ~ oi_colors[( row_number() + 0 ) %% 9 + 1]
+                    )
+      ),
+      y = cell_spec(y, 
+                    color = case_when(
+                      is.na(y) ~ "#999999",
+                      TRUE ~ oi_colors[( row_number() + offset ) %% 9 + 1]
+                    )
+      )
+    ) %>% 
+    mutate(
+      # x = ifelse(row_number() > nrow(.) - offset, paste0("[",x,"]"), x),
+      y = ifelse(row_number() > nrow(.) - offset, NA, y),
+    ) %>% 
+    replace(., is.na(.), "—") %>%
+    bind_rows(df_summary) %>% 
+    rename(
+      "x_t" = x,
+      "x_{t+k}" = y,
+      # paste0("x_{t+", offset, "}") = y,
+      "x_t-mean(x)" = xx, 
+      "(x_t-mean(x))^2" = xx2, 
+      "x_{t+k}-mean(x)" = yy,
+      # "(x_{t+k}-mean(x))^2" = yy2, 
+      "(x-mean(x))(x_{t+k}-mean(x))" = xy
+    )
+  
+  return(out)
+}
+
+# Eliminates the values in columns 3 onward for a specified row_num
+make_blank_row_in_cov_table <- function(df, row_num) {
+  for (col_num in 3:ncol(df)) {
+    df[row_num, col_num] = ""
+  }
+  return(df)
+}
+
+# Compute summary values
+compute_summaries <- function(df, digits = 4) {
+  df %>% 
+    summarize(
+      n = n(),
+      mean_x = mean(x),
+      mean_y = mean(y, na.rm = TRUE),
+      ss_x = sum(xx2),
+      # ss_y = sum(yy2, na.rm = TRUE),
+      ss_xy = sum(xy, na.rm = TRUE),
+      c_0 = sum(xx2) / nrow(.),
+      c_k = sum(xy, na.rm = TRUE) / nrow(.),
+      r_k = c_k / c_0
+    ) %>% 
+    round_df(digits)
+}
+
+```
+
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_2_lesson_2_outcomes.qmd >}}
+
+
+
+
+## Preparation
+
+-   Read Sections 2.2.5 and 2.3-2.5
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+-   What would you add to your learning journal after reading your partner's?
+-   What would you recommend your partner add to their learning journal?
+-   Sign the Learning Journal review sheet for your peer
+
+
+## Hands-on Exercise -- Exploring Sample Autocorrelation (40 min)
+
+<!-- Compute sample acvf and acf -->
+
+### Comparison of Independent and Autocorrelated Error Terms
+
+In the previous lesson, we computed the sample covariance and sample correlation coefficient between two independent variables. When working with time series, the observations are not independent. There is often a relationship between sequential observations. We will compute the autocovariance function and autocorrelation function for a time series. Note: the prefix "auto" comes from a Greek root meaning "self."
+
+The figure below illustrates the difference between a series of data, where the residuals are independent compared to a series with autocorrelated data.
+
+```{r}
+#| echo: false 
+
+# Generate data
+set.seed(101) 
+x <- 1:100*0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))
+e <- rnorm(100, 0, 2.5)
+y <- 1:100*0.5 + e  
+
+# Create data frame  
+df <- data.frame(
+  time = 1:100,
+  Autocorrelated = x,
+  Independent = y
+)
+
+# Plot  
+ggplotly(ggplot(df, aes(x = time)) +
+  geom_line(aes(y = Independent, color = "Independent")) + 
+  geom_point(aes(y = Independent, color = "Independent")) + 
+  geom_line(aes(y = Autocorrelated, color = "Autocorrelated")) + 
+  geom_point(aes(y = Autocorrelated, color = "Autocorrelated")) +
+  scale_color_okabeito(
+    palette = "full",
+    reverse = FALSE,
+    order = c(2,4),
+    aesthetics = "color"
+  ) +
+  labs(title="Comparison of Independent and Autocorrelated Error Terms", 
+       x="Time",
+       y="Values",
+       color="Series") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   The variances of the residuals for these two series are approximately equal. What characteristics distinguish the two series in the figure above?
+
+:::
+
+### Autocovariance and Autocorrelation 
+
+We will use the following data to explore the concepts of autovariance and autocorrelation.
+
+```{r}
+#| echo: false
+
+offset_value <- 1
+cov_df <- get_data_for_cov_table(offset = offset_value)
+
+# Obtain the number of data values.
+n <- nrow(cov_df)
+
+
+cov_df %>%
+  dplyr::select(t, x) %>% 
+  rename("$$ x_t $$"= x) %>% 
+  display_table()
+```
+
+You can use this R command to read in the observations.
+
+```{r}
+#| echo: false
+
+cat("x <- c(", paste(cov_df$x, collapse = ", "),")")
+```
+
+```{r}
+#| echo: false
+
+ggplotly(ggplot(cov_df, aes(x = t, y = x)) +
+  geom_line(color = "#0072B2") +
+  geom_point(color = "#0072B2") +
+  ylim(0,ceiling(max(cov_df$x))) +
+  labs(title = "Sample Time Series",
+       x = "Time",
+       y = "x") +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+We will use the sample mean of these data repeatedly. The value of $\bar x$ is:
+
+$$
+  \bar x 
+    = \frac{1}{n} \sum\limits_{t=1}^{n} x_t 
+    = \frac{1}{`r n`} \cdot `r sum(cov_df$x) %>% round(4)`
+    = `r mean(cov_df$x)`
+$$
+
+
+We will be finding the autocovariance and correlation of a time series with itself. First, we start with a lag of 1. With a lag of 1 the corresponding values of the time series that are being compared are shifted by one time unit. Then, we will consider any integer lag: lag $k$.
+
+
+### Lag $k$ Sample Autocovariance Function (acvf), $c_k$
+
+The **lag** $k$ sample autocovariance function, acvf, denoted $c_k$, is defined as
+
+$$
+  c_k = \frac{1}{n} \sum\limits_{t=1}^{n-k}(x_t-\bar x)(x_{t+k}-\bar x)
+$$
+
+We denote the lag by the letter $k$, where $k \ge 0$. This is the number of values the data set is shifted to compute the autocovariance.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Explain the equation for $c_k$ to your partner.
+-   What is the equation for $c_0$, the value of the autocovariance function with lag $k=0$?
+    -   This expression is very similar to a definition we have encountered previously. What is it?
+
+:::
+
+
+#### Lag $k=1$ Sample Autocovariance Function, $c_1$
+
+We will now find the autocovariance between the values in a time series ($x = x_t$) and the same values, shifted by one unit of time ($y = x_{t+1}$).
+
+```{r}
+#| echo: false
+offset_value <- 1
+cov_df <- get_data_for_cov_table(offset = offset_value)
+cov_table <- cov_df %>%
+  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
+summarized <- compute_summaries(cov_df)
+cov_table %>%
+  rename(
+    "$$ x_t $$" = x_t,
+    "$$ x_{t+k} $$" = `x_{t+k}`,
+    "$$ x_t-\\bar x $$" = `x_t-mean(x)`,
+    "$$ (x_t-\\bar x)^2 $$" = `(x_t-mean(x))^2`,
+    "$$ x_{t+k}-\\bar x$$"= `x_{t+k}-mean(x)`,
+    "$$ (x-\\bar x)(x_{t+k}-\\bar x) $$"= `(x-mean(x))(x_{t+k}-mean(x))`
+  ) %>% 
+  display_table()
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Working with your assigned partner, compute each of the values in row 1 by hand.  Recall that $\bar x = `r mean(cov_df$x)`$.
+-   With your partner, add up the values in the last column to verify that the sum is `r sum(cov_df$xy, na.rm = TRUE) %>% round(10)`.
+
+:::
+
+The scatterplot below illustrates the relationship between the observed data ($x_t$) and the next observation ($x_{t+1}$).
+
+```{r}
+#| echo: false
+
+ggplotly(ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
+  geom_point(size = 2, colour = "#0072B2") +
+  xlab("x[t]") +
+  ylab("x[t+1]") +
+  theme_bw() +  
+  ggtitle(paste0("Data pairs with a lag of k=", offset_value)) + 
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+
+
+In this example, the second variable is $x_{t+1}$, where $t>1$. the autocovariance of $x_t$ and $x_{t+1}$ is:
+
+$$
+  c_1 
+    = \frac{1}{n} \sum\limits_{t=1}^{n-1}(x_t-\bar x)(x_{t+1}-\bar x)
+    = \frac{1}{`r n`} \sum\limits_{t=1}^{`r n - offset_value`}(x_t-\bar x)(x_{t+1}-\bar x)
+  = \frac{1}{`r n`} \cdot `r summarized$ss_xy`
+  = `r summarized$c_k`
+$$
+
+This is the (auto)covariance of $x$ with itself, but with a lag of 1 time unit. This is the value of the **lag** $k=1$ autocovariance function, acvf_1.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What does the lag 1 autocovariance measure?
+
+:::
+
+### Lag $k$ Sample Autocorrelation Function (acf), $r_k$
+
+The **sample autocorrelation function, acf**, denoted $r_k$, where $k$ is the lag, is defined as
+
+$$
+  r_k 
+    = \frac{c_k}{c_0} 
+    = \frac{ \frac{1}{n} \sum\limits_{t=1}^{n-k}(x_t-\bar x)(x_{t+k}-\bar x) }{ \frac{1}{n} \sum\limits_{t=1}^{n}(x_t-\bar x)^2 }
+    = \frac{ \sum\limits_{t=1}^{n-k}(x_t-\bar x)(x_{t+k}-\bar x) }{ \sum\limits_{t=1}^{n}(x_t-\bar x)^2 }
+$$
+
+Note that $c_0$ is the variance of $x$, but computed by dividing by $n$, instead of $n-1$.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Interpret the components of the numerator and the denominator of the expression for $r_k$ to your partner.
+
+:::
+
+#### Lag $k=1$ Sample Autocorrelation Function, $r_1$
+
+We can compute the **lag 1 autocorrelation** or the **autocorrelation of** $x$ with lag 1 as the quotient $r_1 = \frac{c_1}{c_0}$. We have already determined that 
+$c_1 = `r summarized$c_k %>% round(4)`$. We now compute $c_0$:
+
+$$ 
+  c_0 = \frac{1}{n} \sum\limits_{t=1}^{n-0} (x_t-\bar x)(x_{t+0}-\bar x) 
+    = \frac{1}{n} \sum\limits_{t=1}^{n} (x_t-\bar x)^2
+    = \frac{1}{`r n`} \cdot `r summarized$ss_x %>% round(4)`
+    = `r summarized$c_0 %>% round(4)`
+$$
+
+We use $c_0$ and $c_1$ to compute $r_1$. Here are two ways we can compute this value:
+
+\begin{align*}
+  r_1
+    &= \frac{c_1}{c_0} 
+    =
+    \frac{ \frac{1}{n} \sum\limits_{t=1}^{`r n - offset_value`}(x_t-\bar x)(x_{t+1}-\bar x)
+        }{
+            \frac{1}{n} \sum\limits_{t=1}^{`r n`}(x_t-\bar x)^2
+        }  
+    =
+    \frac{
+        \frac{1}{`r summarized$n`} \cdot `r summarized$ss_xy`
+      }{
+        \frac{1}{`r summarized$n`} \cdot `r summarized$ss_x`
+      }
+    = \frac{`r summarized$c_k`}{`r summarized$c_0`}
+    = `r summarized$r_k %>% round(4)`
+    \\
+    &=
+    \frac{ \sum\limits_{t=1}^{`r n - offset_value`}(x_t-\bar x)(x_{t+1}-\bar x)
+        }{
+           \sum\limits_{t=1}^{`r n`}(x_t-\bar x)^2
+        }  
+    = \frac{`r summarized$ss_xy`}{`r summarized$ss_x`}
+    = `r summarized$r_k %>% round(4)`
+    
+\end{align*}
+
+-   What does the lag 1 autocorrelation, $c_1$, measure?
+
+```{r}
+#| echo: false
+
+# Initialize table
+auto_cov_cor_table <- data.frame(lag = integer(),
+                  autocovariance = double(),
+                  autocorrelation = double())
+```
+
+```{r}
+#| echo: false
+
+# Add rows to the table
+auto_cov_cor_table <- auto_cov_cor_table %>% 
+  bind_rows(c(
+    lag = offset_value, 
+    autocovariance = summarized$c_k, 
+    autocorrelation = summarized$r_k
+    )
+  )
+
+# # Display the table, except row 2
+# auto_cov_cor_table %>%
+#   mutate( ####################################### Suppresses row 2
+#     autocovariance = ifelse(row_number() == 2,"", autocovariance),
+#     autocorrelation = ifelse(row_number() == 2,"", autocorrelation)
+#   ) %>% 
+#   knitr::kable(format = "html", align='ccc', escape = FALSE, width = NA) %>%
+#   kable_styling(full_width = FALSE, "striped") 
+```
+
+#### Lag $k = 2$
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Working with your assigned partner, fill in the blanks in the following table. Use the results to compute $c_2$ and $r_2$.
+
+:::
+
+```{r}
+#| echo: false
+offset_value <- 2
+cov_df <- get_data_for_cov_table(offset = offset_value)
+cov_table <- cov_df %>%
+  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
+summarized <- compute_summaries(cov_df)
+cov_table %>%
+    rename(
+    "$$ x_t $$" = x_t,
+    "$$ x_{t+k} $$" = `x_{t+k}`,
+    "$$ x_t-\\bar x $$" = `x_t-mean(x)`,
+    "$$ (x_t-\\bar x)^2 $$" = `(x_t-mean(x))^2`,
+    "$$ x_{t+k}-\\bar x$$"= `x_{t+k}-mean(x)`,
+    "$$ (x-\\bar x)(x_{t+k}-\\bar x) $$"= `(x-mean(x))(x_{t+k}-mean(x))`
+  ) %>%
+  ############ Let students fill in these rows ##########
+  make_blank_row_in_cov_table(4) %>% 
+  make_blank_row_in_cov_table(5) %>% 
+  make_blank_row_in_cov_table(6) %>%
+  make_blank_row_in_cov_table(11) %>% 
+  display_table()
+```
+
+The figure below illustrates the relationship between $x_t$ and $x_{t+2}$.
+
+```{r}
+#| echo: false
+
+ggplotly(ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
+  geom_point(size = 2, colour= "#0072B2") +
+  xlab("x[t]") +
+  ylab("x[t+1]") +
+  theme_bw() +
+  ggtitle(paste0("Data pairs with a lag of k=",offset_value)) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+```{r}
+#| echo: false
+
+# Add rows to the table
+auto_cov_cor_table <- auto_cov_cor_table %>% 
+  bind_rows(c(
+    lag = offset_value, 
+    autocovariance = summarized$c_k, 
+    autocorrelation = summarized$r_k
+    )
+  )
+```
+
+#### Lag $k = 3$
+
+```{r}
+#| echo: false
+offset_value <- 3
+cov_df <- get_data_for_cov_table(offset = offset_value)
+cov_table <- cov_df %>%
+  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
+summarized <- compute_summaries(cov_df)
+cov_table %>%
+    rename(
+    "$$ x_t $$" = x_t,
+    "$$ x_{t+k} $$" = `x_{t+k}`,
+    "$$ x_t-\\bar x $$" = `x_t-mean(x)`,
+    "$$ (x_t-\\bar x)^2 $$" = `(x_t-mean(x))^2`,
+    "$$ x_{t+k}-\\bar x$$"= `x_{t+k}-mean(x)`,
+    "$$ (x-\\bar x)(x_{t+k}-\\bar x) $$"= `(x-mean(x))(x_{t+k}-mean(x))`
+  ) %>%
+  display_table()
+```
+
+The figure below illustrates the correlations between $x_t$ and $x_{t+3}$. Note that $c_3 = \dfrac{`r summarized$ss_xy`}{`r summarized$n`} = `r summarized$c_k`$ and  $r_3 = \dfrac{`r summarized$c_k`}{`r summarized$c_0`} = `r summarized$r_k`$.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Does the value of $r_3 = `r summarized$r_k`$ seem reasonable, given the pattern in this plot?
+
+:::
+
+```{r}
+#| echo: false
+
+ggplotly(ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
+  geom_point(size = 2, colour= "#0072B2") +
+  xlab("x[t]") +
+  ylab("x[t+1]") +
+  theme_bw() +  
+  ggtitle(paste0("Data pairs with a lag of k=",offset_value)) + 
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+```{r}
+#| echo: false
+
+# Add rows to the table
+auto_cov_cor_table <- auto_cov_cor_table %>% 
+  bind_rows(c(
+    lag = offset_value, 
+    autocovariance = summarized$c_k, 
+    autocorrelation = summarized$r_k
+    )
+  )
+```
+
+#### Lag $k = 4$
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Compute $c_4$ and $r_4$ using R (but not automated functions), Excel, or hand calculations.
+
+:::
+
+```{r}
+#| echo: false
+offset_value <- 4
+cov_df <- get_data_for_cov_table(offset = offset_value)
+cov_table <- cov_df %>%
+  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
+summarized <- compute_summaries(cov_df)
+cov_table %>%
+    rename(
+    "$$ x_t $$" = x_t,
+    "$$ x_{t+k} $$" = `x_{t+k}`,
+    "$$ x_t-\\bar x $$" = `x_t-mean(x)`,
+    "$$ (x_t-\\bar x)^2 $$" = `(x_t-mean(x))^2`,
+    "$$ x_{t+k}-\\bar x$$"= `x_{t+k}-mean(x)`,
+    "$$ (x-\\bar x)(x_{t+k}-\\bar x) $$"= `(x-mean(x))(x_{t+k}-mean(x))`
+  ) %>%
+  make_blank_row_in_cov_table(1) %>% 
+  make_blank_row_in_cov_table(2) %>%  
+  make_blank_row_in_cov_table(3) %>%  
+  make_blank_row_in_cov_table(4) %>%  
+  make_blank_row_in_cov_table(5) %>%  
+  make_blank_row_in_cov_table(6) %>%  
+  make_blank_row_in_cov_table(7) %>%  
+  make_blank_row_in_cov_table(8) %>%  
+  make_blank_row_in_cov_table(9) %>%  
+  make_blank_row_in_cov_table(10) %>%  
+  make_blank_row_in_cov_table(11) %>% 
+  display_table()
+```
+
+
+The figure below illustrates the correlations between $x_t$ and $x_{t+4}$.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Does the value of $r_4$ you computed seem reasonable, given the pattern in this plot?
+
+:::
+
+```{r}
+#| echo: false
+
+ggplotly(ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
+  geom_point(size = 2, colour= "#0072B2") +
+  xlab("x[t]") +
+  ylab("x[t+1]") +
+  theme_bw() +  
+  ggtitle(paste0("Data pairs with a lag of k=",offset_value)) + 
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+## Class Activity: Using R to compute the acvf and acf (5 min)
+
+We will continue to use the following sample data.
+
+```{r}
+#| echo: false
+
+# simulate correlated normal random data
+x1 <- get_toy_data()
+df <- data.frame(x = x1)
+
+cat(" x <- c(",paste(x1, collapse = ", "),") \n df <- data.frame(x = x)")
+```
+
+### acvf
+
+This code gives the values of the acvf.
+
+```{r}
+acf(df$x, plot=FALSE, type = "covariance")
+```
+
+
+### acf
+
+We can obtain the acf by changing the argument for the paramter `type` to `"correlation"`.
+
+```{r}
+acf(df$x, plot=FALSE, type = "correlation")
+```
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+## Homework
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_2_2.qmd" download="homework_2_2.qmd"> homework_2_2.qmd </a>
+
+:::
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Class Activity: k=2</a>
+
+::: {#Solutions style="display:none;"}
+
+Solutions to Class Activity: $k=2$
+
+```{r}
+#| echo: false
+offset_value <- 2
+cov_df <- get_data_for_cov_table(offset = offset_value)
+cov_table <- cov_df %>%
+  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
+summarized <- compute_summaries(cov_df)
+cov_table %>%
+  display_table()
+```
+
+\begin{align*}
+  c_2
+    &= \frac{1}{n} \sum\limits_{t=1}^{n-1}(x_t-\bar x)(x_{t+2}-\bar x)
+    = \frac{1}{`r n`} \cdot `r summarized$ss_xy`
+    = `r summarized$c_k |> round(3)` \\
+  r_2 
+    &= \frac{c_2}{c_0} 
+    = \frac{`r summarized$c_k |> round(3)`}{`r summarized$c_0 |> round(3)`} 
+    = `r summarized$r_k |> round(3)`
+\end{align*}
+
+:::
+
+<a href="javascript:showhide('Solutions_k4')"
+style="font-size:.8em;">Class Activity: k=4</a>
+
+::: {#Solutions_k4 style="display:none;"}
+
+Solutions to Class Activity: $k=4$
+
+
+```{r}
+#| echo: false
+offset_value <- 4
+cov_df <- get_data_for_cov_table(offset = offset_value)
+cov_table <- cov_df %>%
+  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
+summarized <- compute_summaries(cov_df)
+cov_table %>%
+  display_table()
+```
+
+\begin{align*}
+  c_4
+    &= \frac{1}{n} \sum\limits_{t=1}^{n-1}(x_t-\bar x)(x_{t+4}-\bar x)
+    = \frac{1}{`r n`} \cdot `r summarized$ss_xy`
+    = `r summarized$c_k |> round(3)` \\
+  r_4 
+    &= \frac{c_4}{c_0} = \frac{`r summarized$c_k |> round(3)`}{`r summarized$c_0 |> round(3)`} 
+    = `r summarized$r_k |> round(3)`
+\end{align*}
+
+:::
+

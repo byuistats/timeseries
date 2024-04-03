@@ -1,0 +1,1661 @@
+---
+title: "Harmonic Seasonal Variables"
+subtitle: "Chapter 5: Lesson 2"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+```{r}
+#| echo: false
+#| label: functions_for_sine_and_cosine_plots
+
+# Okabe-Ito color palette
+okabe_ito_colors <- c("#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#E69F00", "#56B4E9")
+
+plot_sine <- function(cycle_length = 12, i_values = c(1:6), amplitude = rep(1, length(i_values)), spacing = 4, title = "Sine Functions with Different Frequencies", min_t = 0, max_t = cycle_length) {
+  
+  create_sine_df <- function(i, cycle_length, amplitude) {
+    df <- tibble(
+      t = seq(from = min_t, to = max_t, length.out = 501),
+      value = amplitude[which(i_values == i)] * sin(2 * pi * i * t / cycle_length),
+      i = right(paste0(" ", as.character(i)), 2)
+    )
+  }
+  
+  sine_df <- tibble(t = as.integer(), value = as.numeric(), i = as.character())
+  for (i in i_values) {
+    sine_df <- sine_df |> bind_rows(create_sine_df(i, cycle_length, amplitude))
+  }
+  
+  ggplot(sine_df, aes(x = t, y = value - spacing * as.numeric(i), color = i)) +
+    geom_line(linewidth = 1) +
+    scale_y_continuous(
+      breaks = -spacing * (i_values),
+      minor_breaks = NULL,
+      labels = NULL
+    ) +
+    scale_x_continuous(
+      breaks = c(-12:12),
+      minor_breaks = NULL
+    ) +
+    scale_color_manual(values = okabe_ito_colors[1:length(i_values)], name = "i") +
+    labs(x = "t", y = "Sine Value", title = title) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+}
+
+plot_cosine <- function(cycle_length = 12, i_values = c(1:6), amplitude = rep(1, length(i_values)), spacing = 4, title = "Cosine Functions with Different Frequencies", min_t = 0, max_t = cycle_length) {
+  
+  create_cosine_df <- function(i, cycle_length, amplitude) {
+    df <- tibble(
+      t = seq(from = min_t, to = max_t, length.out = 501),
+      value = amplitude[which(i_values == i)] * cos(2 * pi * i * t / cycle_length),
+      i = right(paste0(" ", as.character(i)), 2)
+    )
+  }
+  
+  cosine_df <- tibble(t = as.integer(), value = as.numeric(), i = as.character())
+  for (i in i_values) {
+    cosine_df <- cosine_df |> bind_rows(create_cosine_df(i, cycle_length, amplitude))
+  }
+  
+  ggplot(cosine_df, aes(x = t, y = value - spacing * as.numeric(i), color = i)) +
+    geom_line(linewidth = 1) +
+    scale_y_continuous(
+      breaks = -spacing * (i_values),
+      minor_breaks = NULL,
+      labels = NULL
+    ) +
+    scale_x_continuous(
+      breaks = c(-12:12),
+      minor_breaks = NULL
+    ) +
+    scale_color_manual(values = okabe_ito_colors[1:length(i_values)], name = "i") +
+    labs(x = "t", y = "Cosine Value", title = title) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+}
+```
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_5_lesson_2_outcomes.qmd >}}
+
+
+
+
+## Preparation
+
+-   Read Section 5.6
+
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+## Class Activity: Joys of Trigonometry (15 min)
+
+In the previous lesson, we learned how to incorporate an indicator (or dummy) variable for each season in a period. If there are twelve months in a year, this requires having twelve parameters in the model. Given that many seasonal changes are gradual and can be modeled by a continuous function, we can use sines and cosines to approximate the seasonal variation. This can lead to a smaller number of parameters than is required for the indicator variable approach. 
+
+### Review of Trigonometry
+
+Consider the sine wave with the following parameters:
+
+-   $A$:$~~$    the amplitude, 
+-   $f$:$~~~$    the frequency or the number of cycles per sampling interval, and
+-   $\phi$:$~~~$ the phase shift.
+
+$$
+  A \sin ( 2 \pi f t + \phi )
+$$
+
+Here is an interactive plot of this function. Adjust the values of $A$, $f$, and $\phi$ to see their effect on the function.
+
+<iframe src="https://www.desmos.com/calculator/sgbxo2c0hx" width="750" height="500" style="border: 1px solid #ccc" frameborder=0></iframe>
+
+Notice that this sine function is not linear in the parameters $A$ and $\phi$. 
+
+$$
+  A \sin ( 2 \pi f t + \phi )
+$$
+
+One of the trigonometric sum and difference identities is:
+
+$$
+  \sin(\theta + \phi) 
+    = \cos(\phi) \sin(\theta) + \sin(\phi) \cos(\theta) 
+$$
+
+We apply this to our sine function.
+
+\begin{align*}
+  A \sin ( 2 \pi f t + \phi )
+    &= \underbrace{A \cos( \phi )}_{\alpha_s} \cdot \sin ( 2 \pi f t ) + \underbrace{A \sin( \phi )}_{\alpha_c} \cdot \cos ( 2 \pi f t ) \\
+    &= \alpha_s \cdot \sin ( 2 \pi f t ) + \alpha_c \cdot \cos ( 2 \pi f t ) 
+\end{align*}
+
+We have transformed this from something that is not linear in the parameters $A$ and $\phi$ to an expression that is linear in the parameters $\alpha_s$ and $\alpha_c$.
+
+We can denote the frequency of a sine function as $f = \frac{i}{s}$, where $s$ is the number of seasons in a cycle and $i$ is some integer. This leads the following representation:
+
+\begin{align*}
+  A \sin \left( \frac{2 \pi i t}{s} + \phi \right)
+    &= \underbrace{A \cos( \phi )}_{\alpha_s} \cdot \sin \left( \frac{2 \pi i t}{s} \right) + \underbrace{A \sin( \phi )}_{\alpha_c} \cdot \cos \left( \frac{2 \pi i t}{s} \right) \\
+    &= \alpha_s \cdot \sin \left( \frac{2 \pi i t}{s} \right) + \alpha_c \cdot \cos \left( \frac{2 \pi i t}{s} \right) 
+\end{align*}
+
+@fig-sineFrequencies and @fig-cosineFrequencies illustrate these sine and cosine functions with various values of $i$, where $s = 12$.
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-sineFrequencies
+#| fig-cap: "Sine Functions with Various Frequencies"
+
+ggplotly(plot_sine())
+```
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="45%"}
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-cosineFrequencies
+#| fig-cap: "Cosine Functions with Various Frequencies"
+
+ggplotly(plot_cosine())
+```
+
+:::
+:::
+<!-- End of two columns -->
+
+
+One key objective of this lesson is to use a linear combination of functions like those above to model the seasonal component of a time series.
+
+### Fourier Series
+
+We now explore an important mathematical concept that allows us to approximate any periodic function. If we have an infinite number of terms, the FOurier Series described below gives an exact representation of the function.
+
+::: {.callout-note title="Fourier Series"}
+
+The **Fourier Series** is an infinite series representation of a smooth function $f(t)$ with period $s$:
+
+$$
+  f(t) = \frac{A_0}{2} + \sum_{i=1}^{\infty} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
+$$
+
+The coefficients $A_i$ and $B_i$ are defined by the integrals:
+
+$$
+  A_i = \frac{2}{s} \int_0^s f(t) \cos \left( \frac{2\pi i t}{s} \right) \; dt
+  ~~~~~~~~~~~~~~~~~~
+  B_i = \frac{2}{s} \int_0^s f(t) \sin \left( \frac{2\pi i t}{s} \right) \; dt
+$$
+
+(You will not need to compute any of these integrals.)
+:::
+
+<!-- Sample Fourier Series -->
+
+As an example, we will approximate the periodic function illustrated here with a Fourier series.
+
+```{r}
+#| echo: false
+#| label: use_this_chunk_to_generate_fourier_data
+
+step_size <- 0.001
+
+fourier_df <- tibble(x = seq(-1.75, 1.75, step_size)) |>
+  mutate(
+    terms_1 = sin(pi * x),
+    terms_2 = terms_1 + sin(3 * pi * x) / 3,
+    terms_3 = terms_2 + sin(5 * pi * x) / 5,
+    terms_4 = terms_3 + sin(7 * pi * x) / 7,
+    terms_5 = terms_4 + sin(9 * pi * x) / 9,
+    terms_6 = terms_5 + sin(11 * pi * x) / 11,
+    terms_7 = terms_6 + sin(13 * pi * x) / 13,
+    terms_8 = terms_7 + sin(15 * pi * x) / 15,
+    terms_9 = terms_8 + sin(17 * pi * x) / 17,
+    terms_10 = terms_9 + sin(19 * pi * x) / 19,
+    terms_15 = terms_10 + sin(21 * pi * x) / 21 + sin(23 * pi * x) / 23 
+                        + sin(25 * pi * x) / 25 + sin(27 * pi * x) / 27 
+                        + sin(29 * pi * x) / 29,
+    terms_25 = terms_15 + sin(31 * pi * x) / 31 + sin(33 * pi * x) / 33 
+                        + sin(35 * pi * x) / 35 + sin(37 * pi * x) / 37 
+                        + sin(39 * pi * x) / 39 + sin(41 * pi * x) / 41 
+                        + sin(43 * pi * x) / 43 + sin(45 * pi * x) / 45
+                        + sin(47 * pi * x) / 47 + sin(49 * pi * x) / 49,
+    terms_50 = terms_25 + sin(51 * pi * x) / 51 + sin(53 * pi * x) / 53 
+      + sin(55 * pi * x) / 55 + sin(57 * pi * x) / 57 + sin(59 * pi * x) / 59 
+      + sin(61 * pi * x) / 61 + sin(63 * pi * x) / 63 + sin(65 * pi * x) / 65 
+      + sin(67 * pi * x) / 67 + sin(69 * pi * x) / 69 + sin(71 * pi * x) / 71 
+      + sin(73 * pi * x) / 73 + sin(75 * pi * x) / 75 + sin(77 * pi * x) / 77 
+      + sin(79 * pi * x) / 79 + sin(81 * pi * x) / 81 + sin(83 * pi * x) / 83 
+      + sin(85 * pi * x) / 85 + sin(87 * pi * x) / 87 + sin(89 * pi * x) / 89 
+      + sin(91 * pi * x) / 91 + sin(93 * pi * x) / 93 + sin(95 * pi * x) / 95 
+      + sin(97 * pi * x) / 97 + sin(99 * pi * x) / 99,
+    terms_100 = terms_50 + sin(101 * pi * x) / 101 + sin(103 * pi * x) / 103 + sin(105 * pi * x) / 105 + sin(107 * pi * x) / 107 + sin(109 * pi * x) / 109 + sin(111 * pi * x) / 111 + sin(113 * pi * x) / 113 + sin(115 * pi * x) / 115 + sin(117 * pi * x) / 117 + sin(119 * pi * x) / 119 + sin(121 * pi * x) / 121 + sin(123 * pi * x) / 123 + sin(125 * pi * x) / 125 + sin(127 * pi * x) / 127 + sin(129 * pi * x) / 129 + sin(131 * pi * x) / 131 + sin(133 * pi * x) / 133 + sin(135 * pi * x) / 135 + sin(137 * pi * x) / 137 + sin(139 * pi * x) / 139 + sin(141 * pi * x) / 141 + sin(143 * pi * x) / 143 + sin(145 * pi * x) / 145 + sin(147 * pi * x) / 147 + sin(149 * pi * x) / 149 + sin(151 * pi * x) / 151 + sin(153 * pi * x) / 153 + sin(155 * pi * x) / 155 + sin(157 * pi * x) / 157 + sin(159 * pi * x) / 159 + sin(161 * pi * x) / 161 + sin(163 * pi * x) / 163 + sin(165 * pi * x) / 165 + sin(167 * pi * x) / 167 + sin(169 * pi * x) / 169 + sin(171 * pi * x) / 171 + sin(173 * pi * x) / 173 + sin(175 * pi * x) / 175 + sin(177 * pi * x) / 177 + sin(179 * pi * x) / 179 + sin(181 * pi * x) / 181 + sin(183 * pi * x) / 183 + sin(185 * pi * x) / 185 + sin(187 * pi * x) / 187 + sin(189 * pi * x) / 189 + sin(191 * pi * x) / 191 + sin(193 * pi * x) / 193 + sin(195 * pi * x) / 195 + sin(197 * pi * x) / 197 + sin(199 * pi * x) / 199
+  ) |>
+  pivot_longer(names_to = "terms", values_to = "Value", cols = starts_with("terms")) |>
+  mutate(terms = str_remove(terms, "terms_"))
+```
+
+
+```{r}
+#| echo: false
+#| label: fourier_plot_function
+
+plot_fourier <- function(df = fourier_df, num_terms) {
+  plot_df <- df |>
+  filter(terms == num_terms)
+  
+  my_plot <- plot_df |>
+    ggplot(aes(x = x, y = Value)) +
+    geom_segment(aes(x = -1.75, y = 0, xend = 1.75, yend = 0), linewidth = 1, colour = "black") +
+    geom_segment(aes(x = -1.75, y = 0.785, xend = -1, yend = 0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = -1, y = 0.785, xend = -1, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = -1, y = -0.785, xend = 0, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 0, y = -0.785, xend = 0, yend = 0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 0, y = 0.785, xend = 1, yend = 0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 1, y = 0.785, xend = 1, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 1, y = -0.785, xend = 1.75, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_line(aes(colour = "Approximation"), linewidth = 1, alpha = 0.75) +
+    scale_color_manual(values = c("Target Function" = "#E69F00", "Approximation" = "#56B4E9")) +
+    theme_minimal() +
+    coord_cartesian(ylim = c(-1,1)) +
+    labs(title = paste0("Fourier Series Approximation with ", plot_df$terms |> head(1), " Terms")) +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.text.y = element_blank(),
+      legend.position = c(0.9, 0.8),
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5)
+    )
+  
+  return(my_plot)
+}
+```
+
+::: panel-tabset
+#### Target
+
+```{r}
+#| echo: false
+#| label: plot_target_function
+
+p <- fourier_df |>
+  filter(terms == 1) |>
+  filter(x == floor(x)) |> # To speed up the processing of this chunk
+  ggplot(aes(x = x, y = Value)) +
+    geom_line(aes(colour = "Approximation"), linewidth = 1, alpha = 0) +
+    geom_segment(aes(x = -1.75, y = 0, xend = 1.75, yend = 0), linewidth = 1, colour = "black") +
+    geom_segment(aes(x = -1.75, y = 0.785, xend = -1, yend = 0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = -1, y = 0.785, xend = -1, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = -1, y = -0.785, xend = 0, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 0, y = -0.785, xend = 0, yend = 0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 0, y = 0.785, xend = 1, yend = 0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 1, y = 0.785, xend = 1, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    geom_segment(aes(x = 1, y = -0.785, xend = 1.75, yend = -0.785, colour = "Target Function"), linewidth = 1) +
+    scale_color_manual(values = c("Target Function" = "#E69F00", "Approximation" = "#56B4E9")) +
+    theme_minimal() +
+    coord_cartesian(ylim = c(-1,1)) +
+    labs(
+      title = "Periodic Target Function",
+      x = "x",
+      y = "Values"
+    ) +
+    theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.text.y = element_blank(),
+      legend.position = "none",
+      legend.title = element_blank(),
+      plot.title = element_text(hjust = 0.5)
+    )
+
+ggplotly(p)
+
+```
+
+#### 1 term
+
+```{r}
+#| echo: false
+#| label: plot_fourier_approx_1
+
+ggplotly(plot_fourier(num_terms = 1))
+```
+$$
+  f(x) \approx sin(\pi x)
+$$
+
+```{r}
+#| echo: false
+
+ggplotly(plot_sine(cycle_length = 2, i_values = c(1), amplitude = c(1), spacing = 0, title = "Functions Summed for this Approximation", min_t = -1.75, max_t = 1.75) +
+  theme(legend.position = c(0.95, 0.85)))
+```
+
+
+#### 2 terms
+
+```{r}
+#| echo: false
+#| label: plot_fourier_approx_2
+
+ggplotly(plot_fourier(num_terms = 2))
+```
+$$
+  f(x) \approx \sin(\pi x) + \frac{1}{3} \sin(3 \pi x)
+$$
+
+```{r}
+#| echo: false
+
+ggplotly(plot_sine(cycle_length = 2, i_values = c(1,3), amplitude = c(1, 1/3), spacing = 0, title = "Functions Summed for this Approximation", min_t = -1.75, max_t = 1.75) +
+  theme(legend.position = c(0.95, 0.85)))
+```
+
+#### 3 terms
+
+```{r}
+#| echo: false
+#| label: plot_fourier_approx_3
+
+ggplotly(plot_fourier(num_terms = 3))
+```
+$$
+  f(x) \approx \sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x)
+$$
+
+```{r}
+#| echo: false
+
+ggplotly(plot_sine(cycle_length = 2, i_values = c(1,3,5), amplitude = c(1, 1/3, 1/5), spacing = 0, title = "Functions Summed for this Approximation", min_t = -1.75, max_t = 1.75) +
+  theme(legend.position = c(0.95, 0.85)))
+```
+
+
+
+#### 4 terms
+
+```{r}
+#| echo: false
+#| label: plot_fourier_approx_4
+
+ggplotly(plot_fourier(num_terms = 4))
+```
+$$
+  f(x) \approx \sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \frac{1}{7} \sin(7 \pi x)
+$$
+
+```{r}
+#| echo: false
+
+ggplotly(plot_sine(cycle_length = 2, i_values = c(1,3,5,7), amplitude = c(1, 1/3, 1/5, 1/7), spacing = 0, title = "Functions Summed for this Approximation", min_t = -1.75, max_t = 1.75) +
+  theme(legend.position = c(0.95, 0.85)))
+```
+
+#### 5 terms
+
+```{r}
+#| echo: false
+#| label: plot_fourier_approx_5
+
+ggplotly(plot_fourier(num_terms = 5))
+```
+$$
+  f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \frac{1}{7} \sin(7 \pi x) + \frac{1}{9} \sin(9 \pi x)
+$$
+
+```{r}
+#| echo: false
+
+ggplotly(plot_sine(cycle_length = 2, i_values = c(1,3,5,7,9), amplitude = c(1, 1/3, 1/5, 1/7, 1/9), spacing = 0, title = "Functions Summed for this Approximation", min_t = -1.75, max_t = 1.75) +
+  theme(legend.position = c(0.95, 0.85)))
+```
+
+#### 10 terms
+
+```{r}
+#| echo: false
+#| label: plot_fourier_approx_10
+
+ggplotly(plot_fourier(num_terms = 10))
+```
+$$
+  f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{17} \sin(17 \pi x) + \frac{1}{19} \sin(19 \pi x)
+$$
+
+#### 15 terms
+
+```{r}
+#| echo: false
+#| label: plot_fourier_approx_15
+
+ggplotly(plot_fourier(num_terms = 15))
+```
+$$
+  f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{27} \sin(27 \pi x) + \frac{1}{29} \sin(29 \pi x)
+$$
+
+#### 25 terms
+
+```{r}
+#| echo: false
+#| label: plot_fourier_approx_25
+
+ggplotly(plot_fourier(num_terms = 25))
+```
+$$
+  f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{47} \sin(47 \pi x) + \frac{1}{49} \sin(49 \pi x)
+$$
+
+#### 50 terms
+
+```{r}
+#| echo: false
+#| label: plot_fourier_approx_50
+
+plot_fourier(num_terms = 50)
+```
+$$
+  f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{97} \sin(97 \pi x) + \frac{1}{99} \sin(99 \pi x)
+$$
+
+#### 100 terms
+
+```{r}
+#| echo: false
+#| label: plot_fourier_approx_100
+
+ggplotly(plot_fourier(num_terms = 100))
+```
+$$
+  f(x) \approx sin(\pi x) + \frac{1}{3} \sin(3 \pi x) + \frac{1}{5} \sin(5 \pi x) + \cdots + \frac{1}{197} \sin(197 \pi x) + \frac{1}{199} \sin(199 \pi x)
+$$
+
+:::
+<!-- End of Fourier series example -->
+
+We can continue to get more and more precise estimates of the function by just adding more terms to the sum.
+So, the function $f(t)$ can be approximated to any desired level of precision by truncating the series after a sufficient number of terms. For the purpose of this discussion, we will define "one term" as an expression of the form 
+$$
+  \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
+$$
+
+### Fitting a Seasonal Component
+
+The Fourier series exists for any smooth (continuously differentiable) function. Note theoretically, this allows us to obtain the value of the function at any real value by using this series. 
+However, for a discrete time series with $s$ seasons, we only need to evaluate the function at a finite number of points: 
+$t = 1, 2, 3, \ldots, s-1, s$. 
+For example, in the previous lesson, we used twelve indicator variables to pass through twelve points in a monthly seasonal component to a time series with annual cycles.
+
+It turns out, that we only need six terms (which involves twelve coefficients) to fit monthly data with annual cycles.
+In general, we only need to obtain $\left\lfloor \frac{s}{2} \right\rfloor$ terms of this sum to fit the seasonal values perfectly.
+
+| Pattern            | Number of Seasons, $s$ | Maximum terms in the sum, $\left\lfloor \frac{s}{2} \right\rfloor$ |
+|--------------------|------------------------|------------------------|
+| Days in a Week     | 7                      | 3                      |
+| Quarters in a Year | 4                      | 2                      |
+| Months in a Year   | 12                     | 6                      |
+
+: A few examples of seasonal patterns and the corresponding values of $s$ and $\left\lfloor \frac{s}{2} \right\rfloor$ {#tbl-sAndFloorFunction}
+
+Note that if $s$ is even and $i=\frac{s}{2}$, 
+$$
+  \sin \left( \frac{2\pi i t}{s} \right) = \sin \left( \frac{2\pi \cdot \frac{s}{2} \cdot t}{s} \right) = \sin \left( \pi t \right) = 0
+$$
+for all integer values of $t$. So, this term must be omitted from the model. If we try to include it in the model, the coefficient will be rediculously large, as R trys to make the product of something very close to 0 (the value from the sine function) and the coefficient multiply to some reasonably small number.
+
+The method for fitting seaonal components using indicator variables does not assume any relationship between successive seasons. However, values observed in January are often highly correlated with values observed in February, etc. Fitting a seasonal component using terms in the Fourier Series can often yield a good approximation for the periodic cycles with only a few terms.
+
+For a time series with $s$ seasons per cycle, our additive model can be written as:
+
+\begin{align*}
+  x_t
+    &= m_t + s_t + z_t \\
+    &= m_t +
+        \sum_{i=1}^{\left\lfloor \frac{s}{2} \right\rfloor} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\}
+      + z_t
+\end{align*}
+
+The term $m_t$ can take a variety of forms, including:
+
+-   Linear:       $~~~~~~~~~~~$ $m_t = \alpha_0 + \alpha_1 t$
+-   Quadratic:    $~~~~~~$ $m_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2$
+-   Exponential:  $~~~$ $m_t = \alpha_0 e^{\alpha_1 t}$
+-   Any other functional form
+
+The term $z_t$ is a (possibly autocorrelated) time series with mean zero.
+
+We will now focus on the seasonal term, $s_t$.
+The full seasonal term when considering 12 months in a year is:
+
+\begin{align*}
+  s_t 
+    &= \sum_{i=1}^{\left\lfloor \frac{s}{2} \right\rfloor} \left\{ A_i \sin \left( \frac{2\pi i t}{s} \right) + B_i \cos \left( \frac{2\pi i t}{s} \right) \right\} \\
+    &= \sum_{i=1}^{6} \left\{ A_i \sin \left( \frac{2\pi i t}{12} \right) + B_i \cos \left( \frac{2\pi i t}{12} \right) \right\} \\
+    &=~~~~ \left\{ A_1 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) + B_1 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \right\} & \leftarrow i = 1 \\
+    &~~~~~+ \left\{ A_2 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) + B_2 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \right\} & \leftarrow i = 2 \\
+    &~~~~~+ \left\{ A_3 \sin \left( \frac{2\pi \cdot 3 t}{12} \right) + B_3 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \right\} & \leftarrow i = 3 \\
+    &~~~~~+ \left\{ A_4 \sin \left( \frac{2\pi \cdot 4 t}{12} \right) + B_4 \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \right\} & \leftarrow i = 4 \\
+    &~~~~~+ \left\{ A_5 \sin \left( \frac{2\pi \cdot 5 t}{12} \right) + B_5 \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \right\} & \leftarrow i = 5 \\
+    &~~~~~+ \left\{ A_6 \sin \left( \frac{2\pi \cdot 6 t}{12} \right) + B_6 \cos \left( \frac{2\pi \cdot 6 t}{12} \right) \right\} & \leftarrow i = 6 \\
+    &=~~~~ \left\{ A_1 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) + B_1 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \right\}  \\
+    &~~~~~+ \left\{ A_2 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) + B_2 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \right\} \\
+    &~~~~~+ \left\{ A_3 \sin \left( \frac{2\pi \cdot 3 t}{12} \right) + B_3 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \right\} \\
+    &~~~~~+ \left\{ A_4 \sin \left( \frac{2\pi \cdot 4 t}{12} \right) + B_4 \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \right\} \\
+    &~~~~~+ \left\{ A_5 \sin \left( \frac{2\pi \cdot 5 t}{12} \right) + B_5 \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \right\} \\
+    &~~~~~+ \left\{ \phantom{A_6 \sin \left( \frac{2\pi \cdot 6 t}{12} \right) +}~~ B_6 \cos \left( \frac{2\pi \cdot 6 t}{12} \right) \right\} \\
+\end{align*}
+
+Note that $\sin \left( \frac{2\pi \cdot 6 t}{12} \right) = 0$ for all integer values of $t$, so we can omit the term $A_6 \sin \left( \frac{2\pi \cdot 6 t}{12} \right)$.
+
+As noted above, we can often use a relatively small subset of these terms to get a good approximation of the seasonal component.
+
+
+### Simulation
+
+The following simulation illustrates harmonic seasonal terms. Adjust the values of the parameters to create different seasonal patterns. Note that this is just a sum of sine and cosine function with various frequencies and amplitudes.
+
+```{=html}
+ <iframe id="harmonicSeasons" src="https://posit.byui.edu/content/3fcf5813-76fe-44ee-ab7f-b4a99884c855" style="border: none; width: 100%; height: 900px" frameborder="0"></iframe>
+```
+
+
+## Class Activity: Monthly Average High Temperature in Rexburg (15 min)
+
+### Visualization of the Time Series
+
+Consider the mean monthly high temperature in Rexburg.
+
+```{r}
+#| label: weather1
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+weather_df <- rio::import("data/rexburg_weather_monthly.csv") |>
+  mutate(dates = my(date_text)) |>
+  filter(dates >= my("1/2008") & dates <= my("12/2023")) |>
+  rename(x = avg_daily_high_temp) |>
+  mutate(TIME = 1:n()) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * TIME/12),
+    cos2 = cos(2 * pi * 2 * TIME/12),
+    cos3 = cos(2 * pi * 3 * TIME/12),
+    cos4 = cos(2 * pi * 4 * TIME/12),
+    cos5 = cos(2 * pi * 5 * TIME/12),
+    cos6 = cos(2 * pi * 6 * TIME/12),
+    sin1 = sin(2 * pi * 1 * TIME/12),
+    sin2 = sin(2 * pi * 2 * TIME/12),
+    sin3 = sin(2 * pi * 3 * TIME/12),
+    sin4 = sin(2 * pi * 4 * TIME/12),
+    sin5 = sin(2 * pi * 5 * TIME/12),
+    sin6 = sin(2 * pi * 6 * TIME/12)) |>
+  as_tsibble(index = TIME)
+
+p <- weather_df |>
+  as_tsibble(index = dates) |>
+  autoplot(.vars = x) +
+  geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
+    labs(
+      x = "Month",
+      y = "Mean Daily High Temperature (Fahrenheit)",
+      title = "Time Plot of Mean Daily Rexburg High Temperature by Month",
+      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+ggplotly(p)
+```
+
+
+
+
+
+### Model Selection
+
+
+
+::: {.callout-note icon=false title="Standardizing the Time Variable" collapse="false"}
+<!-- Begin hiding code for standardizing the time varaible -->
+  
+
+#### Standardizing the Time Variable
+
+
+To avoid serious floating point errors, we standardize the time variable. First, compute the sine and cosine terms using the original time variable, then transform the time variable by subtracting its mean and dividing by its standard deviation. (In other words, compute a $z$-score.)
+
+The model is adjusted accordingly after fitting.
+
+::: {.callout-warning}
+When the independent variable (the measure of time) is large, floating point errors in the computation of the regression coefficents can be substantial. 
+:::
+  
+We will demonstrate standardizing the time variable below.
+
+#### Computing the standardized time variable
+
+Our time variable was a simple incremented value counting the months ranging from 
+`r weather_df |> as_tibble() |> dplyr::select(TIME) |> head(1) |> pull()` 
+(representing `r weather_df |> as_tibble() |> dplyr::select(date_text) |> head(1) |> pull()`) 
+to 
+`r weather_df |> as_tibble() |> dplyr::select(TIME) |> tail(1) |> pull()` 
+(representing `r weather_df |> as_tibble() |> dplyr::select(date_text) |> tail(1) |> pull()`).
+
+```{r}
+#| label: weather20
+#| echo: false
+
+stats_unrounded <- weather_df |>
+  as_tibble() |>
+  dplyr::select(TIME) |>
+  summarize(mean = mean(TIME), sd = sd(TIME))
+
+stats <- stats_unrounded |>
+  round_df(3)
+```
+
+
+We standardize this variable by the transformation:
+  
+$$
+zTIME 
+  = \frac{t - \bar t}{s_t}
+  = \frac{t - `r stats$mean`}{`r stats$sd`}
+$$
+  
+where the mean of the variable `TIME` is $\bar t = `r stats$mean`$, and the standard deviation is $s_t = `r stats$sd`$.
+
+```{r}
+#| label: weather21
+weather_df <- weather_df |>
+  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME))
+```
+
+Now, we fit the trend components of the models using `zTIME` instead of `TIME`.
+We will start by modeling a cubic trend term. 
+
+:::
+<!-- End of the Standardizing the Time Variable section -->
+
+
+
+
+<!-- Model Selection: Cubic Trends -->
+
+::: {.callout-note icon=false title="Cubic Trends" collapse="false"}
+<!-- Begin hiding code for cubic trends -->
+
+#### Cubic Trend: Full Model
+
+Visually, we can identify a positive linear trend in the data. It is possible that there are higher-order properties of the trend. We will include a quadratic and cubic term in our search for a model.
+
+In addition to modeling the trend, we need to include terms for the seasonal component. We start with a full model that includes all six of the the sine and cosine terms from the summation above.
+
+```{r}
+#| label: weather2
+#| code-fold: true
+#| code-summary: "Show the code"
+
+full_cubic_lm <- weather_df |>
+  model(full_cubic = TSLM(x ~ zTIME + I(zTIME^2) + I(zTIME^3) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 ))
+
+full_cubic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+forecast_df <- full_cubic_lm |> forecast(weather_df, ) |> as_tibble() |> dplyr::select(zTIME, .mean) |> rename(pred = .mean)
+
+p <- weather_df |>
+  left_join(forecast_df, by = "zTIME") |>
+  as_tsibble(index = dates) |>
+  autoplot(.vars = x) +
+  geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
+  geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
+    labs(
+      x = "Month",
+      y = "Mean Daily High Temperature (Fahrenheit)",
+      title = "Time Plot of Mean Daily Rexburg High Temperature by Month",
+      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+ggplotly(p)
+```
+
+The cubic term in the trend is not significant, but the quadratic term is. We will fit a quadratic model. 
+
+::: {.callout-caution}
+If you choose a different range of dates, you may get a different result. The regression model is fitted to the data, not to the physical situation.
+:::
+
+:::
+<!-- End hiding code for cubic model -->
+
+
+
+
+
+<!-- Model Selection: Quadratic Trends -->
+
+::: {.callout-note icon=false title="Quadratic Trends" collapse="false"}
+<!-- Begin hiding code for quadratic trends -->
+
+#### Quadratic Trend: Full Model
+
+We now fit a quadratic model that includes all of the seasonal terms.
+
+```{r}
+#| label: weather3
+#| code-fold: true
+#| code-summary: "Show the code"
+
+full_quadratic_lm <- weather_df |>
+  model(full_quadratic = TSLM(x ~ zTIME + I(zTIME^2) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 ))
+
+full_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+```
+
+The coefficient on the quadratic trend term is very small and negative. This suggests the data may indicate a decrease in the *rate* of global warming.
+
+
+#### Quadratic Trend: Reduced Model 1
+
+Eliminating the $i=4$ and $i=5$ terms, we get the model:
+
+```{r}
+#| label: weather4
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced1_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_1  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6))
+
+reduced1_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+#### Quadratic Trend: Reduced Model 2
+
+Sequentially removing the cosine term for $i = 3$, we get:
+
+```{r}
+#| label: weather5
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced2_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_2  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos6))
+
+reduced2_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+```
+
+#### Quadratic Trend: Reduced Model 3
+
+This is the quadratic model obtained by eliminating the $i=6$ term from the previous model.
+
+```{r}
+#| label: weather6
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced3_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_3  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2 + sin3))
+
+reduced3_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+#### Quadratic Trend: Reduced Model 4
+
+This is similar to the previous model, except both the sine and cosine terms are included for $i=3$.
+
+```{r}
+#| label: weather7
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced4_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_4  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
+
+reduced4_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+#### Quadratic Trend: Reduced Model 5
+
+This quadratic model only includes the $i=1$ and $i=2$ terms.
+
+```{r}
+#| label: weather8
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced5_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_5  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2))
+
+reduced5_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+#### Quadratic Trend: Reduced Model 6
+
+This model includes a quadratic effect for time, but only includes the sine and cosine terms corresponding to $i=1$.
+
+```{r}
+#| label: weather9
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced6_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_6  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1))
+
+reduced6_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+:::
+<!-- End quadratic model -->
+
+
+
+
+
+<!-- Model Selection: Linear Trend -->
+
+::: {.callout-note icon=false title="Linear Trends" collapse="false"}
+<!-- Begin hiding code for linear trends -->
+
+
+#### Linear Trend: Full Model
+
+This is the full model with a linear time component. All of the period functions are included from $i=1$ to $i=6$.
+
+```{r}
+#| label: weather10
+#| code-fold: true
+#| code-summary: "Show the code"
+
+full_linear_lm <- weather_df |>
+  model(full_linear = TSLM(x ~ zTIME + I(zTIME^2) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 ))
+
+full_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+```
+
+#### Linear Trend: Reduced Model 1
+
+This linear model excludes the terms corresponding to $i=4$ and $i=5$.
+
+```{r}
+#| label: weather11
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced1_linear_lm <- weather_df |>
+  model(reduced_linear_1  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6))
+
+reduced1_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+#### Linear Trend: Reduced Model 2
+
+This represents the reduction of the previous model by eliminating the cosine term for $i=3$.
+
+```{r}
+#| label: weather12
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced2_linear_lm <- weather_df |>
+  model(reduced_linear_2  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos6))
+
+reduced2_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+```
+
+#### Linear Trend: Reduced Model 3
+
+This model is similar to the previous one, but the cosine term associated with $i=6$ has been excluded.
+
+```{r}
+#| label: weather13
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced3_linear_lm <- weather_df |>
+  model(reduced_linear_3  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2 + sin3))
+
+reduced3_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+#### Linear Trend: Reduced Model 4
+
+This model consists of a linear trend with all the periodic terms associated with $i=1$ through $i=3$.
+
+```{r}
+#| label: weather14
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced4_linear_lm <- weather_df |>
+  model(reduced_linear_4  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
+
+reduced4_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+#### Linear Trend: Reduced Model 5
+
+This model has a linear trend and only includes the periodic terms corresponding to $i=1$ and $i=2$.
+
+```{r}
+#| label: weather15
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced5_linear_lm <- weather_df |>
+  model(reduced_linear_5  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2))
+
+reduced5_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+#### Linear Trend: Reduced Model 6
+
+This simple model includes a linear trend and period terms associated with $i=1$.
+
+```{r}
+#| label: weather16
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced6_linear_lm <- weather_df |>
+  model(reduced_linear_6  = TSLM(x ~ zTIME + sin1 + cos1))
+
+reduced6_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+:::
+<!-- End of linear model output -->
+
+
+
+
+
+
+::: {.callout-note icon=false title="Model Comparison" collapse="false"}
+<!-- Begin hiding code for model comparison -->
+
+
+#### Model Comparison
+
+Now, we compare all the models side-by-side.
+
+```{r}
+#| label: weather17
+#| code-fold: true
+#| code-summary: "Show the code"
+#| output: false
+
+model_combined <- weather_df |>
+  model(
+    full_cubic = TSLM(x ~ TIME + I(TIME^2) + I(TIME^3) +
+      sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+      + sin4 + cos4 + sin5 + cos5 + cos6),
+    full_quadratic = TSLM(x ~ TIME + I(TIME^2) +
+      sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+      + sin4 + cos4 + sin5 + cos5 + cos6),
+    full_linear = TSLM(x ~ TIME + I(TIME^2) +
+      sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+      + sin4 + cos4 + sin5 + cos5 + cos6 ),
+    reduced_quadratic_1  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6),
+    reduced_quadratic_2  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos6),
+    reduced_quadratic_3  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3),
+    reduced_quadratic_4  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
+    reduced_quadratic_5  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2),
+    reduced_quadratic_6  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1),
+    reduced_linear_1  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6),
+    reduced_linear_2  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos6),
+    reduced_linear_3  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3),
+    reduced_linear_4  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
+    reduced_linear_5  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2),
+    reduced_linear_6  = TSLM(x ~ TIME + sin1 + cos1)
+  )
+
+glance(model_combined) |>
+  select(.model, AIC, AICc, BIC)
+```
+
+
+```{r}
+#| label: weather18
+#| echo: false
+
+combined_models <- glance(model_combined) |> 
+  select(.model, AIC, AICc, BIC)
+
+minimum <- combined_models |>
+  summarize(
+    AIC = which(min(AIC)==AIC),
+    AICc = which(min(AICc)==AICc),
+    BIC = which(min(BIC)==BIC)
+  )
+combined_models |>
+  rename(Model = ".model") |>
+  round_df(1) |>
+  format_cells(rows = minimum$AIC, cols = 2, "bold") |>
+  format_cells(rows = minimum$AICc, cols = 3, "bold") |>
+  format_cells(rows = minimum$BIC, cols = 4, "bold") |>
+  display_table()
+```
+
+We look for the smallest value of the AIC, AICc, and BIC criteria. These methods do not have to agree with each other, and they provide different perspectives based on their various algorithms. Notice that the AIC and AICc criteria both suggest the model we titled "Reduced Quadratic 1:"
+
+\begin{align*}
+  x_t &= \beta_0 + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 
+                        + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+                        + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+                        + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_7 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)  
+                        + \beta_8 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_9 \cos \left( \frac{2\pi \cdot 6 t}{12} \right) 
+               \phantom{+ \beta_9 \sin \left( \frac{2\pi \cdot 6 t}{12} \right)}
+      + z_t
+\end{align*}
+
+The BIC criteria points to the "Reduced Quadratic 5" model:
+
+\begin{align*}
+  x_t &= \beta_0 + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 
+            + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) + z_t
+\end{align*}
+
+If there are two competing models that are both satisfactory, it is usually preferable to choose the more parsimonious (or simpler) model.
+
+Sometimes there will be a model that does not attain the lowest value of these measures, yet you may still want to use it if the AIC, AICc, and BIC values are not too much larger than the smallest values. Why might you do this? If the model is particularly interpretable or makes logical sense in the context of the physical situation, it is better than a model with a lower AIC that is not readily interpretable. 
+
+You may even choose to include terms that are not statistically significant, if you determine they are practically important. For example, if a quadratic term is significant, but the linear term is not, it is a good practice to include the linear term anyway.
+
+Notice that the linear models corresponding to the "Reduced Quadratic 1" and "Reduced Quadratic 5" models have AIC/AICc/BIC values that are not much larger than the minimum values. Given other external evidence related to global warming, it is unlikely that the second derivative of the function representing the Earth's mean temperature is negative. In other words, it does not seem like the rate at which the earth is warming is decreasing. Even if there is a quadratic component to the trend, it is not visible to the eye in the time plot.
+
+For these reasons, we will apply the "Reduced Linear 5" model. This model implies a linear trend in the mean temperature of the Earth. The BIC for this model is not much bigger than the BIC for the "Reduced Quadratic 5" model. This model is simpler than the "Reduced Quadratic 1," "Reduced Quadratic 5," and "Reduced Linear 1" models. 
+
+\begin{align*}
+  x_t &= \beta_0 + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right)  
+            + \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) + z_t
+\end{align*}
+
+:::
+<!-- End of model comparison -->
+
+
+
+::: {.callout-note icon=false title="Model Fitting" collapse="false"}
+<!-- Begin hiding code for model fitting -->
+
+#### Model Fitting
+
+The model we have chosen is the "Reduced Linear 5" model. For convenience, we reprint the coefficients here.
+
+##### Reduced Linear 5
+
+```{r}
+#| label: weather22
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced5_linear_lm <- weather_df |>
+  model(reduced_linear_5  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2))
+
+reduced5_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+r5lin_coef_unrounded <- reduced5_linear_lm |>
+  tidy() |>
+  select(term, estimate, std.error)
+
+r5lin_coef <- r5lin_coef_unrounded |>
+  round_df(3)
+```
+
+The fitted model is therefore:
+
+\begin{align*}
+  x_t &= \hat \beta_0 + \hat \beta_1 \left( zTIME \right)  \\
+      & ~~~~~~~~~~ + \hat \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \hat \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~ + \hat \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \hat \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= \hat \beta_0 + \hat \beta_1 \left( \frac{t - \bar t}{s_t} \right)  \\
+      & ~~~~~~~~~~ + \hat \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \hat \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~ + \hat \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \hat \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= `r r5lin_coef$estimate[1]` 
+            + `r r5lin_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right) \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+\end{align*}
+
+The linear trend term can be simplified, if desired, but it is not necessary.
+
+\begin{align*}
+  x_t 
+      &= `r r5lin_coef$estimate[1]` 
+            + `r r5lin_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right) \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= `r r5lin_coef$estimate[1]` 
+            + `r r5lin_coef$estimate[2]` \left( \frac{t}{`r stats$sd`} \right)
+            - `r r5lin_coef$estimate[2]` \left( \frac{`r stats$mean`}{`r stats$sd`} \right) \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right)  
+      \\
+      &= `r r5lin_coef$estimate[1]` 
+            + `r ( r5lin_coef_unrounded$estimate[2] / stats_unrounded$sd ) |> round(3)` t
+            - `r ( r5lin_coef_unrounded$estimate[2] * stats_unrounded$mean / stats_unrounded$sd ) |> round(3)` \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= `r ( r5lin_coef_unrounded$estimate[1] -  r5lin_coef_unrounded$estimate[2] * stats_unrounded$mean / stats_unrounded$sd ) |> round(3)`
+            + `r ( r5lin_coef_unrounded$estimate[2] / stats_unrounded$sd ) |> round(3)` t  \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+\end{align*}
+
+
+##### Reduced Quadratic 5
+
+To illustrate how to incorporate the quadratic term, we also fit the model called "Reduced Quadratic 5".
+
+```{r}
+#| label: weather23
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced5_quadratic_lm <- weather_df |>
+  model(reduced_quadratic_5  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2))
+
+reduced5_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+r5quad_coef <- reduced5_quadratic_lm |>
+  tidy() |>
+  select(term, estimate, std.error) |>
+  round_df(3)
+```
+
+The fitted model is:
+
+\begin{align*}
+  x_t &= \hat \beta_0 + \hat \beta_1 \left( zTIME \right) + \hat \beta_2 \left( zTIME \right)^2  \\
+      & ~~~~~~~~~~ + \hat \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \hat \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~ + \hat \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \hat \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= \hat \beta_0 + \hat \beta_1 \left( \frac{t - \bar t}{s_t} \right) + \hat \beta_2 \left( \frac{t - \bar t}{s_t} \right)^2 \\
+      & ~~~~~~~~~~ + \hat \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \hat \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~ + \hat \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \hat \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= `r r5quad_coef$estimate[1]` 
+            + `r r5quad_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right)
+            + (`r r5quad_coef$estimate[3]`) \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right)^2 \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5quad_coef$estimate[4]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5quad_coef$estimate[5]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5quad_coef$estimate[6]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5quad_coef$estimate[7]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+\end{align*}
+
+If we want, we could rewrite this by expanding out the polynomial in the first three terms, but it is not necessary.
+
+:::
+<!-- End of Model Fitting -->
+
+
+
+::: {.callout-note icon=false title="Comparison of Fitted Values" collapse="false"}
+<!-- Begin hiding code for Comparison of Fitted Values -->
+
+#### Comparison of Fitted Values
+
+This time plot shows the original temperature data superimposed with the fitted curves based on three models.
+
+```{r}
+#| label: weather19
+#| code-fold: true
+#| code-summary: "Show the code"
+
+num_months <- weather_df |> 
+  as_tibble() |> 
+  dplyr::select(TIME) |> 
+  tail(1) |> 
+  pull()
+
+df <- tibble( TIME = seq(1, num_months, 0.01) ) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * TIME/12),
+    cos2 = cos(2 * pi * 2 * TIME/12),
+    cos3 = cos(2 * pi * 3 * TIME/12),
+    cos4 = cos(2 * pi * 4 * TIME/12),
+    cos5 = cos(2 * pi * 5 * TIME/12),
+    cos6 = cos(2 * pi * 6 * TIME/12),
+    sin1 = sin(2 * pi * 1 * TIME/12),
+    sin2 = sin(2 * pi * 2 * TIME/12),
+    sin3 = sin(2 * pi * 3 * TIME/12),
+    sin4 = sin(2 * pi * 4 * TIME/12),
+    sin5 = sin(2 * pi * 5 * TIME/12),
+    sin6 = sin(2 * pi * 6 * TIME/12)) |>
+  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME)) |>
+  as_tsibble(index = TIME)
+
+quad1_ts <- reduced1_quadratic_lm |>
+  forecast(df) |>
+  as_tibble() |>
+  dplyr::select(TIME, .mean) |>
+  rename(value = .mean) |>
+  mutate(Model = "Quadratic 1")
+
+quad5_ts <- reduced5_quadratic_lm |>
+  forecast(df) |>
+  as_tibble() |>
+  dplyr::select(TIME, .mean) |>
+  rename(value = .mean) |>
+  mutate(Model = "Quadratic 5")
+
+linear5_ts <- reduced5_linear_lm |>
+  forecast(df) |>
+  as_tibble() |>
+  dplyr::select(TIME, .mean) |>
+  rename(value = .mean) |>
+  mutate(Model = "Linear 5")
+
+data_ts <- weather_df |> 
+  as_tibble() |>
+  rename(value = x) |>
+  mutate(Model = "Data") |>
+  dplyr::select(TIME, value, Model)
+
+combined_ts <- bind_rows(data_ts, quad1_ts, quad5_ts, linear5_ts) 
+point_ts <- combined_ts |> filter(TIME == floor(TIME))
+
+okabe_ito_colors <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+p <- combined_ts |>
+  ggplot(aes(x = TIME, y = value, color = Model)) +
+  geom_line() +
+  geom_point(data = point_ts) +
+  labs(
+      x = "Month Number",
+      y = "Temperature (Fahrenheit)",
+      title = "Monthly Average of Daily High Temperatures in Rexburg",
+      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+  ) +    
+  scale_color_manual(
+    values = okabe_ito_colors[1:nrow(combined_ts |> as_tibble() |> select(Model) |> unique())], 
+    name = ""
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = "top", # Position the legend at the top
+    legend.direction = "horizontal" # Set the legend direction to horizontal
+  )
+
+ggplotly(p)
+```
+:::
+<!-- End of Comparison of Fitted Values -->
+
+
+
+
+## Small-Group Activity: River Flow (15 min)
+
+The Fall River is a tributary of the Henrys Fork of the Snake River northeast of Rexburg, Idaho. The United States Geological Survey (USGS) provides data every fifteen minutes on the flow rate (in cubic feet per second, cfs) of this river.
+
+This map shows the location of the monitoring station. On the left, you can see where Highway 20 intersects with Main St. in Ashton, Idaho.
+
+![Map of the fall river monitoring station](images/fallriver_map.png)
+Here is a glimpse of the raw data:
+
+```{r}
+#| label: fallriver1
+#| echo: false
+
+temp <- rio::import("data/fallriver.parquet")
+
+last_year <- temp |>
+  mutate(year = year(ymd_hm(datetime))) |>
+  summarize(max = max(year)) |>
+  pull()
+
+first_year <- temp |>
+  mutate(year = year(ymd_hm(datetime))) |>
+  summarize(min = min(year)) |>
+  pull()
+
+temp |>
+  dplyr::select(-comments) |>
+  display_partial_table(4,4)
+```
+
+
+The `r last_year` water year goes from October 1, `r last_year - 1` to September 30, `r last_year`. The data starts with the `r first_year + 1` water year and goes through the `r last_year` water year.
+
+We will average the flow rates across the first and last half of each month, so there are 24 values in a year. For various reasons, there are gaps in the data, even after averaging across the first and last half of the month. We impute the missing values by linear interpolation using the `zoo` package. This just means that when we encounter NAs, we fit a line between the most recent observed value and the next observed value. Then, we fill all the NAs in with the value given by the liner relationship between the two points.
+
+Here are a few of the values, after averaging:
+
+```{r}
+#| label: fallriver2
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# load necessary packages
+pacman::p_load(zoo) # for linear interpolation of missing values
+
+# create the tsibble
+fallriver_ts0 <- rio::import("data/fallriver.parquet") |>
+  mutate(date = ymd_hm(datetime)) |>
+  dplyr::select(datetime, date, flow) |>
+  mutate(dates = ymd(paste0(year(date), "/", month(date), "/", day(date)))) |>
+  group_by(dates) |>
+  summarize(flow = mean(flow), .groups = "keep") |>
+  ungroup() |> 
+  as_tsibble(index = dates) |>
+  fill_gaps() |> 
+  read.zoo() %>% 
+  # impute missing values by interpolation
+  na.approx(xout = seq(start(.), end(.), "day")) %>% 
+  fortify.zoo() |>
+  rename(
+    flow = ".", 
+    dates = Index
+  ) |>
+  mutate(round_day = ifelse(day(dates) <= 15, 1, 16)) |>
+  mutate(dates2 = ymd(paste0(year(dates), "/", month(dates), "/", round_day))) |>
+  group_by(dates2) |>
+  summarize(flow = mean(flow)) |>
+  ungroup() |> 
+  rename(dates = dates2) |>
+  as_tsibble(index = dates, regular = FALSE)
+```
+
+
+```{r}
+#| label: fallriver3
+#| echo: false
+
+fallriver_ts0 |>
+  display_partial_table(4,4)
+```
+
+
+```{r}
+#| label: fallriver4
+#| code-fold: true
+#| code-summary: "Show the code"
+
+fallriver_ts <- fallriver_ts0 |>
+  # compute additional variables needed for the regression
+  mutate(TIME = 1:n()) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * TIME / 24),
+    cos2 = cos(2 * pi * 2 * TIME / 24),
+    cos3 = cos(2 * pi * 3 * TIME / 24),
+    cos4 = cos(2 * pi * 4 * TIME / 24),
+    cos5 = cos(2 * pi * 5 * TIME / 24),
+    cos6 = cos(2 * pi * 6 * TIME / 24),
+    cos7 = cos(2 * pi * 7 * TIME / 24),
+    cos8 = cos(2 * pi * 8 * TIME / 24),
+    cos9 = cos(2 * pi * 9 * TIME / 24),
+    cos10 = cos(2 * pi * 10 * TIME / 24),
+    cos11 = cos(2 * pi * 11 * TIME / 24),
+    cos12 = cos(2 * pi * 12 * TIME / 24),
+    sin1 = sin(2 * pi * 1 * TIME / 24),
+    sin2 = sin(2 * pi * 2 * TIME / 24),
+    sin3 = sin(2 * pi * 3 * TIME / 24),
+    sin4 = sin(2 * pi * 4 * TIME / 24),
+    sin5 = sin(2 * pi * 5 * TIME / 24),
+    sin6 = sin(2 * pi * 6 * TIME / 24),
+    sin7 = sin(2 * pi * 7 * TIME / 24),
+    sin8 = sin(2 * pi * 8 * TIME / 24),
+    sin9 = sin(2 * pi * 9 * TIME / 24),
+    sin10 = sin(2 * pi * 10 * TIME / 24),
+    sin11 = sin(2 * pi * 11 * TIME / 24),
+    # sin12 = sin(2 * pi * 12 * TIME / 24) # zero for all integer values of t
+  ) 
+
+# plot the time series
+p <- fallriver_ts |>
+  autoplot(.vars = flow) +
+  labs(
+      x = "Date",
+      y = "Flow (cubic feet per second, cfs)",
+      title = "Fall River Flow Rate (cfs)",
+      subtitle = "Above the Yellowstone Canal near Squirrel, Idaho"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+ggplotly(p)
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the Fall River flow data to do the following.
+
+-   Explore various linear models for the flow of the Fall River over time.
+-   Choose a model to represent the data, and justify your decision.
+
+:::
+
+
+
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_5_2.qmd" download="homework_5_2.qmd"> homework_5_2.qmd </a>
+
+:::
+
+
+
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">Small-Group Activity</a>
+  
+::: {#Solutions1 style="display:none;"}
+    
+Here are the coefficients for two possible models that could be fitted to the Fall River flow data. 
+
+```{r}
+#| label: fallriverSolutions
+#| code-fold: true
+#| code-summary: "Show the code"
+
+river_full_lm <- fallriver_ts |>
+  model(river_full_lm  = TSLM(flow ~ TIME 
+                              + sin1 + cos1 + sin2 + cos2 
+                              + sin3 + cos3 + sin4 + cos4 
+                              + sin5 + cos5 + sin6 + cos6 
+                              + sin7 + cos7 + sin8 + cos8
+                              + sin9 + cos9 + sin10 + cos10
+                              + sin11 + cos11       + cos12
+                              )
+        )
+
+river_full_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+```{r}
+#| label: fallriverSolutions2
+#| code-fold: true
+#| code-summary: "Show the code"
+
+river_reduced1_lm <- fallriver_ts |>
+  model(river_reduced1_lm  = TSLM(flow ~ TIME 
+                              + sin1 + cos1 + sin2 + cos2 
+                              + sin3 + cos3 + sin4 + cos4 
+                              + sin5 + cos5
+                              )
+        )
+
+river_reduced1_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+
+
+:::
+
+
+

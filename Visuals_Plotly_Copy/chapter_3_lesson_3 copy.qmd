@@ -1,0 +1,914 @@
+---
+title: "Holt-Winters Method (Additive Model)"
+subtitle: "Chapter 3: Lesson 3"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_3_lesson_3_outcomes.qmd >}}
+
+
+
+
+
+## Introduction to the Holt-Winters Method (Additive Model)
+
+### From EWMA to Holt-Winters
+
+#### Simple Exponential Smoothing (EWMA)
+
+The exponential weighted moving average (EWMA) is a simple method for smoothing (or filtering) a time series. We update the estimate of the level of the time series as:
+
+$$
+  a_t = \alpha x_t + (1-\alpha) a_{t-1}
+$$
+
+where $a_t$ is the estimate of the level of the time series at time $t$ and $0 \le \alpha \le 1$ is the smoothing paramter.
+
+This is known as the *level update equation*, because at each time step, we can update our estimate of the level (or the center) of the time series. 
+It is called exponential smoothing, because at each preceding value has exponentially decreasing influence on the estimate.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Explain the level update equation to your partner.
+
+:::
+
+These computations are based on previous values and $a_1 = x_1$. The number $0 \le \alpha \le 1$ is a smoothing parameter. This determines how much weight is given to previous values when creating the updated level estimate.
+
+If you were to use this model for forecasting, you would not be able to consider any trend or seasonality in the forecast. Hence, the future values would all be forecasted as the last value of $a_n$:
+
+$$
+  \hat x_{n+k|n} = a_n
+$$
+where $\hat x_{n+k \mid n}$ is the estimate of the time series $k$ time units in the future past time $t=n$.
+Frankly, this is not very useful, because many time series have trends or seasonality.
+
+#### Holt's Exponential Smoothing
+
+In 1957, Charles Holt published a new procedure that introduced a trend into this model. The forecasted values were:
+
+$$
+  \hat x_{n+k|n} = a_n + k b_n
+$$
+
+where $b_n$ is the slope indicating how much the time series changes on average from one time point to another and $k$ is the number of time periods past $t=n$ you are forecasting.
+
+The slope update equation is:
+
+$$
+  b_t = \beta \left( a_t - a_{t-1} \right) + (1-\beta) b_{n-1}
+$$
+
+where $0 \le \beta \le 1$ is a smoothing parameter, $b_t$ is the slope estimate at time $t$, and $a_t$ is the estimate of the level of the time series at time $t$.
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Explain the slope update equation to your partner.
+
+:::
+
+#### Winter's Exponential Smoothing (Holt-Winters Filtering)
+
+Peter Winters was a colleague of Holt's at the Carnagie Institute of Technology. In 1960, he publised a revision of Winters' technique that allowed for seasonal variation. This is known as the *Holt-Winters Method* or *Holt-Winters Filtering*. The forecasting equation is:
+
+$$
+  \hat x_{n+k|n} = a_n + k b_n + s_{n+k-p}
+$$
+
+where $\hat x_{n+k|n}$ is the forecasted value of the time series $k$ units in the future after time $t=n$, and the time series is assumed to have seasonality with a period of $p$ time units; $a_n$ is the level of the time series at time $t=n$; $b_n$ is the slope of the time series at time $t=n$; and $s_{n+k-p}$ is the estimated seasonal component at time $t=n+k$. Note that we must look back one full period to get the estimated seasonal component.
+
+We will practice forecasting, before we discuss how to get the values of $a_t$, $b_t$, and $s_t$.
+
+The Holt-Winters method was applied to the chocolate search data. This table summarizes the results for the last few values of the time series.
+
+```{r}
+
+```
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+
+-   Explain the slope update equation to your partner.
+
+:::
+
+The Holt-Winters method provides a way to model a time series in which we consider the time series in layers. first, there is the level (the smoothed $x_t$ values from the time series) at time $t$. We will denote the *level* by $a_t$. The level can change from time to time.
+We introduce a value $b_n$, which we call the *slope*. This is the change in the level of the series from one time period to another. (As the book points out, R and many textbooks call the slope the *trend*.) 
+Finally, we include a seasonal estimate, $s_t$, which indicates how much the time series rises or falls above the level and trend values at time $t$.
+
+To visualize these terms, it can be helpful to consider the forecasting model. Suppose we have computed that Holt-Winters estimate of a time series with $n$ observations. In other words, we have just fit a curve to the entire time series. 
+We will use a very simple time series for this illustration. 
+
+
+
+```{r, warning=FALSE}
+holt_winters_additive_forecast <- function(data, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 12, a1 = NULL, b1 = NULL, s1 = NULL) {
+  # Assuming 'data' is a tsibble with a column 'value'
+  data <- data %>%
+    mutate(month = month(date))
+  
+  at <- numeric(nrow(data))
+  bt <- numeric(nrow(data))
+  st <- numeric(nrow(data))
+  
+  at[1] <- ifelse(!is.null(a1), a1, data$value[1]) 
+  bt[1] <- ifelse(!is.null(b1), b1, (1 / p) * mean( data$value[(p+1):(2*p)] - data$value[1:p] )) 
+  st[1:p] <- ifelse(!is.null(s1), s1, 0)
+  
+  # First cycle
+  for (t in 2:p) {
+    at[t] <- alpha * (data$value[t] - st[t - 0 * p ]) + (1 - alpha) * (at[t - 1] + bt[t - 1])
+    bt[t] <- beta * (at[t] - at[t - 1]) + (1 - beta) * bt[t - 1]
+  }
+  
+  for (t in (p + 1):nrow(data)) {
+    at[t] <- alpha * (data$value[t] - st[t - p]) + (1 - alpha) * (at[t - 1] + bt[t - 1])
+    bt[t] <- beta * (at[t] - at[t - 1]) + (1 - beta) * bt[t - 1]
+    st[t] <- gamma * (data$value[t] - at[t]) + (1 - gamma) * st[t - p]
+  }
+  
+  data <- data %>%
+    mutate(estimated_level = at, estimated_slope = bt, estimated_seasonal = st)
+  
+  data %>% return()
+}
+```
+
+
+```{r, warning=FALSE}
+holt_winters_additive_plot <- function(data) {
+# Plot 1: Just 'data$estimated_level'
+  plot_at <- ggplot(data, aes(x = date, y = estimated_level)) +
+    geom_line(color = "blue", size = 1) +
+    labs(
+      x = "Date",
+      y = "Level (at)",
+      title = NULL
+    ) +
+    theme_minimal()
+
+  # Plot 2: Just 'data$estimated_slope'
+  plot_bt <- ggplot(data, aes(x = date, y = estimated_slope)) +
+    geom_line(color = "red", size = 1) +
+    labs(
+      x = "Date",
+      y = "Slope (bt)",
+      title = NULL
+    ) +
+    theme_minimal()
+
+  # Plot 3: Just 'data$estimated_seasonal'
+  plot_st <- ggplot(data, aes(x = date, y = estimated_seasonal)) +
+    geom_line(color = "green", size = 1) +
+    labs(
+      x = "Date",
+      y = "Seasonal (st)",
+      title = NULL
+    ) +
+    theme_minimal()
+
+  # Plot 4: Original trendline with 'data$estimated_level'
+  plot_combined <- ggplot(data, aes(x = date)) +
+    geom_line(aes(y = value), color = "black", size = 1) +
+    geom_line(aes(y = estimated_level, color = "Combined", alpha=0.5), size = 1) +
+    labs(
+      x = "Date",
+      y = "Value",
+      title = NULL,
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none")
+
+  return(list(plot_at, plot_bt, plot_st, plot_combined))
+}
+```
+
+
+```{r, warning=FALSE}
+# holt_winters_additive_forecast_plot <- function(data, k = 8) {
+# 
+#   
+#   # Plot 4: Original trendline with 'data$estimated_level'
+#   plot_combined <- ggplot(data, aes(x = date)) +
+#     geom_line(aes(y = value), color = "black", size = 1) +
+#     geom_line(aes(y = estimated_level, color = "Combined", alpha=0.5), size = 1) +
+#     labs(
+#       x = "Date",
+#       y = "Value",
+#       title = NULL,
+#       color = "Components"
+#     ) +
+#     theme_minimal() +
+#     theme(legend.position = "none")
+# 
+#   return(plot_combined)
+# }
+```
+
+<!-- #### I THINK THIS IS THE WRONG ONE... -->
+
+<!-- ```{r} -->
+<!-- a <- function(t) { 100 } -->
+<!-- b <- function(t) { 1/2 } -->
+<!-- s <- function(t) { (t %% 4 == 2) * 3 } -->
+<!-- x <- function(t) { a(t) + t * b(t) + s(t) } -->
+<!-- n_months <- 12 -->
+
+<!-- start_date <- my(paste(1, floor(year(now())-n_months/12))) -->
+<!-- date_seq <- seq(start_date, -->
+<!--     start_date + months(n_months - 1), -->
+<!--     by = "1 months") -->
+<!-- date_seq -->
+
+<!-- temp_ts <- data.frame(date = yearmonth(date_seq), value = x(1:n_months)) |> -->
+<!--   as_tsibble(index = date) -->
+<!-- temp_ts |> -->
+<!--   autoplot(.vars = value) -->
+<!-- temp1 <- holt_winters_additive_forecast(temp_ts, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 4, b1=NULL, s1 = 0) -->
+<!-- temp1 %>% as_tibble() -->
+<!-- # holt_winters_additive_forecast_plot(temp1) -->
+<!-- holt_winters_additive_plot(temp1) -->
+<!-- ``` -->
+
+#### This is the right one
+
+```{r}
+#| warning: false
+
+a <- function(t) { 100 }
+b <- function(t) { 1/2 }
+s <- function(t) { (t %% 4 == 2) * 3 }
+x <- function(t) { a(t) + (t-1) * b(t) + s(t) }
+n_months <- 36
+max_k <- 16
+
+start_date <- my(paste(1, floor(year(now())-n_months/12)))
+date_seq <- seq(start_date,
+    start_date + months(n_months - 1),
+    by = "1 months")
+date_seq
+
+temp_ts <- data.frame(date = yearmonth(date_seq), value = x(1:n_months)) |>
+  as_tsibble(index = date)
+temp_ts |>
+  autoplot(.vars = value)
+temp1 <- holt_winters_additive_forecast(temp_ts, alpha = 0.2, beta = 0.2, gamma = 0.2, p = 4, s1 = 0)
+
+
+start_date <- ym(max(temp1$date)) + months(1)
+date_seq <- seq(start_date,
+    start_date + months(max_k - 1),
+    by = "1 months")
+date_seq
+
+tail1 <- temp1 %>% mutate(n = row_number()) %>% tail(1)
+an <- tail1$estimated_level[1]
+bn <- tail1$estimated_slope[1]
+n <- tail1$n[1]
+
+temp2 <- temp1 %>% 
+  bind_rows(data.frame(date = date_seq, value = NA, month = NA, estimated_level = NA, estimated_slope = NA, estimated_seasonal = NA)) %>% 
+  mutate(forecast = as.numeric(NA))
+
+temp2$forecast[n] <- temp2$estimated_level[n] + temp2$estimated_seasonal[n]
+
+for (k in (n+1):(n+max_k)) {
+  temp2$estimated_seasonal[k] <- temp2$estimated_seasonal[k - 4] ######### MAGIC NUMBER: 4 periods per cycle
+  temp2$forecast[k] <- an + (k - n) * bn + temp2$estimated_seasonal[k]
+}
+
+ggplotly(ggplot(temp2, aes(x = date)) +
+    geom_line(aes(y = value), color = "black", size = 1) +
+    geom_line(aes(y = estimated_level + estimated_seasonal, color = "Combined", alpha=0.5), size = 1) +
+    geom_line(aes(y = forecast, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
+    labs(
+      x = "Date",
+      y = "Value",
+      title = NULL,
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none"))
+
+```
+
+
+
+
+```{r}
+temp1
+temp2
+```
+
+
+Now, suppose we want to use this estimated curve to forecast future values of the time series.
+
+## Forecast (Additive) 
+
+
+
+
+
+
+```{r, warning=FALSE}
+df <- read.csv("https://byuistats.github.io/timeseries/data/baltimore_crime.csv", 
+               header=TRUE,
+               stringsAsFactors=FALSE)
+summary_df <- df %>%
+  group_by(CrimeDate) %>%
+  summarise(
+    total_incidents = sum(Total.Incidents)
+  )
+crime_data <- summary_df %>%
+  mutate(CrimeDate = as.Date(CrimeDate, format = "%m/%d/%Y")) %>% 
+  arrange(CrimeDate)
+crime_tsibble <- as_tsibble(crime_data, index = CrimeDate)
+crime_tsibble # Uncomment to see table
+```
+
+
+
+
+
+#### Additive seasonality Model
+- **Alpha** = 0.2
+- **Beta** = 0.2
+- **Gamma** = 0.2
+
+```{r}
+# holt_winters_additive_forecast_plot(crime_tsibble, alpha = 0.2, beta = 0.2, gamma = .2)
+```
+
+
+\begin{align*}
+  a_t &= \alpha \left( x_t - s_{t-p} \right) + (1-\alpha) \left( a_{t-1} + b_{t-1} \right) \\
+  b_t &= \beta \left( a_t - a_{t-1} \right) + (1-\beta) b_{t-1} \\
+  s_t &= \gamma \left( x_t - a_t \right) + (1-\gamma) s_{t-p}
+\end{align*}
+
+
+## Small Group Activity: Holt-Winters Model for BYU-Idaho Enrollment Data (20 min)
+
+In Chapter 2, Lesson 3, we explored the BYU-Idaho Enrollment data. We will apply the Holt-Winters model to these data.
+
+```{r}
+#| warning: false
+
+# read in the data from a csv and make the tsibble
+
+# Method 1:
+enrollment_df <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv")
+start_date <- lubridate::ymd("2019-05-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(enrollment_df)-1) * 4,
+                by = "4 months")
+enrollment_ts <- tibble(
+    dates = tsibble::yearmonth(date_seq),
+    semester = pull(enrollment_df, semester),
+    enrollment = pull(enrollment_df, enrollment)
+  ) |>
+  dplyr::select(semester, dates, enrollment) |>
+  as_tsibble(index = dates)
+
+# Method 2:
+enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
+  mutate(
+    dates = yearmonth(ym(paste(year, term * 4 - 3)))
+  ) |>
+  dplyr::select(semester, dates, enrollment) |>
+  as_tsibble(index = dates) 
+
+# Compute and plot the decomposition
+enrollment_decompose <- enrollment_ts |>
+    model(feasts::classical_decomposition(enrollment,
+        type = "add"))  |>
+    components()
+autoplot(enrollment_decompose) |> ggplotly()
+```
+
+
+<!-- ### Moving Average -->
+
+<!-- We can use the following function to compute the moving average -->
+
+<!-- ```{r} -->
+<!-- # compute moving average -->
+<!-- compute_moving_average <- function(df, variable, periods = 12) { -->
+<!--   sum <- 0 -->
+
+<!--   for (i in 1:(periods / 2)) { -->
+<!--     sum <- sum + lead(eval(substitute(variable), df), i)           # x_{t+i} -->
+<!--     sum <- sum + lag(eval(substitute(variable), df), i)            # x_{t-i} -->
+<!--   } -->
+
+<!--   sum <- sum + eval(substitute(variable), df) -->
+<!--   sum <- sum - lag(eval(substitute(variable), df), periods / 2) / 2 -->
+<!--   sum <- sum - lead(eval(substitute(variable), df), periods / 2) / 2 -->
+
+<!--   df$m_hat <- sum / periods -->
+
+<!--   return(df) -->
+<!-- } -->
+
+<!-- crime_decomposition <- crime_monthly_ts |> -->
+<!--   compute_moving_average(value) -->
+<!-- ``` -->
+
+<!-- Here are the first few rows of this new file.  -->
+<!-- ```{r} -->
+<!-- #| echo: false -->
+
+<!-- crime_decomposition |> -->
+<!--   head(13) |> -->
+<!--   display_table() -->
+<!-- ``` -->
+
+<!-- ### Estimated Monthly Multiplicative Effect -->
+
+<!-- <!-- Check Your Understanding --> -->
+
+<!-- ::: {.callout-tip icon=false title="Check Your Understanding"} -->
+
+<!-- -   Use the 12-month centered moving average computed above to calculate the estimated monthly multiplictive effect. -->
+<!-- -   Question1 -->
+<!-- -   Question2 -->
+
+<!-- ::: -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- **Calculate Mean Crime Incidents Monthly by Year** -->
+
+<!-- ```{r} -->
+<!-- # Calculate mean annual total incidents -->
+<!-- crime_annual_ts <- crime_tsibble |> -->
+<!--   index_by(year = year(dates)) |> -->
+<!--   summarise(value = mean(incidents)) -->
+
+<!-- # Plot mean annual total incidents using autoplot -->
+<!-- autoplot(crime_annual_ts, .vars = value) + -->
+<!--   labs( -->
+<!--     x = "Year", -->
+<!--     y = "Mean Daily Crime Incidents", -->
+<!--     title = "Mean Daily Crime Incidents" -->
+<!--   ) + -->
+<!--   theme(plot.title = element_text(hjust = 0.5)) -->
+<!-- ``` -->
+
+
+<!-- **Monthly Boxplots of Total Crime Incidents** -->
+
+<!-- ```{r} -->
+<!-- # Create boxplots -->
+<!-- ggplot(crime_tsibble, aes(x = as.factor(month), y = incidents)) + -->
+<!--   geom_boxplot() + -->
+<!--   labs( -->
+<!--     x = "Month", -->
+<!--     y = "Total Crime Incidents", -->
+<!--     title = "Boxplots of Total Crime Incidents by Month" -->
+<!--   ) + -->
+<!--   theme(plot.title = element_text(hjust = 0.5)) -->
+<!-- ``` -->
+
+
+
+<!-- ## Estimating the Trend: Moving Average (5 min) -->
+
+<!-- ```{r} -->
+<!-- # Create a daily plot -->
+<!-- dp <- autoplot(crime_tsibble, .vars = incidents) + -->
+<!--     labs( -->
+<!--       x = "Month", -->
+<!--       y = "Total Crime Incidents", -->
+<!--       title = "Total Crime Incidents Over Time" -->
+<!--     ) + -->
+<!--     theme(plot.title = element_text(hjust = 0.5)) -->
+
+<!--   # Calculate mean monthly total incidents -->
+<!--   mean_monthly_incidents <- crime_tsibble |> -->
+<!--     as.data.frame() |> -->
+<!--     group_by(year, month) |> -->
+<!--     summarize(value = mean(incidents)) |> -->
+<!--   mutate(index = tsibble::yearmonth( mdy(paste0(month, "/15/", year)) )) |> -->
+<!--   as_tsibble(index = index) -->
+
+<!--   # Calculate mean annual total incidents -->
+<!--   mean_annual_incidents <- crime_tsibble |> -->
+<!--     as.data.frame() |> -->
+<!--     group_by(year) |> -->
+<!--     summarize(value = mean(incidents)) |> -->
+<!--   mutate(index = tsibble::yearmonth( mdy(paste0("7/1/",year)) )) |> -->
+<!--   as_tsibble(index = index) -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- # Create a yearly plot -->
+<!--   yp <- ggplot(mean_annual_incidents, aes(x = year, y = value)) + -->
+<!--     geom_line() + -->
+<!--     labs( -->
+<!--       x = "Year", -->
+<!--       y = "Mean Total Crime Incidents", -->
+<!--       title = "Annual Mean Total Crime Incidents" -->
+<!--     ) + -->
+<!--     scale_x_continuous(breaks = seq(2004, max(crime_tsibble$year), by = 2)) + -->
+<!--     theme(plot.title = element_text(hjust = 0.5)) -->
+
+<!-- # Create a monthly plot -->
+<!--   mp <- ggplot(mean_monthly_incidents, aes(x = index, y = value)) + -->
+<!--     geom_line() + -->
+<!--     labs( -->
+<!--       x = "Year", -->
+<!--       y = "Mean Total Crime Incidents", -->
+<!--       title = "Monthly Mean Total Crime Incidents" -->
+<!--     ) + -->
+<!--     # scale_x_continuous(breaks = seq(2004, max(crime_tsibble$year), by = 2)) + -->
+<!--     theme(plot.title = element_text(hjust = 0.5)) -->
+
+<!--   # Display both simultaneously -->
+<!--   dp / mp -->
+<!--   dp / yp -->
+
+<!-- ``` -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Small Group Activity: Decomposition of Baltimore Crime Data (20 min)
+
+### Background 
+
+The City of Baltimore publishes crime data, which can be accessed through a query. 
+This dataset is sourced from the City of Baltimore Open Data and is updated monthly. 
+You can explore the data on [data.world](https://data.world/data-society/city-of-baltimore-crime-data).
+
+Use the following code to import the data:
+
+
+<!-- **Packages** -->
+<!-- ```{r, warning=FALSE} -->
+<!-- # library(dplyr) -->
+<!-- # library(tidyr) -->
+<!-- # library(ggplot2) -->
+<!-- # library(tidyverse) -->
+<!-- # library(dygraphs) -->
+<!-- # library(tidyquant) -->
+<!-- # library(forecast) -->
+<!-- ``` -->
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_df <- rio::import("https://byuistats.github.io/timeseries/data/baltimore_crime.csv")
+#crime_df <- rio::import("data/baltimore_crime.parquet")
+
+```
+
+
+```{r}
+#| include: false
+#| eval: false
+# # Store the data, in case the query stops working
+# rio::export(crime_df, "data/baltimore_crime.csv")
+```
+
+
+The data set consists of `r nrow(crime_df)` rows and `r ncol(crime_df)` columns. 
+There are a few key variables:
+
+- **Date and Time:** Records the date and time of each incident.
+- **Location:** Detailed coordinates of each incident.
+- **Crime Type:** Description of the type of crime.
+
+When exploring a new time series, it is crucial to carefully examine the data. Here are a few rows of the original data set. 
+
+```{r}
+#| echo: false
+
+# View data
+crime_df |> 
+  display_partial_table(6,1)
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Using the command `crime_df |> summary()`, we learn that the `Total.Incidents` always equals 1. What does each row in the data frame represent?
+
+:::
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Data Summary and Aggregation
+# Group by dates column and summarize from Total.Incidents column
+daily_summary_df <- crime_df |>
+  rename(dates = CrimeDate) |>
+  group_by(dates) |>
+  summarise(incidents = sum(Total.Incidents))
+
+
+# Data Transformation and Formatting
+# Select relevant columns, format dates, and arrange the data
+crime_data <- daily_summary_df |>
+  mutate(dates = mdy(dates)) |>
+  mutate(
+    month = month(dates),
+    day = day(dates),
+    year = year(dates)
+  ) |>
+  dplyr::select(dates, month, day, year, incidents) |>
+  arrange(dates)
+
+# Convert formatted data to a tsibble with dates as the index
+crime_tsibble <- as_tsibble(crime_data, index = dates)
+```
+
+Here are a few rows of the summarized data.
+
+```{r}
+#| echo: false
+
+# View data
+daily_summary_df |>
+  display_partial_table(6,3) 
+```
+
+The following table summarizes the number of days in each month for which crime data were reported.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_data |>
+  mutate(month_char = format(as.Date(dates), '%b') ) |>
+  group_by(month, month_char, year) |>
+  summarise(n = n(), .groups = "keep") |>
+  group_by() |>
+  arrange(year, month) |>
+  dplyr::select(-month) |>
+  rename(Year = year) |>
+  pivot_wider(names_from = month_char, values_from = n) |>
+  display_table()
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you observe about the data?
+-   What are some problems that could arise from incomplete data?
+-   How do you recommend we address the missing data?
+
+:::
+
+Here is a time plot of the number of crimes reported in Baltimore daily.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Time series plot of total incidents over time
+crime_plot <- ggplotly(autoplot(crime_tsibble, .vars = incidents) +
+  labs(
+    x = "Time",
+    y = "Total Crime Incidents",
+    title = "Total Crime Incidents Over Time"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+
+# Display the plot
+crime_plot
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you notice about this time plot?
+    - Describe the trend
+    - Is there evidence of seasonality?
+    - Is the additive or multiplicative model appropriate?
+    - Which date has the highest number of recorded crimes? Can you determine a reason for this spike?
+
+:::
+
+### Monthly Summary
+
+We could analyze the data at the daily level, but for simplicity we will model the monthly totals.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_monthly_ts <- crime_tsibble |>
+  index_by(month_year = floor_date(as_date(dates), "month")) |>
+  summarise(value = sum(incidents))
+
+# Plot mean annual total incidents using autoplot
+ggplotly(autoplot(crime_monthly_ts, .vars = value) +
+  labs(
+    x = "Year",
+    y = "Total Monthly Crime Incidents",
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+There is incomplete data for `r temp <- crime_tsibble |> arrange(dates) |> as.data.frame() |> tail(1); temp |> dplyr::select(year) |> pull()`, as data were not provided after `r last_date <- temp |> dplyr::select(dates) |> pull(); paste0(month(last_date), "/", day(last_date), "/", year(last_date))`. We will only consider data through `r month(paste0(month(last_date)-1, "/1/", year(last_date)), label = TRUE, abbr = FALSE)` `r ifelse(month(last_date) == 1, year(last_date)-1, year(last_date))`.
+<!-- ~ -->
+<!-- This is hard-coded.. -->
+We will omit any data after October 2016.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_monthly_ts <- crime_monthly_ts |>
+  filter(month_year < mdy("10/31/2016"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- ## TO BE CONTINUED.... -->
+
+
+
+
+
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_3_3.qmd" download="homework_3_3.qmd"> homework_3_3.qmd </a>
+
+:::
+
+
+
+
+
+
+
+
+
+
+<a href="javascript:showhide('Solutions0')"
+style="font-size:.8em;">Balitmore Crime Time Plot</a>
+
+::: {#Solutions0 style="display:none;"}
+
+```{r}
+# Dates with high criminal activity
+crime_data |> arrange(desc(incidents)) |> head()
+```
+
+On April 27, 2015, 419 crimes were recorded. These are associated with protests over arrest of Freddie Gray.
+:::
+
+
+
+
+
+
+
+
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Class Activity</a>
+
+::: {#Solutions style="display:none;"}
+
+Solutions to Class Activity
+
+```{r}
+#| echo: false
+stuff <- "here"
+```
+
+:::
+
+
+
+## References
+
+-   C. C. Holt (1957) Forecasting seasonals and trends by exponentially weighted moving averages, ONR Research Memorandum, Carnegie Institute of Technology 52. (reprint at https://doi.org/10.1016/j.ijforecast.2003.09.015).
+-   P. R. Winters (1960). Forecasting sales by exponentially weighted moving averages. Management Science, 6, 324--342. 10.1287/mnsc.6.3.324.

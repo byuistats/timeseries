@@ -1,0 +1,907 @@
+---
+title: "Autoregressive Models"
+subtitle: "Chapter 4: Lesson 3"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_4_lesson_3_outcomes.qmd >}}
+
+
+
+
+## Preparation
+
+-   Read Section 4.5
+
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+
+## Class Activity: Definition of Autoregressive Models (10 min)
+
+::: {.callout-note icon=false title="Definition of an Autoregressive Model"}
+
+The time series $\{x_t\}$ is an **autoregressive process of order $p$**, denoted as $AR(p)$, if
+$$
+  x_t = \alpha_1 x_{t-1} + \alpha_2 x_{t-2} + \alpha_3 x_{t-3} + \cdots + \alpha_{p-1} x_{t-(p-1)} + \alpha_p x_{t-p} + w_t ~~~~~~~~~~~~~~~~~~~~~~~ (4.15)
+$$
+
+where $\{w_t\}$ is white noise and the $\alpha_i$ are the model parameters with $\alpha_p \ne 0$.
+
+:::
+
+In short, this means that the next observation of a time series depends linearly on the previous $p$ terms and a random white noise component. 
+
+<!-- Check your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Show that we can write Equation (4.15) as a polynomial of order $p$ in terms of the backward shift operator:
+  $$
+   \left( 1 - \alpha_1 \mathbf{B} - \alpha_2 \mathbf{B}^2 - \cdots - \alpha_p \mathbf{B}^p \right) x_t = w_t
+  $$
+
+:::
+
+We have seen some special cases of this model already.
+
+<!-- Check your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Give another name for an $AR(0)$ model.
+
+-   Show that the random walk is the special case $AR(1)$ with $\alpha_1 = 1$. (<a href="https://byuistats.github.io/timeseries/chapter_4_lesson_1.html#randomwalk">See Chapter 4, Lesson 1</a>.)
+
+-   Show that the exponential smoothing model is the special case where 
+  $$\alpha_i = \alpha(1-\alpha)^i$$
+  for $i = 1, 2, \ldots$ and $p \rightarrow \infty$. (<a href="https://byuistats.github.io/timeseries/chapter_3_lesson_2.html#ewma">See Chapter 3, Lesson 2</a>.)
+
+:::
+
+We now explore the autoregressive properties of this model.
+
+<!-- Check your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Show that the $AR(p)$ model is a regression of $x_t$ on past terms from the same series. 
+Hint: write the $AR(p)$ model in more familiar terms, letting 
+  $$y_i = x_t, ~~ x_1 = x_{t-1}, ~~ x_2 = x_{t-2}, ~~ \ldots, ~~ x_p = x_{t-p}, ~~ \text{and} ~~ \epsilon_i = w_t$$
+
+-   Explain why the prediction at time $t$ is given by
+  $$
+    \hat x_t = \hat \alpha_1 x_{t-1} + \hat \alpha_2 x_{t-2} + \cdots + \hat \alpha_{p-1} x_{t-(p-1)} + \hat \alpha_p x_{t-p}
+  $$
+  
+-   Explain why the model parameters (the $\alpha$'s) can be estimated by minimizing the sum of the squared error terms: 
+  $$\sum_{t=1}^n \left( \hat w_t \right)^2 = \sum_{t=1}^n \left( x_t - \hat x_t \right)^2$$
+
+-   What is the reason this is called an autoregressive model?
+
+:::
+
+
+
+
+
+## Class Activity: Exploring $AR(1)$ Models (10 min)
+
+### Definition
+
+Recall that an $AR(p)$ model is of the form
+$$
+  x_t = \alpha_1 x_{t-1} + \alpha_2 x_{t-2} + \alpha_3 x_{t-3} + \cdots + \alpha_{p-1} x_{t-(p-1)} + \alpha_p x_{t-p} + w_t
+$$
+So, an $AR(1)$ model is expressed as
+$$
+  x_t = \alpha x_{t-1} + w_t
+$$
+where $\{w_t\}$ is a white noise series with mean zero and variance $\sigma^2$.
+
+### Second-Order Properties of an $AR(1)$ Model
+
+We now explore the second-order properties of this model. 
+
+::: {.callout-note icon=false title="Second-Order Properties of an $AR(1)$ Model"}
+
+If $\{x_t\}_{t=1}^n$ is an $AR(1)$ prcess, then its the first- and second-order properties are summarized below.
+
+$$
+\begin{align*}
+  \mu_x &= 0 \\  
+  \gamma_k = cov(x_t, x_{t+k}) &= \frac{\alpha^k \sigma^2}{1-\alpha^2}
+\end{align*}
+$$
+
+::: {.callout-tip title="Click here for a proof of the equation for $cov(x_t,x_{t+k})$" collapse=true}
+
+Why is $cov(x_t, x_{t+k}) = \dfrac{\alpha^k \sigma^2}{1-\alpha^2}$?
+
+If $\{x_t\}$ is a stable $AR(1)$ process (which means that $|\alpha|<1) can be written as:
+
+\begin{align*}
+  (1-\alpha \mathbf{B}) x_t &= w_t \\
+  \implies x_t &= (1-\alpha \mathbf{B})^{-1} w_t \\
+    &= w_t + \alpha w_{t-1} + \alpha^2 w_{t-2} + \alpha^3 w_{t-3} + \cdots \\
+    &= \sum\limits_{i=0}^\infty \alpha^i w_{t-i}
+\end{align*}
+
+From this, we can deduce that the mean is 
+
+$$
+  E(x_t) 
+    = E\left( \sum\limits_{i=0}^\infty \alpha^i w_{t-i} \right)
+    = \sum\limits_{i=0}^\infty \alpha^i E\left( w_{t-i} \right)
+    = 0
+$$
+
+The autocovariance is computed similarly as:
+
+\begin{align*}
+  \gamma_k = cov(x_t, x_{t+k}) 
+    &= cov \left( 
+      \sum\limits_{i=0}^\infty \alpha^i w_{t-i}, \\
+      \sum\limits_{j=0}^\infty \alpha^j w_{t+k-j} \right) \\
+    &= \sum\limits_{j=k+i} \alpha^i \alpha^j cov ( w_{t-i}, w_{t+k-j} ) \\
+    &= \alpha^k \sigma^2 \sum\limits_{i=0}^\infty \alpha^{2i} \\
+    &= \frac{\alpha^k \sigma^2}{1-\alpha^2}
+\end{align*}
+
+See Equations (2.15) and (4.2).
+
+:::
+
+:::
+
+
+
+### Correlogram of an $AR(1)$ process
+
+::: {.callout-note icon=false title="Correlogram of an AR(1) Process"}
+
+The autocorrelation function for an AR(1) process is
+
+$$
+  \rho_k = \alpha^k ~~~~~~ (k \ge 0)
+$$
+where $|\alpha| < 1$. 
+
+:::
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Use the equation for the autocovariance function, $\gamma_k$, to show that 
+$$
+  \rho_k = \alpha^k
+$$
+for $k \ge 0$ when $|\alpha|<1$.
+
+-   Use this to explain why the correlogram decays to zero more quickly when $\alpha$ is small.
+
+:::
+
+### Small Group Activity: Simulation of an $AR(1)$ Process
+
+```{=html}
+ <iframe id="AR1_app" src="https://posit.byui.edu/content/be8ec2cd-6209-4b53-a5c6-be11464b86de" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe>
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+In each of the following cases, what do you observe in the correlogram? (If you expect to see significant results and you do not, try increasing the number of points.)
+
+-   $\alpha = 1$
+-   $\alpha = 0.5$
+-   $\alpha = 0.1$
+-   $\alpha = 0$   
+-   $\alpha = -0.1$
+-   $\alpha = -0.5$
+-   $\alpha = -1$
+
+:::
+
+
+## Class Activity: Partial Autocorrelation (10 min)
+
+### Definition of Partial Autocorrelation
+
+::: {.callout-note icon=false title="Partial Autocorrleation"}
+
+The **partial autocorrelation** at lag $k$ is defined as the portion of the correlation that is not explained by shorter lags.
+
+:::
+
+For example, the partial correlation for lag 4 is the correlation not explained by lags 1, 2, or 3.
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What is the value of the partial autocorrelation function for an $AR(2)$ process for all lags greater than 2?
+<!-- Zero -->
+
+:::
+
+On page 81, the textbook states that in general, the partial autocorrelation at lag $k$ is the $k^{th}$ coefficient of a fitted $AR(k)$ model.
+This implies that if the underlying process is $AR(p)$, then all the coefficients $\alpha_k=0$ if $k>p$. So, an $AR(p)$ process will yield partial correlations that are zero after lag $p$. So, a correlogram of partial autocorrelations can be helpful to determine the order of an appropriate $AR$ process to model a time series.
+
+::: {.callout-note icon=false title="ACF and PACF of an $AR(p)$ Process"}
+
+For an $AR(p)$ process, we observe the following:
+
+<center>
+
+|      | AR(p)                  |
+|------|------------------------|
+| ACF  | Tails off              |
+| PACF | Cuts off after lag $p$ |
+
+</center>
+
+<!-- https://people.cs.pitt.edu/~milos/courses/cs3750/lectures/class16.pdf -->
+
+<!-- |      | AR(p)                  | MA(q)                  | ARMA(p,q)                | -->
+<!-- |------|------------------------|------------------------|--------------------------| -->
+<!-- | ACF  | Tails off              | Cuts off after lag $q$ | Tails off                | -->
+<!-- | PACF | Cuts off after lag $p$ | Tails off              | Tails off                | -->
+
+:::
+
+
+
+### Example: McDonald's Stock Price
+
+Here is a partial autocorrelation plot for the McDonald's stock price data:
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Set symbol and date range
+symbol <- "MCD"
+company <- "McDonald's"
+
+# Retrieve static file
+stock_df <- rio::import("data/stock_price_mcd.parquet")
+
+# Transform data into tibble
+stock_ts <- stock_df %>%
+  mutate(
+    dates = date, 
+    value = adjusted
+  ) %>%
+  select(dates, value) %>%
+  as_tibble() %>% 
+  arrange(dates) |>
+  mutate(diff = value - lag(value)) |>
+  as_tsibble(index = dates, key = NULL) 
+
+pacf(stock_ts$value, plot=TRUE, lag.max = 25)
+```
+
+The only significant partial correlation is at lag $k=1$. This suggests that an $AR(1)$ process could be used to model the McDonald's stock prices.
+
+### Partial Autocorrelation Plots of Various $AR(p)$ Processes
+
+Here are some time plots, correlograms, and partial correlograms for $AR(p)$ processes with various values of $p$.
+
+### Shiny App
+
+```{=html}
+ <iframe id="FittedModels_app" src="https://posit.byui.edu/content/6c451298-48a0-43a4-b8e2-52d9adc6baeb" style="border: none; width: 100%; height: 1400px" frameborder="0"></iframe>
+```
+
+<!-- ### google sheets test -->
+
+<!-- ```{=html} -->
+<!--  <iframe id="googlesheets" src="https://docs.google.com/spreadsheets/d/1K0yK3Ck08FBgPp8eDxw4aa7NhwDvuhTvb04U0ZjqB4A/edit?usp=sharing" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe> -->
+<!-- ``` -->
+
+<!-- ### Onedrive excel -->
+<!-- ```{=html} -->
+<!--  <iframe id="excel" src="https://1drv.ms/x/s!AmVxjPrpSKCjgv4ZsHYfXZJZ4ZasWw?e=jRJW5j" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe> -->
+<!-- ``` -->
+
+
+
+
+
+
+## Class Activity: Stationary and Non-Stationary AR Processes (15 min)
+
+
+::: {.callout-note icon=false title="Definition of the Characteristic Equation"}
+
+Treating the symbol $\mathbf{B}$ formally as a number (either real or complex), the polynomial 
+
+$$
+  \theta_p(\mathbf{B}) x_t = \left( 1 - \alpha_1 \mathbf{B} - \alpha_2 \mathbf{B}^2 - \cdots - \alpha_p \mathbf{B}^p \right) x_t
+$$
+
+is called the **characteristic polynomial** of an AR process. 
+
+If we set the characteristic polynomial to zero, we get the **characteristic equation**:
+
+$$
+  \theta_p(\mathbf{B}) = \left( 1 - \alpha_1 \mathbf{B} - \alpha_2 \mathbf{B}^2 - \cdots - \alpha_p \mathbf{B}^p \right) = 0
+$$
+
+:::
+
+The roots of the characteristic polynomial are the values of $\mathbf{B}$ that make the polynomial equal to zero--i.e., the values of $\mathbf{B}$ that make $\theta_p(\mathbf{B}) = 0$. These are also called the solutions of the characteristic equation.
+The roots of the characteristic polynomial can be real or complex numbers.
+
+We now explore an important result for AR processes that uses the absolute value of complex numbers.
+
+::: {.callout-note icon=false title="Identifying Stationary Processes"}
+
+An AR process will be **stationary** if the absolute value of the solutions of the characteristic equation are all strictly greater than 1.
+
+:::
+
+First, we will find the roots of the characteristic polynomial (i.e. the solutions of the characteristic equation) and then we will determine if the absolute value of these solutions is greater than 1.
+
+We can use the `polyroot` function to find the roots of polynomials in R.  For example, to find the roots of the polynomial $x^2-x-6$, we apply the command
+```{r}
+polyroot(c(-6,-1,1))
+```
+
+Note the order of the coefficients. They are given in increasing order of the power of $x$.
+
+Of course, we could simply factor the polynomial:
+$$
+  x^2-x-6 = (x-3)(x+2) \overset{set}{=} 0
+$$
+which implies that
+$$
+  x = 3 ~~~ \text{or} ~~~ x = -2
+$$
+
+::: {.callout-note icon=false title="Definition of the Absolute Value in the Complex Plane"}
+
+Let $z = a+bi$ be any complex number. It can be represented by the point $(a,b)$ in the complex plane.  We define the absolute value of $z$ as the distance from the origin to the point:
+
+$$
+  |z| = \sqrt{a^2 + b^2}
+$$
+
+:::
+
+Practice computing the absolute value of a complex number. $\ $
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Find the absolute value of the following (complex) numbers:
+
+-   $-3$
+
+-   $4i$
+
+-   $-3+4i$
+
+-   $-\dfrac{\sqrt{3}}{4} + \dfrac{1}{4} i$
+
+-   $\dfrac{1}{\sqrt{2}} - \dfrac{1}{\sqrt{2}} i$
+
+-   $5-12i$
+
+:::
+
+We will now practice assessing whether an AR process is stationary using the characteristic equation. 
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+For each of the following AR processes, do the following:
+
+1.    Write the AR process in terms of the backward shift operator.
+2.    Solve the characteristic equation.
+3.    Determine if the AR process is stationary.
+
+-   $AR(1)$ process:
+  $$
+    x_t = x_{t-1} + w_t
+  $$
+<!-- $\mathbf{B} = 1$ -->
+<!-- Not stationary -->
+
+-   $AR(1)$ process:
+  $$
+    x_t = \frac{1}{3} x_{t-1} + w_t
+  $$
+<!-- $\mathbf{B} = 3$ -->
+<!-- Stationary -->
+
+-   $AR(2)$ process:
+  $$
+    x_t = - \frac{1}{4} x_{t-1} + \frac{1}{8} x_{t-2} + w_t
+  $$
+<!-- $$ -\frac{1}{8} \left(\mathbf{B}^2 - 2 \mathbf{B} - 8 \right) x_t = w_t $$ -->
+<!-- B = -4, B = 2 -->
+<!-- Stationary -->
+
+
+-   $AR(2)$ process:
+  $$
+    x_t = - \frac{2}{3} x_{t-1} + \frac{1}{3} x_{t-2} + w_t
+  $$
+<!-- $$ -\frac{1}{3} \left(\mathbf{B}^2 - 2 \mathbf{B} - 3 \right) x_t = w_t $$ -->
+<!-- B = -1, B = 3 -->
+<!-- Non-Stationary -->
+
+
+-   $AR(2)$ process:
+  $$
+    x_t = -x_{t-1} - 2 x_{t-2} + w_t
+  $$
+<!-- $$ \left(\mathbf{B}^2 + 1/2 * \mathbf{B} + 1/2 \right) x_t = w_t $$ -->
+<!-- B = 1/4 +/- \frac{sqrt{7}}{4} i -->
+<!-- Non-Stationary -->
+
+
+-   $AR(2)$ process:
+  $$
+    x_t = \frac{3}{2} x_{t-1} - x_{t-2} + w_t
+  $$
+<!-- $$ \left(\mathbf{B}^2 - \frac{3}{2} \mathbf{B} + 1 \right) x_t = w_t $$ -->
+<!-- B = \frac{3}{4} +/- \frac{sqrt{7}}{4} i  -->
+<!-- |B| = 1 -->
+<!-- Non-Stationary -->
+
+
+-   $AR(2)$ process:
+  $$
+    x_t = 4 x_{t-2} + w_t
+  $$
+<!-- $$ \left(1 - 4\mathbf{B}^2 \right) x_t = w_t $$ -->
+<!-- B = \pm \frac{1}{2}  -->
+<!-- |B| = \frac{1}{2} -->
+<!-- Non-stationary -->
+
+
+-   $AR(3)$ process:
+  $$
+    x_t = \frac{2}{3} x_{t-1} + \frac{1}{4} x_{t-2} - \frac{1}{6} x_{t-3} + w_t
+  $$
+<!-- B = 2, -2, 3/2  -->
+<!-- Stationary -->
+
+4.    Choose one stationary $AR(2)$ process and one non-stationary $AR(2)$ process. For each, do the following:
+
+-    Simulate at least 1000 sequential observations.
+-    Make a time plot of the simulated values.
+-    Make a correlogram of the simulated values.
+-    Plot the partial correlogram of the simulated values.
+
+    The following code chunk may be helpful--or you can use the simulation above.
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| eval: false
+
+# Number of observations
+n_obs <- 1000
+
+# Generate sequence of dates
+start_date <- my(paste(1, floor(year(now())-n_obs/365)))
+date_seq <- seq(start_date,
+    start_date + days(n_obs - 1),
+    by = "1 days")
+
+# Simulate random component
+w <- rnorm(n_obs)
+
+# Set first few values of x
+x <- rep(0, n_obs)
+x[1] <- w[1]
+x[2] <- 0.6 * x[1] + w[2]
+
+# Set all remaining values of x
+for (t in 3:n_obs) {
+  x[t] <- 0.6 * x[t-1] + 0.25 * x[t-2] + w[t]
+}
+
+# Create the tsibble
+sim_ts <- data.frame(dates = date_seq, x = x) |>
+  as_tsibble(index = dates) 
+
+# Generate the plots
+sim_ts |> autoplot(.vars = x) |> ggplotly()
+acf(sim_ts$x, plot=TRUE, lag.max = 25)
+pacf(sim_ts$x, plot=TRUE, lag.max = 25)
+```
+
+
+5.    What do you observe about the difference in the behavior of the stationary and non-stationary processes?
+
+:::
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_4_3.qmd" download="homework_4_3.qmd"> homework_4_3.qmd </a>
+
+:::
+
+
+
+
+
+
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">Autoregressive Model Definition</a>
+  
+::: {#Solutions1 style="display:none;"}
+
+<!-- Check your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding Solutions"}
+
+-   Show that we can write Equation (4.15) as a polynomial of order $p$ in terms of the backward shift operator:
+  $$
+   \left( 1 - \alpha_1 \mathbf{B} - \alpha_2 \mathbf{B}^2 - \cdots - \alpha_p \mathbf{B}^p \right) x_t = w_t
+  $$
+
+**Solution:**
+  
+  $$
+    x_t = \alpha_1 x_{t-1} + \alpha_2 x_{t-2} + \alpha_3 x_{t-3} + \cdots + \alpha_{p-1} x_{t-(p-1)} + \alpha_p x_{t-p} + w_t 
+  $$
+  After subtracting, we have:
+  $$
+  \begin{align*}
+    w_t 
+      &= x_t - \alpha_1 x_{t-1} - \alpha_2 x_{t-2} - \alpha_3 x_{t-3} - \cdots - \alpha_{p-1} x_{t-(p-1)} - \alpha_p x_{t-p} \\
+      &= x_t - \alpha_1 \mathbf{B} x_{t} - \alpha_2 \mathbf{B}^2 x_{t} - \alpha_3 \mathbf{B}^3 x_{t} - \cdots - \alpha_{p-1} \mathbf{B}^{p-1} x_{t} - \alpha_p \mathbf{B}^p x_{t} \\
+      &= \left( 1 - \alpha_1 \mathbf{B} - \alpha_2 \mathbf{B}^2  - \alpha_3 \mathbf{B}^3 - \cdots - \alpha_{p-1} \mathbf{B}^{p-1} - \alpha_p \mathbf{B}^p \right) x_t
+  \end{align*}
+  $$
+
+<hr></hr> 
+
+-   Give another name for an $AR(0)$ model.
+
+**Solution:**
+
+White noise
+
+<hr></hr> 
+  
+-   Show that the random walk is the special case $AR(1)$ with $\alpha_1 = 1$. (<a href="https://byuistats.github.io/timeseries/chapter_4_lesson_1.html#randomwalk">See Chapter 4, Lesson 1</a>.)
+
+**Solution:**
+
+  If we let $\alpha_1=1$ in an $AR(1)$ model, we get:
+  $$
+  \begin{align*}
+  x_t &= \alpha_1 x_{t-1} + \alpha_2 x_{t-2} + \alpha_3 x_{t-3} + \cdots + \alpha_{p-1} x_{t-(p-1)} + \alpha_p x_{t-p} + w_t \\
+    &= \alpha_1 x_{t-1} + w_t \\
+    &= x_{t-1} + w_t \\
+  \end{align*}
+  $$
+  which is the definition of a random walk, as given in <a href="https://byuistats.github.io/timeseries/chapter_4_lesson_1.html#randomwalk">Chapter 4, Lesson 1</a>.
+
+<hr></hr> 
+
+-   Show that the exponential smoothing model is the special case where 
+  $$\alpha_i = \alpha(1-\alpha)^i$$
+  for $i = 1, 2, \ldots$ and $p \rightarrow \infty$. (<a href="https://byuistats.github.io/timeseries/chapter_3_lesson_2.html#ewma">See Chapter 3, Lesson 2</a>.)
+
+**Solution:**
+\begin{align*}
+    x_t &= \alpha_1 x_{t-1} + \alpha_2 x_{t-2} + \alpha_3 x_{t-3} + \cdots + \alpha_{p-1} x_{t-(p-1)} + \alpha_p x_{t-p} + w_t \\
+      &= \alpha(1-\alpha)^1 x_{t-1} + \alpha(1-\alpha)^2 x_{t-2} + \alpha(1-\alpha)^3 x_{t-3} + \cdots + \alpha(1-\alpha)^{p-1} x_{t-(p-1)} + \alpha(1-\alpha)^p x_{t-p} + w_t \\
+\end{align*}
+
+  
+  This is Equation (3.18) in <a href="https://byuistats.github.io/timeseries/chapter_3_lesson_2.html#ewma">Chapter 3, Lesson 2</a>.
+
+<hr></hr> 
+
+
+-   Show that the $AR(p)$ model is a regression of $x_t$ on previous terms in the series. (This is why it is called an "autoregressive model.") 
+Hint: write the $AR(p)$ model in more familiar terms, letting 
+  $$y_i = x_t, ~~ x_1 = x_{t-1}, ~~ x_2 = x_{t-2}, ~~ \ldots, ~~ x_p = x_{t-p}, ~~ \epsilon_i = w_t, ~~ \text{and} ~~ \beta_j = \alpha_j$$
+
+**Solution:**
+$$
+\begin{align*}
+    x_t &= \alpha_1 x_{t-1} + \alpha_2 x_{t-2} + \alpha_3 x_{t-3} + \cdots + \alpha_{p-1} x_{t-(p-1)} + \alpha_p x_{t-p} + w_t \\
+    y_i &= \beta_1 x_{1i} ~+~ \beta_2 x_{2i} ~+~ \beta_3 x_{3i} ~+ \cdots +~ \beta_{p-1,i} x_{p-1,i} ~~~+~ \beta_p x_{p,i} + \epsilon_i \\
+\end{align*}
+$$
+
+  This is a multiple linear regression equation with zero intercept.
+
+<hr></hr> 
+
+-   Explain why the prediction at time $t$ is given by
+  $$
+    \hat x_t = \hat \alpha_1 x_{t-1} + \hat \alpha_2 x_{t-2} + \cdots + \hat \alpha_{p-1} x_{t-(p-1)} + \hat \alpha_p x_{t-p}
+  $$
+  
+**Solution:**
+
+  The prediction at time $t$ in a multiple regression setting would be:
+  $$
+    \hat y_i = \hat \beta_1 x_{1i} ~~~+~ \hat \beta_2 x_{2i} ~+~ \hat \beta_3 x_{3i} ~~+ \cdots +~~ \hat \beta_{p-1} x_{p-1,i} ~~+~ \hat \beta_p x_{p,i}
+  $$
+  Translated to the $AR(p)$ setting, this becomes:
+  $$
+    \hat x_t = \hat \alpha_1 x_{t-1} + \hat \alpha_3 x_{t-2} + \hat \alpha_3 x_{t-3} + \cdots + \hat \alpha_{p-1} x_{t-(p-1)} + \hat \alpha_p x_{t-p}
+  $$
+
+<hr></hr> 
+
+-   Explain why the model parameters (the $\alpha$'s) can be estimated by minimizing the sum of the squared error terms: 
+  $$\sum_{t=1}^n \left( \hat w_t \right)^2 = \sum_{t=1}^n \left( x_t - \hat x_t \right)^2$$
+
+**Solution:**
+
+  This is exactly how the multiple linear regression coefficients are estimated...minimizing the sum of the squared error terms.
+
+<hr></hr> 
+
+-   What is the reason this is called an autoregressive model?
+
+**Solution:**
+
+  This is called an autoregressive model because we regress the current tern on the previous terms in the series.
+
+:::
+
+:::
+
+
+
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Absolute Value</a>
+  
+::: {#Solutions2 style="display:none;"}
+    
+::: {.callout-tip icon=false title="Check Your Understanding Solutions"}
+
+Find the absolute value of the following (complex) numbers:
+
+-   $|-3| = \sqrt{(-3)^2 + 0^2} = 3$
+
+-   $|4i| = \sqrt{(0)^2 + (4)^2} = 4$
+
+-   $|-3+4i| = \sqrt{(-3)^2 + (4)^2} = 5$
+
+-   $\left| - \dfrac{\sqrt{3}}{4} + \dfrac{1}{4} i \right| = \sqrt{\left( \dfrac{\sqrt{-3}}{4} \right)^2 + \left( \dfrac{1}{4} \right)^2} = \sqrt{\dfrac{3}{16} + \dfrac{1}{16}} = \dfrac{1}{2}$
+
+-   $\left| \dfrac{1}{\sqrt{2}} - \dfrac{1}{\sqrt{2}} i \right| = \sqrt{\left( \frac{1}{\sqrt{2}} \right)^2 + \left( \frac{-1}{\sqrt{2}} \right)^2} = 1$
+
+-   $|5-12i| = \sqrt{(5)^2 + (-12)^2} = 13$
+
+:::
+
+:::
+
+
+
+
+<a href="javascript:showhide('Solutions3')"
+style="font-size:.8em;">Using the Characteristic Polynomial to Assess Stationarity</a>
+  
+::: {#Solutions3 style="display:none;"}
+    
+::: {.callout-tip icon=false title="Check Your Understanding Solutions"}
+
+For each of the following AR processes, do the following:
+
+1.    Write the AR process in terms of the backward shift operator.
+
+2.    Solve the characteristic equation.
+
+3.    Determine if the AR process is stationary.
+
+-   $AR(1)$ process:
+  $$
+    x_t = x_{t-1} + w_t
+  $$
+  
+<!-- $\mathbf{B} = 1$ -->
+<!-- Not stationary -->
+
+**Solution:**
+
+
+
+<hr></hr>
+
+
+-   $AR(1)$ process:
+  $$
+    x_t = \frac{1}{3} x_{t-1} + w_t
+  $$
+
+**Solution:**
+
+$$\mathbf{B} = 3$$
+This is a stationary AR process.
+
+<hr></hr>
+
+
+-   $AR(2)$ process:
+  $$
+    x_t = - \frac{1}{4} x_{t-1} + \frac{1}{8} x_{t-2} + w_t
+  $$
+
+**Solution:**
+
+$$ -\frac{1}{8} \left(\mathbf{B}^2 - 2 \mathbf{B} - 8 \right) x_t = w_t $$
+$$B = -4, ~~~ B = 2$$
+This is a stationary AR process.
+
+<hr></hr>
+
+
+-   $AR(2)$ process:
+  $$
+    x_t = - \frac{2}{3} x_{t-1} + \frac{1}{3} x_{t-2} + w_t
+  $$
+
+**Solution:**
+
+$$ -\frac{1}{3} \left(\mathbf{B}^2 - 2 \mathbf{B} - 3 \right) x_t = w_t $$
+$$B = -1, ~~~ B = 3$$
+This is a non-stationary AR process.
+
+<hr></hr>
+
+
+-   $AR(2)$ process:
+  $$
+    x_t = -x_{t-1} - 2 x_{t-2} + w_t
+  $$
+
+**Solution:**
+  
+$$ \left(\mathbf{B}^2 + 1/2 * \mathbf{B} + 1/2 \right) x_t = w_t $$
+$$ B = \frac{1}{4} \pm \frac{\sqrt{7}}{4} i $$
+$$ |B| = \sqrt{\frac{1}{16} + \frac{7}{16} i } = \frac{1}{\sqrt{2}} \le 1 $$
+This is a non-stationary AR process.
+
+<hr></hr>
+
+
+-   $AR(2)$ process:
+  $$
+    x_t = \frac{3}{2} x_{t-1} - x_{t-2} + w_t
+  $$
+
+**Solution:**
+
+$$ \left(\mathbf{B}^2 - \frac{3}{2} \mathbf{B} + 1 \right) x_t = w_t $$
+$$ B = \frac{3}{4} \pm \frac{\sqrt{7}}{4} i $$
+$$|B| = 1$$
+This is a non-stationary AR process.
+
+<hr></hr>
+
+
+-   $AR(2)$ process:
+  $$
+    x_t = 4 x_{t-2} + w_t
+  $$
+
+**Solution:**
+
+$$ \left(1 - 4\mathbf{B}^2 \right) x_t = w_t $$
+$$B = \pm \frac{1}{2}$$
+$$|B| = \frac{1}{2}$$
+This is a non-stationary AR process.
+
+<hr></hr>
+
+
+-   $AR(3)$ process:
+  $$
+    x_t = \frac{2}{3} x_{t-1} + \frac{1}{4} x_{t-2} - \frac{1}{6} x_{t-3} + w_t
+  $$
+
+**Solution:**
+
+$$ B = 2, ~ -2, ~ \frac{3}{2} $$
+This is a stationary AR process.
+
+:::
+
+:::

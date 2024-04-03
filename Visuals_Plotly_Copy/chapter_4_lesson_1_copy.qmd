@@ -1,0 +1,699 @@
+---
+title: "White Noise and Random Walks: Part 1"
+subtitle: "Chapter 4: Lesson 1"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_4_lesson_1_outcomes.qmd >}}
+
+
+
+
+## Preparation
+
+-   Read Sections 4.1-4.2, 4.3.1-4.3.2
+
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+## Class Activity: White Noise (15 min)
+
+### Definition
+
+In this class, we are learning to investigate different types of time series. Up to this point, we have focused mostly on time series with distinct seasonal behavior. We will not focus on what are called *stochastic processes* or random processes, where there is not necessarily a seasonal component. We first focus on **white noise**.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Based on your understanding from the reading, explain the concept of white noise to your partner.
+-   Can you give an example of a time series that would represent white noise?
+
+:::
+
+
+::: {.callout-note icon=false title="Definition of a Discrete White Noise (DWN) Process"}
+
+A time series $\{w_t: t = 1, 2, \ldots, n\}$ is a **discrete white noise (DWN)** if the variables $w_1, w_2, \ldots, w_n$ are independent and identically distributed with mean 0. The assumption that the variables are identically distributed implies that there is a common variance denoted $\sigma$. The assumption of independence means that the covariance (and correlation) between different variables will be zero: $cov(w_i, w_j) = 0$ and $cor(w_i, w_j) = 0$ if $i \ne j$. 
+
+If the variables are normally distributed, i.e. $w_i \sim N(0,\sigma^2)$, the DWN is called a **Gaussian white noise** process. The normal distribution is also known as the Gaussian distribution, after Carl Friedrich Gauss.
+
+:::
+
+
+
+
+### Simulation
+
+The following simulation illustrates a white noise time series.
+
+```{=html}
+ <iframe id="whitenoise" src="https://posit.byui.edu/content/86061d12-80c9-455c-98ff-aca015c75ed1" style="border: none; width: 100%; height: 1200px" frameborder="0"></iframe>
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you notice about this time series?
+-   What characteristics do you observe in the correlogram?
+
+:::
+
+### Type I Errors
+
+In your introductory statistics course, you probably learned about Type I error. Here is a quick refresher.
+
+::: {.callout-note icon=false title="Type I Errors"}
+
+Suppose we will conduct a hypothesis test with a level of significance equal to $\alpha = 0.05$. If the null hypothesis is true, there is a probability of 0.05 that we will reject the null hypothesis. Due to sampling variation, we will reject a true null hypothesis 5% of the time. We refer to this as making a **Type I Error**. 
+
+:::
+
+When we create a correlogram, we actually conduct one hypothesis test for each value of $k$. With so many hypothesis tests, it is not surprising if some of them show a significant correlation due to chance alone. In this case, we tend to disregard correlations that are barely significant and inexplicable.
+
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Do the following with a partner:
+
+1.    Click on the [Simulate!] button above to generate a new simulated realization of the DWN process.
+2.    Out of the 20 autocorrelations represented in the correlogram, count the number that are statistically significant.
+3.    Repeat Steps 1. and 2. ten times, so you will have displayed 200 autocorrelations.
+
+-   What percentage of your autocorrelations were statistically significant?
+-   Compare your results with other teams.
+-   What percentage of these would you expect to be statistically significant, assuming the true autocorrelations are all zero?
+
+:::
+
+
+
+### Visualizing White Noise 
+
+The data in the file [white_noise.parquet](https://byuistats.github.io/timeseries/data/white_noise.parquet) were generated by a Gaussian white noise process.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# This code was used to create the white noise data file
+
+# Set random seed
+set.seed(10)
+
+# Specify means and standard deviation
+n <- 2500                           # number of points
+white_noise_sigma <- rnorm(1, 5, 1) # choose a random standard deviation
+
+# Simulate normal data
+data.frame(x = rnorm(n, 0, white_noise_sigma)) |>
+  rio::export("data/white_noise.parquet")
+```
+
+```{r}
+# White noise data
+white_noise_df <- rio::import("https://byuistats.github.io/timeseries/data/white_noise.parquet")
+```
+
+The first 250 points in this time series are illustrated here:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+p <- white_noise_df |> 
+  mutate(t = 1:nrow(white_noise_df)) |>
+  head(250) |>  
+  ggplot(aes(x = t, y = x)) + 
+    geom_line() +
+    theme_bw() +
+    labs(
+      x = "Time",
+      y = "Values",
+      title = "First 250 Values of a Gaussian White Noise Time Series"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    ) 
+
+
+ggplotly(p)
+```
+
+Here is a histogram of the `r nrow(white_noise_df)` values from this DWN distribution.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+p <- white_noise_df |>
+  mutate(density = dnorm(x, mean(white_noise_df$x), sd(white_noise_df$x))) |>
+  ggplot(aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 1) +
+    geom_line(aes(x = x, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Values from a Gaussian White Noise Process"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+
+ggplotly(p)
+```
+
+Notice that the values follow a normal distribution. This suggests the data are from a Gaussian white noise distribution.
+
+
+
+### Second-Order Properties of Discrete White Noise
+
+When we refer to the second-order properties of a time series, we are talking about its variance and covariance. The mean is a first-order property, the covariance is a second-order property.
+
+::: {.callout-note icon=false title="Second-Order Properties of a Discrete White Noise Process"}
+If $\{w_t\}_{t=1}^n$ is a DWN time series, then the population has the following properties. 
+
+$$ \mu_w = 0 $$
+and
+$$
+  cov(w_t, w_{t+k}) = 
+    \begin{cases}
+      \sigma^2, & k = 0 \\
+      0,        & k \ne 0
+    \end{cases}
+$$
+The correlation function is therefore
+
+$$
+  \rho_k = 
+    \begin{cases}
+      1, & k = 0 \\
+      0, & k \ne 0
+    \end{cases}
+$$
+
+:::
+
+Note that the properties given above are theoretical properties of the population, not estimates computed using a sample. The sample autocorrelations will not equal zero, due to randomness inherent in sampling.
+
+
+### Fitting the White Noise Model
+
+Typically, a DWN series arises in the random component of another time series. If we have fully explained the level and seasonality in the time series, then the only component left is the random component, which would ideally follow a DWN process.
+
+::: {.callout-note icon=false title="Identifying of a Discrete White Noise Process"}
+
+A DWN process will have the following properties:
+
+-   There is a discrete observations.
+-   The mean of the observations is zero.
+-   The variance of the observations is finite.
+-   Successive observations are uncorrelated.
+
+:::
+
+Since the mean of a DWN time series is zero, the only parameter we need to fit is the variance.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Compute the sample variance for the DWN data in the file [white_noise.parquet](https://byuistats.github.io/timeseries/data/white_noise.parquet).
+
+:::
+
+
+
+
+
+
+
+
+
+
+## Class Activity: Random Walks (15 min)
+
+### Definitions
+
+<a id="randomwalk">Consider</a> moving on a number line, where your movements are determined by a discrete white noise (DWN) process. Each successive value indicates how far you will move along the number line from your current position. This is mathematically equivalent to allowing your position at time $t$ to be the sum of all the observed DWN values up to time $t$.
+
+::: {.callout-note icon=false title="Definition of a Random Walk"}
+
+Let $\{x_t\}$ be a time series. Then, $\{x_t\}$ is a **random walk** if it can be expressed as
+$$
+  x_{t} = x_{t-1} + w_{t}
+$$
+where $\{w_t\}$ is a random process.
+
+:::
+
+The value $x_t$ can be considered as the cumulative summation of the first $t$ values of the $w_t$ series.
+In many cases, $w_t$ is a discrete white noise series, and it is often modeled as a Gaussian white noise series. However, $w_t$ could be as simple as a coin toss, as illustrated in the next activity.
+
+
+
+### Simulating a Random Walk
+
+In this activity, we will simulate a discrete-time, discrete-space random walk.
+
+::: {.callout-tip appearance="minimal"}
+
+Do the following: 
+
+1.  Start the time series at $x_0 = 0$.
+
+2.  Toss a coin. 
+    -   If the coin shows heads, then $x_t = x_{t-1}+1$
+    -   If the coin shows tails, then $x_t = x_{t-1}-1$
+
+3.  Plot the new point on the time plot.
+
+4.  Complete steps 2 and 3 a total of $n=60$ times. (One realization is illustrated below.)
+
+```{r}
+#| echo: false
+#| results: asis
+
+set.seed(7)
+
+df <- data.frame(x=0:60) |>
+  mutate(w = ifelse(row_number() == 1, 0, sample(c(-1,1), size = 60, replace = TRUE))) |>
+  mutate(y = cumsum(w))
+
+p <- ggplot(data=df, aes(x=x, y=y)) +
+  # geom_point(data = df2, aes(x=x, y=y), size = 0.01) +
+  geom_line() +
+  geom_point(size = 0.5) +
+  scale_x_continuous(limits = c(0,60),
+                     breaks = seq(0, 60, by = 5),
+                     minor_breaks = seq(0, 60, 1)) +
+  scale_y_continuous(limits = c(-20,20),
+                     breaks = seq(-20, 20, by = 5),
+                     minor_breaks = seq(-20, 20, 1)) +
+  labs(
+      x = "Toss Number",
+      y = "x_t",
+      title = "Cumulative Results of Coin Tosses"
+  ) +
+  theme_minimal() +
+  theme(
+    panel.grid.major = element_line(colour = "black"),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+ggplotly(p)
+```
+:::
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   How would you describe a random walk to someone who has not taken this class?
+-   How is a random walk related to a discrete white noise (DWN) process?
+-   Give a real-world example of a process that could be modeled by a random walk.
+
+:::
+
+
+
+### Representations for a Random Walk
+
+
+Recall the definition of a random walk:
+
+$\{x_t\}$ is a **random walk** if it can be expressed as
+$$
+  x_{t} = x_{t-1} + w_{t}
+$$
+where $\{w_t\}$ is a white noise series.
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+There are other ways to represent a random walk.
+
+-   Notice that 
+    \begin{align*}
+      x_{t} &= x_{t-1} + w_{t} \\
+      x_{t-1} &= x_{t-2} + w_{t-1} \\
+      ⋮ ~~~ & ~~~~~~~~~~~~~~~ ⋮
+    \end{align*}
+    Use this to write $x_t$ in terms of $x_{t-2}$, $w_t$, and $w_{t-1}$.
+    
+-   Write $x_t$ in terms of $x_{t-3}$, $w_t$, $w_{t-1}$, and $w_{t-2}$.
+    
+-   Explain why it is possible to write $x_t$ as
+    $$
+      x_{t} = \sum\limits_{i=-\infty}^{t} w_{i} = w_{t} + w_{t-1} + w_{t-2} + w_{t-3} + \cdots
+    $$
+    where $\{w_t\}$ is a DWN time series.
+    
+    Note that if the random walk is finite, we can write $x_t$ as:
+    $$
+      x_{t} = w_1 + w_2 + w_3 + \cdots + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} 
+    $$
+    where $x_1=w_1$.
+    
+:::
+
+
+<!-- Note that this implies that: -->
+<!-- \begin{align*} -->
+<!--   x_{t} &= x_{t-1} + w_{t} \\ -->
+<!--   x_{t-1} &= x_{t-2} + w_{t-1} \\ -->
+<!--   x_{t-2} &= x_{t-3} + w_{t-2} \\ -->
+<!--   x_{t-3} &= x_{t-4} + w_{t-3} \\ -->
+<!--   \vdots ~~ &= ~~~~~~~~~~~~ \vdots \\ -->
+<!--   x_{4} &= x_{3} + w_{4} \\ -->
+<!--   x_{3} &= x_{2} + w_{3} \\ -->
+<!--   x_{2} &= x_{1} + w_{2} \\ -->
+<!--   x_{1} &= w_{1}  -->
+<!-- \end{align*} -->
+
+<!-- We can write this as -->
+
+<!-- \begin{align*} -->
+<!--   x_{t}  -->
+<!--     &= x_{t-1} + w_{t} \\ -->
+<!--     &= \underbrace{x_{t-2} + w_{t-1}} + w_{t} \\ -->
+<!--     &= \underbrace{x_{t-3} + w_{t-2}} + w_{t-1} + w_{t} \\ -->
+<!--     &= \underbrace{x_{t-4} + w_{t-3}} + w_{t-2} + w_{t-1} + w_{t} \\ -->
+<!--     &= ~~~~ \vdots \\ -->
+<!--     &= \underbrace{x_3 + w_4} + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
+<!--     &= \underbrace{x_2 + w_3} + w_4 + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
+<!--     &= \underbrace{x_1 + w_2} + w_3 + w_4 + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t} \\ -->
+<!--     &= w_1 + w_2 + w_3 + w_4 + \cdots + w_{t-4} + w_{t-3} + w_{t-2} + w_{t-1} + w_{t}  -->
+<!-- \end{align*} -->
+
+
+
+
+## Class Activity: Backward Shift Operator (10 min)
+
+### Definition of the Backward Shift Operator
+
+This process of *back substitution* is so common, we define notation to handle it.
+
+::: {.callout-note icon=false title="Definition of the Backward Shift Operator"}
+
+We define the **backward shift operator** or the **lag operator**, $\mathbf{B}$, as:
+$$
+  \mathbf{B} x_t = x_{t-1}
+$$
+where $\{x_t\}$ is any time series.
+
+We can apply this operator repeatedly. We will use exponential notation to indicate this.
+
+$$
+  \mathbf{B}^2 x_t = \mathbf{B} \mathbf{B} x_t = \mathbf{B} ( \mathbf{B} x_t ) x_t = \mathbf{B} x_{t-1} = \mathbf{B} x_{t-2}
+$$
+
+In general, 
+$$
+  \mathbf{B}^n x_t = \underbrace{\mathbf{B} \cdot \mathbf{B} \cdot \cdots \cdot \mathbf{B}}_{n ~ \text{terms}} x_t = \mathbf{B}^{n-1} ( \mathbf{B} x_t ) = \mathbf{B}^{n-1} ( x_{t-1} ) = \mathbf{B}^{n-2} ( x_{t-2} ) = \cdots = \mathbf{B} x_{t-(n-1)} = x_{t-n}
+$$
+
+:::
+
+### Properties of the Backshift Operator 
+
+The backwards shift operator is a linear operator. So, if $a$, $b$, $c$, and $d$ are constants, then
+$$
+(a \mathbf{B} + b)x_t = a \mathbf{B} x_t + b x_t
+$$
+The distributive property also holds.
+\begin{align*}
+(a \mathbf{B} + b)(c \mathbf{B} + d) x_t 
+  &= c (a \mathbf{B} + b) \mathbf{B} x_t  + d(a \mathbf{B} + b) x_t \\
+  &= a \mathbf{B} (c \mathbf{B} + d) x_t + b (c \mathbf{B} + d) x_t \\
+  &= \left( ac \mathbf{B}^2 + (ad+bc) \mathbf{B} + bd \right) x_t \\
+  &= ac \mathbf{B}^2 x_t + (ad+bc) \mathbf{B} x_t + (bd) x_t
+\end{align*}
+
+We will practice applying this operator.
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Let $\{x_t\}$ be a time series with the following values. 
+
+<center>
+```{r, results='asis'}
+#| echo: false
+
+set.seed(6)
+n <- 8
+d_operator <- data.frame(t = c(1:n), x = sample(1:15, n, replace = FALSE)) |>
+  mutate(diff = t - n)
+
+#cat( paste( paste0("$x_{t", ifelse(d_operator$t==n,"",d_operator$t-n), "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+
+cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+
+# Computes the value of the "power_on_d"^th difference from x_n
+d_value <- function(power_on_d = 0) {
+  out <- d_operator |> #### Note the use of this global variable
+    filter(diff == -power_on_d) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+
+
+ts_val <- function(t_value) {
+  out <- d_operator |> #### Note the use of this global variable
+    filter(t == t_value) |>
+    dplyr::select(x) |>
+    pull()
+  
+  return(out)
+}
+```
+</center>
+Evaluate the following. 
+
+-   $\mathbf{B} x_8$
+-   $\mathbf{B}^5 x_8$
+-   $(\mathbf{B}^5 - \mathbf{B} ) x_8$
+-   $( \mathbf{B}^2 - 6 \mathbf{B} + 9 ) x_8$
+-   $( (\mathbf{B} - 6 )\mathbf{B} + 9 ) x_8$
+-   $( \mathbf{B} - 3 )^2 x_8 =  ( \mathbf{B} - 3 ) \left[ ( \mathbf{B} - 3 ) x_8 \right]$
+-   $( 1 - \frac{1}{2} \mathbf{B} - \frac{1}{4} \mathbf{B}^2 - \frac{1}{8} \mathbf{B}^3 ) x_8$
+
+:::
+
+
+
+
+
+
+## Class Activity: Properties of Random Walks (5 min)
+
+### Simulation
+
+The following simulation illustrates a random walk.
+
+```{=html}
+ <iframe id="Randomwalk" src="https://posit.byui.edu/content/f9a0690a-87ce-423c-9d9c-4dfd0188dd86" style="border: none; width: 100%; height: 1100px" frameborder="0"></iframe>
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you notice about this time series?
+-   What characteristics do you observe in the correlogram?
+-   How does this compare to the time series and correlogram for the DWN process?
+
+:::
+
+
+### Second-Order Properties of a Random Walk
+
+The second-order properties of a random walk are summarized below. 
+
+::: {.callout-note icon=false title="Second-Order Properties of a Random Walk"}
+If $\{x_t\}_{t=1}^n$ is a random walk, then the population has the following properties. 
+
+$$ \mu_x = 0 $$
+and
+$$
+  cov(x_t, x_{t+k}) = t \sigma^2
+$$
+
+::: {.callout-tip title="Click here for a proof of the equation for $cov(x_t,x_{t+k})$" collapse=true}
+
+Why is $cov(x_t, x_{t+k}) = t \sigma^2$?
+
+First, note that that since the terms in the white noise series are independent, 
+
+$$
+cov ( w_i, w_j ) = 
+  \begin{cases}
+    \sigma^2, & \text{if } ~ i=j \\
+    0, & \text{otherwise}
+  \end{cases}
+$$
+
+Also, when random variables are independent, the covariance of a sum is the sum of the covariance.
+
+Hence,
+\begin{align*}
+  cov(x_t, x_{t+k})
+    &= cov ( \sum_{i=1}^t w_i, \sum_{j=1}^{t+K} w_j ) \\
+    &= \sum_{i=j} cov ( w_i, w_j ) \\
+    &= \sum_{i=1}^t \sigma^2 \\
+    &= t \sigma^2
+\end{align*}
+
+:::
+
+If $k>0$ and $t>0$, the correlation function is
+
+$$
+  \rho_k 
+  = 
+    \frac{
+            cov(x_t, x_{t+k})
+          }{
+            \sqrt{var(x_t)} \sqrt{var(x_{t+k})}
+          }
+  =
+    \frac{t \sigma^2}{\sqrt{t \sigma^2} \sqrt{(t+k) \sigma^2}}
+  =
+    \frac{1}{\sqrt{1+\frac{k}{t}}}
+$$
+
+:::
+
+Note that the covariance of a random walk process depends on $t$. Hence, random walks are non-stationary. The variance is unbounded as $t$ increases. That implies a random walk will not provide good predictions in the long term.
+
+Note that if $0 < k \ll t$, then $\rho_k \approx 1$. Because of this, a correlogram for a random walk will typically demonstrate positive autocorrelations that start near 1 and slowly decrease as $k$ increases. This is exactly what we observed in the simulation above.
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+::: {.callout-note icon=false icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_4_1.qmd" download="homework_4_1.qmd"> homework_4_1.qmd </a>
+
+:::
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">White Noise</a>
+  
+::: {#Solutions1 style="display:none;"}
+
+The sample variance of the DWN data is computed using the R command `var(white_noise_df$x)` as `r var(white_noise_df$x) |> round(2)`.
+    
+:::
+
+
+
+
+
+
+
+<a href="javascript:showhide('SolutionsBackwardShift')"
+style="font-size:.8em;">Backward Shift Operator</a>
+  
+::: {#SolutionsBackwardShift style="display:none;"}
+
+<center>
+```{r, results='asis'}
+#| echo: false
+
+cat( paste( paste0("$x_{", d_operator$t, "} = ", d_operator$x, "$"), collapse = ",$~$ " ) ) 
+```
+</center>
+
+Check Your Understanding Solutions:
+
+-   $\mathbf{B} x_8 = x_7 = `r ts_val(7)`$
+-   $\mathbf{B}^5 x_8 = x_3 = `r ts_val(3)`$
+-   $(\mathbf{B}^5 - \mathbf{B} ) x_8 = x_3 - x_7 = `r ts_val(3)` - `r ts_val(7)` = `r ts_val(4) - ts_val(7)`$
+-   $( \mathbf{B}^2 - 6 \mathbf{B} + 9 ) x_8 = x_6 - 6 (x_7) + 9 (x_{t}) = `r ts_val(6)` - 6 (`r ts_val(7)`) + 9 (`r ts_val(8)`) = `r ts_val(6) - 6 * ts_val(7) + 9 * ts_val(8)`$
+-   $( (\mathbf{B} - 6) \mathbf{B} + 9 ) x_8 = `r ts_val(6) - 6 * ts_val(7) + 9 * ts_val(8)`$
+-   $( \mathbf{B} - 3 )^2 x_8 = `r ts_val(6) - 6 * ts_val(7) + 9 * ts_val(8)`$
+-   $( 1 - \frac{1}{2} B - \frac{1}{4} B^2 - \frac{1}{8} B^3 ) x_8 = x_8 - \frac{1}{2} x_7 - \frac{1}{4} x_6 - \frac{1}{8} x_5 = `r ts_val(8)` - \frac{1}{2} (`r ts_val(7)`) - \frac{1}{4} (`r ts_val(6)`) - \frac{1}{8} (`r ts_val(5)`) = `r ts_val(8) - ts_val(7) / 2 - ts_val(6) / 4 - ts_val(5) / 8`$
+
+:::

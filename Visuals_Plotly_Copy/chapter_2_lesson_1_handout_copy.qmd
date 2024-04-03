@@ -1,0 +1,290 @@
+---
+title: "Covariance and Correlation"
+subtitle: "Chapter 2: Lesson 1"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+library(ggplot2)
+library(plotly)
+```
+
+#### Class Activity: Variance and Standard Deviation 
+
+```{r}
+#| echo: false
+
+# Set random seed
+set.seed(2412)
+
+# Specify means and standard deviation
+n <- 5        # number of points
+mu <- 10      # mean
+sigma <- 3    # standard deviation
+
+# Simulate normal data
+sim_data <- data.frame(x = round(rnorm(n, mu, sigma), 1)) |> 
+  arrange(x)
+
+# Convert to character string
+# Initialize empty character vector
+five_vals <- sim_data$x[1]
+# Simulate normal data
+for(t in 2:n){
+  five_vals <- paste(five_vals, sim_data$x[t], sep=", ")
+}
+```
+
+<center>
+
+```{r fig.asp=0.6180, fig.width=6}
+#| echo: false
+#| warning: false
+temp <- sim_data |> 
+  mutate(deviations = x - mean(x)) |> 
+  arrange(desc(x))
+
+mean_x <- mean(temp$x)
+min_x <- floor(min(temp$x))
+max_x <- ceiling(max(temp$x))
+range <- max_x - min_x
+lower <- min_x - range / 10
+upper <- max_x + range / 10
+
+ticks <- ceiling(lower):floor(upper)
+ticks_df <- data.frame(x = ticks, y = -1)
+
+# Plot deviations from the mean
+ggplot(temp, aes(x = x, y = 0)) +
+  # x-axis
+  annotate("segment", x = lower, xend = upper, y = -1, yend = -1, colour = "black", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+  
+  # Add tick marks and labels          
+  annotate("segment", x = ticks, xend = ticks, y = -1.25, yend = -0.75, colour = "black", linewidth = 0.5) +
+
+  geom_text(aes(x = upper, y = -1, label = "x"), size = 4, hjust = -1, vjust = 0, color = "black") +
+  
+  geom_text(data = ticks_df, aes(x = x, y = y, label = x), size = 4, vjust = 2, color = "black") +
+  
+  # Deviations from the mean arrows and lines
+  geom_segment(aes(x = mean_x, xend = x, y = 1:n, yend = 1:n), colour = "black", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+  geom_segment(aes(x = x, xend = x, y = 0.25, yend = 1:n - 0.25), colour = "black", linewidth = 0.5, linetype = "dashed") +
+  geom_text(aes(x = (mean_x + x)/2, y = 1:n, label = round(deviations, 2)), size = 3, vjust = -0.5) +
+  
+  # Marker for the mean
+  annotate("segment", x = mean_x, xend = mean_x, y = -2.5, yend = -1.25, colour = "black", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
+  geom_segment(aes(x = mean_x, xend = mean_x, y = -0.75, yend = n + 1), colour = "black", linewidth = 0.5, linetype = "dashed") +
+  # Add xbar
+  geom_label(
+    label=expression(bar(x) == " "),
+    x=mean_x-0.1,
+    y=-2.6,
+    color = "black", parse = TRUE,label.size = NA, fill=NA)+
+  # add mean value
+  geom_label(
+    label=paste0(round(mean_x, 2)),
+    x=mean_x+0.3,
+    y=-2.6,
+    color = "black", label.size = NA, fill=NA)+
+  geom_point(size = 3, color = "black") + 
+  geom_text(aes(x = x, y = rep(0,n), label = x), size = 3, vjust = 1.75) +
+  
+  # theme
+  theme_void() +
+  theme(axis.title.y = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+     
+  theme(aspect.ratio = 0.4) +
+  labs(title = "Deviations from the Mean", 
+       x = "Value",
+       y = "")
+```
+
+</center>
+
+
+
+
+#### Table 1: Deviations from the mean
+```{r}
+#| echo: false
+sim_data |> 
+  mutate(
+    xx = x - mean(x),
+    extra1 = " ",
+    extra2 = " ",
+    extra3 = " ",
+    extra4 = " "
+    ) |> 
+  rename(
+    "$$x_t$$" = x,
+    "$$x_t-\\bar x$$" = xx,
+    " " = extra1,
+    "  " = extra2,
+    "   " = extra3,
+    "    " = extra4
+  ) |>
+  display_table("0.75in")
+```
+
+<br>
+<br>
+<br>
+
+#### Team Activity: Computational Practice 
+
+```{r}
+#| echo: false
+
+# Set random seed
+set.seed(300)
+
+# Specify means and correlation coefficient
+n <- 6              # number of points
+mu <- c(3, 1)       # mean vector (mu_x, mu_y)
+sigma_x <- 3.5      # standard deviation x
+sigma_y <- 2        # standard deviation y
+rho <- -0.85          # correlation coefficient
+
+# Define variance-covariance matrix
+sigma <- matrix(
+  c(sigma_x^2,
+    rho*sigma_x*sigma_y,
+    rho*sigma_x*sigma_y,
+    sigma_y^2),
+  nrow = 2)
+
+# Simulate bivariate normal data
+mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) |> 
+  data.frame() |> 
+  rename(x = X1, y = X2) |> 
+  round_df(1)
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+With your assigned partner, use this table to compute the values given below.
+
+#### Table 3: Computational Practice
+
+```{r}
+#| echo: false
+
+cov_dat <- mvn_data_6 |> 
+  mutate(t = row_number()) |> 
+  dplyr::select(t, x, y) |> 
+  mutate(
+    xx = x - mean(x),
+    xx2 = xx^2,
+    yy = y - mean(y),
+    yy2 = yy^2,
+    xy = (x - mean(x)) * (y - mean(y))
+    ) 
+
+cov_dat_summary <- cov_dat |> 
+  summarize(
+    x = sum(x),
+    y = sum(y),
+    xx = sum(xx),
+    xx2 = sum(xx2),
+    yy = sum(yy),
+    yy2 = sum(yy2),
+    xy = sum(xy)
+  ) |> 
+  round_df(5) |>
+  mutate(across(everything(), as.character)) |> 
+  mutate(t = "sum")
+
+temp <- cov_dat |> 
+  round_df(5) |>
+  mutate(across(everything(), as.character)) |> 
+  bind_rows(cov_dat_summary)
+
+
+temp |> 
+  blank_out_cells_in_df(ncols_to_keep = 3, nrows_to_keep = 1) |>
+  bind_rows(temp |> tail(1) |> blank_out_cells_in_df(ncols_to_keep = 0, nrows_to_keep = 0) |> mutate(t = "$$~$$") ) |> 
+  rename(
+    "$$t$$" = t,
+    "$$x_t$$" = x,
+    "$$y_t$$" = y,
+    "$$x_t-\\bar x$$" = xx, 
+    "$$(x_t - \\bar x)^2$$" = xx2, 
+    "$$y_t-\\bar y$$" = yy,
+    "$$(y_t-\\bar y)^2$$" = yy2, 
+    "$$(x_t - \\bar x)(y_t-\\bar y)$$" = xy
+  ) |>
+  display_table()
+```
+
+Use the table above to determine these values:
+
+::: columns
+::: {.column width="30%"}
+
+-   $\bar x =$
+
+-   $\bar y =$
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
+-   $s_x =$
+
+-   $s_y =$
+
+:::
+
+::: {.column width="5%"}
+<!-- empty column to create gap -->
+:::
+
+::: {.column width="30%"}
+
+-   $r =$
+
+-   $\\cov(x,y) =$
+
+:::
+:::
+
+
+Here is a scatterplot of the data.
+
+<center>
+
+```{r fig.asp=0.75, fig.width=4}
+#| echo: false
+#| warning: false
+
+cov_dat <- cov_dat |> 
+  mutate(
+    sign = case_when(
+      xy > 0 ~ "positive", 
+      xy < 0 ~ "negative",
+      TRUE ~ "zero")
+  ) 
+  
+ggplotly(ggplot(cov_dat, aes(x = x, y = y)) +
+  geom_point(size = 2) +
+  labs(x="x", y="y") +
+  theme_bw() +  
+  ggtitle(paste0("Data for Computational Practice (n = ",n,")")) + 
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+</center>
+
+:::
+
+

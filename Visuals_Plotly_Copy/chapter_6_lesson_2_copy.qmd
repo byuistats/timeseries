@@ -1,0 +1,1065 @@
+---
+title: "Autoregressive Moving Average (ARMA) Models"
+subtitle: "Chapter 6: Lesson 2"
+format: html
+editor: source
+sidebar: false
+---
+
+
+
+
+
+<!-- # -->
+<!-- # -->
+<!-- # -->
+<!-- # -->
+<!-- # -->
+<!-- # -->
+<!-- #   This could be broken into two lessons: One for theory and other for fitting & forecasting. -->
+<!-- #   It was too rushed as one lesson. -->
+<!-- # -->
+<!-- # -->
+<!-- # -->
+<!-- # -->
+<!-- # -->
+<!-- # -->
+
+
+
+
+
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+## Learning Outcomes
+
+{{< include outcomes/_chapter_6_lesson_2_outcomes.qmd >}}
+
+
+
+
+## Preparation
+
+-   Read Sections 6.5.1 and 6.6-6.7
+
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+
+## Class Activity: Introduction to Autoregressive Moving Average (ARMA) Models (10 min)
+
+### Autoregressive (AR) Models
+
+In [Chapter 4, Lesson 3](https://byuistats.github.io/timeseries/chapter_4_lesson_3.html#ARdefinition), we learned the definition of an AR model:
+
+::: {.callout-note icon=false title="Definition of an Autoregressive (AR) Model"}
+
+The time series $\{x_t\}$ is an **autoregressive process of order $p$**, denoted as $AR(p)$, if
+$$
+  x_t = \alpha_1 x_{t-1} + \alpha_2 x_{t-2} + \alpha_3 x_{t-3} + \cdots + \alpha_{p-1} x_{t-(p-1)} + \alpha_p x_{t-p} + w_t ~~~~~~~~~~~~~~~~~~~~~~~ (4.15)
+$$
+
+where $\{w_t\}$ is white noise and the $\alpha_i$ are the model parameters with $\alpha_p \ne 0$.
+
+:::
+
+The $AR(p)$ model can be expressed as:
+$$
+  \underbrace{\left( 1 - \alpha_1 \mathbf{B} - \alpha_2 \mathbf{B}^2 - \cdots - \alpha_p \mathbf{B}^p \right)}_{\theta_p \left( \mathbf{B} \right)} x_t = w_t
+$$
+
+### Moving Average (MA) Models
+
+The definition of an $MA(q)$ model is:
+
+::: {.callout-note icon=false title="Definition of a Moving Average (MA) Model"}
+
+We say that a time series $\{x_t\}$ is a **moving average process of order $q$**, denoted as $MA(q)$, if each term in the time series is a linear combination of the current white noise term and the $q$ most recent past white noise terms. 
+
+It is given as:
+$$
+  x_t = w_t + \beta_1 w_{t-1} + \beta_2 w_{t-2} + \beta_3 w_{t-3} + \cdots + \beta_{q-1} w_{t-(q-1)} + \beta_q w_{t-q}
+$$
+
+where $\{w_t\}$ is white noise with zero mean and variance $\sigma_w^2$, and the $\beta_i$ are the model parameters with $\beta_q \ne 0$.
+
+:::
+
+Written in terms of the backward shift operator, we have 
+$$
+  x_t = \underbrace{\left( 1 + \beta_1 \mathbf{B} + \beta_2 \mathbf{B}^2  + \beta_3 \mathbf{B}^3  + \cdots + \beta_{q-1} \mathbf{B}^{q-1}  + \beta_q \mathbf{B}^{q} \right)}_{\phi_q(\mathbf{B})} w_t
+$$
+
+Putting the $AR$ and $MA$ models together, we get the $ARMA$ model. 
+
+::: {.callout-note icon=false title="Definition of an Autogregressive Moving Average (ARMA) Model"}
+
+A time series $\{ x_t \}$ follows an **autoregressive moving average (ARMA) model** of order $(p, q)$, which we write as $ARMA(p,q)$, if it can be written as:
+
+$$
+  x_t = 
+    \underbrace{
+      \alpha_1 x_{t-1} + \alpha_2 x_{t-2} 
+      + \alpha_3 x_{t-3} 
+      + \cdots 
+      % + \alpha_{p-1} x_{t-(p-1)} + 
+      \alpha_p x_{t-p}
+    }_{
+      AR(p) ~ \text{model}
+    } 
+    + \underbrace{
+      w_t + \beta_1 w_{t-1} + \beta_2 w_{t-2} 
+      + \beta_3 w_{t-3} 
+      + \cdots 
+      % + \beta_{q-1} w_{t-(q-1)} 
+      + \beta_q w_{t-q}
+    }_{
+      MA(q) ~ \text{model}
+    } 
+$$
+where $\{w_t\}$ is a white noise process.
+
+:::
+
+We can write this as:
+$$
+  \theta_p \left( \mathbf{B} \right) x_t
+  =
+  \phi_q \left( \mathbf{B} \right) w_t
+$$
+
+::: {.callout-caution icon=false title="Facts about ARMA Processes"}
+
+The following facts are true for $ARMA(p,q)$ processes:
+
+-   The ARMA process is stationary if all the roots of $\theta_p \left( \mathbf{B} \right)$ are greater than 1 in absolute value.
+-   The ARMA process is invertible if all the roots of $\phi_q \left( \mathbf{B} \right)$ are greater than 1 in absolute value.
+-   The special case $ARMA(p,0)$ is the $AR(p)$ model.
+-   The special case $ARMA(0,q)$ is the $MA(q)$ model.
+-   An $ARMA$ model will usually require fewer parameters than a single $MA$ or $AR$ model. This is called *parameter parsimony*.
+-   If $\theta$ and $\phi$ have a common factor, a stationary model can be simplified. This is called *parameter redundancy*.
+As an example, the model 
+$$
+  \left( 1 - \frac{1}{2} \mathbf{B} \right)\left( 1 - \frac{1}{3} \mathbf{B} \right) x_t 
+  = 
+  \left( 1-\frac{1}{2} \mathbf{B} \right)\left( 1 - \frac{1}{4} \mathbf{B} \right) w_t
+$$ 
+is the same as the model
+$$
+  \left( 1 - \frac{1}{3} \mathbf{B} \right) x_t 
+  = 
+  \left( 1 - \frac{1}{4} \mathbf{B} \right) w_t
+$$
+
+:::
+
+
+### Comparison of AR and MA Models
+::: {.callout-note icon=false title="ACF and PACF of an $AR(p)$ Process"}
+
+We can use the pacf and acf plots to assess if an $AR(p)$ or $MA(q)$ model is appropriate. 
+For an $AR(p)$ or $MA(q)$ process, we observe the following:
+
+<center>
+
+|      | AR(p)                  | MA(q)                  | ARMA(p,q)                |
+|------|------------------------|------------------------|--------------------------|
+| ACF  | Tails off              | Cuts off after lag $q$ | Tails off                |
+| PACF | Cuts off after lag $p$ | Tails off              | Tails off                |
+
+</center>
+
+<!-- https://people.cs.pitt.edu/~milos/courses/cs3750/lectures/class16.pdf -->
+
+:::
+
+
+### Analyzing Time Series with a Regular Seasonal Pattern
+
+Here are some steps you can use to guide your work as you analyze time series with a regular seasonal pattern. Even though these are presented linearly, you may find it helpful to iterate between some of the steps as needed.
+
+::: {.callout-warning icon=false title="Analyzing a Time Series with a Regular Seasonal Pattern"}
+
+-   Create a time plot of the series
+-   Determine an appropriate model for the trend and seasonality; call this Model 1
+    -   Regression
+    -   Holt-Winters
+    -   Additive / Multiplicative Decomposition
+    -   Other Techniques
+-   Use AIC/AICc/BIC (or other metrics) and your reasoning skills to choose the best model
+-   Obtain the residuals
+-   Check the residuals of Model 1 for evidence of autocorrelation and non-stationarity
+    -   Time plot of the residuals
+    -   ACF plot
+    -   PACF plot
+-   Fit an AR/MA/ARMA model to the (stationary) residuals; call this Model 2
+-   Check the residuals of Model 2 for evidence of autocorrelation and normality
+    -   ACF plot
+    -   PACF plot
+    -   Histogram
+-   Forecast the trend and seasonality of the time series using Model 1
+-   Forecast the residuals of Model 1 using Model 2
+-   Add the two forecasts together
+-   Plot and summarize the resulting forecast
+-   Refine the models above as needed
+
+:::
+
+## Class Activity: Model for the Residuals from the Rexburg Weather Model (15 min)
+
+### Review
+
+We now review the model we built in [Chapter 5 Lesson 3](https://byuistats.github.io/timeseries/chapter_5_lesson_3.html#weather) for the monthly average of the daily high temperature in Rexburg, Idaho.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-WeatherTimePlot
+#| fig-cap: "Time plot of the monthly mean daily high temperatures in Rexburg Idaho, in degrees Fahrenheit"
+
+weather_df <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather_monthly.csv") |>
+  mutate(dates = my(date_text)) |>
+  filter(dates >= my("1/2008") & dates <= my("12/2023")) |>
+  rename(x = avg_daily_high_temp) |>
+  mutate(TIME = 1:n()) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * TIME/12),
+    cos2 = cos(2 * pi * 2 * TIME/12),
+    cos3 = cos(2 * pi * 3 * TIME/12),
+    cos4 = cos(2 * pi * 4 * TIME/12),
+    cos5 = cos(2 * pi * 5 * TIME/12),
+    cos6 = cos(2 * pi * 6 * TIME/12),
+    sin1 = sin(2 * pi * 1 * TIME/12),
+    sin2 = sin(2 * pi * 2 * TIME/12),
+    sin3 = sin(2 * pi * 3 * TIME/12),
+    sin4 = sin(2 * pi * 4 * TIME/12),
+    sin5 = sin(2 * pi * 5 * TIME/12),
+    sin6 = sin(2 * pi * 6 * TIME/12)) |>
+  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME)) |>
+  as_tsibble(index = TIME)
+
+
+p <- weather_df |>
+  as_tsibble(index = dates) |>
+  autoplot(.vars = x) +
+  geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
+    labs(
+      x = "Month",
+      y = "Mean Daily High Temperature (Fahrenheit)",
+      title = "Time Plot of Mean Daily Rexburg High Temperature by Month",
+      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+ggplotly(p)
+```
+
+
+We chose the "Reduced Linear 5" model. For convenience, we reprint the coefficients here.
+
+```{r}
+#| label: weather22
+#| code-fold: true
+#| code-summary: "Show the code"
+
+reduced5_linear_lm <- weather_df |>
+  model(reduced_linear_5  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2))
+
+reduced5_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+r5lin_coef_unrounded <- reduced5_linear_lm |>
+  tidy() |>
+  select(term, estimate, std.error)
+
+r5lin_coef <- r5lin_coef_unrounded |>
+  round_df(3)
+
+stats_unrounded <- weather_df |>
+  as_tibble() |>
+  dplyr::select(TIME) |>
+  summarize(mean = mean(TIME), sd = sd(TIME))
+
+stats <- stats_unrounded |>
+  round_df(3)
+```
+
+The fitted model is:
+
+\begin{align*}
+  x_t 
+      &= \hat \beta_0 + \hat \beta_1 \left( \frac{t - \bar t}{s_t} \right)  \\
+      & ~~~~~~~~~~ + \hat \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + \hat \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~ + \hat \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + \hat \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+      &= `r r5lin_coef$estimate[1]` 
+            + `r r5lin_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right) \\ 
+      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
+            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
+      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
+            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
+      \\
+\end{align*}
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-WeatherTimePlotWithForecast
+#| fig-cap: "Time plot of the monthly mean daily high temperatures in Rexburg Idaho, in degrees Fahrenheit; the fitted values from the regression model are given in orange"
+
+num_months <- weather_df |> 
+  as_tibble() |> 
+  dplyr::select(TIME) |> 
+  tail(1) |> 
+  pull()
+
+df <- tibble( TIME = seq(1, num_months, 0.01) ) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * TIME/12),
+    cos2 = cos(2 * pi * 2 * TIME/12),
+    cos3 = cos(2 * pi * 3 * TIME/12),
+    cos4 = cos(2 * pi * 4 * TIME/12),
+    cos5 = cos(2 * pi * 5 * TIME/12),
+    cos6 = cos(2 * pi * 6 * TIME/12),
+    sin1 = sin(2 * pi * 1 * TIME/12),
+    sin2 = sin(2 * pi * 2 * TIME/12),
+    sin3 = sin(2 * pi * 3 * TIME/12),
+    sin4 = sin(2 * pi * 4 * TIME/12),
+    sin5 = sin(2 * pi * 5 * TIME/12),
+    sin6 = sin(2 * pi * 6 * TIME/12)) |>
+  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME)) |>
+  as_tsibble(index = TIME)
+
+linear5_ts <- reduced5_linear_lm |>
+  forecast(df) |>
+  as_tibble() |>
+  dplyr::select(TIME, .mean) |>
+  rename(value = .mean) |>
+  mutate(Model = "Linear 5")
+
+data_ts <- weather_df |> 
+  as_tibble() |>
+  rename(value = x) |>
+  mutate(Model = "Data") |>
+  dplyr::select(TIME, value, Model)
+
+combined_ts <- bind_rows(data_ts, linear5_ts) 
+point_ts <- combined_ts |> filter(TIME == floor(TIME))
+
+okabe_ito_colors <- c("#000000", "#E69F00")
+
+p <- combined_ts |>
+ ggplot(aes(x = TIME, y = value, color = Model)) +
+  geom_line() +
+  geom_point(data = point_ts, alpha = 0.5) +
+  labs(
+      x = "Month Number",
+      y = "Temperature (Fahrenheit)",
+      title = "Monthly Average of Daily High Temperatures in Rexburg",
+      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+  ) +    
+  scale_color_manual(
+    values = okabe_ito_colors[1:nrow(combined_ts |> as_tibble() |> select(Model) |> unique())], 
+    name = ""
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = "top", # Position the legend at the top
+    legend.direction = "horizontal" # Set the legend direction to horizontal
+  )
+
+ggplotly(p)
+```
+
+
+### Fitting an ARMA(p,q) Model
+
+First, we create an acf and pacf plot of the residuals from the model above.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-acfResidWeather
+#| fig-cap: "ACF Plot of the Residuals from the Rexburg Weather Model"
+#| warning: false
+
+reduced5_linear_lm |>
+  residuals() |>
+  ACF() |> 
+  autoplot(var = .resid)
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-pacfResidWeather
+#| fig-cap: "PACF Plot of the Residuals from the Rexburg Weather Model"
+#| warning: false
+
+reduced5_linear_lm |> 
+  residuals() |>
+  PACF() |>
+  autoplot(var = .resid)
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What ARMA model does the combined information in the acf and pacf plots suggest would be appropriate for the residuals of the Rexburg weather model?
+
+:::
+
+Here are summaries of some ARMA models that could be constructed.
+
+```{r}
+#| output: false
+
+model_resid <- reduced5_linear_lm |>
+  residuals() |>
+  select(-.model) |>
+  model(
+    auto = ARIMA(.resid ~ 1 + pdq(0:2,0,0:2) + PDQ(0, 0, 0)),
+    a000 = ARIMA(.resid ~ 1 + pdq(0,0,0) + PDQ(0, 0, 0)),
+    a001 = ARIMA(.resid ~ 1 + pdq(0,0,1) + PDQ(0, 0, 0)),
+    a002 = ARIMA(.resid ~ 1 + pdq(0,0,2) + PDQ(0, 0, 0)),
+    a100 = ARIMA(.resid ~ 1 + pdq(1,0,0) + PDQ(0, 0, 0)),
+    a101 = ARIMA(.resid ~ 1 + pdq(1,0,1) + PDQ(0, 0, 0)),
+    a102 = ARIMA(.resid ~ 1 + pdq(1,0,2) + PDQ(0, 0, 0)),
+    a200 = ARIMA(.resid ~ 1 + pdq(2,0,0) + PDQ(0, 0, 0)),
+    a201 = ARIMA(.resid ~ 1 + pdq(2,0,1) + PDQ(0, 0, 0)),
+    a202 = ARIMA(.resid ~ 1 + pdq(2,0,2) + PDQ(0, 0, 0))) 
+
+model_resid |>
+  glance() 
+```
+
+
+```{r}
+#| echo: false
+
+# model_best |>
+#   residuals() |>
+#   ACF() |>
+#   autoplot()
+
+
+# new_data <- tibble(
+#   date = seq(
+#     max(cbe_ts$date) + months(1),
+#       max(cbe_ts$date) + months(36),
+#       by = "1 months"),
+#   month = tsibble::yearmonth(date),  
+#   time = seq(nrow(cbe_ts), length = 36),
+#   imth = rep(1:12, 3)) |>
+#   as_tsibble(index = month)
+# 
+# plot_dat <- new_data |>
+#   mutate(
+#     residuals = forecast(
+#       model_best,
+#       h = "3 years") |>
+#       pull(.mean),
+#     expected_log = forecast(
+#       elec_lm,
+#       new_data = new_data) |>
+#       pull(.mean),
+#     expected = exp(expected_log + residuals)  
+#   )
+# 
+# ggplot() +
+#   geom_line(data = cbe_ts, aes(x = date, y = elec)) +
+#   geom_line(data = plot_dat, aes(x = date, y = expected), linetype = 2)
+```
+
+
+
+
+```{r}
+#| label: tbl-ModelComparison
+#| tbl-cap: "Comparison of the AIC, AICc, and BIC values for the models fitted to the Rexburg weather data"
+#| echo: false
+
+
+combined_models <- glance(model_resid) |> 
+  select(.model, AIC, AICc, BIC)
+
+minimum <- combined_models |>
+  reframe(
+    AIC = which(min(AIC)==AIC),
+    AICc = which(min(AICc)==AICc),
+    BIC = which(min(BIC)==BIC)
+  )
+
+combined_models |>
+  rename(Model = ".model") |>
+  round_df(1) |>
+  format_cells(rows = minimum$AIC, cols = 2, "bold") |>
+  format_cells(rows = minimum$AICc, cols = 3, "bold") |>
+  format_cells(rows = minimum$BIC, cols = 4, "bold") |> 
+  display_table()
+```
+
+
+
+```{r}
+#
+#
+# Detailed Overview:
+# The following code performs the following operations on the 'combined_models' data:
+# 1. Renames the column '.model' to 'Model'.
+# 2. Calculates the minimum values of AIC, AICc, and BIC.
+# 3. Rounds the values of AIC, AICc, and BIC to one decimal place.
+# 4. For each of AIC, AICc, and BIC columns, it applies bold formatting to the cells that match the minimum values.
+#    If the rounded value of a cell matches the rounded minimum value, it wraps the cell value with <b> tags to make it bold.
+#    If the cell value doesn't match the minimum value, it remains unchanged.
+# 5. Displays the formatted table using the 'display_table' function.
+#
+#
+
+
+combined_models %>%
+  rename(Model = .model) %>%
+  mutate(
+    AIC = ifelse(round(AIC, 1) == round(min(AIC), 1), paste0("<b>", round(AIC, 1), "</b>"), round(AIC, 1)),
+    AICc = ifelse(round(AICc, 1) == round(min(AICc), 1), paste0("<b>", round(AICc, 1), "</b>"), round(AICc, 1)),
+    BIC = ifelse(round(BIC, 1) == round(min(BIC), 1), paste0("<b>", round(BIC, 1), "</b>"), round(BIC, 1))
+  ) %>%
+  display_table()
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+model_resid |>
+  tidy() |>
+  filter(.model == "a101") 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-ACFofResiduals
+#| fig-cap: "ACF plot of the residuals from the $ARMA(1,1)$ model"
+
+model_resid |>
+  select(a101) |>
+  residuals() |>
+  ACF() |>
+  autoplot(var = .resid)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-PACFofResiduals
+#| fig-cap: "PACF plot of the residuals from the $ARMA(1,1)$ model"
+
+model_resid |>
+  select(a101) |>
+  residuals() |>
+  PACF() |>
+  autoplot(var = .resid)
+```
+
+
+
+
+
+
+
+
+
+## Small-Group Activity: Industrial Electricity Consumption in Texas (20 min)
+
+
+
+
+These data represent the amount of electricity used each month for industrial applications in Texas.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+elec_ts <- rio::import("https://byuistats.github.io/timeseries/data/electricity_tx.csv") |>
+  dplyr::select(-comments) |>
+  mutate(month = my(month)) |>
+  mutate(
+    t = 1:n(),
+    std_t = (t - mean(t)) / sd(t)
+  ) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12)
+  ) |>
+  as_tsibble(index = month)
+
+elec_plot_raw <- elec_ts |>
+    autoplot(.vars = megawatthours) +
+    labs(
+      x = "Month",
+      y = "Megawatt-hours",
+      title = "Texas' Industrial Electricity Use"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+elec_plot_log <- elec_ts |>
+    autoplot(.vars = log(megawatthours)) +
+    labs(
+      x = "Month",
+      y = "log(Megwatt-hours)",
+      title = "Log of Texas' Industrial Electricity Use"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+```
+
+```{r}
+ggplotly(elec_plot_raw)
+```
+
+
+```{r}
+ggplotly(elec_plot_log)
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the Texas industrial electricity consumption data to do the following.
+
+-   Select an appropriate model to fit the time series using the AIC, AICc, or BIC critera.
+-   Determine the best $ARMA(p,q)$ model for the residuals.
+<!-- -   Forecast the data for the next 5 years using the regression model. -->
+<!-- -   Forecast the residuals for the next 5 years using ARMA model. -->
+<!-- -   Sum the two forecasted time series and plot the combined series against the original retail sales data. -->
+
+:::
+
+
+
+
+## Small Group Activity: Fitting an ARMA(p,q) Model to the Retail Data (30 min)
+
+Apply what you have learned in this lesson to the retail sales data. In particular, consider full-service restaurants (NAICS code 722511). 
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the total retail sales for full-service restaurants to do the following.
+
+-   Select an appropriate model to fit the time series using the AIC, AICc, or BIC critera.
+-   Determine the best $ARMA(p,q)$ model for the residuals.
+-   Forecast the data for the next 5 years using the regression model.
+-   Forecast the residuals for the next 5 years using ARMA model.
+-   Sum the two forecasted time series and plot the combined series against the original retail sales data.
+
+:::
+
+
+Here is some code you can use to help you get started.
+
+
+
+```{r}
+#| label: fig-retailSideBySidePlot
+#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| fig-height: 3.5
+
+# Read in retail sales data for "Full-Service Restaurants"
+retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
+  filter(naics == 722511) |>
+  mutate(
+    month = yearmonth(as_date(month)),
+    month_number = month(month)
+  ) |>
+  mutate(t = 1:n()) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12)
+  ) |>
+  mutate(
+    in_great_recession = ifelse(ym(month) >= my("December 2007") & month <= my("June 2009"), 1, 0),
+    after_great_recession = ifelse(ym(month) > my("June 2009"), 1, 0)
+  ) |>
+  as_tsibble(index = month)
+
+retail_plot_raw <- retail_ts |>
+    autoplot(.vars = sales_millions) +
+    labs(
+      x = "Month",
+      y = "sales_millions",
+      title = "Other General Merchandise Sales"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+retail_plot_log <- retail_ts |>
+    autoplot(.vars = log(sales_millions)) +
+    labs(
+      x = "Month",
+      y = "log(sales_millions)",
+      title = "Logarithm of Other Gen. Merch. Sales"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+```{r}
+ggplotly(retail_plot_raw)
+```
+
+
+```{r}
+ggplotly(retail_plot_log)
+```
+
+
+
+```{r}
+#| label: tbl-modelFitting
+#| tbl-cap: "Coefficients for the fitted model for the total sales in full-service restaurants in the United States"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+retail_final_lm <- retail_ts |>
+  model(retail_full = TSLM(log(sales_millions) ~  
+      (in_great_recession * std_t) + (after_great_recession * std_t) 
+      + (in_great_recession * I(std_t^2) ) + (after_great_recession * I(std_t^2) )
+      + (in_great_recession * I(std_t^3) ) + (after_great_recession * I(std_t^3) )
+      + sin1 + cos1 + sin2 + cos2 + sin3 + cos3
+      + sin4 + cos4 + sin5 + cos5 + cos6 # Note sin6 is omitted
+    )
+    ) 
+
+retail_final_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) |>
+  knitr::kable(format = "html", align='ccccccc', escape = FALSE, width = NA, row.names = FALSE) |>
+  kable_styling(full_width = FALSE, "striped")
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-HistogramOfResiduals
+#| fig-cap: "Histogram of the residuals from the fitted regression model"
+#| warning: false
+
+retail_resid_df <- retail_final_lm |> 
+  residuals() |> 
+  as_tibble() |> 
+  dplyr::select(.resid) |>
+  rename(x = .resid) 
+  
+ggplotly(retail_resid_df |>
+  mutate(density = dnorm(x, mean(retail_resid_df$x), sd(retail_resid_df$x))) |>
+  ggplot(aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 0.02) +
+    geom_line(aes(x = x, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    ))
+```
+
+The skewness is given by the command `skewness`:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+skewness(retail_resid_df$x)
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-acfOfResiduals
+#| fig-cap: "Correlogram of the residuals from the fitted regression model"
+#| warning: false
+
+retail_final_lm |>
+  residuals() |>
+  ACF() |> 
+  autoplot(var = .resid)
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-pacfOfResiduals
+#| fig-cap: "Partial correlogram of the residuals from the fitted regression model"
+#| warning: false
+
+retail_final_lm |>
+  residuals() |>
+  PACF() |> 
+  autoplot(var = .resid)
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-FittedModelPlottedOnTimePlot
+#| fig-cap: "Time plot of the retail sales data for full-service restaurants; the regression curve without the seasonal terms is given in orange; the predicted values from the model are given in blue"
+
+################################################################
+#   Be sure to adjust this model to match what you did above   #
+################################################################
+#
+# Model without any seasonal trends
+retail_no_seasonal_lm <- retail_ts |>
+  model(retail_full_quad = TSLM(log(sales_millions) ~  
+      (in_great_recession * std_t) + (after_great_recession * std_t) 
+      + (in_great_recession * I(std_t^2) ) + (after_great_recession * I(std_t^2) )
+      + (in_great_recession * I(std_t^3) ) + (after_great_recession * I(std_t^3) )
+    )
+    )
+
+ggplotly(retail_ts |> 
+  autoplot(.vars = sales_millions) +
+  # ggplot(mapping = aes(x = month, y = sales_millions)) +
+  # geom_line() +
+  geom_line(data = augment(retail_no_seasonal_lm),
+            aes(x = month, y = .fitted),
+            color = "#E69F00",
+            linewidth = 1
+            ) +
+  geom_line(data = augment(retail_final_lm),
+            aes(x = month, y = .fitted),
+            color = "blue",
+            alpha = 0.7,
+            # linewidth = 1
+            ) +
+  labs(
+    x = "Month",
+    y = "Sales (Millions of U.S. Dollars)",
+    title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+
+
+```{r}
+#| label: tbl-ARMAmodelFitting
+#| tbl-cap: "Results from the process of fitting an ARMA model to the residuals of the model for the total sales in full-service restaurants in the United States"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+model_resid <- retail_final_lm |>
+  residuals() |>
+  select(-.model) |>
+  model(
+    auto = ARIMA(.resid ~ 1 + pdq(0:5,0,0:5) + PDQ(0, 0, 0)),
+    a000 = ARIMA(.resid ~ 1 + pdq(0,0,0) + PDQ(0, 0, 0)),
+    a001 = ARIMA(.resid ~ 1 + pdq(0,0,1) + PDQ(0, 0, 0)),
+    a002 = ARIMA(.resid ~ 1 + pdq(0,0,2) + PDQ(0, 0, 0)),
+    a003 = ARIMA(.resid ~ 1 + pdq(0,0,3) + PDQ(0, 0, 0)),
+    a004 = ARIMA(.resid ~ 1 + pdq(0,0,4) + PDQ(0, 0, 0)),
+    a005 = ARIMA(.resid ~ 1 + pdq(0,0,5) + PDQ(0, 0, 0)),
+    a100 = ARIMA(.resid ~ 1 + pdq(1,0,0) + PDQ(0, 0, 0)),
+    a101 = ARIMA(.resid ~ 1 + pdq(1,0,1) + PDQ(0, 0, 0)),
+    a102 = ARIMA(.resid ~ 1 + pdq(1,0,2) + PDQ(0, 0, 0)),
+    a103 = ARIMA(.resid ~ 1 + pdq(1,0,3) + PDQ(0, 0, 0)),
+    a104 = ARIMA(.resid ~ 1 + pdq(1,0,4) + PDQ(0, 0, 0)),
+    a105 = ARIMA(.resid ~ 1 + pdq(1,0,5) + PDQ(0, 0, 0)), 
+    a200 = ARIMA(.resid ~ 1 + pdq(2,0,0) + PDQ(0, 0, 0)),
+    a201 = ARIMA(.resid ~ 1 + pdq(2,0,1) + PDQ(0, 0, 0)),
+    a202 = ARIMA(.resid ~ 1 + pdq(2,0,2) + PDQ(0, 0, 0)),
+    a203 = ARIMA(.resid ~ 1 + pdq(2,0,3) + PDQ(0, 0, 0)),
+    a204 = ARIMA(.resid ~ 1 + pdq(2,0,4) + PDQ(0, 0, 0)),
+    a205 = ARIMA(.resid ~ 1 + pdq(2,0,5) + PDQ(0, 0, 0)),
+    a300 = ARIMA(.resid ~ 1 + pdq(3,0,0) + PDQ(0, 0, 0)),
+    a301 = ARIMA(.resid ~ 1 + pdq(3,0,1) + PDQ(0, 0, 0)),
+    a302 = ARIMA(.resid ~ 1 + pdq(3,0,2) + PDQ(0, 0, 0)),
+    a303 = ARIMA(.resid ~ 1 + pdq(3,0,3) + PDQ(0, 0, 0)),
+    a304 = ARIMA(.resid ~ 1 + pdq(3,0,4) + PDQ(0, 0, 0)),
+    a305 = ARIMA(.resid ~ 1 + pdq(3,0,5) + PDQ(0, 0, 0)), 
+    a400 = ARIMA(.resid ~ 1 + pdq(4,0,0) + PDQ(0, 0, 0)),
+    a401 = ARIMA(.resid ~ 1 + pdq(4,0,1) + PDQ(0, 0, 0)),
+    a402 = ARIMA(.resid ~ 1 + pdq(4,0,2) + PDQ(0, 0, 0)),
+    a403 = ARIMA(.resid ~ 1 + pdq(4,0,3) + PDQ(0, 0, 0)),
+    a404 = ARIMA(.resid ~ 1 + pdq(4,0,4) + PDQ(0, 0, 0)),
+    a405 = ARIMA(.resid ~ 1 + pdq(4,0,5) + PDQ(0, 0, 0)),
+    a500 = ARIMA(.resid ~ 1 + pdq(5,0,0) + PDQ(0, 0, 0)),
+    a501 = ARIMA(.resid ~ 1 + pdq(5,0,1) + PDQ(0, 0, 0)),
+    a502 = ARIMA(.resid ~ 1 + pdq(5,0,2) + PDQ(0, 0, 0)),
+    a503 = ARIMA(.resid ~ 1 + pdq(5,0,3) + PDQ(0, 0, 0)),
+    a504 = ARIMA(.resid ~ 1 + pdq(5,0,4) + PDQ(0, 0, 0)),
+    a505 = ARIMA(.resid ~ 1 + pdq(5,0,5) + PDQ(0, 0, 0))
+  )
+
+
+# This command indicates which model was selected by "auto"
+# model_resid |> select(auto)
+
+model_resid |> 
+  glance() |>
+  # uncomment the next line to only show the "best" models according to these criteria
+  # filter(AIC == min(AIC) | AICc == min(AICc) | BIC == min(BIC) | .model == "auto") |>
+  knitr::kable(format = "html", align='ccccccc', escape = FALSE, width = NA, row.names = FALSE) |>
+  kable_styling(full_width = FALSE, "striped")
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-acfOfResidualsFromArmaModelOnTheResiduals
+#| fig-cap: "Correlogram of the residuals from the ARMA model fitted to the residuals from the regression model"
+#| warning: false
+
+model_resid |>
+  select(a504) |>
+  residuals() |>
+  ACF() |> 
+  autoplot(var = .resid)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-pacfOfResidualsFromArmaModelOnTheResiduals
+#| fig-cap: "Partial correlogram of the residuals from the ARMA model fitted to the residuals from the regression model"
+#| warning: false
+
+model_resid |>
+  select(a504) |>
+  residuals() |>
+  PACF() |> 
+  autoplot(var = .resid)
+```
+
+
+
+
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_6_2.qmd" download="homework_6_2.qmd"> homework_6_2.qmd </a>
+
+:::
+
+

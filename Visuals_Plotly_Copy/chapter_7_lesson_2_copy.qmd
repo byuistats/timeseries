@@ -1,0 +1,652 @@
+---
+title: "Seasonal ARIMA Models"
+subtitle: "Chapter 7: Lesson 2"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+## Learning Outcomes
+
+{{< include outcomes/_chapter_7_lesson_2_outcomes.qmd >}}
+
+
+
+
+## Preparation
+
+-   Read Section 7.3
+
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+
+### Definition of Seasonal ARIMA (SARIMA) Models
+
+We can add a seasonal component to an ARIMA model. We call this model a Seasonal ARIMA model, or a SARIMA model.
+We use differencing at a lag equal to the number of seasons, $s$. This allows us to remove additional seasonal effects that carry over from one cycle to another. 
+
+Recall that if we use a difference of lag 1 to remove a linear trend, we introduce a moving average term. The same thing happens when we introduce a difference with lag $s$.
+For the lag $s$ values, we can apply an autoregressive (AR) component at lag $s$ with $P$ parameters, an integrated (I) component with parameter $D$, and a moving average (MA) component with $Q$ terms.
+This yields the full SARIMA model.
+
+
+::: {.callout-note icon=false title="Definition of SARIMA Models"}
+
+A Seasonal ARIMA model, or SARIMA model with $s$ seasons can be expressed as:
+
+$$
+  \Theta_P \left( \mathbf{B}^s \right) \theta_p \left( \mathbf{B} \right) \left( 1 - \mathbf{B}^s \right)^D \left( 1 - \mathbf{B} \right)^d x_t = \Phi_Q \left( \mathbf{B}^s \right) \phi_q \left( \mathbf{B} \right) w_t
+$$
+
+where 
+
+-   $p$, $d$, and $q$ are the parameters for the $ARIMA(p, d, q)$ model applied to the time series and the differences are taken with a lag of 1,
+
+-   $s$ is the number of seasons, and
+
+-   $P$, $D$, and $Q$ are the parameters for the $ARIMA(P, D, Q)$ model applied to the time series where the differences are taken across a lag of $s$.
+
+$\Theta_P \left( \mathbf{B}^s \right)$, $\theta_p \left( \mathbf{B} \right)$, $\Phi_Q \left( \mathbf{B}^s \right)$, and $\phi_q \left( \mathbf{B} \right)$ are polynomials of degree $P$, $p$, $Q$, and $q$, respectively.
+
+We denote this model as $ARIMA(p,d,q)(P,D,Q)_s$ or $ARIMA(p,d,q)(P,D,Q)[s]$.
+
+:::
+
+Looking closely at this model, we can see it is the combination of the ARIMA model 
+$$
+  \theta_p \left( \mathbf{B} \right) \left( 1 - \mathbf{B} \right)^d x_t = \phi_q \left( \mathbf{B} \right) w_t
+$$
+and the same model, after applying a difference across $s$ seasons
+$$
+  \Theta_P \left( \mathbf{B}^s \right) \left( 1 - \mathbf{B}^s \right)^D x_t = \Phi_Q \left( \mathbf{B}^s \right) w_t
+$$
+
+
+
+### Special Cases of a Seasonal ARIMA Model
+
+#### Stationary SARIMA Models
+
+::: {.callout-note icon=false title="Stationarity of SARIMA Models"}
+
+The SARIMA model is, in general, non-stationary. However, there is a special case in which it is stationary. An $ARIMA(p,d,q)(P,D,Q)_s$ will be stationary if the following conditions are satisfied:
+
+1.    If $D = d = 0$, and 
+2.    The roots of the characteristic equation
+$$
+  \Theta_P \left( \mathbf{B}^s \right) \theta_p \left( \mathbf{B} \right) = 0
+$$
+are all greter than 1 in absolute value.
+
+:::
+
+#### A Simple AR Model with a Seasonal Period of $s$ Units
+
+$ARIMA(0,0,0)(1,0,0)_{s}$ is given as
+
+$$
+  x_t = \alpha x_{t-s} + w_t
+$$
+This model would be appropriate for data where there are $s$ seasons and the value in the season exactly one cycle prior affects the current value. This model is stationary when $\left| \alpha^{1/s} \right| > 1$.
+
+
+#### Stochastic Trends with Seasonal Influences
+
+Many time series with stochastic trends also have seasonal influences. We can extend the previous model as:
+
+$$
+  x_t = x_{t-1} + \alpha x_{t-s} - \alpha x_{t-(s+1)} + w_t
+$$
+
+This is equivalent to 
+$$
+  \underbrace{\left( 1 - \alpha \mathbf{B}^{12} \right)}_{\Theta_1 \left( \mathbf{B}^{12} \right)} \left( 1 - \mathbf{B} \right) x_t = w_t
+$$
+
+which is $ARIMA(0,1,0)(1,0,0)_s$.
+
+Note that we could have written this model as:
+$$
+  \nabla x_t = \alpha \nabla x_{t-s} + w_t
+$$
+
+This makes it clear that under this model, the *change* at time $t$ depends on the change at the corresponding time in the previous cycle.
+
+Note that $\left( 1 - \mathbf{B} \right)$ is a factor in the characteristic polynomial, so this model will be non-stationary.
+
+
+#### Simple Quarterly Seasonal Moving Average Model (with no Trend)
+
+We can write a simple quarterly seasonal moving average model as 
+
+$$
+  x_t = \underbrace{w_t - \beta w_{t-4}}_{\left( 1 - \beta \mathbf{B}^{4} \right) w_t}
+$$
+
+This is an $ARIMA(0,0,0)(0,0,1)_4$ model.
+
+
+#### Quarterly Seasonal Moving Average Model with a Stocastic Trend
+
+We can add a stochastic trend to the previous model by including first-order differences:
+
+$$
+  x_t = x_{t-1} + w_t - \beta w_{t-4}
+$$
+This is an $ARIMA(0,1,0)(0,0,1)_4$ model. 
+
+
+#### Quarterly Seasonal Moving Average Model where the Seasonal Terms Contain a Stocastic Trend
+
+We can allow the seasonal components to include a stochastic trend. We apply differencing at the seasonal period. This yields the model 
+
+$$
+  x_t = x_{t-4} + w_t - \beta w_{t-4}
+$$
+
+This is an $ARIMA(0,0,0)(0,1,1)_4$ process. 
+
+
+::: {.callout-warning icon=false title="Effects of Differencing"}
+
+Recall that lag $s$ differencing will remove a linear trend, however if there is a linear trend, differencing at lag 1 will introduce an AR process in the residuals. If a linear model is appropriate in a, say, quarterly series with additive seasonals, then the model could be
+$$
+  x_t = a + bt + s_{[t]} + w_t
+$$
+
+where $[t]$ is the modulus operator, or $[t]$ is the remainder when $t$ is divided by $4$. Another way to view this is to note that for a quarterly time series, $[t] = [t-4]$.
+
+If we apply first-order differencing at lag 4, we get
+\begin{align*}
+  \left( 1 - \mathbf{B}^{4} \right) x_t 
+    &= x_t - x_{t-4} \\
+    &= \left(a + bt + s_{[t]} + w_t \right) - \left(a + b(t-4) + s_{[t-4]} + w_{t-4} \right) \\
+    &= \left(a + bt + s_{[t]} + w_t \right) - \left(a + b(t-4) + s_{[t]} + w_{t-4} \right) \\
+    &= 4b + w_t - w_{t-4}
+\end{align*}
+
+This is an $ARIMA(0,0,0)(0,1,1)_4$ process with constant term of $4b$.
+
+If we apply first-order differencing at lag 1 and then do the differencing at lag 4, we get the following process:
+\begin{align*}
+  \left( 1 - \mathbf{B}^{4} \right) \left( 1 - \mathbf{B} \right) x_t 
+    &= \left( 1 - \mathbf{B}^{4} \right) \left( x_t  - \mathbf{B}x_t \right) \\
+    &= \left( 1 - \mathbf{B}^{4} \right) \left[ \left( a + bt + s_{[t]} + w_t \right)  - \mathbf{B} \left( a + bt + s_{[t]} + w_t \right) \right] \\
+    &= \left( 1 - \mathbf{B}^{4} \right) \left[ \left( a + bt + s_{[t]} + w_t \right)  - \left( a + b(t-1) + s_{[t-1]} + w_{t-1} \right) \right] \\
+    &= \left( 1 - \mathbf{B}^{4} \right) \left[ \left( s_{[t]} + w_t \right)  - \left( -b + s_{[t-1]} + w_{t-1} \right) \right] \\
+    &= \left( 1 - \mathbf{B}^{4} \right) \left( b + s_{[t]} - s_{[t-1]} + w_t - w_{t-1} \right) \\
+    &= \left( b + s_{[t]} - s_{[t-1]} + w_t - w_{t-1} \right) - \mathbf{B}^{4} \left( b + s_{[t]} - s_{[t-1]} + w_t - w_{t-1} \right)  \\
+    &= \left( b + s_{[t]} - s_{[t-1]} + w_t - w_{t-1} \right) - \left( b + s_{[t-4]} - s_{[t-5]} + w_{t-4} - w_{t-5} \right)  \\
+    &= \left( s_{[t]} - s_{[t-1]} + w_t - w_{t-1} \right) - \left( s_{[t]} - s_{[t-1]} + w_{t-4} - w_{t-5} \right)  \\
+    &= w_t - w_{t-1} - w_{t-4} + w_{t-5}
+\end{align*}
+
+This represents an $ARIMA(0,1,1)(0,1,1)_4$ process without a constant term.
+
+:::
+
+
+## Class Activity: Seasonal ARIMA Models - Retail: General Merchandise Stores (10 min)
+
+```{r}
+#| label: fig-PaintWallpaperRetailSideBySidePlot
+#| fig-cap: "Time plots of the retail sales in General Merchandise stores; time plot of the timt series (left) and the natural logarithm of the time series (right)"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| fig-height: 3.5
+
+# Read in retail sales data for "Full-Service Restaurants"
+retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
+  filter(naics == 452) |>
+  mutate( month = yearmonth(as_date(month)) ) |>
+  na.omit() |>
+  as_tsibble(index = month)
+
+```
+
+
+
+
+```{r}
+retail_plot_raw <- ggplotly(ggplot(data = retail_ts, aes(x = month, y = sales_millions)) +
+  geom_line() +
+  labs(
+    x = "Month",
+    y = "Sales (in millions)",
+    title = "Sales (in millions) - Full-Service Restaurants",
+    subtitle = "General Merchandise Stores"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  ))
+```
+
+
+
+```{r}
+retail_plot_log <- ggplotly(ggplot(data = retail_ts, aes(x = month, y = log(sales_millions))) +
+  geom_line() +
+  labs(
+    x = "Month",
+    y = "Log of Sales (in millions)",
+    title = "Log of Sales (in millions) - Full-Service Restaurants",
+    subtitle = "General Merchandise Stores"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  ))
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Based on the figure above, should the logarithm be applied to the time series? Justify your answer.
+
+:::
+
+
+Here are a few models we could fit to this time series.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: get_model
+#| warning: false
+#| output: false
+
+retail_ts |>
+  model(
+    ar_model = ARIMA(sales_millions ~ 1 +
+      pdq(1, 1, 0) +
+      PDQ(1, 0, 0), approximation = TRUE),
+    ma_model = ARIMA(sales_millions ~ 1 + 
+      pdq(0, 1, 1) +
+      PDQ(0, 0, 1), approximation = TRUE),
+    arima_102012 = ARIMA(sales_millions ~ 1 + 
+      pdq(1, 0, 2) +
+      PDQ(0, 1, 2), approximation = TRUE),
+    arima_102102 = ARIMA(sales_millions ~ 1 + 
+      pdq(1, 0, 2) +
+      PDQ(1, 0, 2), approximation = TRUE),
+    arima_112112 = ARIMA(sales_millions ~ 1 + 
+      pdq(1, 1, 2) +
+      PDQ(1, 1, 2), approximation = TRUE),
+    arima_012012 = ARIMA(sales_millions ~ 1 + 
+      pdq(0, 1, 2) +
+      PDQ(0, 1, 2), approximation = TRUE),
+    arima_111111 = ARIMA(sales_millions ~ 1 + 
+      pdq(1, 1, 1) +
+      PDQ(1, 1, 1), approximation = TRUE),
+    ) |>
+  glance()
+```
+
+```{r}
+#| echo: false
+#| warning: false
+
+retail_ts |>
+  model(
+    ar_model = ARIMA(sales_millions ~ 1 +
+      pdq(1, 1, 0) +
+      PDQ(1, 0, 0), approximation = TRUE),
+    ma_model = ARIMA(sales_millions ~ 1 + 
+      pdq(0, 1, 1) +
+      PDQ(0, 0, 1), approximation = TRUE),
+    arima_102012 = ARIMA(sales_millions ~ 1 + 
+      pdq(1, 0, 2) +
+      PDQ(0, 1, 2), approximation = TRUE),
+    arima_112112 = ARIMA(sales_millions ~ 1 + 
+      pdq(1, 1, 2) +
+      PDQ(1, 1, 2), approximation = TRUE),
+    arima_012012 = ARIMA(sales_millions ~ 1 + 
+      pdq(0, 1, 2) +
+      PDQ(0, 1, 2), approximation = TRUE),
+    arima_111111 = ARIMA(sales_millions ~ 1 + 
+      pdq(1, 1, 1) +
+      PDQ(1, 1, 1), approximation = TRUE),
+    ) |>
+  glance() |>
+  select(-ar_roots, -ma_roots) |>
+  display_table()
+```
+
+Here is the model automatically selected by R.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+best_fit_retail <- retail_ts |>
+  model(
+    ar_model = ARIMA(sales_millions ~ 1 +
+      pdq(0:2, 0:2, 0:2) +
+      PDQ(0:2, 0:2, 0:2), approximation = TRUE))
+
+best_fit_retail
+```
+
+This is the acf and pacf of the residuals from the automatically selected model.
+
+```{r}
+#| label: fig-retailACFandPACFofResiduals
+#| fig-cap: "Correlogram (left) and partial correlogram (right) of the residuals from the best-fitting model"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+acf_plot <- best_fit_retail |>
+  residuals() |>
+  feasts::ACF() |>
+  autoplot()
+
+pacf_plot <- best_fit_retail |>
+  residuals() |>
+  feasts::PACF() |>
+  autoplot()
+
+acf_plot | pacf_plot
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you notice in the acf and pacf plots?
+
+:::
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+#| output: false
+#| include: false
+
+best_fit_retail |>
+  glance()
+```
+
+Here are the coefficients from the automatically-selected model.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| output: false
+
+coefficients(best_fit_retail)
+```
+
+```{r}
+#| echo: false
+
+coefficients(best_fit_retail) |>
+  display_table()
+```
+
+We can forecast future values of this time series using our model. 
+
+```{r}
+#| label: fig-retailforecast
+#| fig-cap: "Five-year forecast of the time series based on the best-fitting model"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+best_fit_retail |>
+  forecast(h = "60 months") |>
+  autoplot(retail_ts) +
+    labs(
+      x = "Month",
+      y = "Total U.S. Sales in Millions",
+      title = "Forecasted Sales (in millions)",
+      subtitle = "General Merchandise Stores"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+```
+
+
+```{r}
+#| echo: false
+#| include: false
+#| eval: false
+
+############################################
+#### This does not work with these data ####
+############################################
+
+# Very slow, but you can see all fits.
+get_arima <- function(p, d, q, P, D, Q, data = retail_ts) {
+  model(data, arima = ARIMA(sales_millions ~ 1 +
+      pdq(p, d, q) + PDQ(P, D, Q), approximation = TRUE))
+}
+
+get_aic <- function(fit) {
+  gfit <- glance(fit)
+  if (nrow(gfit) != 0) {
+    pull(gfit, AIC)
+  } else {
+    NA
+  }
+}
+
+all_possible <- expand_grid(
+  p = 0:2, d = 0:2, q = 0:2,
+  P = 0:2, D = 0:2, Q = 0:2)
+
+all_possible <- all_possible |>
+  mutate(
+    fit = purrr::pmap(all_possible, get_arima),
+    aic = purrr::map_dbl(fit, ~get_aic(.x))
+    )
+
+filter(all_possible, aic == min(aic, na.rm = TRUE))
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   How well does the forecast generated by this model appear to work? 
+
+:::
+
+
+
+
+## Small-Group Activity: Seasonal ARIMA Models - Retail: Shoe Stores (20 min)
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Repeat the analysis above for the retail sales for shoe stores (NAICS code 4482).
+
+-   Create time plots of the data and the logarithm of the data. 
+-   Is it appropriate to take the logarithm of the time series? (Use the appropriate time series for the following.)
+-   Find the best-fitting SARIMA model for the time series.
+-   Determine the model coefficients.
+-   Use the acf and pacf plots of the residuals to assess whether this model adequately models the time series.
+-   Use your model to forecast the value of the time series over the next five years.
+-   How well does the forecast generated by this model appear to work? 
+-   Did the downward COVID spike seriously affect the applicability of this model?
+
+:::
+
+
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_7_2.qmd" download="homework_7_2.qmd"> homework_7_2.qmd </a>
+
+:::
+
+
+
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">Small-Group Activity: Seasonal ARIMA Models - Retail: Shoe Stores</a>
+  
+::: {#Solutions1 style="display:none;"}
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+# Read in retail sales data for "Full-Service Restaurants"
+retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
+  filter(naics == 4482) |>
+  mutate( month = yearmonth(as_date(month)) ) |>
+  na.omit() |>
+  as_tsibble(index = month)
+
+retail_plot_raw <- retail_ts |>
+    autoplot(.vars = sales_millions) +
+    labs(
+      x = "Month",
+      y = "sales_millions",
+      title = "Sales (in millions)",
+      subtitle = "Shoe Stores"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+retail_plot_log <- retail_ts |>
+    autoplot(.vars = log(sales_millions)) +
+    labs(
+      x = "Month",
+      y = "log(sales_millions)",
+      title = "Log of Sales (in millions)",
+      subtitle = "Shoe Stores"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+retail_plot_raw | retail_plot_log
+
+best_fit_retail <- retail_ts |>
+  model(
+    ar_model = ARIMA(sales_millions ~ 1 +
+      pdq(0:2, 0:2, 0:2) +
+      PDQ(0:2, 0:2, 0:2), approximation = TRUE))
+
+best_fit_retail
+
+acf_plot <- best_fit_retail |>
+  residuals() |>
+  feasts::ACF() |>
+  autoplot()
+
+pacf_plot <- best_fit_retail |>
+  residuals() |>
+  feasts::PACF() |>
+  autoplot()
+
+acf_plot | pacf_plot
+
+best_fit_retail |>
+  glance()
+
+coefficients(best_fit_retail)
+
+best_fit_retail |>
+  forecast(h = "60 months") |>
+  autoplot(retail_ts) +
+    labs(
+      x = "Month",
+      y = "Total U.S. Sales in Millions",
+      title = "Forecasted Sales (in millions)",
+      subtitle = "Shoe Stores"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5)
+    )
+
+```
+
+:::

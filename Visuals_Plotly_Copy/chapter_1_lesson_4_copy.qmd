@@ -1,0 +1,684 @@
+---
+title: "Additive Models"
+subtitle: "Chapter 1: Lesson 4"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+
+library(plotly)
+library(ggplot2)
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+## Learning Outcomes
+
+{{< include outcomes/chapter_1_lesson_4_outcomes.qmd >}}
+
+
+
+## Preparation
+
+-   Read Sections 1.5.4-1.5.5 and 1.6
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+-   What would you add to your learning journal after reading your partner's?
+-   What would you recommend your partner add to their learning journal?
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+
+
+
+<!-- ## Random walks (5-10 min) -->
+
+<!-- ```          -->
+<!-- -   Definition of a random walk -->
+<!-- -   Example: tossing a coin and moving left or right one integer on a number line -->
+<!-- ``` -->
+
+<!-- ::: callout-solution -->
+<!-- Please add simulation of random walk here -->
+<!-- ::: -->
+
+
+
+
+
+
+
+
+
+## Converting from a Data File to a Tsibble (5 min)
+
+This is a demonstration of two ways to convert an Excel 
+or csv data file to a tsibble.
+
+```{r}
+deaths_df <- rio::import("https://byuistats.github.io/timeseries/data/traffic_deaths.xlsx")
+
+# Method 1: Create date from scratch based on pattern of rows
+# This only works if the data are in ascending order with no missing values
+# Note: This file is not in the right order, so this code gives the wrong tsibble
+# unless you sort the Excel file before proceeding.
+start_date <- lubridate::ymd("2017-01-01")
+date_seq <- seq(start_date,
+                start_date + months(nrow(deaths_df)-1),
+                by = "1 months")
+deaths_tibble <- tibble(
+  dates = date_seq,
+  year = lubridate::year(date_seq),
+  month = lubridate::month(date_seq),
+  value = pull(deaths_df, Deaths)
+)
+
+# Method 2: Build using the date information in the Excel file
+deaths_tibble <- deaths_df |>
+  mutate(
+    date_str = paste("1", Month, Year),
+    dates = dmy(date_str),
+    year = lubridate::year(dates),
+    month = lubridate::month(dates),
+    value = Deaths
+  ) |>
+  dplyr::select(dates, year, month, value)  |> 
+  tibble()
+
+# Create the index variable and convert to a tsibble
+deaths_ts <- deaths_tibble |>
+  mutate(index = tsibble::yearmonth(dates)) |>
+  as_tsibble(index = index) |>
+  dplyr::select(index, dates, year, month, value) |>
+  rename(deaths = value) # rename value to emphasize data context
+```
+
+This results in a tsibble. The first few rows are given here:
+
+```{r}
+#| echo: false
+deaths_ts |> 
+  head()
+```
+
+## Data Visualizations (5 min)
+
+The following time plot illustrates the data in this time series.
+
+### Time Series Plot
+
+::: panel-tabset
+#### Default y-axis
+
+This is the plot R creates by default
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+ggplotly(autoplot(deaths_ts, .vars = deaths) +  
+  labs(
+    x = "Month",
+    y = "Traffic Fatalities",
+    title = "Traffic Fatalities in the United States (by Month)"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+
+
+#### Adjusted y-axis
+
+The vertical axis was adjusted in this plot, so it would begin at 0.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+ggplotly(autoplot(deaths_ts, .vars = deaths) +
+  labs(
+    x = "Month",
+    y = "Traffic Fatalities",
+    title = "Traffic Fatalities in the United States (by Month)"
+  ) +
+  coord_cartesian(ylim = c(0, 4500)) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+:::
+
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you notice?
+    -   Does it seem like there is a trend in the time series?
+    -   Is there evidence of a seasonal effect? If so, when is the number of fatalities particularly high? particularly low?
+
+-   Which of the two time plots above is superior? Why?
+
+:::
+
+
+
+### Visualization of Seasonal Effects: Side-by-Side Box Plots
+
+These side-by-side box plots illustrate the seasonal effect present in the data.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+ggplotly(ggplot(deaths_ts, aes(x = factor(month), y = deaths)) +
+    geom_boxplot() +
+  labs(
+    x = "Month Number",
+    y = "Deaths",
+    title = "Boxplots of Traffic Deaths by Month"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)))
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   How do the positions of the box plots correspond to the times of the year where you noted more (or less) deaths occurring?
+
+:::
+
+## Computing the Seasonally Adjusted Series (25 min)
+
+Our objective is to find an estimate for the time series that does not fluctuate with the seasons. This is called the seasonally adjusted series.
+
+### Centered Moving Average
+
+First, we compute the centered moving average, $\hat m_t$. This computation was explored in detail in the previous lesson. This code can be used to compute the 12-month centered moving average.
+
+```{r}
+# computes the 12-month centered moving average (m_hat)
+deaths_ts <- deaths_ts |> 
+  mutate(
+    m_hat = (
+          (1/2) * lag(deaths, 6)
+          + lag(deaths, 5)
+          + lag(deaths, 4)
+          + lag(deaths, 3)
+          + lag(deaths, 2)
+          + lag(deaths, 1)
+          + deaths
+          + lead(deaths, 1)
+          + lead(deaths, 2)
+          + lead(deaths, 3)
+          + lead(deaths, 4)
+          + lead(deaths, 5)
+          + (1/2) * lead(deaths, 6)
+        ) / 12
+  )
+```
+
+To emphasize the computation of the centered moving average, the observed data values that were used to find $\hat m_t$ for December 2017 are shown in <span style="color:#009E73;">green</span> in the table below. 
+
+### Estimated Monthly Additive Effect
+
+The centered moving average, $\hat m_t$, is then used to compute the monthly additive effect, $\hat s_t$:
+
+$$
+  \hat s_t = x_t - \hat m_t
+$$
+
+#### Table 1: Computation of the Centered Moving Average, $\hat m_t$, and the Estimated Monthly Additive Effect, $\hat s_t$
+
+```{r}
+#| echo: false
+
+# Constants defining the number of rows included in the sample tables
+num_blank_rows <- 14
+num_addl_rows <- 2
+
+
+deaths_shat_ts <- deaths_ts |>
+  dplyr::select(index, month, deaths, m_hat) |>
+  mutate(s_hat = deaths - m_hat)
+
+deaths_shat_ts |>
+  round_df(1) |>
+  mutate(
+    m_hat = as.character(m_hat),
+    s_hat = as.character(s_hat),
+  ) |> 
+  mutate(
+    s_hat = ifelse(row_number() <= num_blank_rows, "______", s_hat),
+    deaths = as.character(deaths)
+  ) |>
+  dplyr::select(-month) |>
+  rename(
+    Month = index,
+    "Deaths $$x_t$$" = deaths,
+    "$$ \\hat m $$" = m_hat,
+    "$$ \\hat s $$" = s_hat
+  ) |>
+  color_specific_cell(row_num = 12, col_num = 3, color = "#009E73") |>
+  color_specific_cell(row_num = 6, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 7, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 8, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 9, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 10, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 11, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 12, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 13, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 14, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 15, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 16, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 17, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 18, col_num = 2, color = "#009E73") |>
+  display_table()
+```
+
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Working with your assigned partner, fill in the missing values of $\hat s_t$ in the table above. 
+
+:::
+
+### Seasonally Adjusted Means
+
+
+Next, we need to compute the mean (across years) of $\hat s_t$ by month. To compute this, it can be convenient to organize the values of $\hat s_t$ in a table, where the rows give the year and the columns give the month. We will calculate the mean of the $\hat s_t$ values for each month. We will call this $\bar {\hat s_t}$, the unadjusted monthly additive components.
+
+The overall mean of these unadjusted monthly additive components $\left( \bar {\bar {\hat s_t}} \right)$ will be reasonably close to, but not exactly zero. We adjust these values by subtracting their overall mean, $\bar{\bar {\hat s_t}}$, from from each of them:
+
+$$
+  \bar s_t = \bar {\hat s_t} - \bar{\bar {\hat s_t}}
+$$
+
+where $\bar {\hat s_t}$ is the mean of the $\hat s_t$ values corresponding to month $t$, and $\bar{\bar {\hat s_t}}$ is the mean of the $\bar {\hat s_t}$ values.
+
+This yields $\bar s_t$, the seasonally adjusted mean for each month.
+
+#### Table 2: Computation of $\bar s_t$
+
+```{r}
+#| echo: false
+
+# Compute s_hat
+deaths_shat_df <- deaths_ts |>
+  data.frame() |>
+  mutate(month = month(dates, label=TRUE)) |>
+  round_df(1) |> # Round df to make the computations simpler
+  mutate(s_hat = deaths - m_hat)
+
+wider_df <- deaths_shat_df |>
+  dplyr::select(year, month, s_hat) |> 
+  pivot_wider(values_from = "s_hat", names_from = "month")
+
+wider_df2 <- wider_df %>% 
+  bind_rows(colMeans(wider_df[ , -c(1)], na.rm = TRUE)) |>
+  round_df(1) |>
+  mutate(
+    Jan = round_as_text(Jan),
+    Feb = round_as_text(Feb),
+    Mar = round_as_text(Mar),
+    Apr = round_as_text(Apr),
+    May = round_as_text(May),
+    Jun = round_as_text(Jun),
+    Jul = round_as_text(Jul),
+    Aug = round_as_text(Aug),
+    Sep = round_as_text(Sep),
+    Oct = round_as_text(Oct),
+    Nov = round_as_text(Nov),
+    Dec = round_as_text(Dec)
+  ) |>
+  mutate(year = ifelse(row_number() == n(), "Mean", year))
+
+wider_df2 |>
+  # Hide bar_s_t values for November and December
+  mutate(Jul = ifelse(row_number() == 1, "______", Jul)) |>
+  mutate(Aug = ifelse(row_number() == 1, "______", Aug)) |>
+  mutate(Sep = ifelse(row_number() == 1, "______", Sep)) |>
+  mutate(Oct = ifelse(row_number() == 1, "______", Oct)) |>
+  mutate(Nov = ifelse(row_number() == 1, "______", Nov)) |>
+  mutate(Dec = ifelse(row_number() == 1, "______", Dec)) |>
+  mutate(Jan = ifelse(row_number() == 2, "______", Jan)) |>
+  mutate(Feb = ifelse(row_number() == 2, "______", Feb)) |>
+  mutate(Nov = ifelse(row_number() == n(), "______", Nov)) |>
+  mutate(Dec = ifelse(row_number() == n(), "______", Dec)) |>
+  rename(Year = year) |>
+  color_specific_cell(1, 8, "#0072B2") |>
+  color_specific_cell(1, 9, "#0072B2") |>
+  color_specific_cell(1, 10, "#0072B2") |>
+  color_specific_cell(1, 11, "#0072B2") |>
+  color_specific_cell(1, 12, "#0072B2") |>
+  color_specific_cell(1, 13, "#0072B2") |>
+  color_specific_cell(2, 2, "#0072B2") |>
+  color_specific_cell(2, 3, "#0072B2") |>
+  color_last_row2("#0072B2") |>
+  rbind(c("$$ \\bar s_t $$",rep("$$~$$ ______",12))) |>
+  color_last_row2("#0072B2") |>
+  display_table()
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   The table above gives the values of $\hat s_t$. Fill in the missing values in the first two rows of the table above. (Note you already computed these.)
+-   The second-to-last row (labeled "Mean") gives the values of $\bar s_t$. Fill in the two missing numbers. We will call these 12 means $\bar {\hat s_t}$.
+-   Compute the mean of the $\bar {\hat s_t}$ values. Call this value $\bar {\bar {\hat s_t}}$ (This number should be relatively close to 0.)
+-   Subtract the grand mean $\bar {\bar {\hat s_t}}$ from the column means $\bar {\hat s_t}$ to get $\bar s_t$, the seasonally adjusted mean for month $t$.  (Note that the mean of the $\bar s_t$ values is 0.)
+
+$$ \bar s_t = \bar {\hat s_t} - \bar {\bar {\hat s_t}} $$
+
+$\bar s_t$ is the seasonally adjusted mean for month $t$. 
+
+:::
+
+
+### Computing the Random Component and the Seasonally Adjusted Series
+
+We calculate the random component by subtracting the trend and seasonally adjusted mean from the time series:
+
+$$
+  \text{random component} = x_t - \hat m_t - \bar s_t
+$$
+
+The seasonally adjusted series is computed by subtracting $\bar s_t$ from each of the observed values:
+
+$$
+  \text{seasonally adjusted series} = x_t - \bar s_t
+$$
+
+Compute the values missing from the table below.
+
+#### Table 3: Computation of $\bar s$, the Random Component, and the Seasonally Adjusted Time Series
+
+```{r}
+#| echo: false
+
+# THIS CODE IS DUPLICATED BELOW, BUT IT IS NEEDED HERE TO GET THE adjusted_ts
+# Compute s_hat
+deaths_ts2 <- deaths_ts |>
+  mutate(s_hat = deaths - m_hat)
+
+# Compute the unadjusted_s_bar and s_bar
+s_bar_df <- deaths_ts2 |>
+  data.frame() |>
+  group_by(month) |>
+  summarize(unadjusted_s_bar = mean(s_hat, na.rm = TRUE)) |>
+  mutate(s_bar_bar = mean(unadjusted_s_bar)) |>
+  mutate(s_bar = unadjusted_s_bar - s_bar_bar) |>
+  dplyr::select(month, s_bar, s_bar_bar)
+
+# Get seasonally adjusted time series
+adjusted_ts <- deaths_ts2 |>
+  left_join(s_bar_df, by = join_by(month)) |>
+  mutate(random = deaths - m_hat - s_bar) |>
+  mutate(seasonally_adjusted_x = deaths - s_bar) |>
+  dplyr::select(-s_bar_bar)
+
+additional_rows_from_adjusted_ts <- head(adjusted_ts, num_blank_rows + num_addl_rows) |> 
+  tail(num_addl_rows) |> 
+  convert_df_to_char(1)
+
+adjusted_ts |>
+  data.frame() |>
+  round_df(1) |>
+  filter(row_number() <= num_blank_rows) |>
+  mutate(
+    s_hat = cell_spec(s_hat, color = ""),
+    s_bar = "______",
+    random = "______",
+    seasonally_adjusted_x = "______"
+  ) |>
+  convert_df_to_char() |>
+  bind_rows(additional_rows_from_adjusted_ts) |>
+  dplyr::select(-dates, -year, -month) |>
+  rename(
+    Month = index,
+    "Deaths $$x_t$$" = deaths,
+    "$$ \\hat m $$" = m_hat,
+    "$$ \\hat s $$" = s_hat,
+    "$$ \\bar s $$" = s_bar,
+    Random = random,
+    "Seasonally Adjusted $$x_t$$" = seasonally_adjusted_x
+  ) |>
+  display_partial_table(num_blank_rows + num_addl_rows, 0)
+```
+
+
+
+## Class Activity: Computing the Additive Decomposition in R (10 min)
+
+<!-- ### Visualizing the Seasonally Adjusted Series -->
+
+This code calculates the decomposition, including the seasonally adjusted time series, beginning with the tsibble deaths_ts.
+
+#### Table 4: First Few Rows of the Decomposition of the Traffic Deaths Time Series
+
+```{r}
+# Compute the additive decomposition for deaths_ts
+deaths_decompose <- deaths_ts |>
+  model(feasts::classical_decomposition(deaths,
+          type = "add"))  |>
+  components()
+```
+
+First few rows of the `deaths_decompose` tsibble:
+
+```{r}
+#| echo: false
+
+deaths_decompose |>
+  display_partial_table(14, 0)
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   How do these values from R compare to the ones you computed above?
+
+:::
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+ggplotly(autoplot(deaths_decompose))
+```
+
+
+The figure below illustrates the original time series (in black), the centered moving average $\hat m_t$ (in blue), and the seasonally adjusted series (in red).
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+p <- deaths_decompose |>
+  ggplot() +
+  geom_line(data = deaths_decompose, aes(x = index, y = deaths), color = "black") +
+  geom_line(data = deaths_decompose, aes(x = index, y = season_adjust), color = "#D55E00") +
+  geom_line(data = deaths_decompose, aes(x = index, y = trend), color = "#0072B2") +
+  labs(
+    x = "Month",
+    y = "Traffic Fatalities",
+    title = "Traffic Fatalities in the United States (by Month)"
+  ) +
+  coord_cartesian(ylim = c(0,4500)) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+ggplotly(p)
+```
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Do you observe a trend in the time series?
+    -   What does this trend suggest?
+-   In February 2020, there is a spike in the seasonally adjusted time series. Refer to the values in the original time series to explain why this occurred.
+-   In April 2020, there is a dip in the seasonally adjusted time series. Refer to the values in the original time series to explain why this occurred. 
+    -   What would explain this phenomenon?
+
+:::
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+
+
+
+## Homework
+
+::: {.callout-note icon="false"}
+## Download Assignment
+
+<!-- ## need to update href link to correct files when we get them -->
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_1_4.qmd" download="homework_1_4.qmd"> homework_1_4.qmd </a>
+:::
+
+
+
+
+
+
+<!-- Solutions  -->
+
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Team Activity: Computational Practice</a>
+
+::: {#Solutions style="display:none;"}
+
+Solutions for the computations from this lesson
+
+#### Table 3: (Solutions)
+
+```{r}
+#| echo: false
+
+# THIS IS THE HARD WAY. JUST USE THE DECOMPOSITION FUNCTION ABOVE...
+
+# Compute s_hat
+deaths_ts2 <- deaths_ts |>
+  mutate(s_hat = deaths - m_hat)
+
+# Compute the unadjusted_s_bar and s_bar
+s_bar_df <- deaths_ts2 |>
+  data.frame() |>
+  group_by(month) |>
+  summarize(unadjusted_s_bar = mean(s_hat, na.rm = TRUE)) |>
+  mutate(s_bar_bar = mean(unadjusted_s_bar)) |>
+  mutate(s_bar = unadjusted_s_bar - s_bar_bar) |>
+  dplyr::select(month, s_bar, s_bar_bar)
+
+# Get seasonally adjusted time series
+adjusted_ts <- deaths_ts2 |>
+  left_join(s_bar_df, by = join_by(month)) |>
+  mutate(random = deaths - m_hat - s_bar) |>
+  mutate(seasonally_adjusted_x = deaths - s_bar) |>
+  dplyr::select(-s_bar_bar)
+
+adjusted_ts |> 
+  round_df(1) |>
+  filter(row_number() <= num_blank_rows) |>
+  mutate(
+    s_hat = cell_spec(s_hat, color = "#E69F00"),
+    s_bar = cell_spec(s_bar, color = "#009E73"),
+    random = cell_spec(random, color = "#009E73"),
+    seasonally_adjusted_x = cell_spec(seasonally_adjusted_x, color = "#009E73")
+  ) |>
+  convert_df_to_char() |>
+  bind_rows(additional_rows_from_adjusted_ts) |>
+  select(-dates, -year, -month) |>
+  rename(
+    Month = index, 
+    "Deaths $$x_t$$" = deaths,
+    "$$ \\hat m_t $$" = m_hat, 
+    "$$ \\hat s_t $$" = s_hat, 
+    "$$ \\bar s_t $$" = s_bar,
+    Random = random,
+    "Seasonally Adjusted $$x_t$$" = seasonally_adjusted_x
+  ) |>
+  display_partial_table(num_blank_rows + num_addl_rows, 0)
+```
+
+#### Table 2: (Solutions)
+
+```{r}
+#| echo: false
+
+s_bar_bar_value <- s_bar_df %>% 
+  summarize(s_bar_bar = round(mean(s_bar_bar), 1)) |>
+  dplyr::select(s_bar_bar) |>
+  pull()
+
+wider_df3 <- wider_df2 |>
+  bind_rows(
+    wider_df2 |> tail(1)
+  ) 
+
+# Subtract the mean of \bar s_t to make the mean of the adjusted values be zero.
+for (j in 2:ncol(wider_df3)) {
+  wider_df3[nrow(wider_df3), j] = 
+    as.character(
+      as.numeric(wider_df3[nrow(wider_df3), j]) - s_bar_bar_value
+    )
+}
+
+wider_df3 |> 
+  mutate(year = ifelse(row_number() == n(), "$$ \\bar s_t $$", year)) |>
+  rename(Year = year) |>
+  color_specific_cell(1, 8, "#0072B2") |>
+  color_specific_cell(1, 9, "#0072B2") |>
+  color_specific_cell(1, 10, "#0072B2") |>
+  color_specific_cell(1, 11, "#0072B2") |>
+  color_specific_cell(1, 12, "#0072B2") |>
+  color_specific_cell(1, 13, "#0072B2") |>
+  color_specific_cell(2, 2, "#0072B2") |>
+  color_specific_cell(2, 3, "#0072B2") |>
+  color_last_row2("#0072B2") |>
+  color_2nd_to_last_row2("#0072B2") |>
+  display_table()
+```
+
+:::
