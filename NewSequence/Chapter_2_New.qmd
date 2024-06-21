@@ -9,10 +9,118 @@ number-depth: 3  # Numbers only ## and ### headings
 number-offset: 1
 ---
 
+## Functions & Stuff
+
 ```{r}
-#| include: false
-source("../common_functions.R")
+#| echo: false
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(
+  # Interactive plots
+  plotly, # Interactive visualizations, loaded before tidyverse so it overwrite dplyr::select(). Note: High conflict Potential
+
+  # Core packages
+  MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite dplyr::select()
+  tidyverse, # This will also load the dependencies; dplyr, readr, stringr, tibble, tidyr, purrr, forcats, gglot2, & lubridate
+
+  # Data manipulation
+  tsibble, # Tidyverse Temporal data
+  tsibbledata, # Sample Tsibble datasets
+
+  # Statistical modeling (GLS - Chpt 6-7)
+  nlme, # loaded before feasts to avoid ACF() conflict
+  tidymodels, # for GLS, This will also load the dependencies; broom, rsample, dials, tune, infer, workflows, modeldata, workflowsets, parsnip, yardstick, & recipies. Note: High conflict Potential
+  multilevelmod, # for GLS
+  broom.mixed, # for GLS
+
+  # TS modeling and forecasting
+  fable,# Forecasting Models for Tidy Time Series, Note: High conflict Potential
+  feasts, # collection of features, decomposition methods, statistical summaries and graphics for tsibble data, Loaded after nlme to avoid ACF() conflict
+  fable.prophet, # Converts prophet (forecasting) package for fable workflow
+
+  # Data exploration & visualization
+  patchwork, # Multiple plot outputs
+  ggthemes, # Plot styling
+  see,  # okabeito color scheme
+  ggokabeito,  # colorblind palette
+
+  # Reporting & output
+  kableExtra, # Create nice-looking tables from data.frames
+  rio, # Easy import/export of data between R and other software
+  gt, # Grammar of Tables for advanced table creation
+  quarto, # For generating reports in LaTeX format
+
+  # Additional packages
+  tidyquant # Quantitative analysis tools using tidyverse principles, This will also load the dependencies; PerformanceAnalytics, xts, & zoo. Important Masks: ‘package:base’: as.Date, as.Date.numeric. Note: High conflict Potential
+)
+
+
+okabeito_colors_list <- c(
+  `orange` = "#E69F00",
+  `light blue` = "#56B4E9",
+  `green` = "#009E73",
+  `yellow` = "#F0E442",
+  `blue` = "#0072B2",
+  `red` = "#D55E00",
+  `purple` = "#CC79A7",
+  `grey` = "#999999",
+  `black` = "#000000",
+  `sky blue` = "#56B4E9",
+  `bluish green` = "#009E73",
+  `vermillion` = "#D55E00",
+  `reddish purple` = "#CC79A7",
+  `dark yellow` = "#F5C710",
+  `amber` = "#F5C710"
+)
+
+
+display_table <- function(df, min_col_width = "0in") {
+  df |>
+    knitr::kable(format = "html", align='ccccccccccccccccc', escape = FALSE, width = NA, row.names = FALSE) |>
+    kable_styling(full_width = FALSE, "striped") |>
+    column_spec(1:ncol(df), width_min = min_col_width)
+}
+
+round_df <- function(df, digits) {
+  nums <- vapply(df, is.numeric, FUN.VALUE = logical(1))
+  df[,nums] <- round(df[,nums], digits = digits)
+  return(df)
+}
+
+convert_df_to_char <- function(df, decimals = 3) {
+  out_df <- df |>
+    as.data.frame() |>
+    mutate_if(is.numeric, round, digits=decimals) |>
+    mutate(across(everything(), as.character))
+  return(out_df)
+}
+
+blank_out_cells_in_df <- function(df, ncols_to_keep = 2, nrows_to_keep = 0, decimals = 3) {
+  out_df <- df |>
+    convert_df_to_char(decimals)
+
+  for (i in (nrows_to_keep + 1) : nrow(df))
+    for (j in (ncols_to_keep + 1) : ncol(df)) {
+      out_df[i,j] <- ""
+    }
+  return(out_df)
+}
+
+round_as_text <- function(x, places) {
+  return(as.character(round(x,12)))
+}
+
+get_toy_data <- function(n = 10, mu = 0, sigma = 3, rho = 0.99, random_seed = 997) {
+  set.seed(random_seed)
+
+  # build population correlation matrix
+  tmp.r <- matrix(rho, n, n)
+  tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
+
+  return( round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1) )
+}
 ```
+
+
 
 ```{=html}
 <script type="text/javascript">
@@ -36,6 +144,8 @@ source("../common_functions.R")
  }    
 </script>
 ```
+
+
 # Chapter 2
 
 (I known this looks funky, its a quarto numbering quirk, I assume the when we host through the school they will get around this with something more versatile.)

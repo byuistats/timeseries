@@ -70,7 +70,7 @@ ui <- fluidPage(
     </script>')
   ),
   withMathJax(),
-    titlePanel("Covariance & Correlation Exploration"),
+    titlePanel("Covariance & Correlation Scatter Plot"),
     fluidRow(
       column(4, sliderInput("n", "Number of Points", min = 10, max = 100, value = 50, step=5)),
       column(4, sliderInput("mu_x", "Mean (x)", min = -10, max = 10, value = 1.25, step=0.25)),
@@ -89,6 +89,8 @@ ui <- fluidPage(
       column(12, uiOutput("formula1")),
       column(12, h3("Table 2: Simulated values and computations involving deviations from the mean")),
       column(12, tableOutput("kable")),
+      column(12, uiOutput("formula1.5")),
+      column(12, h3("Sample Covariance and Correlation")),
       column(12, uiOutput("formula2")),
       column(12, uiOutput("formula2.5")),
       column(12, uiOutput("formula3")),
@@ -227,14 +229,14 @@ server <- function(input, output, session) {
   output$formula0 <- renderUI({
     req(sim_data())
     tagList(
-      "The simulated values are plotted below, with vertical lines drawn at $x = \\bar x$ and $y = \\bar y$. The first simulated point $(t=1)$ is circled.",
+      "The simulated values are plotted below, with vertical lines drawn at $x = \\bar x$ and $y = \\bar y$.",
       tags$script('renderMathInElement(document.getElementById("formula0"), {delimiters: [{left: "$", right: "$", display: false}]});')
     )
   })
 
   output$formula0.5 <- renderUI({
     req(sim_data())
-    multiline_text<-"If the quantity $(x-\\bar x)(y-\\bar y)$ is greater than zero, the points are colored blue. Otherwise, they are colored orange. <br> -   What color are the points if $(x-\\bar x)$ and $(y-\\bar y)$ have the same sign? <br> -   What color are the points if $(x-\\bar x)$ and $(y-\\bar y)$ have different signs?"
+    multiline_text<-"The points are color coded to illustrate the numerical range of the quantity $(x−\\bar x)(y−\\bar y)$. If the quantity $(x-\\bar x)(y-\\bar y)$ is greater than zero, the points are colored blue. Otherwise, they are colored orange. <br> Note that the product of two quantities of the same sign are positive, whereas the product of quantities of different signs are negative."
     tagList(
       # Use HTML function to create HTML content
       HTML(paste("<p>", multiline_text, "</p>")),
@@ -245,9 +247,19 @@ server <- function(input, output, session) {
 
   output$formula1 <- renderUI({
     mvn_data <- sim_data()[[3]]
+    multiline_text2<-paste0("The sample averages are as follows; The mean of the $x_t$ values is $\\bar x$ =", round(mean(mvn_data$x), 3),". The mean of the $y_t$ values is $\\bar y =", round(mean(mvn_data$y), 3),"$. These differ from the simulation parameters due to random sampling. <br> We will soon use the values $(x_t-\\bar x)$, $(x_t-\\bar x)^2$, $(y_t-\\bar y)$, $(y_t-\\bar y)^2$, and $(x_t-\\bar x)(y_t-\\bar y)$ For convenience, they are included in the table below.")
     tagList(
-      paste0("The resulting table illustrates some of the simulated values. The mean of the $x_t$ values is $\\bar x$ =", round(mean(mvn_data$x), 3),". The mean of the $y_t$ values is $\\bar y =", round(mean(mvn_data$y), 3),"$. We will soon use the values $(x_t-\\bar x)$, $(x_t-\\bar x)^2$, $(y_t-\\bar y)$, $(y_t-\\bar y)^2$, and $(x_t-\\bar x)(y_t-\\bar y)$ For convenience, they are included in the table below."),
+      HTML(paste("<p>", multiline_text2, "</p>")),
       tags$script('renderMathInElement(document.getElementById("formula1"), {delimiters: [{left: "$", right: "$", display: false}]});')
+    )
+  })
+
+
+  output$formula1.5<- renderUI({
+    req(sim_data())
+    tagList(
+      "The table illustrates the calculation of sample covariance step by step. The color coding of the two rightmost columns matches the one used in the plot above. Notice the relative number of blue points compared to the orange points. The last row calculates the numerator of the sample covariance statistic. Since the denominator is always a positive number, the sign on the numerator determines the sign of the sample covariance. The sign and magnitude of the numbers in the rightmost column will determine the sign and magnitude of the sample covariance.",
+      tags$script('renderMathInElement(document.getElementById("formula1.5"), {delimiters: [{left: "$", right: "$", display: false}]});')
     )
   })
 
@@ -267,7 +279,7 @@ server <- function(input, output, session) {
 
   output$formula3 <- renderUI({
     req(sim_data())
-    multiline_text<-"  You can think of this as an 'average' of the $(x - \\bar x)(y - \\bar y)$ values. The only difference is that we divide by $n-1$ instead of $n$. <br> -   If there are more blue points than orange points, what should the sign of the sample covariance be? Why? <br> -   What does the sample covariance tell us? <br>   <br> The sample covariance is related to the sample standard deviation of $x$ and $y$ and the sample correlation coefficient between $x$ and $y$. <br> The sample standard deviations are:"
+    multiline_text<-"You can think of this as an 'average' of the $(x - \\bar x)(y - \\bar y)$ values. The only difference is that we divide by $n-1$ instead of $n$. <br>   <br> The sample covariance is related to the sample standard deviation of $x$ and $y$ and the sample correlation coefficient between $x$ and $y$. <br> The sample standard deviations are:"
     tagList(
       # Use HTML function to create HTML content
       HTML(paste("<p>", multiline_text, "</p>")),
@@ -337,13 +349,15 @@ server <- function(input, output, session) {
         )
       ) |>
       rename(
-        "x_t" = x,
-        "y_t" = y,
-        "x_t-mean(x)" = xx,
-        "(x_t-mean(x))^2" = xx2,
-        "y_t-mean(y)" = yy,
-        "(y_t-mean(y))^2" = yy2,
-        "(x_t-mean(x))(y_t-mean(y))" = xy
+        "$$t$$" = t,
+        "$$x_t$$" = x,
+        "$$y_t$$" = y,
+        "$$x_t-\\bar x$$" = xx,
+        "$$(x_t-\\bar x)^2$$" = xx2,
+        "$$y_t-\\bar y$$" = yy,
+        "$$(y_t-\\bar y)^2$$" = yy2,
+        "$$(x_t-\\bar x)(y_t-\\bar y)$$" = xy,
+        "$$Sign$$"= sign
       ) |>
       concat_partial_table(min(25,max(6, min_row)), 6)
     # move summary to bottom
@@ -351,7 +365,7 @@ server <- function(input, output, session) {
     cov_table <- cov_table[c(8, 1:7, 9:ncol(cov_table))]
     rownames(cov_table) <- NULL
 
-    knitr::kable(cov_table, format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
+    kable(cov_table, format = "html", align='cccccccc', escape = FALSE, width = NA) %>%
     kable_styling(full_width = FALSE, "striped")
 
   }
