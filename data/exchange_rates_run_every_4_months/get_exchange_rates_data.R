@@ -4,6 +4,7 @@ pacman::p_load(quantmod)
 pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite dplyr::select()
                tidyverse, kableExtra,
                tsibble, fable,
+               fabletools,
                feasts, tsibbledata,
                fable.prophet,
                patchwork,
@@ -16,12 +17,13 @@ pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite d
                tidyquant,
                gt, # grammar of tables, for LaTeX in tables
                quarto, # For LaTeX mode results = 'asis'
-               plotly # For interactive figures
+               plotly, # For interactive figures
+               arrow # for parquet files
 )
 
 
 # Read in existing data from previous downloads
-usd1_exchange_prior <- rio::import("data/exchange_rates.parquet")
+usd1_exchange_prior <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/exchange_rates.parquet")
 
 
 jpy <- getSymbols('USD/JPY', src='oanda', from=Sys.Date()-180,
@@ -91,8 +93,7 @@ usd1_exchange_updated <- usd1_exchange_prior %>%
   group_by(date, currency) %>%
   slice(1) %>%
   ungroup()
-rio::export(usd1_exchange_updated, "data/exchange_rates.parquet")
-
+rio::export(usd1_exchange_updated, "C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/exchange_rates.parquet")
 
 
 # # #
@@ -286,4 +287,21 @@ usd1_ts <- usd1_exchange_updated %>%
 usd1_ts %>% autoplot(.vars = rate) + labs(title = usd1_ts$currency[1])
 acf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
 pacf(usd1_ts$diff, main = paste("ACF of First Difference of", usd1_ts$currency[1]))
+
+
+usd1_exchange_updated |>
+  filter(currency == "USD.CAD") %>%
+  as_tsibble(index = date) %>%
+  autoplot(.vars = rate) +
+  labs(
+    x = "Date",
+    y = "Exchange Rate",
+    title = "USD.CAN Exchange Rate",
+    subtitle = "(This is one of many rates recorded)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
 
