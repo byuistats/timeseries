@@ -1,17 +1,126 @@
 ---
 title: "Sample Statistics and Correlation"
 subtitle: "Chapter 2"
-format: html
+format: 
+  html:
+    code-fold: true
 editor: source
 sidebar: false
 number-sections: true
 number-depth: 3  # Numbers only ## and ### headings
 number-offset: 1
+code-fold: true
 ---
 
+## Functions & Stuff
+
 ```{r}
-#| include: false
-source("../common_functions.R")
+#| echo: false
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(
+  # Interactive plots
+  plotly, # Interactive visualizations, loaded before tidyverse so it overwrite dplyr::select(). Note: High conflict Potential
+
+  # Core packages
+  MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite dplyr::select()
+  tidyverse, # This will also load the dependencies; dplyr, readr, stringr, tibble, tidyr, purrr, forcats, gglot2, & lubridate
+
+  # Data manipulation
+  tsibble, # Tidyverse Temporal data
+  tsibbledata, # Sample Tsibble datasets
+
+  # Statistical modeling (GLS - Chpt 6-7)
+  nlme, # loaded before feasts to avoid ACF() conflict
+  tidymodels, # for GLS, This will also load the dependencies; broom, rsample, dials, tune, infer, workflows, modeldata, workflowsets, parsnip, yardstick, & recipies. Note: High conflict Potential
+  multilevelmod, # for GLS
+  broom.mixed, # for GLS
+
+  # TS modeling and forecasting
+  fable,# Forecasting Models for Tidy Time Series, Note: High conflict Potential
+  feasts, # collection of features, decomposition methods, statistical summaries and graphics for tsibble data, Loaded after nlme to avoid ACF() conflict
+  fable.prophet, # Converts prophet (forecasting) package for fable workflow
+
+  # Data exploration & visualization
+  patchwork, # Multiple plot outputs
+  ggthemes, # Plot styling
+  see,  # okabeito color scheme
+  ggokabeito,  # colorblind palette
+
+  # Reporting & output
+  kableExtra, # Create nice-looking tables from data.frames
+  rio, # Easy import/export of data between R and other software
+  gt, # Grammar of Tables for advanced table creation
+  quarto, # For generating reports in LaTeX format
+
+  # Additional packages
+  tidyquant # Quantitative analysis tools using tidyverse principles, This will also load the dependencies; PerformanceAnalytics, xts, & zoo. Important Masks: ‘package:base’: as.Date, as.Date.numeric. Note: High conflict Potential
+)
+
+
+okabeito_colors_list <- c(
+  `orange` = "#E69F00",
+  `light blue` = "#56B4E9",
+  `green` = "#009E73",
+  `yellow` = "#F0E442",
+  `blue` = "#0072B2",
+  `red` = "#D55E00",
+  `purple` = "#CC79A7",
+  `grey` = "#999999",
+  `black` = "#000000",
+  `sky blue` = "#56B4E9",
+  `bluish green` = "#009E73",
+  `vermillion` = "#D55E00",
+  `reddish purple` = "#CC79A7",
+  `dark yellow` = "#F5C710",
+  `amber` = "#F5C710"
+)
+
+
+display_table <- function(df, min_col_width = "0in") {
+  df |>
+    knitr::kable(format = "html", align='ccccccccccccccccc', escape = FALSE, width = NA, row.names = FALSE) |>
+    kable_styling(full_width = FALSE, "striped") |>
+    column_spec(1:ncol(df), width_min = min_col_width)
+}
+
+round_df <- function(df, digits) {
+  nums <- vapply(df, is.numeric, FUN.VALUE = logical(1))
+  df[,nums] <- round(df[,nums], digits = digits)
+  return(df)
+}
+
+convert_df_to_char <- function(df, decimals = 3) {
+  out_df <- df |>
+    as.data.frame() |>
+    mutate_if(is.numeric, round, digits=decimals) |>
+    mutate(across(everything(), as.character))
+  return(out_df)
+}
+
+blank_out_cells_in_df <- function(df, ncols_to_keep = 2, nrows_to_keep = 0, decimals = 3) {
+  out_df <- df |>
+    convert_df_to_char(decimals)
+
+  for (i in (nrows_to_keep + 1) : nrow(df))
+    for (j in (ncols_to_keep + 1) : ncol(df)) {
+      out_df[i,j] <- ""
+    }
+  return(out_df)
+}
+
+round_as_text <- function(x, places) {
+  return(as.character(round(x,12)))
+}
+
+get_toy_data <- function(n = 10, mu = 0, sigma = 3, rho = 0.99, random_seed = 997) {
+  set.seed(random_seed)
+
+  # build population correlation matrix
+  tmp.r <- matrix(rho, n, n)
+  tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
+
+  return( round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1) )
+}
 ```
 
 ```{=html}
@@ -38,597 +147,345 @@ source("../common_functions.R")
 ```
 # Chapter 2
 
-(I known this looks funky, its a quarto numbering quirk, I assume the when we host through the school they will get around this with something more versatile.)
-
 ## Motivate the chapter. Why does it matter?
 
 ### Connect this with Ch1.1
 
 ## Differentiate population and sample properties and statistics
 
-### Define population and samples
+Time series are the realizations of uncertain events and processes. Uncertainty and randomness are inherent to human experience and natural phenomena. Scholars have developed a framework to study uncertainty, so before working with time series, we must build the vocabulary and tools necessary to understand and apply the science of uncertainty and risk.
 
-### Illustrate population and samples using pdf and histogram
+#### **Random Variables and Stochastic Processes**
+
+A random variable is a numerical quantity whose value is determined by the outcome of a random process. A stochastic or random process is a collection of random variables that represent the evolution of a stochastic system over time. In time series analysis, a stochastic process can describe how a variable, such as daily temperature, changes over time. Each temperature measurement is a value of the random variable daily temperature. A sequence of temperature readings from the same location represents a time series. Each time series is a realization of the stochastic process, one of a potentially infinite number of sequences that could have been measured. In the case of daily temperatures, the stochastic process generating the data is governed by the natural processes of the earth's weather: sun radiation, earth's rotation, ocean temperatures, and wind patterns, among others.
+
+\[Insert here a simulated temperature series and it's ensemble\]
+
+**Population and Sample**
+
+The definitions of population and sample differentiate between all the possibilities of a stochastic process and our measurements. In statistics, a population refers to the entire set of individuals, observations, or values possible in a group of interest. It includes every possible member of the group we are studying. For example, if we are studying the heights of adult men in a country, the population would include the heights of all adult men in that country. Or if you are studying the roll of a die, it represents all the possible numerical values a die can take.
+
+In the context of time series analysis, the concept of a population is called the ensemble. An ensemble represents the collection of all possible time series that a given stochastic process could generate. Each time series in the ensemble is a realization of the underlying process. For instance, consider the study of the daily temperatures in a city over ten years. The ensemble, or population, includes all possible sequences of daily temperatures that could be recorded over ten years. 
+
+A sample is a subset of the population selected for analysis. In the context of time series, a time series is a sample from its ensemble. In modeling daily temperature readings, a single sequence of daily temperatures observed over ten years in a specific city is a sample from the population (ensemble) of all possible temperature sequences that could have occurred under similar conditions. Unlike sampling in cross-sectional analysis, the researcher does not direct or influence the sampling process in time series analysis; the time series measured is the only sample obtained, and there is no way to repeat the process or influence it in any way. 
+
+#### **Parameters and Statistics**
+
+Parameters are features that describe an entire population, and the associated numerical values provide a summary measure of some aspect of the population. For example, the mean height of all adult men in a country is a parameter. In time series analysis, parameters include the mean, variance, and autocorrelation function of the entire ensemble of time series. Because parameters encompass the entire population, they are often denoted by Greek letters, such as $\mu$ for the population mean and $\sigma^2$ for the population variance.
+
+Statistics, on the other hand, are features that describe a sample drawn from the population. Unlike parameters, statistics can vary depending on which individuals are included in the sample. For example, the mean height of a sample of 1,000 men selected from the population is a statistic. The sample mean from a second sample of 1,000 men will differ from the first sample. We expect the two sample means to be numerically similar because they are drawn from the same population but are unlikely to be the same. In time series analysis, statistics include the sample mean, sample variance, and sample autocorrelation function of a single time series realization.  Statistics are typically denoted by Latin letters, such as $\bar{x}$ for the sample mean and $s^2$ for the sample variance.
+
+Statistics, on the other hand, are features that describe a sample drawn from the population. Unlike parameters, statistics can vary depending on which individuals are included in the sample. For example, the mean height of a sample of 1,000 men selected from the population is a statistic. The sample mean from a second sample of 1,000 men will differ from the first sample. We expect the two sample means to be numerically similar because they are drawn from the same population but are unlikely to be the same. In time series analysis, statistics include the sample mean, sample variance, and sample autocorrelation function of a single time series realization. Statistics are typically denoted by Latin letters, such as $\bar{x}$ for the sample mean and $s^2$ for the sample variance.
 
 ## Contrast parameters and statistics, estimators and estimates
 
-## Calculate a sample arithmetic mean
+### Estimators and Estimates
 
-### Define expected value and sample mean
+An estimator is a rule or formula used to estimate a population parameter based on sample data. Estimators are functions of the observed data and are used to infer the values of unknown parameters. For example, the sample mean is an estimator used to estimate the population mean. There are preferred estimators for certain parameters; they are popular and usually spoken of as the only ones available, but note that there are many estimators for each parameter, and which one we use might depend on the context.
 
-The expected value, also known as the population mean, represents the true average value of the entire population you're interested in. Unfortunately, obtaining the data for the entire population can be impractical or even impossible. This is where sample mean comes in.
+For example, consider the mean of a population as the parameter we aim to estimate. Two common estimators for this parameter are the sample and trimmed mean. The sample mean is calculated by summing all the values in a sample and then dividing by the number of values in that sample. It is a simple and widely used estimator for the population mean. On the other hand, the trimmed mean is calculated by removing a certain percentage of the smallest and largest values from the sample and then computing the mean of the remaining values. This estimator is particularly useful when the data contains outliers that might skew the sample mean. For instance, a 10% trimmed mean involves removing the lowest 10% and the highest 10% of the data points and then taking the mean of the remaining 80%. Both the sample mean and the trimmed mean aim to estimate the population mean but might yield different results depending on the presence of outliers or the distribution of the data.
 
+An estimate is the numerical value obtained from an estimator when applied to a specific sample. For instance, if we calculate the mean of a sample of data points, this calculated value is the estimate of the population mean.
+
+### Probabililty distributions of a Population and the Sampling Distribution of Estimators.
+
+To illustrate and differentiate estimators and estimates, consider the outcomes of rolling two dice and summing the results.
+
+The population in this case is the set of all possible outcomes of the sum of the two dice rolls, which ranges from 2 to 12. Each possible outcome has a theoretical probability associated with it, forming the **probability distribution of the population**. For example, there is only one way to roll a sum of 2 (both dice showing 1), but there are six ways to roll a sum of 7 (such as 1 and 6, 2 and 5, etc.). The probabilities for each possible sum are as follows:
+
+-   Sum of 2: Probability = 1/36
+-   Sum of 3: Probability = 2/36
+-   Sum of 4: Probability = 3/36
+-   Sum of 5: Probability = 4/36
+-   Sum of 6: Probability = 5/36
+-   Sum of 7: Probability = 6/36
+-   Sum of 8: Probability = 5/36
+-   Sum of 9: Probability = 4/36
+-   Sum of 10: Probability = 3/36
+-   Sum of 11: Probability = 2/36
+-   Sum of 12: Probability = 1/36
+
+Using these probabilities, the expected value, or mean, of the population can be calculated as
+
+$$\mu = \sum_{i} X_i \cdot P(X_i)$$
+
+where $X_i$ is each value that the the random variable $X$ can take, and $P(X_i)$ is the probability that $X$ takes the value $X_i$. The expected value is a weighted average of all the possible values of $X$ weighted by how often they occur in the population.
+
+In the case of the sum of two dice rolls, the expected value is 
+
+$$\mu = \sum_{X_i=2}^{12} X_i \cdot P(X_i)$$
+
+
+$$\mu = 2 \cdot \frac{1}{36} + 3 \cdot \frac{2}{36} + 4 \cdot \frac{3}{36} + 5 \cdot \frac{4}{36} + 6 \cdot \frac{5}{36} + 7 \cdot \frac{6}{36} + 8 \cdot \frac{5}{36} + 9 \cdot \frac{4}{36} + 10 \cdot \frac{3}{36} + 11 \cdot \frac{2}{36} + 12 \cdot \frac{1}{36}$$
+
+$$\mu = \frac{252}{36} = 7$$
+
+Which interpreted means that when we draw from the population at random, we expect to roll a seven when we add the value of two dice. Seven is not the only outcome, but its the most likely outcome among all the possibilities
+
+In practice, the population parameter $\mu$ is often unobserved or unknown. An estimator of $\mu$ is the sample mean $\bar x$
+
+
+$$
+\bar{x} = \frac{1}{n} \sum_{i=1}^{n} x_i
+$$
+
+where $n$ is the total number of observations in the sample, and $x_i$ represents each individual observation in the sample.
+
+Suppose we record the results of rolling the two dice 50 times. This set of 50 outcomes is a sample from the population distribution. We repeat this process multiple times, each time calculating the sample mean, 
+
+
+$$
+\bar{x} = \frac{1}{n} \sum_{i=1}^{n} x_i = \frac{1}{50} \sum_{i=1}^{50} x_i
+$$
+
+the code below simulates 1000 samples of 50 observations each and creates a histogram of the sample means.The red line indicates the theoretical population mean (7).
+
+A histogram is a graphical representation of the distribution of numerical data. The entire range of data is divided into a series of intervals or bins. Each bin represents a specific range of data values. The width of each bin is often the same, but this is not a strict requirement. Each bin is represented by a bar, and the height of the bar corresponds to the frequency (count) or relative frequency (probability) of data points that fall within the bin. 
+
+The x-axis (horizontal axis) represents the variable being measured. It is divided into intervals that correspond to the bins. The y-axis (vertical axis) represents the frequency or relative frequency of data points within each bin. For a probability histogram, the y-axis represents the probability density.
 ```{r}
-# Sample data
-data <- data.frame(val=rnorm(200, 1.37))  # Generate 20 random numbers from a normal distribution
 
-# Sample mean calculation
-sample_mean <- mean(data$val)
 
-# Print the sample mean
-cat("Sample mean:", sample_mean, "\n")
+# Simulate rolling two dice 50 times and calculate sample means
+set.seed(123)  # For reproducibility
+num_samples <- 1000
+sample_size <- 50
+sample_means <- numeric(num_samples)
+
+for (i in 1:num_samples) {
+  sample_rolls <- sample(2:12, size = sample_size, replace = TRUE, prob = c(1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1) / 36)
+  sample_means[i] <- mean(sample_rolls)
+}
+
+# Plot histogram of sample means and theoretical population mean
+hist(sample_means, breaks = 30, probability = TRUE, col = "lightblue",
+     main = "Sample Means of 50 Dice Rolls", xlab = "Sample Mean", ylab = "Frequency")
+abline(v = 7, col = "red", lwd = 2)  # Theoretical population mean
+
 ```
 
-### Explain the intuition of sample mean using a histogram
+The estimator we used to calculate the estimates is the same, but each sample has a different samples mean (estimate). Because each sample is a subset of the population, each sample mean contains information about the population mean. However, most of the 1000 estimates are not equal to the population mean. 
 
-A histogram helps visualize the distribution of the data points in your sample. The sample mean, by definition, tends to be concentrated around the center of this distribution. The more data points you have in your sample, the closer the sample mean gets to the true expected value.
+In most situations, the population parameters are unknown, but we can use the distribution of sample estimates to infer their location. The histogram above represents the sampling distribution of sample means. In general, all estimators have a sampling distribution; statistical inference relies on these distributions to estimate population parameters or conduct statistical tests.
 
-```{r}
-# Histogram with sample mean highlighted
-ggplot(data, aes(x = val)) +
-  geom_histogram(bins = 15, color = "lightblue") +  # Adjust bin count as needed
-  labs(x = "Data value", y = "Frequency", title = "Sample mean distribution") +
-  geom_vline(xintercept = sample_mean, color = "red", linetype = "dashed", lwd = 2, label = "Sample Mean") +
-  theme_classic()  # Optional: adjust plot aesthetics
-```
+The following section will introduce four parameters critical to studying time series and their respective estimators. Understanding what the parameters communicate will help us characterize the various stochastic processes that generate time series. The respective estimators will provide estimates used as evidence to match the time series we observe with the underlying stochastic processes likely to have generated it. Successful forecasting and inference rely on correctly using estimates to narrow down which stochastic process we are modeling.
 
-By looking at the histogram, you can see how the data points tend to cluster around the sample mean, providing an intuition for how it estimates the true expected value of the population.
 
 ## Calculate a sample standard deviation
 
-### Define population and sample variance standard deviation
+### Understanding and Calculating the Sample Standard Deviation
 
-### Explain the intuition behind the sample standard deviation using a histogram
+An important feature of population is the variation of the random outcomes. One of the key measures of variability is the standard deviation.
 
-### Explain a box and whiskers plot.
+#### 1.1 Define Population and Sample Variance and Standard Deviation
+
+**Population Variance and Standard Deviation**
+
+Population variance $\sigma^2$ is a measure of how data points in a population are spread out around the mean. It is calculated as the average of the squared differences from the mean. Mathematically, it is expressed as
+
+$\sigma^2 = \frac{1}{N} \sum_{i=1}^{N} (X_i - \mu)^2$
+
+where N is the size of the population, $X_i$ represents each data point in the population, and $\mu$ is the population mean
+
+The population standard deviation $\sigma$ is the square root of the population variance:
+
+$\sigma = \sqrt{\sigma^2}$
+
+**Sample Variance and Standard Deviation**
+
+Sample variance $s^2$ is used to estimate the population variance from a sample. It is calculated similarly to the population variance but with a slight adjustment (Bessel's correction) to account for the fact that the sample is only a subset of the population:
+
+$s^2 = \frac{1}{n-1} \sum_{i=1}^{n} (x_i - \bar{x})^2$
+
+where $n$ is the size of the sample, $x_i$ represents the value of each data point in the sample, $\bar{x}$ is the sample mean
+
+The sample standard deviation $s$ is the square root of the sample variance:
+
+$s = \sqrt{s^2}$
+
+
+#### 1.2 Explain the Intuition Behind the Sample Standard Deviation Using a Histogram
+
+To grasp the intuition behind the sample standard deviation, consider a histogram of two samples with different variances. 
+
+```{r}
+# Simulate daily temperatures for one year (365 days) with two different standard deviations
+set.seed(123)  # For reproducibility
+temperature_data1 <- rnorm(365, mean = 75, sd = 5)  # Sample 1: Mean temperature = 75, standard deviation = 5
+temperature_data2 <- rnorm(365, mean = 75, sd = 10) # Sample 2: Mean temperature = 75, standard deviation = 10
+
+# Calculate the sample means and standard deviations
+sample_mean1 <- mean(temperature_data1)
+sample_sd1 <- sd(temperature_data1)
+sample_mean2 <- mean(temperature_data2)
+sample_sd2 <- sd(temperature_data2)
+
+# Set x-axis limits to fit 3.5 standard deviations away from the mean on both sides
+xlim_range <- range(sample_mean2 - 3.5 * sample_sd2, sample_mean2 + 3.5 * sample_sd2)
+
+# Create histograms
+hist(temperature_data1, breaks = 30, probability = TRUE, col = rgb(0, 0, 1, 0.5),
+     main = "Sample Distribution of Daily Temperature Series",
+     xlab = "Temperature (°C)", xlim = xlim_range, ylim = c(0, 0.08))
+hist(temperature_data2, breaks = 30, probability = TRUE, col = rgb(1, 0, 0, 0.5), add = TRUE)
+
+# Add vertical lines at the sample means
+abline(v = sample_mean1, col = "blue", lwd = 2, lty = 2)
+abline(v = sample_mean2, col = "red", lwd = 2, lty = 2)
+
+# Display sample means and standard deviations on the plot
+graphics::legend("topright", legend = c(paste("Sample 1: Mean =", round(sample_mean1, 2), ", SD =", round(sample_sd1, 2)),
+                              paste("Sample 2: Mean =", round(sample_mean2, 2), ", SD =", round(sample_sd2, 2))),
+       fill = c(rgb(0, 0, 1, 0.5), rgb(1, 0, 0, 0.5)), border = NA)
+
+
+```
+
+This code generates superimposed histograms of two simulated daily temperature series, one with a standard deviation of 5 and the other with a standard deviation of 10. The blue histogram represents the sample with a standard deviation of 5, and the red histogram represents the sample with a standard deviation of 10. The dashed lines indicate the sample means of the samples by color.
+
+The spread of the data points around the mean gives us an idea of the variability. The red histogram shows a broader spread, indicating higher variability. The blue histogram shows a narrower spread, indicating lower variability.
+
+In the time series context, the population variance quantifies the variability or dispersion of data points around the mean for the entire ensemble. By calculating the sample variance of a time series, we can assess the extent to which the observed values deviate from the average value over the observed time frame. This measure helps identify the volatility and stability of the time series, revealing patterns and trends. Understanding the sample variance allows us to make informed inferences about the underlying stochastic process and accurately model and forecast future values.
+
+#### 1.3 Explain a Box-and-Whisker Plot
+
+A box-and-whisker plot (or box plot) is another visualization tool that illustrates the distribution and variability of a sample. It provides a summary of the data based on five key statistics: minimum, first quartile (Q1), median (Q2), third quartile (Q3), and maximum.
+
+```{r}
+# Create box-and-whisker plots
+boxplot(temperature_data1, temperature_data2, 
+        names = c("Sample 1", "Sample 2"), 
+        main = "Box-and-Whisker Plots of Two Simulated Samples",
+        ylab = "Temperature (°C)", col = c("lightblue", "lightpink"))
+
+
+# Display sample means on the plot
+graphics::legend("bottomleft", legend = c(paste("Sample 1: Mean =", round(sample_mean1, 2), ", SD =", round(sample_sd1, 2)),
+                              paste("Sample 2: Mean =", round(sample_mean2, 2), ", SD =", round(sample_sd2, 2))),
+       fill = c(rgb(0, 0, 1, 0.5), rgb(1, 0, 0, 0.5)), border = NA)
+```
+
+This code generates two box-and-whisker plots of the simulated daily temperature data. The box represents the interquartile range (IQR), showing the spread of the middle 50% of the data.The median line inside the box indicates the median temperature. The whiskers extend to the smallest and largest values within 1.5 times the IQR from Q1 and Q3. Any data points that fall outside these whiskers, known as outliers, are considered to be significantly different from the rest of the data and are plotted individually. The red dashed line represents the sample mean temperature, highlighting its position relative to the median and the overall data distribution.
+
 
 ## Calculate sample covariance and correlation coefficient.
 
-### Define covariance and sample covariance
+### Understanding Covariance and Correlation
+
+Variance measures the variability of one random variable. In time series, we are often interested in how two random variables "move together." Covariance and correlation measure the linear co-movements between two random variables, and sample covariance and correlation are key statistics for inferring relationships between variables. Because complex systems generate most of the data collected today, statistics that illuminate the connections between variables are the foundation of quantitative science and our understanding of complex phenomena.
+
+#### Covariance and Sample Covariance
+
+**Covariance**
+
+Covariance is a measure of the degree to which two variables change together. If the variables tend to increase and decrease simultaneously, the covariance will be positive. If one variable tends to increase while the other decreases, the covariance will be negative. Mathematically, the population covariance between two variables $X$ and $Y$ is defined as:
+
+$$\text{Cov}(X, Y) = \frac{1}{N} \sum_{i=1}^{N} (X_i - \mu_X)(Y_i - \mu_Y)$$
+
+where $N$ is the size of the population, $X_i$ and $Y_i$ are the individual data points of $X$ and $Y$, and $\mu_X$ and $\mu_Y$ are the means of $X$ and $Y$.
+
+**Sample Covariance**
+
+Sample covariance is used to estimate the population covariance from a sample. It is calculated similarly to population covariance but uses sample data and includes Bessel's correction to account for the sample size. The sample covariance between two variables $X$ and $Y$ is defined as:
+
+$$s_{XY} = \frac{1}{n-1} \sum_{i=1}^{n} (x_i - \bar{x})(y_i - \bar{y})$$
+
+where $n$ is the size of the sample, $x_i$ and $y_i$ are the individual sample data points of $X$ and $Y$ , and $\bar{x}$ and $\bar{y}$ are the sample means of $X$ and $Y$.
+
+#### Correlation and Sample Correlation Coefficient
+
+Covariance provides a numerical expression of the magnitude of the joint variability of two variables using their units measure. For example, in a study of the relationship between height in centimeters and weight in kilograms, the covariance will have units of centimeters-kilograms. This unit dependency can make it difficult to interpret the strength of the relationship, especially when comparing covariance statistics across data sets with different units. Additionally, the scale of covariance can vary widely depending on the variability of the data, complicating its interpretation. Correlation standardizes the covariance measure, providing a dimensionless number that quantifies the strength and direction of the linear relationship between two variables. The population correlation coefficient $\rho$ between two variables $X$ and $Y$ is defined as:
+
+$$\rho_{XY} = \frac{\text{Cov}(X, Y)}{\sigma_X \sigma_Y}$$
+
+where $\text{Cov}(X, Y)$ is the covariance between $X$ and $Y$, and $\sigma_X$ and $\sigma_Y$ are the standard deviations of $X$ and $Y$. The correlation coefficient ranges from -1 to 1. A correlation of 1 indicates a perfect positive linear relationship, while a correlation of -1 indicates a perfect negative linear relationship. A correlation of 0 indicates no linear relationship.
+
+**Sample Correlation Coefficient**
+
+The sample correlation coefficient $r_{X,Y}$ is the estimator $\rho_{X,Y}$ and is defined as:
+
+$$r_{XY} = \frac{s_{XY}}{s_X s_Y}$$
+
+where $s_{XY}$ is the sample covariance between $X$ and $Y$, and $s_X$ and $s_Y$ are the sample standard deviations of $X$ and $Y$.
+
+#### Interpreting an Estimate of the Sample Correlation Coefficient
+
+For example, consider two time series: daily temperatures and daily ice cream sales. If the sample correlation coefficient, $r$, between these variables is 0.8, it indicates a strong positive relationship, suggesting that higher temperatures are associated with increased ice cream sales. Conversely, if $r=-0.8$, it would suggest that higher temperatures are associated with decreased ice cream sales. A correlation value around 0 would indicate that temperature changes have little to no effect on ice cream sales.
 
 ### Explain the intuition of covariance using a scatter plot
 
-### Define the correlation and sample correlation coefficient.
+The following simulation explains the intuition behind the estimates for sample covariance and correlation. Please choose the size of the sample and the parameters in the population. The simulation will generate a sample and calculate, step by step, the estimates using the estimators. 
 
-### Interpret an estimate of sample correlation coefficient.
-
+```{=html}
+ <iframe id="CoAndCo" src="https://posit.byui.edu/content/564c2e71-3d0b-43a6-8c6f-d402125c8b28" style="border: none; width: 100%; height: 2200px" frameborder="0"></iframe>
+```
 ## Calculate a sample autocorrelation
 
+### Autocovariance and Autocorrelation
+
+As explained in Chapter 1, in cross-sectional analysis, data is collected at one point in time across multiple subjects, such as individuals, countries, company stocks, or bacteria. Sample covariance and correlation are essential statistics used to understand the relationships between variables common to all the subjects. A critical assumption in cross-sectional analysis is the independent sampling of each subject in the population. Intuitively, that means that the selection of each subject in the sample is random or not connected in any systematic way. The violation of independent sampling jeopardizes the validity of the analysis. Suppose there were connections between subjects created by the sampling process; sample covariance and correlation estimates would pick up that connection alongside the population relationship the analysis was supposed to estimate. The sampling interconnections between subjects will muddle the estimates for the population relationships, either increasing or attenuating the magnitude of the relationship, eliminating our confidence in the estimates.
+
+Random sampling is impossible in time series data, which tracks a single subject over multiple periods. Because time series are collected from a single subject, each observation is inherently related to another in the series and not chosen at random. Suppose a time series tracks the height of an individual over time at a monthly frequency. Most of us would find it curious if the height of our subject increased by 10 inches in a month and then decreased by 20 inches the next month. Humans do not grow so quickly, and unless for the loss of limbs, they will not shorten that quickly either. The connection between observations in a sample implies that many of the tools of cross-sectional inference are invalid. Instead of relying on information from multiple subjects, as in cross-sectional analysis, time-series statistics use multiple sequential observations to learn about the subject.
+
+The autocovariance and autocorrelation functions help us characterize the relationships between sequential observations of the same subject. The prefix "auto" comes from a Greek root meaning "self." Like in cross-sectional analysis, where we exploit variation across subjects to find something common to all the subjects, understanding the temporal relationships in a time series will illuminate the characteristics of the stochastic process that generated the data. The measurement and analysis of autocovariance and the tools that rely on this statistic will be the foundation of most of the analysis taught in the rest of the textbook. Like cross-sectional analysis, meeting the assumptions about the autocovariance structure of the data will be the primary driver in selecting the estimators we choose for our analysis.
+
 ### Define population and sample autocorrelation
+
+Autocovariance and autocorrelation quantify how values in a time series relate to their past and future values, providing insights into the internal structure and patterns of the data. Because there is a temporal component in these statistics, we specify them as a function of time or lag; so there is not a single estimator of autocorrelation, like covariance, but rather an autocovariance and autocorrelation function, with one estimator for each possible time lag. 
+
+#### Autocovariance
+
+Population autocovariance measures the covariance of a time series with a lagged version of itself for the entire ensemble, or population. It quantifies the degree to which current values of the series are related to its past values. The population autocovariance function at lag $k$ for a time series $X_t$ is defined as:
+
+$$\gamma_k =\frac{1}{N} \sum^{N-k}_{t=1}{(X_t - \mu)(X_{t+k} - \mu)}$$
+
+where: $N$ is the number of observations in the time series, $X_t$ and $X_{t+k}$ are the values of the series at time $t$ and $t+k$, $\mu$ is the mean of the time series, and $k$ is the lag.
+
+The collection of $\gamma_k$ for all possible lags $k$ forms the population autocovariance function, or ACVF.
+
+Sample autocovariance is used to estimate the population autocovariance from a time series, not an ensemble. It is calculated similarly to the population autocovariance but uses sample data. The sample autocovariance at lag $k$ is defined as:
+
+$$\hat{\gamma}_k = c_k =\frac{1}{n} \sum_{t=1}^{n-k} (x_t - \bar{x})(x_{t+k} - \bar{x})$$
+
+where: $n$ is the number of observations in the sample, $x_t$ and $x_{t+k}$ are the sample values at time $t$ and $t+k$, $\bar{x}$ is the sample mean, and $k$ is the lag
+
+The collection of $c_k$ for all possible lags $k$ forms the sample autocovariance function.
+
+#### Autocorrelation
+
+Population autocorrelation standardizes the measure of autocovariance, providing a dimensionless value that quantifies the strength and direction of the relationship between values in a time series at different lags. The population autocorrelation function at lag $k$, denoted as $\rho_k$ is defined as:
+
+$$\rho_k = \frac{\gamma_k}{\gamma_0}$$
+
+where: $\gamma_k$ is the population autocovariance at lag $k$, and $\gamma_0$ is the variance of the time series, or autocovariance at lag zero.
+
+The collection of $\rho_k$ for all possible lags $k$ forms the population autocorrelation function, or ACF.
+
+**Sample Autocorrelation**
+
+Sample autocorrelation is used to estimate the population autocorrelation from a time series. It is defined as:
+
+$$
+  \hat{\rho}_k= r_k 
+    = \frac{c_k}{c_0} 
+    = \frac{ \frac{1}{n} \sum\limits_{t=1}^{n-k}(x_t-\bar{x})(x_{t+k}-\bar{x}) }{ \frac{1}{n} \sum\limits_{t=1}^{n}(x_t-\bar{x})^2 }
+    = \frac{ \sum\limits_{t=1}^{n-k}(x_t-\bar{x})(x_{t+k}-\bar{x}) }{ \sum\limits_{t=1}^{n}(x_t-\bar{x})^2 }
+$$
+
+where: $c_k$ is the sample autocovariance at lag $k$, $c_0$ is the sample variance of the time series, or autocovariance at lag zero.
+
+The collection of $r_k$ for all possible lags $k$ forms the sample autocorrelation function.
 
 ### Explain the intuition of sample autocorrelation using a scatter plot
 
 ### Interpret an estimate of sample autocorrelation at different lags
 
-### Define a correlogram
-
-### Conduct hypothesis testing using a correlogram
-
-## Content Dump
-
-#### Learning Outcomes
-
-{{< include ../outcomes/new/_chapter_2_lesson_1_outcomes.qmd >}}
-
-#### Preparation
-
--   Read Sections 2.1-2.2.2 and 2.2.4
-
-#### Learning Journal Exchange (10 min)
-
--   Review another student's journal
--   What would you add to your learning journal after reading your partner's?
--   What would you recommend your partner add to their learning journal?
--   Sign the Learning Journal review sheet for your peer
-
-#### Class Activity: Variance and Standard Deviation (10 min)
-
-We will explore the variance and standard deviation in this section.
-
-::: {.callout-tip icon="false" title="Check Your Understanding"}
--   What do the standard deviation and the variance measure?
-:::
-
-The following code simulates observations of a random variable. We will use these data to explore the variance and standard deviation.
-
-```{r}
-# Set random seed
-set.seed(2412)
-
-# Specify means and standard deviation
-n <- 5        # number of points
-mu <- 10      # mean
-sigma <- 3    # standard deviation
-
-# Simulate normal data
-sim_data <- data.frame(x = round(rnorm(n, mu, sigma), 1)) |> 
-  arrange(x)
-```
+The autocovariance and autocorrelation functions are a function of time. Each example that follows will show a scatter plot of a single time series against itself, lagged at different periods. The scatter plot shows the linear relationships between lagged variables and the code below each scatter plot shows the value of the autocovariance and autocorrelation functions for each lag.
 
 ```{r}
 #| echo: false
 
-# Convert to character string
-# Initialize empty character vector
-five_vals <- sim_data$x[1]
-# Simulate normal data
-for(t in 2:n){
-  five_vals <- paste(five_vals, sim_data$x[t], sep=", ")
-}
-```
-
-The data simulated by this process are:
-
-<center>`r five_vals`</center>
-
-::: {.callout-tip icon="false" title="Check Your Understanding"}
--   Find the sample mean of these numbers. <!-- `r mean(sim_data$x)`. -->
--   What are some ways to interpret the mean?
-:::
-
-The variance and standard deviation are individual numbers that summarize how far the data are from the mean. We first compute the deviations from the mean, $x - \bar x$. This is the directed distance from the mean to each data point.
-
-```{r}
-#| echo: false
-#| warning: false
-temp <- sim_data |> 
-  mutate(deviations = x - mean(x)) |> 
-  arrange(desc(x))
-
-mean_x <- mean(temp$x)
-min_x <- floor(min(temp$x))
-max_x <- ceiling(max(temp$x))
-range <- max_x - min_x
-lower <- min_x - range / 10
-upper <- max_x + range / 10
-
-ticks <- ceiling(lower):floor(upper)
-ticks_df <- data.frame(x = ticks, y = -1)
-
-
-# Plot deviations from the mean
-ggplot(temp, aes(x = x, y = 0)) +
-  # x-axis
-  annotate("segment", x = lower, xend = upper, y = -1, yend = -1, colour = "black", linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
-  
-  # Add tick marks and labels          
-  annotate("segment", x = ticks, xend = ticks, y = -1.25, yend = -0.75, colour = "black", linewidth = 0.5) +
-
-  geom_text(aes(x = upper, y = -1, label = "x"), size = 4, hjust = -1, vjust = 0, color = "black") +
-  
-  geom_text(data = ticks_df, aes(x = x, y = y, label = x), size = 4, vjust = 2, color = "black") +
-  
-  # Deviations from the mean arrows and lines
-  geom_segment(aes(x = mean_x, xend = x, y = 1:n, yend = 1:n), colour = okabeito_colors_list[2], linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
-  geom_segment(aes(x = x, xend = x, y = 0.25, yend = 1:n - 0.25), colour = okabeito_colors_list[2], linewidth = 0.5, linetype = "dashed") +
-  geom_text(aes(x = (mean_x + x)/2, y = 1:n, label = round(deviations, 2)), size = 3, vjust = -0.5) +
-  
-  # Marker for the mean
-  annotate("segment", x = mean_x, xend = mean_x, y = -2.5, yend = -1.25, colour = okabeito_colors_list[1], linewidth = 1, arrow = arrow(length = unit(0.3,"cm"))) +
-  geom_segment(aes(x = mean_x, xend = mean_x, y = -0.75, yend = n + 1), colour = okabeito_colors_list[1], linewidth = 0.5, linetype = "dashed") +
-  # Add xbar
-  geom_label(
-    label=expression(bar(x) == " "),
-    x=mean_x-0.1,
-    y=-2.6,
-    color = okabeito_colors_list[1],parse = TRUE,label.size = NA, fill=NA)+
-  # add mean value
-  geom_label(
-    label=paste0(round(mean_x, 2)),
-    x=mean_x+0.3,
-    y=-2.6,
-    color = okabeito_colors_list[1],label.size = NA, fill=NA)+
-  geom_point(size = 3, color = okabeito_colors_list[2]) + 
-  geom_text(aes(x = x, y = rep(0,n), label = x), size = 3, vjust = 1.75) +
-  
-  # theme
-  theme_void() +
-  theme(axis.title.y = element_blank()) +
-  theme(plot.title = element_text(hjust = 0.5)) +
-     
-  theme(aspect.ratio = 0.4) +
-  labs(title = "Deviations from the Mean", 
-       x = "Value",
-       y = "")
-```
-
-We can summarize this information in a table:
-
-######## Table 1: Deviations from the mean
-
-```{r}
-#| echo: false
-sim_data |> 
-  mutate(
-    xx = x - mean(x),
-    extra1 = " ",
-    extra2 = " ",
-    extra3 = " ",
-    extra4 = " "
-    ) |> 
-  rename(
-    "$$x_t$$" = x,
-    "$$x_t-\\bar x$$" = xx,
-    " " = extra1,
-    "  " = extra2,
-    "   " = extra3,
-    "    " = extra4
-  ) |>
-  display_table("0.75in")
-```
-
-::: {.callout-tip icon="false" title="Check Your Understanding"}
-How can we obtain one number that summarizes how spread out the data are from the mean? We may try averaging the deviations from the mean.
-
--   What is the average deviation from the mean?
--   Will we get the same value with other data sets, or is this just a coincidence?
--   What could you do to prevent this from happening?
--   Apply your idea. Compute the resulting value that summarizes the spread. What do you get?
--   What is the relationship between the sample variance and the sample standard deviation?
--   Use a table like the one above to verify that the sample variance is `r var(sim_data$x)`.
--   Show that the sample standard deviation is `r sd(sim_data$x) |> round(4)`.
-:::
-
-#### Class Activity: Covariance and Correlation (15 min)
-
-```{=html}
- <iframe id="CoAndCo" src="https://posit.byui.edu/content/564c2e71-3d0b-43a6-8c6f-d402125c8b28" style="border: none; width: 100%; height: 2200px" frameborder="0"></iframe>
-```
-::: {.callout-tip icon="false" title="Check Your Understanding"}
--   What do you get if you multiply the equations for $r$, $s_x$, and $s_y$ together?
-:::
-
-$$
-  r \cdot s_x \cdot s_y 
-    =
-      \frac{\sum\limits_{t=1}^n (x - \bar x)(y - \bar y)}{\sqrt{\sum\limits_{t=1}^n (x - \bar x)^2} \sqrt{\sum\limits_{t=1}^n (y - \bar y)^2}} 
-      \cdot 
-      \sqrt{ \frac{\sum\limits_{t=1}^n (x - \bar x)^2}{n-1} }
-      \cdot 
-      \sqrt{ \frac{\sum\limits_{t=1}^n (y - \bar y)^2}{n-1} }
-    =
-      ?
-$$
-
-::: {.callout-tip icon="false" title="Check Your Understanding"}
--   Use the numerical values above to confirm your result. Any discrepancy is due to roundoff error.
-:::
-
-#### Team Activity: Computational Practice (15 min)
-
-```{r}
-#| echo: false
-
-# Set random seed
-set.seed(300)
-
-# Specify means and correlation coefficient
-n <- 6              # number of points
-mu <- c(3, 1)       # mean vector (mu_x, mu_y)
-sigma_x <- 3.5      # standard deviation x
-sigma_y <- 2        # standard deviation y
-rho <- -0.85          # correlation coefficient
-
-# Define variance-covariance matrix
-sigma <- matrix(
-  c(sigma_x^2,
-    rho*sigma_x*sigma_y,
-    rho*sigma_x*sigma_y,
-    sigma_y^2),
-  nrow = 2)
-
-# Simulate bivariate normal data
-mvn_data_6 <- MASS::mvrnorm(n, mu, sigma) |> 
-  data.frame() |> 
-  rename(x = X1, y = X2) |> 
-  round_df(1)
-```
-
-######## Table 3: Computational Practice
-
-The table below contains values of two time series $\{x_t\}$ and $\{y_t\}$ observed at times $t = 1, 2, \ldots, 6$. We will use these values to practice finding the means, standard deviations, correlation coefficient, and covariance without using built-in R functions.
-
-```{r}
-#| echo: false
-
-cov_dat <- mvn_data_6 |> 
-  mutate(t = row_number()) |> 
-  dplyr::select(t, x, y) |> 
-  mutate(
-    xx = x - mean(x),
-    xx2 = xx^2,
-    yy = y - mean(y),
-    yy2 = yy^2,
-    xy = (x - mean(x)) * (y - mean(y))
-    ) 
-
-cov_dat_summary <- cov_dat |> 
-  summarize(
-    x = sum(x),
-    y = sum(y),
-    xx = sum(xx),
-    xx2 = sum(xx2),
-    yy = sum(yy),
-    yy2 = sum(yy2),
-    xy = sum(xy)
-  ) |> 
-  round_df(5) |>
-  mutate(across(everything(), as.character)) |> 
-  mutate(t = "sum")
-
-temp <- cov_dat |> 
-  round_df(5) |>
-  mutate(across(everything(), as.character)) |> 
-  bind_rows(cov_dat_summary)
-
-temp |> 
-  blank_out_cells_in_df(ncols_to_keep = 3, nrows_to_keep = 1) |>
-  bind_rows(temp |> tail(1) |> blank_out_cells_in_df(ncols_to_keep = 0, nrows_to_keep = 0) |> mutate(t = "$$~$$")) |> 
-  rename(
-    "$$t$$" = t,
-    "$$x_t$$" = x,
-    "$$y_t$$" = y,
-    "$$x_t-\\bar x$$" = xx, 
-    "$$(x_t - \\bar x)^2$$" = xx2, 
-    "$$y_t-\\bar y$$" = yy,
-    "$$(y_t-\\bar y)^2$$" = yy2, 
-    "$$(x_t - \\bar x)(y_t-\\bar y)$$" = xy
-  ) |>
-  display_table()
-```
-
-Use the table above to determine these values:
-
-::: columns
-::: {.column width="30%"}
--   $\bar x =$
-
--   $\bar y =$
-:::
-
-::: {.column width="5%"}
-<!-- empty column to create gap -->
-:::
-
-::: {.column width="30%"}
--   $s_x =$
-
--   $s_y =$
-:::
-
-::: {.column width="5%"}
-<!-- empty column to create gap -->
-:::
-
-::: {.column width="30%"}
--   $r =$
-
--   $\\cov(x,y) =$
-:::
-:::
-
-Here is a scatterplot of the data.
-
-<center>
-
-```{r fig.asp=0.75}
-#| echo: false
-#| warning: false
-
-cov_dat <- cov_dat |> 
-  mutate(
-    sign = case_when(
-      xy > 0 ~ "positive", 
-      xy < 0 ~ "negative",
-      TRUE ~ "zero")
-  ) 
-  
-ggplot(cov_dat, aes(x = x, y = y)) +
-  geom_point(size = 2) +
-  labs(x="x", y="y") +
-  theme_bw() +  
-  ggtitle(paste0("Data for Computational Practice (n = ",n,")")) + 
-  theme(plot.title = element_text(hjust = 0.5)) 
-```
-
-</center>
-
-##### Summary
-
-::: {.callout-tip icon="false" title="Check Your Understanding"}
-Working with your partner, prepare to explain the following concepts to the class:
-
--   Variance
--   Standard deviation
--   Correlation
--   Covariance
-:::
-
-#### Computations in R (5 min)
-
-Use these commands to load the data from the previous activity into R.
-
-```{r}
-#| echo: false
-x <- mvn_data_6$x
-y <- mvn_data_6$y
-cat("x <- c(", paste(mvn_data_6$x, collapse = ", "),")")
-cat("y <- c(", paste(mvn_data_6$y, collapse = ", "),")")
-```
-
-We can use R to compute the mean, variance, standard deviation, correlation coefficient, and covariance.
-
-######## Mean, $\bar x$
-
-```{r}
-mean(x)
-```
-
-######## Variance, $s_x^2$
-
-```{r}
-var(x)
-```
-
-######## Standard Deviation, $s_x$
-
-```{r}
-sd(x)
-```
-
-######## Correlation Coefficient, $r$
-
-```{r}
-cor(x, y)
-```
-
-######## Covariance, $\\cov(x,y)$
-
-```{r}
-cov(x, y)
-```
-
-<a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Class Activity: Variance and Standard Deviation</a>
-
-::: {#Solutions style="display:none;"}
-Solutions to Class Activity: Variance and Standard Deviation
-
-```{r}
-#| echo: false
-temp <- sim_data |> 
-  mutate(
-    xx = x - mean(x),
-    xx2 = (x - mean(x))^2,
-    ) 
-
-temp2 <- temp |> 
-  bind_rows(colSums(temp)) |>
-  round_df(5) |>
-  mutate(Solution = ifelse(row_number() == n(), "Sum", "")) |>
-  dplyr::select(Solution, x, xx, xx2) |>
-  data.frame()
-
-ssx <- temp2[nrow(temp2), ncol(temp2)]
-
-temp2 |> 
-  rename(
-    "$$x_t$$" = x,
-    "$$x_t-\\bar x$$" = xx, 
-    "$$(x_t-\\bar x)^2$$" = xx2
-  ) |>
-  display_table()
-```
-
-```{r}
-
-```
-
-The variance of these values is $s^2 = \frac{`r ssx`}{`r nrow(temp)` - 1} = `r var(x)`$.
-
-The standard deviation is $s = \sqrt{s^2} = \sqrt{`r var(x)`} = `r sd(x) |> round(3)`$.
-:::
-
-<a href="javascript:showhide('Solutions2')"
-style="font-size:.8em;">Team Activity: Computational Practice</a>
-
-::: {#Solutions2 style="display:none;"}
-Solutions to Team Activity: Computational Practice
-
-######## Table 3: Computational Practice
-
-```{r}
-#| echo: false
-
-cov_dat <- mvn_data_6 |> 
-  mutate(t = row_number()) |> 
-  dplyr::select(t, x, y) |> 
-  mutate(
-    xx = x - mean(x),
-    xx2 = xx^2,
-    yy = y - mean(y),
-    yy2 = yy^2,
-    xy = (x - mean(x)) * (y - mean(y))
-    ) 
-
-cov_dat_summary <- cov_dat |> 
-  summarize(
-    x = sum(x),
-    y = sum(y),
-    xx = sum(xx),
-    xx2 = sum(xx2),
-    yy = sum(yy),
-    yy2 = sum(yy2),
-    xy = sum(xy)
-  ) |> 
-  round_df(5) |>
-  mutate(across(everything(), as.character)) |> 
-  mutate(t = "sum")
-
-temp <- cov_dat |> 
-  round_df(5) |>
-  mutate(across(everything(), as.character)) |> 
-  bind_rows(cov_dat_summary)
-
-temp |> 
-  # blank_out_cells_in_df(ncols_to_keep = 3, nrows_to_keep = 1) |>
-  # bind_rows(temp |> tail(1) |> blank_out_cells_in_df(ncols_to_keep = 0, nrows_to_keep = 0) |> mutate(t = "$$~$$")) |> 
-  rename(
-    "$$t$$" = t,
-    "$$x_t$$" = x,
-    "$$y_t$$" = y,
-    "$$x_t-\\bar x$$" = xx, 
-    "$$(x_t - \\bar x)^2$$" = xx2, 
-    "$$y_t-\\bar y$$" = yy,
-    "$$(y_t-\\bar y)^2$$" = yy2, 
-    "$$(x_t - \\bar x)(y_t-\\bar y)$$" = xy
-  ) |>
-  display_table()
-```
-
-::: columns
-::: {.column width="30%"}
--   $\bar x = `r mean(mvn_data_6$x)`$
-
--   $\bar y = `r mean(mvn_data_6$y)`$
-:::
-
-::: {.column width="5%"}
-<!-- empty column to create gap -->
-:::
-
-::: {.column width="30%"}
--   $s_x = `r sd(mvn_data_6$x)`$
-
--   $s_y = `r sd(mvn_data_6$y)`$
-:::
-
-::: {.column width="5%"}
-<!-- empty column to create gap -->
-:::
-
-::: {.column width="30%"}
--   $r = `r cor(mvn_data_6$x, mvn_data_6$y)`$
-
--   $\\cov(x,y) = `r cov(mvn_data_6$x, mvn_data_6$y)`$
-:::
-:::
-:::
-
-### New section 1
-
-```{r}
-#| include: false
+#This chunk creates functions used in later code to manipulate the data and the tables
 
 get_data_for_cov_table <- function(offset = 1) {
   # set random number generator seed
@@ -763,85 +620,9 @@ compute_summaries <- function(df, digits = 4) {
 
 ```
 
-
-#### Learning Outcomes
-
-{{< include ../outcomes/_chapter_2_lesson_2_outcomes.qmd >}}
-
-
-
-
-#### Preparation
-
--   Read Sections 2.2.5 and 2.3-2.5
-
-
-#### Learning Journal Exchange (10 min)
-
--   Review another student's journal
--   What would you add to your learning journal after reading your partner's?
--   What would you recommend your partner add to their learning journal?
--   Sign the Learning Journal review sheet for your peer
-
-
-#### Hands-on Exercise -- Exploring Sample Autocorrelation (40 min)
-
-<!-- Compute sample acvf and acf -->
-
-##### Comparison of Independent and Autocorrelated Error Terms
-
-In the previous lesson, we computed the sample covariance and sample correlation coefficient between two independent variables. When working with time series, the observations are not independent. There is often a relationship between sequential observations. We will compute the autocovariance function and autocorrelation function for a time series. Note: the prefix "auto" comes from a Greek root meaning "self."
-
-The figure below illustrates the difference between a series of data, where the residuals are independent compared to a series with autocorrelated data.
+This table and chart show ten observations from a simulation.
 
 ```{r}
-#| echo: false 
-
-# Generate data
-set.seed(101) 
-x <- 1:100*0.5 + arima.sim(n=100-1, list(ar=0.1, ma=0.2, order=c(1,1,1)))
-e <- rnorm(100, 0, 2.5)
-y <- 1:100*0.5 + e  
-
-# Create data frame  
-df <- data.frame(
-  time = 1:100,
-  Autocorrelated = x,
-  Independent = y
-)
-
-# Plot  
-ggplot(df, aes(x = time)) +
-  geom_line(aes(y = Independent, color = "Independent")) + 
-  geom_point(aes(y = Independent, color = "Independent")) + 
-  geom_line(aes(y = Autocorrelated, color = "Autocorrelated")) + 
-  geom_point(aes(y = Autocorrelated, color = "Autocorrelated")) +
-  scale_color_okabeito(
-    palette = "full",
-    reverse = FALSE,
-    order = c(2,4),
-    aesthetics = "color"
-  ) +
-  labs(title="Comparison of Independent and Autocorrelated Error Terms", 
-       x="Time",
-       y="Values",
-       color="Series") +
-  theme_bw() +
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   The variances of the residuals for these two series are approximately equal. What characteristics distinguish the two series in the figure above?
-
-:::
-
-##### Autocovariance and Autocorrelation 
-
-We will use the following data to explore the concepts of autovariance and autocorrelation.
-
-```{r}
-#| echo: false
 
 offset_value <- 1
 cov_df <- get_data_for_cov_table(offset = offset_value)
@@ -856,27 +637,14 @@ cov_df %>%
   display_table()
 ```
 
-You can use this R command to read in the observations.
-
-```{r}
-#| echo: false
-
-cat("x <- c(", paste(cov_df$x, collapse = ", "),")")
-```
-
 ```{r}
 #| echo: false
 
 ggplot(cov_df, aes(x = t, y = x)) +
   geom_line(color = "#0072B2") +
   geom_point(color = "#0072B2") +
-#   scale_color_okabeito(
-#   palette = "full",
-#   reverse = TRUE,
-#   order = c(1,7,8,5,6,3,4,2,9),
-#   aesthetics = "color"
-# ) +
-  ylim(0,ceiling(max(cov_df$x))) +
+  ylim(0, ceiling(max(cov_df$x))) +
+  scale_x_continuous(breaks = seq(0, max(cov_df$t), by = 1)) +
   labs(title = "Sample Time Series",
        x = "Time",
        y = "x") +
@@ -884,7 +652,7 @@ ggplot(cov_df, aes(x = t, y = x)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 ```
 
-We will use the sample mean of these data repeatedly. The value of $\bar x$ is:
+We will use the sample mean of these data repeatedly. The value of $\bar{x}$ is:
 
 $$
   \bar x 
@@ -893,32 +661,17 @@ $$
     = `r mean(cov_df$x)`
 $$
 
+##### Lag $k=1$ Sample Autocovariance Function (ACVF), $c_1$
 
-We will be finding the autocovariance and correlation of a time series with itself. First, we start with a lag of 1. With a lag of 1 the corresponding values of the time series that are being compared are shifted by one time unit. Then, we will consider any integer lag: lag $k$.
-
-
-##### Lag $k$ Sample Autocovariance Function (acvf), $c_k$
-
-The **lag** $k$ sample autocovariance function, acvf, denoted $c_k$, is defined as
+The lag $k=1$ sample ACVF denoted $c_1$, is defined as
 
 $$
-  c_k = \frac{1}{n} \sum\limits_{t=1}^{n-k}(x_t-\bar x)(x_{t+k}-\bar x)
+  c_1 = \frac{1}{n} \sum\limits_{t=1}^{n-1}(x_t-\bar x)(x_{t+1}-\bar x)
 $$
+There are some important details to point out. Starting with the upper limit of the summation operator, $n-1$. When we shift the series by one unit of time, we reduce the number of observations available for the calculation by one unit; for an illustration, see the table below. The inside of the summation operator there are $n-1$ values for the expression $(x_t-\bar x)(x_{t+1}-\bar x)$. The summation operator then sums all the products and divides it by the sample size, or the length of the time series. 
 
-We denote the lag by the letter $k$, where $k \ge 0$. This is the number of values the data set is shifted to compute the autocovariance.
+Intuitively, the autocorrelation coefficient is the average of the product $(x_t-\bar x)(x_{t+1}-\bar x)$. The following table illustrates each step in the calculation.
 
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   Explain the equation for $c_k$ to your partner.
--   What is the equation for $c_0$, the value of the autocovariance function with lag $k=0$?
-    -   This expression is very similar to a definition we have encountered previously. What is it?
-
-:::
-
-
-######## Lag $k=1$ Sample Autocovariance Function, $c_1$
-
-We will now find the autocovariance between the values in a time series ($x = x_t$) and the same values, shifted by one unit of time ($y = x_{t+1}$).
 
 ```{r}
 #| echo: false
@@ -930,23 +683,27 @@ summarized <- compute_summaries(cov_df)
 cov_table %>%
   rename(
     "$$ x_t $$" = x_t,
-    "$$ x_{t+k} $$" = `x_{t+k}`,
-    "$$ x_t-\\bar x $$" = `x_t-mean(x)`,
+    "$$ x_{t+1} $$" = `x_{t+k}`,
+    "$$ (x_t-\\bar x) $$" = `x_t-mean(x)`,
     "$$ (x_t-\\bar x)^2 $$" = `(x_t-mean(x))^2`,
-    "$$ x_{t+k}-\\bar x$$"= `x_{t+k}-mean(x)`,
-    "$$ (x-\\bar x)(x_{t+k}-\\bar x) $$"= `(x-mean(x))(x_{t+k}-mean(x))`
+    "$$ (x_{t+1}-\\bar x)$$"= `x_{t+k}-mean(x)`,
+    "$$ (x-\\bar x)(x_{t+1}-\\bar x) $$"= `(x-mean(x))(x_{t+k}-mean(x))`
   ) %>% 
   display_table()
 ```
 
-::: {.callout-tip icon=false title="Check Your Understanding"}
+In this example, the second variable is $x_{t+1}$, where $t>1$. the autocovariance of $x_t$ and $x_{t+1}$ is:
 
--   Working with your assigned partner, compute each of the values in row 1 by hand.  Recall that $\bar x = `r mean(cov_df$x)`$.
--   With your partner, add up the values in the last column to verify that the sum is `r sum(cov_df$xy, na.rm = TRUE) %>% round(10)`.
+$$
+  c_1 
+    = \frac{1}{n} \sum\limits_{t=1}^{n-1}(x_t-\bar x)(x_{t+1}-\bar x)
+    = \frac{1}{`r n`} \sum\limits_{t=1}^{`r n - offset_value`}(x_t-\bar x)(x_{t+1}-\bar x)
+  = \frac{1}{`r n`} \cdot `r summarized$ss_xy`
+  = `r summarized$c_k`
+$$
 
-:::
 
-The scatterplot below illustrates the relationship between the observed data ($x_t$) and the next observation ($x_{t+1}$).
+Visually, the scatter plot below illustrates the relationship between the observed data $x_t$ and the next observation $x_{t+1}$. Note that the product $(x_t-\bar x)(x_{t+1}-\bar x)$ is positive for all observations, suggesting a positive linear relationship. However, the magnitude of the relationship is difficult to evaluate give that the statistic is measured in the same units as the observations. The autocorrelation calculated in the next section will highlight the usefulness of a normalized measurement that doesn't have the unit measurement problem of autocovariance. 
 
 ```{r}
 #| echo: false
@@ -960,47 +717,10 @@ ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 ```
 
-In this example, the second variable is $x_{t+1}$, where $t>1$. the autocovariance of $x_t$ and $x_{t+1}$ is:
 
-$$
-  c_1 
-    = \frac{1}{n} \sum\limits_{t=1}^{n-1}(x_t-\bar x)(x_{t+1}-\bar x)
-    = \frac{1}{`r n`} \sum\limits_{t=1}^{`r n - offset_value`}(x_t-\bar x)(x_{t+1}-\bar x)
-  = \frac{1}{`r n`} \cdot `r summarized$ss_xy`
-  = `r summarized$c_k`
-$$
+##### Lag $k=1$ Sample Autocorrelation Function, $r_1$
 
-This is the (auto)covariance of $x$ with itself, but with a lag of 1 time unit. This is the value of the **lag** $k=1$ autocovariance function, acvf_1.
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   What does the lag 1 autocovariance measure?
-
-:::
-
-##### Lag $k$ Sample Autocorrelation Function (acf), $r_k$
-
-The **sample autocorrelation function, acf**, denoted $r_k$, where $k$ is the lag, is defined as
-
-$$
-  r_k 
-    = \frac{c_k}{c_0} 
-    = \frac{ \frac{1}{n} \sum\limits_{t=1}^{n-k}(x_t-\bar x)(x_{t+k}-\bar x) }{ \frac{1}{n} \sum\limits_{t=1}^{n}(x_t-\bar x)^2 }
-    = \frac{ \sum\limits_{t=1}^{n-k}(x_t-\bar x)(x_{t+k}-\bar x) }{ \sum\limits_{t=1}^{n}(x_t-\bar x)^2 }
-$$
-
-Note that $c_0$ is the variance of $x$, but computed by dividing by $n$, instead of $n-1$.
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   Interpret the components of the numerator and the denominator of the expression for $r_k$ to your partner.
-
-:::
-
-######## Lag $k=1$ Sample Autocorrelation Function, $r_1$
-
-We can compute the **lag 1 autocorrelation** or the **autocorrelation of** $x$ with lag 1 as the quotient $r_1 = \frac{c_1}{c_0}$. We have already determined that 
-$c_1 = `r summarized$c_k %>% round(4)`$. We now compute $c_0$:
+We can compute the autocorrelation of $x$ with lag 1 as the quotient $r_1 = \frac{c_1}{c_0}$. We have already determined that $c_1 = `r summarized$c_k %>% round(4)`$. We now compute $c_0$:
 
 $$ 
   c_0 = \frac{1}{n} \sum\limits_{t=1}^{n-0} (x_t-\bar x)(x_{t+0}-\bar x) 
@@ -1011,6 +731,7 @@ $$
 
 We use $c_0$ and $c_1$ to compute $r_1$. Here are two ways we can compute this value:
 
+```{=tex}
 \begin{align*}
   r_1
     &= \frac{c_1}{c_0} 
@@ -1037,8 +758,9 @@ We use $c_0$ and $c_1$ to compute $r_1$. Here are two ways we can compute this v
     = `r summarized$r_k %>% round(4)`
     
 \end{align*}
+```
 
--   What does the lag 1 autocorrelation, $c_1$, measure?
+Because we are using variance of $x_t$ as the denominator in the ratio, the autocorrelation $r_1$ is bounded in the range $[-1,1]$, with zero suggesting no linear relationship. We can evaluate the strength and magnitude of the relationship because all autocorrelation estimates have the same range. The value of `r summarized$r_k %>% round(4)` suggests a strong positive correlation between between $x_t$ and $x_{t+1}$. 
 
 ```{r}
 #| echo: false
@@ -1071,13 +793,8 @@ auto_cov_cor_table <- auto_cov_cor_table %>%
 #   kable_styling(full_width = FALSE, "striped") 
 ```
 
-######## Lag $k = 2$
+##### Lag $k=2$ Sample Autocorrelation Function, $r_2$
 
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   Working with your assigned partner, fill in the blanks in the following table. Use the results to compute $c_2$ and $r_2$.
-
-:::
 
 ```{r}
 #| echo: false
@@ -1089,21 +806,61 @@ summarized <- compute_summaries(cov_df)
 cov_table %>%
     rename(
     "$$ x_t $$" = x_t,
-    "$$ x_{t+k} $$" = `x_{t+k}`,
+    "$$ x_{t+2} $$" = `x_{t+k}`,
     "$$ x_t-\\bar x $$" = `x_t-mean(x)`,
     "$$ (x_t-\\bar x)^2 $$" = `(x_t-mean(x))^2`,
-    "$$ x_{t+k}-\\bar x$$"= `x_{t+k}-mean(x)`,
-    "$$ (x-\\bar x)(x_{t+k}-\\bar x) $$"= `(x-mean(x))(x_{t+k}-mean(x))`
+    "$$ x_{t+2}-\\bar x$$"= `x_{t+k}-mean(x)`,
+    "$$ (x-\\bar x)(x_{t+2}-\\bar x) $$"= `(x-mean(x))(x_{t+k}-mean(x))`
   ) %>%
-  ######################## Let students fill in these rows ####################
-  make_blank_row_in_cov_table(4) %>% 
-  make_blank_row_in_cov_table(5) %>% 
-  make_blank_row_in_cov_table(6) %>%
-  make_blank_row_in_cov_table(11) %>% 
+
   display_table()
 ```
 
-The figure below illustrates the relationship between $x_t$ and $x_{t+2}$.
+The autocovariance of $x_t$ and $x_{t+2}$ is:
+
+$$
+  c_2 
+    = \frac{1}{n} \sum\limits_{t=1}^{n-2}(x_t-\bar x)(x_{t+2}-\bar x)
+    = \frac{1}{`r n`} \sum\limits_{t=1}^{`r n - offset_value`}(x_t-\bar x)(x_{t+2}-\bar x)
+  = \frac{1}{`r n`} \cdot `r summarized$ss_xy`
+  = `r summarized$c_k`
+$$
+
+We use $c_0$ and $c_2$ to compute $r_2$. Here are two ways we can compute this value:
+
+```{=tex}
+\begin{align*}
+  r_2
+    &= \frac{c_2}{c_0} 
+    =
+    \frac{ \frac{1}{n} \sum\limits_{t=1}^{`r n - offset_value`}(x_t-\bar x)(x_{t+2}-\bar x)
+        }{
+            \frac{1}{n} \sum\limits_{t=1}^{`r n`}(x_t-\bar x)^2
+        }  
+    =
+    \frac{
+        \frac{1}{`r summarized$n`} \cdot `r summarized$ss_xy`
+      }{
+        \frac{1}{`r summarized$n`} \cdot `r summarized$ss_x`
+      }
+    = \frac{`r summarized$c_k`}{`r summarized$c_0`}
+    = `r summarized$r_k %>% round(4)`
+    \\
+    &=
+    \frac{ \sum\limits_{t=1}^{`r n - offset_value`}(x_t-\bar x)(x_{t+2}-\bar x)
+        }{
+           \sum\limits_{t=1}^{`r n`}(x_t-\bar x)^2
+        }  
+    = \frac{`r summarized$ss_xy`}{`r summarized$ss_x`}
+    = `r summarized$r_k %>% round(4)`
+    
+\end{align*}
+```
+
+Notice that the number of elements inside the summation operator is $n-2=8$. As we increase the lag by one, the number of products $(x_t - \bar{x})(x_{t+2} - \bar{x})$ is reduced by $k=2$. For an illustration, please see the table above. The value of `r summarized$r_k %>% round(4)` suggests a positive correlation between between $x_t$ and $x_{t+2}$, but one that is much weaker than the autocorrelation between $x_t$ and $x_{t+1}$.
+
+
+The figure below illustrates the relationship between $x_t$ and $x_{t+2}$. Please compare this scatter plot with the one for lag $k=1$ and understand the graphical differences that illustrate the difference in the magnitude of the sample autocorrelation estimates.
 
 ```{r}
 #| echo: false
@@ -1130,7 +887,8 @@ auto_cov_cor_table <- auto_cov_cor_table %>%
   )
 ```
 
-######## Lag $k = 3$
+
+##### Lag $k=3$ Sample Autocorrelation Function, $r_3$
 
 ```{r}
 #| echo: false
@@ -1142,22 +900,18 @@ summarized <- compute_summaries(cov_df)
 cov_table %>%
     rename(
     "$$ x_t $$" = x_t,
-    "$$ x_{t+k} $$" = `x_{t+k}`,
+    "$$ x_{t+3} $$" = `x_{t+k}`,
     "$$ x_t-\\bar x $$" = `x_t-mean(x)`,
     "$$ (x_t-\\bar x)^2 $$" = `(x_t-mean(x))^2`,
-    "$$ x_{t+k}-\\bar x$$"= `x_{t+k}-mean(x)`,
-    "$$ (x-\\bar x)(x_{t+k}-\\bar x) $$"= `(x-mean(x))(x_{t+k}-mean(x))`
+    "$$ x_{t+3}-\\bar x$$"= `x_{t+k}-mean(x)`,
+    "$$ (x-\\bar x)(x_{t+3}-\\bar x) $$"= `(x-mean(x))(x_{t+k}-mean(x))`
   ) %>%
   display_table()
 ```
 
-The figure below illustrates the correlations between $x_t$ and $x_{t+3}$. Note that $c_3 = \dfrac{`r summarized$ss_xy`}{`r summarized$n`} = `r summarized$c_k`$ and  $r_3 = \dfrac{`r summarized$c_k`}{`r summarized$c_0`} = `r summarized$r_k`$.
+Note that the column with the product $(x_t - \bar{x})(x_{t+3} - \bar{x})$ has positive, negative, and zero values. Their average $r_3$ is close to zero, suggesting a very weak or non-existent linear relationship at lag $k=3$  The estimates for the autocovariance and autocorrelation are $c_3 = \dfrac{`r summarized$ss_xy`}{`r summarized$n`} = `r summarized$c_k`$ and  $r_3 = \dfrac{`r summarized$c_k`}{`r summarized$c_0`} =`r summarized$r_k`$.
 
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   Does the value of $r_3 = `r summarized$r_k`$ seem reasonable, given the pattern in this plot?
-
-:::
+The figure below illustrates the correlations between $x_t$ and $x_{t+3}$. Please compare it to the prior scatter plots to understand the intuition behind the magnitude of the estimate $r_3$
 
 ```{r}
 #| echo: false
@@ -1184,13 +938,11 @@ auto_cov_cor_table <- auto_cov_cor_table %>%
   )
 ```
 
-######## Lag $k = 4$
 
-::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Compute $c_4$ and $r_4$ using R (but not automated functions), Excel, or hand calculations.
 
-:::
+##### Lag $k=4$ Sample Autocorrelation Function, $r_4$
+
 
 ```{r}
 #| echo: false
@@ -1202,34 +954,17 @@ summarized <- compute_summaries(cov_df)
 cov_table %>%
     rename(
     "$$ x_t $$" = x_t,
-    "$$ x_{t+k} $$" = `x_{t+k}`,
+    "$$ x_{t+4} $$" = `x_{t+k}`,
     "$$ x_t-\\bar x $$" = `x_t-mean(x)`,
     "$$ (x_t-\\bar x)^2 $$" = `(x_t-mean(x))^2`,
-    "$$ x_{t+k}-\\bar x$$"= `x_{t+k}-mean(x)`,
-    "$$ (x-\\bar x)(x_{t+k}-\\bar x) $$"= `(x-mean(x))(x_{t+k}-mean(x))`
+    "$$ x_{t+4}-\\bar x$$"= `x_{t+k}-mean(x)`,
+    "$$ (x-\\bar x)(x_{t+4}-\\bar x) $$"= `(x-mean(x))(x_{t+k}-mean(x))`
   ) %>%
-  make_blank_row_in_cov_table(1) %>% 
-  make_blank_row_in_cov_table(2) %>%  
-  make_blank_row_in_cov_table(3) %>%  
-  make_blank_row_in_cov_table(4) %>%  
-  make_blank_row_in_cov_table(5) %>%  
-  make_blank_row_in_cov_table(6) %>%  
-  make_blank_row_in_cov_table(7) %>%  
-  make_blank_row_in_cov_table(8) %>%  
-  make_blank_row_in_cov_table(9) %>%  
-  make_blank_row_in_cov_table(10) %>%  
-  make_blank_row_in_cov_table(11) %>% 
   display_table()
 ```
 
+At lag $k=4$ the number of products $(x_t - \bar{x})(x_{t+4} - \bar{x})$ is only six. Note that a majority are negative. The estimates for the autocovariance and autocorrelation are $c_4 = \dfrac{`r summarized$ss_xy`}{`r summarized$n`} = `r summarized$c_k`$ and  $r_4 = \dfrac{`r summarized$c_k`}{`r summarized$c_0`} =`r summarized$r_k`$. For most purposes, this autocorrelation estimate is not practically significant, there is no linear relationship at lag $k=4$. The figure below illustrates the correlations between $x_t$ and $x_{t+4}$.
 
-The figure below illustrates the correlations between $x_t$ and $x_{t+4}$.
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   Does the value of $r_4$ you computed seem reasonable, given the pattern in this plot?
-
-:::
 
 ```{r}
 #| echo: false
@@ -1243,120 +978,11 @@ ggplot(cov_df %>% na.omit(), aes(x = x, y = y)) +
   theme(plot.title = element_text(hjust = 0.5)) 
 ```
 
-#### Class Activity: Using R to compute the acvf and acf (5 min)
 
-We will continue to use the following sample data.
-
-```{r}
-#| echo: false
-
-# simulate correlated normal random data
-x1 <- get_toy_data()
-df <- data.frame(x = x1)
-
-cat(" x <- c(",paste(x1, collapse = ", "),") \n df <- data.frame(x = x)")
-```
-
-##### acvf
-
-This code gives the values of the acvf.
-
-```{r}
-acf(df$x, plot=FALSE, type = "covariance")
-```
+The autocovariance and autocorrelation functions are crucial tools in time series analysis, as they measure how a time series relates to its past values at different lags. Autocovariance quantifies the covariance between a time series and its lagged version, while autocorrelation standardizes this measure, providing a dimensionless value that indicates the strength and direction of the relationship. Both functions are dependent on the lag and illustrating the temporal relationship between the variables involves the analysis of multiple lags. The next section will introduce the correlogram, a single chart that shows the temporal relationships of a time series at many lags simultaneously.
 
 
-##### acf
-
-We can obtain the acf by changing the argument for the paramter `type` to `"correlation"`.
-
-```{r}
-acf(df$x, plot=FALSE, type = "correlation")
-```
-
-
-
-
-#### Homework Preview (5 min)
-
--   Review upcoming homework assignment
--   Clarify questions
-
-
-
-#### Homework
-
-::: {.callout-note icon=false}
-
-#### Download Homework
-
-<a href="https://byuistats.github.io/timeseries/homework/homework_2_2.qmd" download="homework_2_2.qmd"> homework_2_2.qmd </a>
-
-:::
-
-<a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Class Activity: k=2</a>
-
-::: {#Solutions style="display:none;"}
-
-Solutions to Class Activity: $k=2$
-
-```{r}
-#| echo: false
-offset_value <- 2
-cov_df <- get_data_for_cov_table(offset = offset_value)
-cov_table <- cov_df %>%
-  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
-summarized <- compute_summaries(cov_df)
-cov_table %>%
-  display_table()
-```
-
-\begin{align*}
-  c_2
-    &= \frac{1}{n} \sum\limits_{t=1}^{n-1}(x_t-\bar x)(x_{t+2}-\bar x)
-    = \frac{1}{`r n`} \cdot `r summarized$ss_xy`
-    = `r summarized$c_k |> round(3)` \\
-  r_2 
-    &= \frac{c_2}{c_0} 
-    = \frac{`r summarized$c_k |> round(3)`}{`r summarized$c_0 |> round(3)`} 
-    = `r summarized$r_k |> round(3)`
-\end{align*}
-
-:::
-
-<a href="javascript:showhide('Solutions_k4')"
-style="font-size:.8em;">Class Activity: k=4</a>
-
-::: {#Solutions_k4 style="display:none;"}
-
-Solutions to Class Activity: $k=4$
-
-
-```{r}
-#| echo: false
-offset_value <- 4
-cov_df <- get_data_for_cov_table(offset = offset_value)
-cov_table <- cov_df %>%
-  make_cov_table_df(offset = offset_value)#, decimals_1st_order = 1, decimals_2nd_order = 2) 
-summarized <- compute_summaries(cov_df)
-cov_table %>%
-  display_table()
-```
-
-\begin{align*}
-  c_4
-    &= \frac{1}{n} \sum\limits_{t=1}^{n-1}(x_t-\bar x)(x_{t+4}-\bar x)
-    = \frac{1}{`r n`} \cdot `r summarized$ss_xy`
-    = `r summarized$c_k |> round(3)` \\
-  r_4 
-    &= \frac{c_4}{c_0} = \frac{`r summarized$c_k |> round(3)`}{`r summarized$c_0 |> round(3)`} 
-    = `r summarized$r_k |> round(3)`
-\end{align*}
-
-:::
-
-### New section 2
+##### Define a Correlogram
 
 
 ```{r}
@@ -1473,47 +1099,11 @@ compute_summaries <- function(df, digits = 4) {
 ```
 
 
-#### Learning Outcomes
-
-{{< include ../outcomes/_chapter_2_lesson_3_outcomes.qmd >}}
-
-
-
-
-
-#### Preparation
-
--   Read Sections 2.2.5 and 2.3-2.5 (No new reading assignment)
-
-
-
-#### Learning Journal Exchange (10 min)
-
--   Review another student's journal
--   What would you add to your learning journal after reading your partner's?
--   What would you recommend your partner add to their learning journal?
--   Sign the Learning Journal review sheet for your peer
-
-
-#### Correlograms (10 min)
-
-In the previous lesson, we used the following time series as an example.
-Here are the values in that time series:
+A correlogram, also known as an autocorrelation plot, visually represents the autocorrelation coefficients of a time series for different lags. This graphical tool helps identify patterns, trends, and the extent of correlations within the data over time. The table below summarizes the ACF values calculated in the previous section and five additional lags.
 
 ```{r}
 #| echo: false
-
-# simulate correlated normal random data
 x1 <- get_toy_data()
-
-cat("x <- c(",paste(x1, collapse = ", "),")")
-```
-
--   The table below gives the sample autocorrelation function, acf, for this data set. You may recognize some of these values from the previous lesson. 
-
-```{r}
-#| echo: false
-
 df <- data.frame(x = x1)
 
 z <- acf(df$x, plot=FALSE, type = "correlation") 
@@ -1531,234 +1121,42 @@ z$acf |>
   # mutate("4" = "_____") |> 
   display_table()
 ```
+##### Create a correlogram
 
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   Use the acf values to sketch the correlogram for these data in your Learning Journal. The figure below can help you begin.
-
-```{r}
-#| echo: false
-
-ggplot(data = df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +
-  # geom_col() +
-  ylim(-1, 1) +
-  scale_x_continuous(breaks = 0:9) + 
-  geom_segment(aes(x = 0, y = 0, xend = 0, yend = 1)) + 
-  geom_segment(aes(x = 0, y = 0, xend = 9, yend = 0)) + #### Hack
-  geom_hline(yintercept = 0, linetype = "solid", linewidth=1, color = "black") +
-  geom_hline(yintercept = (2.6/4.2), linetype = "dashed", linewidth=1, color = "#0072B2") +  # Texbooks says these lines should be at (-0.1 +/- 2/sqrt(10)). Used +/-(2.6/4.2), based on measurements made visually with a ruler from the figure generated by R.
-  geom_hline(yintercept = (-2.6/4.2), linetype = "dashed", linewidth=1, color = "#0072B2") +
-  labs(x = "Lag", y = "ACF") +
-  # theme_bw()   
-  # theme(panel.grid.major.x = element_blank(), panel.grid.major.y = element_blank())
-  theme_bw() +
-  theme(
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor.x = element_blank(),
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor.y = element_blank()
-  )
-```
-
-<!-- -   Finish a partially-created correlogram with the r_k values computed -->
-
--   Are any of the autocorrelations statistically significant? If so, which one(s)?
-
-:::
-
-#### Application: Chocolate Search Trends (10 min)
-
-Recall the Google Trends data for the term "chocolate" from the last lesson.
-The cleaned data are available in the file <a href="data/chocolate.csv" download>chocolate.csv</a>.
-
-##### Import the chocolate search data and convert to tsibble format
-
-Use the code below to import the data and convert it into a time series (tsibble) object.
+The correlogram below consists of several key components. The primary feature is the display of autocorrelation coefficients for different lags; compare them to the table above. Each bar in the correlogram represents the correlation coefficient at a specific lag, with values ranging from -1 to 1. Values close to 1 indicate a strong positive correlation, values close to -1 indicate a strong negative correlation, and values around 0 suggest no significant correlation. The x-axis of the correlogram represents the lag values, typically starting from lag 0 (the correlation of the series with itself) and extending to higher lag values. Each lag value indicates the time shift applied to the series for computing the autocorrelation.
 
 ```{r}
-#| warning: false
 
-# load packages
-if (!require("pacman")) install.packages("pacman")
-pacman::p_load("tsibble", "fable",
-               "feasts", "tsibbledata",
-               "fable.prophet", "tidyverse",
-               "patchwork", "rio")
+acf(df$x, plot=TRUE, 
+    type = "correlation", 
+    main = "ACF Plot of Simulated Data",
+    ylim = c(-1, 1)
+    )
 
-# read in the data from a csv and make the tsibble
-# change the line below to include your file path
-chocolate_month_ts <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |>
-  mutate(
-    dates = yearmonth(ym(Month)),
-    month = month(dates),
-    year = year(dates),
-    value = chocolate
-  ) |> 
-  dplyr::select(dates, month, year, value) |>
-  as_tsibble(index = dates)
 
-choc_decompose <- chocolate_month_ts |>
-    model(feasts::classical_decomposition(value,
-        type = "add"))  |>
-    components()
 
-autoplot(choc_decompose)
+
 ```
 
-Here are the values of the acf for the chocolate search data:
+Correlograms include confidence intervals, shown as dashed horizontal lines. These intervals help assess the statistical significance of the autocorrelation coefficients. If a bar extends beyond the confidence interval, the autocorrelation at that lag is considered statistically significant. The zero line, or baseline, indicates zero correlation. Bars extending above or below this line show positive or negative correlations, respectively. 
 
-```{r}
-acf(chocolate_month_ts$value, plot=FALSE, type = "correlation", lag.max = 25)
-```
+The statistical significance decision rule involves evaluating a hypothesis tests with each autocorrelation coefficient, one at a time. The hypothesis test uses the null hypothesis $H_0: \rho_k = 0$ which states that there is no autocorrelation in the time series at a given lag. The alternative hypothesis $H_1: \rho_k \neq 0$ states that there is significant autocorrelation at a given lag. We assume that the data follows a normal distribution centered around the value of the null hypothesis. If a autocorrelation coefficient lies outside the interval, we reject the null hypothesis for that lag, concluding that there is significant autocorrelation at that lag. If the coefficient lies within the interval, we fail to reject the null hypothesis, indicating no significant autocorrelation.
 
-Here is the associated correlogram:
+To create the confidence interval, first choose a significance level $\alpha$, the default in R is 0.05. For large samples, the confidence intervals for $\alpha=0.05$ are $0 \pm \frac{\alpha_c}{\sqrt{n}}$, where $n$ is the number of observations in the time series and $\alpha_c$ is the test's critical value. For large samples, the critical value $\alpha_c=1.96$ corresponds to a 95% confidence level using the standard normal distribution.
 
-```{r}
-acf(chocolate_month_ts$value, plot=TRUE, type = "correlation", lag.max = 25)
-```
+Based on the simulated data, the autocorrelation $r_1$ is the only statistically significant temporal relationship. The value of $r_0$ is always 1 because it represents the correlation of the time series with itself and should be ignored. The estimates $r_5$ and $r_6$ are numerically large, suggesting a relationship at lags $k=5$ and $k=6$, but neither satisfy the single hypothesis test for each lag and are not statistically different from zero.
 
-<!-- Check Your Understanding -->
+There are two key points related to hypothesis testing that need to be highlighted. First, the significance level, $\alpha$, represents the probability of making a Type I error, or false positive. A Type I error occurs when the null hypothesis is true, but we incorrectly reject it. If $\alpha=0.05$, approximately five percent of hypothesis tests will be false positives. In correlograms with many lags, around five percent of autocorrelation coefficients will extend beyond the confidence interval thresholds. Additionally, it's likely that the estimates $r_k$ are correlated, so adjacent estimates might fall in patterns, making interpretation of the underlying phenomenon more difficult. We don't know which estimates are false positives, so the investigator needs to be careful when making statements about the significance of each estimate. Remember, in statistics we are never completely certain. 
 
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   What does the information displayed in this correlogram suggest?
-
-:::
-
-If we consider only the random component of this time series, the correlogram is:
-
-```{r}
-acf(choc_decompose$random |> na.omit(), plot=TRUE, type = "correlation", lag.max = 25)
-```
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
--   What do the spikes in the correlogram tell us about this time series?
--   Is there evidence of autocorrelation in the data after removing the trend and seasonal variation?
-
-:::
+Second, statistically significant estimates might not be practically significant. As the number of observations increase the confidence interval shrinks as the standard error $\pm \frac{1.96}{\sqrt{n}}$ tends to zero. Estimates of autocorrelation coefficients that are close to zero in magnitude might be statistically significant in this case. As previously stated, five percent of the estimates will be false positives, so a practical significance rule is to report statistically significant estimates that are large in magnitude. Practically significance can be justified based on a feature of autocorrelation coefficients. The expression $r_k^2$ represents how much of the variation in $x_t$ is explained in the linear dependency between $x_t$ on $x_k$. For estimates that are small in magnitude the explanatory power of the relationship will be diminutive rendering the estimate of no practical consequence.
 
 
-#### Small Group Activity: BYU-Idaho On-Campus Enrollment (25 min)
+[insert here the waves time series from the textbook]
 
-The official number of on-campus BYU-Idaho students each semester is given in the file <a href="https://byuistats.github.io/timeseries/data/byui_enrollment.csv" download>byui_enrollment.csv</a>. 
+
+In this example many estimates are statistically significant. In a chart of 25 lags approximately one estimate will be a false positive. Take $r_17\approx0.1$ for example, $r_{17}^2\approx0.01$ so only about 1% of the variation in $x_t$ is explained by the linear relationship between $r_t$ and $r_{t+17}$. While $r_{17}$ is statistically significant it fails the practical significance test. We can't know whether $r_{17}$ is a false positive, but it is not worth reporting regardless.
+
+The pattern of estimates at adjacent lags suggest a correlation between them. This correlation make the interpretation of the individual estimates difficult since it's clear the magnitude of $r_4$ is linked to the magnitude of $r_3$. The next chapter will introduce the idea of trends and seasonality in time series. Trends and seasonality are relationships in sequential observations that we can estimate and account for, reducing the correlation between the time periods and allowing us to interpret autocorrelation estimates easier.
 
 
 
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
-Do the following:
-
--   Create a tsibble with the BYU-Idaho enrollment data. (Hint: There are three semesters in a year, so treat the enrollments as observations taken every four months in January, May, and September.)
--   Plot the decomposition of this time series.
--   Describe the trend.
--   Describe the seasonal component.
--   Is there evidence of seasonal variation? If so, propose an explanation for the seasonal variation.
--   Create the correlogram for these data. 
-    -   What do you observe?
-    -   Does the correlogram support the statement you made about the seasonal component?
--   Is there evidence of autocorrelation in the data after removing the trend and seasonal variation?
-
-:::
-
-
-
-
-
-#### Homework Preview (5 min)
-
--   Review upcoming homework assignment
--   Clarify questions
-
-
-
-#### Homework
-
-::: {.callout-note icon=false}
-
-#### Download Homework
-
-<a href="https://byuistats.github.io/timeseries/homework/homework_2_3.qmd" download="homework_2_3.qmd"> homework_2_3.qmd </a>
-
-:::
-
-<a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Correlograms</a>
-
-::: {#Solutions style="display:none;"}
-
-Solutions to correlogram activity
-
-```{r}
-x <- c( 4.4, 4.2, 4.2, 4, 4.4, 4.7, 4.9, 5.3, 5.4, 5.5 )
-acf(x, plot=FALSE, type = "correlation")
-acf(x, plot=TRUE, type = "correlation")
-```
-
-:::
-
-
-<a href="javascript:showhide('Solutions2')"
-style="font-size:.8em;">BYU-Idaho Enrollment</a>
-
-::: {#Solutions2 style="display:none;"}
-
-Solutions to BYU-Idaho Enrollment Activity
-
-
-```{r}
-#| warning: false
-
-# read in the data from a csv and make the tsibble
-
-# Method 1:
-enrollment_df <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv")
-start_date <- lubridate::ymd("2019-05-01")
-date_seq <- seq(start_date,
-                start_date + months(nrow(enrollment_df)-1) * 4,
-                by = "4 months")
-enrollment_ts <- tibble(
-    dates = tsibble::yearmonth(date_seq),
-    semester = pull(enrollment_df, semester),
-    enrollment = pull(enrollment_df, enrollment)
-  ) |>
-  dplyr::select(semester, dates, enrollment) |>
-  as_tsibble(index = dates)
-
-# Method 2:
-enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment.csv") |>
-  mutate(
-    dates = yearmonth(ym(paste(year, term * 4 - 3)))
-  ) |>
-  dplyr::select(semester, dates, enrollment) |>
-  as_tsibble(index = dates) 
-
-# Compute and plot the decomposition
-enrollment_decompose <- enrollment_ts |>
-    model(feasts::classical_decomposition(enrollment,
-        type = "add"))  |>
-    components()
-autoplot(enrollment_decompose)
-```
-
-
-```{r}
-acf(enrollment_decompose$enrollment, type = "correlation")
-```
-
-
-```{r}
-acf(enrollment_decompose$enrollment, plot=FALSE, type = "correlation")
-```
-
-
-```{r}
-acf(enrollment_decompose$enrollment, plot=TRUE, type = "correlation")
-```
-
-
-```{r}
-acf(enrollment_decompose$random |> na.omit(), plot=TRUE, type = "correlation")
-```
-
-:::
