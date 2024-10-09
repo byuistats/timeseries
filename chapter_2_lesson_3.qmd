@@ -189,6 +189,7 @@ cat("x <- c(",paste(x1, collapse = ", "),")")
 
 ```{r}
 #| echo: false
+#| warning: false
 
 df <- data.frame(x = x1)
 
@@ -214,6 +215,7 @@ z$acf |>
 
 ```{r}
 #| echo: false
+#| warning: false
 
 ggplot(data = df, aes(x = seq_along(x), y = acf(x, plot = FALSE)$acf)) +
   # geom_col() +
@@ -275,7 +277,7 @@ chocolate_month_ts <- rio::import("https://byuistats.github.io/timeseries/data/c
 
 choc_decompose <- chocolate_month_ts |>
     model(feasts::classical_decomposition(value,
-        type = "add"))  |>
+        type = "mult"))  |>
     components()
 
 autoplot(choc_decompose)
@@ -311,9 +313,15 @@ acf(choc_decompose$random |> na.omit(), plot=TRUE, type = "correlation", lag.max
 
 -   What do the spikes in the correlogram tell us about this time series?
 -   Is there evidence of autocorrelation in the data after removing the trend and seasonal variation?
+-   What would happen to the correlogram of the random component if we used an additive decomposition?
 
 :::
 
+::: {.callout-warning icon=false title="Statistical vs Practical Significance "}
+
+An estimate for the lag k autocorrelation can be statistically significant, but practically insignificant. The percentage of variation in $x_t$ explained by $x_{t+k}$ equals $r_k^2$. In the example above, $r_3\approx r_4\approx r_5 \approx 0.2$, which mean that each of the lagged variables estimates explain around 4% of the variation of the chocolate series at their respective lag values. All the estimates are statistically significant, but we should put a lot of practical weight in their significance. 
+
+:::
 
 ## Small Group Activity: BYU-Idaho On-Campus Enrollment (25 min)
 
