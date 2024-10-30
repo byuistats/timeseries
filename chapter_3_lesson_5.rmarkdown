@@ -1,0 +1,629 @@
+---
+title: "Holt-Winters Method (Multiplicative Models)"
+subtitle: "Chapter 3: Lesson 5"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+```{r}
+#| echo: false
+
+# Rounds the values at each step
+
+hw_additive_slope_multiplicative_seasonal_rounded <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(1,p)) {
+
+  # Get expanded data frame
+  df <- df |> expand_holt_winters_df_old(date_var, value_var, p, predict_periods) |>
+    mutate(x_t = round(x_t, 1))
+
+  # Fill in prior belief about s_t
+  for (t in 1:p) {
+    df$s_t[t] <- s_initial[t]
+  }
+
+  # Fill in first row of values
+  offset <- p # number of header rows to skip
+  df$a_t[1 + offset] <- df$x_t[1 + offset]
+  df$b_t[1 + offset] <- round( (1 / p) * mean(df$x_t[(p + 1 + offset):(2 * p + offset)] - df$x_t[(1 + offset):(p + offset)]), 3)
+  df$s_t[1 + offset] <- df$s_t[1]
+
+  # Fill in remaining rows of body of df with values
+  for (t in (2 + offset):(nrow(df) - predict_periods) ) {
+    df$a_t[t] = round( alpha * (df$x_t[t] / df$s_t[t-p]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1]), 1)
+    df$b_t[t] = round( beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1], 3)
+    df$s_t[t] = round( gamma * (df$x_t[t] / df$a_t[t]) + (1 - gamma) * df$s_t[t-p], 2)
+  }
+
+  df <- df |>
+    mutate(k = ifelse(row_number() >= nrow(df) - predict_periods, row_number() - (nrow(df) - predict_periods), NA))
+
+  # Fill in forecasted values
+  offset <- nrow(df) - predict_periods
+  for (t in (offset+1):nrow(df)) {
+    df$s_t[t] = df$s_t[t - p]
+    df$xhat_t[t] = round( (df$a_t[offset] + df$k[t] * df$b_t[offset]) * df$s_t[t - p], 1)
+  }
+  df$xhat_t[offset] = round( (df$a_t[offset] + df$k[offset] * df$b_t[offset]) * df$s_t[offset], 1) #### NOTE THIS ISSUE!!!
+
+  # Delete temporary variable k
+  df <- df |> select(-k)
+
+  return(df)
+}
+```
+
+
+
+
+## Learning Outcomes
+
+<details>
+
+<summary>Implement the Holt-Winter method to forecast time series</summary>
+
+-   Explain the Holt-Winters method equations for multiplicative decomposition models
+-   Explain the purpose of the paramters $\alpha$, $\beta$, and $\gamma$
+-   Interpret the coefficient estimates $a_t$, $b_t$, and $s_t$ of the Holt-Winters smoothing algorithm
+-   Explain the Holt-Winters forecasting equation for multiplicative decomposition models, Equation (3.23)
+-   Use HoltWinters() to forecast multiplicative model time series
+-   Plot the Holt-Winters decomposition of a TS (see Fig 3.10)
+-   Plot the Holt-Winters fitted values versus the original time series (see Fig 3.11)
+-   Superimpose plots of the Holt-Winters predictions with the time series realizations (see Fig 3.13)
+
+</details>
+
+
+
+
+
+
+## Preparation
+
+-   Read Sections 3.4.2-3.4.3, 3.5
+
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+
+<!-- Great reference: -->
+<!-- https://medium.com/analytics-vidhya/a-thorough-introduction-to-holt-winters-forecasting-c21810b8c0e6 -->
+
+
+
+## Class Discussion: Multiplicative Seasonality (10 min)
+
+We can assume either additive or multiplicative seasonality. In the previous two lessons, we explored additive seasonality. In this lesson, we consider the case where the seasonality is multiplicative. 
+
+Additive seasonality is appropriate when the variation in the time series is roughly constant for any level. We assume multiplicative seasonality when the variation gets larger as the level increases.
+
+### Forecasting 
+
+Here are the forecasting equations we use, based on the model that is appropriate for the time series.
+
+
+
+|                          | **Additive Seasonality**                                                               | **Multiplicative Seasonality**                                                              |
+|------------------|----------------------------|----------------------------|
+| **Additive Slope**       | $$ \hat x_{n+k \mid n} = \left( a_n + k \cdot b_n \right) + s_{n+k-p} $$                          | $$ \hat x_{n+k \mid n} = \left( a_n + k \cdot b_n \right) \cdot s_{n+k-p} $$                               |
+
+
+<!-- Additional Row for the table:  -->
+<!-- | **Multiplicative Slope** | $$ \hat x_{n+k \mid n} = \left[ a_n \cdot ( b_n )^k \right]+s_{n+k-p} $$ | $$ \hat x_{n+k \mid n} = \left[ a_n \cdot ( b_n )^k \right]\cdot s_{n+k-p} $$ | -->
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   With your partner, for the forecasting equations above, identify where the additive or multiplicative terms are represented for both the slope and the seasonality.
+    -   How is an additive slope represented in the forecasting equation?
+    <!-- -   How is a multiplicative slope represented in the forecasting equation? -->
+    -   How is additive seasonality represented in the forecasting equation?
+    -   How is multiplicative seasonality represented in the forecasting equation?
+:::
+
+
+### Update Equations (Multiplicative Seasonals)
+
+The update equations for the seasonals are:
+
+\begin{align*}
+  a_t &= \alpha \left( \frac{x_t}{s_{t-p}} \right) + (1-\alpha) \left( a_{t-1} + b_{t-1} \right) && \text{Level} \\
+  b_t &= \beta \left( a_t - a_{t-1} \right) + (1-\beta) b_{t-1} && \text{Slope} \\
+  s_t &= \gamma \left( \frac{x_t}{a_{t}} \right) + (1-\gamma) s_{t-p} && \text{Seasonal}
+\end{align*}
+
+
+Note that when the seasonal effect is additive, we subtract it from the time series to remove its effect. If the seasonal effect is multiplicative, we divide.
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Work with your partner to answer the following questions about the update equations.
+
+$$
+a_t = \alpha \cdot \underbrace{ \left( \frac{x_t}{s_{t-p}} \right) }_{A} + (1-\alpha) \cdot  \underbrace{ \left( a_{t-1} + b_{t-1} \right) }_{B}
+~~~~~~~~~~~~~~~~~~~~ \text{Level}
+$$
+
+
+-   Interpret the term $A = \dfrac{x_t}{s_{t-p}}$.
+-   Interpret the term $B = a_{t-1} - b_{t-1}$.
+-   Explain why this expression for $a_t$ estimates the level of the time series at time $t$.
+
+$$
+b_t = \beta \cdot \underbrace{ \left( a_t - a_{t-1} \right) }_{C} + (1-\beta) \cdot \underbrace{ b_{t-1} }_{D}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \text{Slope}
+$$
+
+-   Interpret the term $C = a_t - a_{t-1}$.
+-   Interpret the term $D = b_{t-1}$.
+-   Explain why this expression for $b_t$ estimates the slope of the time series at time $t$.
+
+$$
+s_t = \gamma \cdot \underbrace{ \left( \frac{x_t}{a_{t}} \right) }_{E} + (1-\gamma) \cdot \underbrace{ s_{t-p} }_{F}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ \text{Seasonal}
+$$
+
+-   Interpret the term $E = \dfrac{x_t}{a_{t}}$.
+-   Interpret the term $F = s_{t-p}$.
+-   Explain why this expression for $s_t$ estimates the seasonal component of the time series at time $t$.
+-   When the seasonal component appears on the right-hand side of the update equations, it always given as $s_{t-p}$. Why do we use the estimate of the seasonal effect $p$ periods ago? Why not apply a more recent value?
+-   What do the following sets of terms have in common?
+    -   $\{A, C, E \}$
+    -   $\{B, D, F \}$
+-   Explain why the Holt-Winters method for multiplicative seasonals works.
+
+:::
+
+
+
+
+
+
+## Small Group Activity: Holt-Winters Model for BYU-Idaho Enrollment Data (25 min)
+
+We will now apply Holt-Winters filtering to the BYU-Idaho Enrollment data. First, we examine the time plot in @fig-enrollment-ts.
+
+<a href="https://github.com/TBrost/BYUI-Timeseries-Drafts/raw/master/handouts/chapter_3_5_handout.xlsx" download="chapter_3_5_handout.xlsx"> Tables-Handout-Excel </a>
+
+
+```{r}
+#| label: fig-enrollment-ts
+#| fig-cap: "Time plot of BYU-Idaho campus enrollments"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+# read in the data from a csv and make the tsibble
+byui_enrollment_ts <- rio::import("https://byuistats.github.io/timeseries/data/byui_enrollment_2012.csv") |>
+  rename(
+    semester = "TermCode",
+    year = "Year",
+    enrollment = "On Campus Enrollment (Campus HC)"
+  ) |>
+  mutate(
+    term = 
+      case_when(
+        left(semester, 2) == "WI" ~ 1,
+        left(semester, 2) == "SP" ~ 2,
+        left(semester, 2) == "FA" ~ 3,
+        TRUE ~ NA
+      )
+  ) |>
+  filter(!is.na(term)) |>
+  mutate(dates = yearmonth( ym( paste(year, term * 4 - 3) ) ) ) |>
+  mutate(enrollment_1000 = enrollment / 1000) |>
+  dplyr::select(semester, dates, enrollment_1000) |>
+  as_tsibble(index = dates) 
+
+byui_enrollment_ts_expanded <- byui_enrollment_ts |>
+  as_tibble() |>
+  hw_additive_slope_multiplicative_seasonal_rounded("dates", "enrollment_1000", p = 3, predict_periods = 9) |>
+  mutate(xhat_t = ifelse(t %in% c(1:36), round(a_t * s_t, 1), xhat_t)) |>
+  select(-dates, -enrollment_1000)
+
+# This is hard-coded for this data set, because I am in a hurry to get done.
+# This revises the semester codes
+byui_enrollment_ts_expanded$semester[1:3] <- c("SP11", "FA11", "WI12")
+byui_enrollment_ts_expanded$semester[40:48] <- c("SP24", "FA24", "WI25",
+                                                 "SP25", "FA25", "WI26",
+                                                 "SP26", "FA26", "WI27")
+
+byui_enrollment_ts_expanded |>
+  tail(nrow(byui_enrollment_ts_expanded) - 3) |>
+  ggplot(aes(x = date, y = x_t)) +
+    geom_line(color = "black", linewidth = 1) +
+    coord_cartesian(ylim = c(0, 22.5)) +
+    labs(
+      x = "Date",
+      y = "Enrollment (in Thousands)",
+      title = "BYU-Idaho On-Campus Enrollments (in Thousands)",
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Which of the Holt-Winter models described above is appropriate for this situation? Justify your answer.
+
+:::
+
+
+@tbl-enrollment-table summarizes the intermediate values for Holt-Winters filtering with multiplicative seasonals.
+
+
+```{r}
+#| label: tbl-enrollment-table
+#| tbl-cap: "Holt-Winters smoothing for BYU-Idaho campus enrollments"
+#| warning: false
+#| echo: false
+
+byui_enrollment_ts_expanded |>
+  as_tibble() |>
+  select(-date) |>
+  rename(
+    "$$Semester$$" = semester,
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$b_t$$" = b_t,
+    "$$s_t$$" = s_t,
+    "$$\\hat x_t$$" = xhat_t
+  ) |>
+  replace_cells_with_char(rows = 1:3, cols = 3:5, new_char = emdash) |>
+  replace_cells_with_char(rows = 1:3, cols = 6, new_char = "") |>
+  replace_cells_with_char(rows = 1:3, cols = 7, new_char = emdash) |>
+  replace_cells_with_char(rows = 4, cols = 4:7, new_char = "") |>
+  replace_cells_with_char(rows = 9:10, cols = 4:7, new_char = "") |>
+  replace_cells_with_char(rows = 40:48, cols = 3:5, new_char = emdash) |>
+  replace_cells_with_char(rows = 40:43, cols = 6:7, new_char = "") |>
+  replace_na_with_char() |>
+  head(nrow(byui_enrollment_ts_expanded) - 3) |>
+  display_partial_table(14, 14, min_col_width = "0.75in")
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Apply Holt-Winters filtering to these data.
+
+$$
+\alpha = 0.2, \beta = 0.2, \gamma = 0.2
+$$
+
+-   Identify the value of $p$
+-   Let $a_1 = x_1$
+-   Compute 
+$$
+  b_1 =
+    \frac{
+      \left(
+        \dfrac{x_{p+1} - x_{1}}{p} +
+        \dfrac{x_{p+2} - x_{2}}{p} +
+        \cdots +
+        \dfrac{x_{2p} - x_{p}}{p}
+      \right)
+    }{p}
+$$
+-   Let $s_{1-p} = s_{2-p} = \cdots = s_{3-p} = 1$, and set $s_1 = s_{1-p}$.
+-   Compute the values of $a_t$, $b_t$, and $s_t$ for all rows with observed time series data.
+-   Find $\hat x_t = a_t \cdot s_t$ for all rows with data. 
+-   Compute the prediction $\hat x_{n+k|n} = \left( a_t + k \cdot b_n \right) \cdot s_{n+k-p}$ for the future values.
+-   Superimpose a sketch of your Holt-Winters filter and the associated forecast on @fig-enrollment-ts.
+
+:::
+
+
+
+## Small Group Activity: Applying Holt-Winters in R to the Apple Quarterly Revenue Data (10 min)
+
+Recall the Apple, Inc., revenue values reported by Bloomberg:
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_ts <- rio::import("https://byuistats.github.io/timeseries/data/apple_revenue.csv") |>
+  mutate(
+    dates = mdy(date),
+    year = lubridate::year(dates),
+    quarter = lubridate::quarter(dates),
+    value = revenue_billions
+  ) |>
+  dplyr::select(dates, year, quarter, value)  |> 
+  arrange(dates) |>
+  mutate(index = tsibble::yearquarter(dates)) |>
+  as_tsibble(index = index) |>
+  dplyr::select(index, dates, year, quarter, value) |>
+  rename(revenue = value) # rename value to emphasize data context
+
+apple_ts |>
+  autoplot(.vars = revenue) +
+  labs(
+    x = "Quarter",
+    y = "Apple Revenue, Billions $US",
+    title = "Apple's Quarterly Revenue, Billions of U.S. Dollars"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+Here are a few rows of the summarized data.
+
+
+```{r}
+#| echo: false
+
+# View data
+apple_ts |>
+  display_partial_table(6,3) 
+```
+
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you notice about this time plot?
+    - Describe the trend
+    - Is there evidence of seasonality?
+    - Is the additive or multiplicative model appropriate?
+
+:::
+
+We apply Holt-Winters filtering to the quarterly Apple revenue data with a multiplicative model:
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_hw <- apple_ts |>
+  # tsibble::fill_gaps() |>
+  model(Additive = ETS(revenue ~
+        trend("A") +
+        error("A") +
+        season("M"),
+        opt_crit = "amse", nmse = 1))
+report(apple_hw)
+```
+
+
+We can compute some values to assess the fit of the model:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| eval: false
+
+# SS of random terms
+sum(components(apple_hw)$remainder^2, na.rm = T)
+
+# RMSE
+forecast::accuracy(apple_hw)$RMSE
+
+# Standard devation of the quarterly revenues
+sd(apple_ts$revenue)
+```
+
+
+-   The sum of the square of the random terms is: `r sum(components(apple_hw)$remainder^2, na.rm = T)`.
+-   The root mean square error (RMSE) is: `r forecast::accuracy(apple_hw)$RMSE`.
+-   The standard deviation of the number of incidents each month is `r sd(apple_ts$revenue)`.
+
+@fig-apple-decomp illustrates the Holt-Winters decomposition of the Apple revenue data.
+
+
+```{r}
+#| label: fig-apple-decomp
+#| fig-cap: "Apple, Inc., Quarterly Revenue (in Billions)"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+autoplot(components(apple_hw))
+```
+
+
+In @fig-apple-hw, we can observe the relationship between the Holt-Winters filter and the Apple revenue time series.
+
+
+```{r}
+#| label: fig-apple-hw
+#| fig-cap: "Superimposed plots of the Apple revenue and the Holt-Winters filter"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+augment(apple_hw) |>
+  ggplot(aes(x = index, y = revenue)) +
+    geom_line() +
+    geom_line(aes(y = .fitted, color = "Fitted")) +
+    labs(color = "")
+```
+
+
+@fig-apple-hw-forecast contains the information from @fig-apple-hw, with the addition of an additional four years of forecasted values. The light blue bands give a 95% prediction bands for the forecast.
+
+
+```{r}
+#| label: fig-apple-hw-forecast
+#| fig-cap: "Superimposed plots of Apple's quarterly revenue and the Holt-Winters filter, with four additional years forecasted"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+apple_forecast <- apple_hw |>
+  forecast(h = "4 years") 
+
+apple_forecast |>
+  autoplot(apple_ts, level = 95) +
+  geom_line(aes(y = .fitted, color = "Fitted"),
+    data = augment(apple_hw)) +
+  scale_color_discrete(name = "")
+```
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_3_5.qmd" download="homework_3_5.qmd"> homework_3_5.qmd </a>
+
+:::
+
+
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">BYU-Idaho Enrollment</a>
+
+::: {#Solutions1 style="display:none;"}
+
+<a href="https://github.com/TBrost/BYUI-Timeseries-Drafts/raw/master/handouts/chapter_3_5_handout_key.xlsx" download="chapter_3_5_handout_key.xlsx"> Tables-Handout-Excel-key </a>
+
+
+
+```{r}
+#| echo: false
+#| warning: false
+
+## Holt-Winters Multiplicative Model - Plot
+byui_enrollment_ts |> 
+  as_tibble() |>
+  hw_additive_slope_multiplicative_seasonal_rounded("dates", "enrollment_1000", p = 3, predict_periods = 9) |>
+  as_tsibble(index = date) |>
+  tail(-3) |>
+  ggplot(aes(x = date)) +
+    geom_line(aes(y = x_t), color = "black", linewidth = 1) +
+    geom_line(aes(y = a_t * s_t, color = "Combined", alpha=0.5), linewidth = 1) +
+    geom_line(aes(y = xhat_t, color = "Combined", alpha=0.5), linetype = "dashed", linewidth = 1) +
+    coord_cartesian(ylim = c(12, 22.5)) +
+    labs(
+      x = "Date",
+      y = "Enrollment (in Thousands)",
+      title = "BYU-Idaho Enrollments with Holt-Winters Forecast",
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+
+
+#### Table 1: Holt-Winters smoothing for BYU-Idaho campus enrollments
+
+
+```{r}
+#| warning: false
+#| echo: false
+
+# This is hard-coded for this data set, because I am in a hurry to get done.
+# Revise the semester codes
+byui_enrollment_ts_expanded$semester[1:3] <- c("SP11", "FA11", "WI12")
+byui_enrollment_ts_expanded$semester[1:3] <- c("SP11", "FA11", "WI12")
+byui_enrollment_ts_expanded$semester[40:48] <- c("SP24", "FA24", "WI25",
+                                                 "SP25", "FA25", "WI26",
+                                                 "SP26", "FA26", "WI27")
+# ,
+#                                                  "SP27", "FA27", "WI28")
+
+byui_enrollment_ts_expanded |>
+  as_tibble() |>
+  select(-date) |>
+  rename(
+    "$$Semester$$" = semester,
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$b_t$$" = b_t,
+    "$$s_t$$" = s_t,
+    "$$\\hat x_t$$" = xhat_t
+  ) |>
+  replace_cells_with_char(rows = 1:3, cols = 3:5, new_char = emdash) |>
+  # replace_cells_with_char(rows = 1:3, cols = 6, new_char = "") |>
+  replace_cells_with_char(rows = 1:3, cols = 7, new_char = emdash) |>
+  # replace_cells_with_char(rows = 4, cols = 4:7, new_char = "") |>
+  # replace_cells_with_char(rows = 9:10, cols = 4:7, new_char = "") |>
+  replace_cells_with_char(rows = 40:48, cols = 3:5, new_char = emdash) |>
+  # replace_cells_with_char(rows = 40:43, cols = 6:7, new_char = "") |>
+  replace_na_with_char() |>
+  display_partial_table(14, 14, min_col_width = "0.75in")
+```
+
+
+:::
+
+
+
+
+## References
+
+-   C. C. Holt (1957) Forecasting seasonals and trends by exponentially weighted moving averages, ONR Research Memorandum, Carnegie Institute of Technology 52. (Reprint at [https://doi.org/10.1016/j.ijforecast.2003.09.015](https://doi.org/10.1016/j.ijforecast.2003.09.015)).
+-   P. R. Winters (1960). Forecasting sales by exponentially weighted moving averages. Management Science, 6, 324--342. (Reprint at [https://doi.org/10.1287/mnsc.6.3.324](https://doi.org/10.1287/mnsc.6.3.324).)
