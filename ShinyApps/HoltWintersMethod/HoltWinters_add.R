@@ -190,7 +190,7 @@ ui <- fluidPage(
     titlePanel("Exploration: Holt-Winters Additive Model"),
     fluidRow(
       column(3, selectInput("dataset_in", label = "Choose a Dataset",
-                            choices = c("Enrollment", "Baltimore Crimes", "Apple Revenue"))),
+                            choices = c("Enrollment", "Baltimore Crimes", "Apple Revenue", "Natural Gas"))),
       column(3, dateRangeInput("dateRange", "Select date range:",
                      start = "2000-01-01",  # Default start date
                      end = "2024-01-01",         # Default end date
@@ -376,6 +376,22 @@ server <- function(input, output, session) {
     as_tsibble(index = dates) |>
     dplyr::select(dates, year, quarter, value)
 
+  ## Nat Gas
+  nat_gas <- rio::import("https://byuistats.github.io/timeseries/data/natural_gas_res.csv") |>
+    mutate(date = my(month)) |>
+    filter(date >= my("Jan 2017"))|>
+    mutate(dates = yearquarter(date)) |>
+    group_by(dates) |>
+    summarize(
+      gas_use_mmcf = sum(residential_nat_gas_consumption),
+      n = n()
+    ) |>
+    filter(n == 3) |>  # Eliminate partial quarter(s)
+    dplyr::select(-n) |>
+    mutate(gas_billion_cf = round(gas_use_mmcf / 10^3))
+  nat_gas_ts <- nat_gas %>%
+    as_tsibble(index = dates)
+
   #### event reactives ####
   # list of defined s's
   S_initial_list <- reactive({
@@ -419,6 +435,8 @@ server <- function(input, output, session) {
       data <- enrollment_ts
     } else if (input$dataset_in == "Apple Revenue"){
       data <- apple_ts
+    } else if (input$dataset_in == "Natural Gas"){
+      data <- nat_gas_ts
     } else {
       data <- crime_summary
     }

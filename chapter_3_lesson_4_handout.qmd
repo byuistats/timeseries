@@ -39,11 +39,9 @@ source("common_functions.R")
 #| echo: false
 #| warning: false
 
-# nat_gas <- rio::import("https://byuistats.github.io/timeseries/data/natural_gas_res.csv") |>
-nat_gas_raw <- rio::import("data/natural_gas_res.csv") |>
+nat_gas <- rio::import("https://byuistats.github.io/timeseries/data/natural_gas_res.csv") |>
   mutate(date = my(month)) |>
-  filter(date >= my("Jan 2017"))
-nat_gas <- nat_gas_raw |>
+  filter(date >= my("Jan 2017"))|>
   mutate(quarter = yearquarter(date)) |>
   group_by(quarter) |> 
   summarize(
@@ -53,6 +51,8 @@ nat_gas <- nat_gas_raw |>
   filter(n == 3) |>  # Eliminate partial quarter(s)
   dplyr::select(-n) |>
   mutate(gas_billion_cf = round(gas_use_mmcf / 10^3))
+nat_gas_ts <- nat_gas %>%
+  as_tsibble(index = quarter)
 ```
 
 #### Figure 1: Quarterly U.S. natural gas consumption (Bcf)
