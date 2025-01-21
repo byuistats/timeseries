@@ -14,7 +14,7 @@ ui <- fluidPage(
   useShinyjs(),
   titlePanel("AR (1) "),
   # A fluidRow() defines a row (ik pretty complex)
-  # Each row is then split into columns, the first value passed to these defines how much relative space they are alloted for that row as a fraction of 12.
+  # Each row is then split into columns, the first value passed to these defines how much relative space they are allotted for that row as a fraction of 12.
   # 2 columns with an allotment of 6 will be centered into two equal columns on one row.
   # If the columns of a row add to more than 12 it will simply start to overflow into a new row
   # so 3 columns in 6 in a single fluid row will have form a 2x2 grid, with the bottom right section being empty
