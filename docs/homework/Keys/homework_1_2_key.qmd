@@ -65,6 +65,7 @@ Please plot the US Unemployment time series and superimpose the annual mean of t
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r}
+###########################3 cut in half
 # extracts the year out of the date
 unemp_rate$Year <- year(unemp_rate$date)
 
@@ -75,12 +76,12 @@ annual_mean <- unemp_rate %>%
 
 
 # plots the data and the annual mean in ggplot
-ggplot() +
-  geom_line(data = unemp_rate, aes(x = date, y = value), color = "black", linetype = "solid", size = 0.5) +
-    geom_line(data = annual_mean, aes(x = as.Date(paste0(Year, "-07-01")), y = Annual_Mean), 
+ggplot(data= unemp_rate %>% filter(date >= "1980-01-01" & date <= "2023-12-01" )) +
+  geom_line(aes(x = date, y = value), color = "black", linetype = "solid", size = 0.5) +
+    geom_line(data = annual_mean %>% filter(Year >=1980), aes(x = as.Date(paste0(Year, "-07-01")), y = Annual_Mean), 
             color = "blue", linetype = "solid", size = 0.7) +
-
   labs(title = "US Unemployment Rate Over Time with Annual Mean",
+       subtitle = "1980-2023",
        x = "Date", y = "Unemployment Rate (%)") +
     theme_minimal() +
     labs(caption = "Blue Line: Annual Mean, Solid black Line: Monthly Unemployment Rate") +
@@ -91,17 +92,48 @@ ggplot() +
 
 ### Question 3 - Trend Analysis (30 points)
 
-##### a) Describe the US Unemployment time series and its trend. Comment on *the series' sampling interval???????*, time series trend characteristics, seasonal variation, and cycle.
+##### a) Describe the US Unemployment time series and its trend. Comment on the time series trend characteristics, seasonal variation, and cycle.
 
 ::: {.callout-note title="Answer" icon="false"}
+
+###### Define, describe, link to the process that generated the data.
+
 This series exhibits significant stochastic patterns and elements. While the series fluctuates significantly, it generally fluctuates around the same value, approximately 5%, and does not exhibit a significant long-term upward or downward trend. 
 
 ```{r}
 ggplot() +
-  geom_line(data = unemp_rate %>% filter(date >= "2012-01-01" & date <= "2018-01-01" ), aes(x = date, y = value), color = "black", linetype = "solid", size = 0.5)
+  geom_line(data = unemp_rate %>% filter(date >= "2012-01-01" & date <= "2016-01-01" ), aes(x = date, y = value), color = "black", linetype = "solid", size = 0.5)+
+  labs(title = "US Unemployment Rate Over Time with Annual Mean",
+       subtitle = "2012-2016",
+       x = "Date", y = "Unemployment Rate (%)") +
+    theme_bw()
 ```
 
-By "zooming" into out date and looking at just a 6 year period we can clearly see annual seasonality with two seasonal periods per year (once around Jan and again around July).
+
+```{r}
+library(ggplot2)
+library(ggforce)
+library(dplyr)
+
+# Assuming 'unemp_rate' is your data frame with 'date' and 'value' columns
+
+ggplot(unemp_rate, aes(x = date, y = value)) +
+  geom_line(color = "black", linetype = "solid", size = 0.5) +
+  ggforce::facet_zoom(ylim = c(4.5,9.5), xlim = c(as.Date("2012-01-01"), as.Date("2016-01-01")), horizontal = FALSE, shrink = FALSE)+
+  labs(title = "US Unemployment Rate Over Time with Annual Mean",
+       subtitle = "Emphasis on 2012-2016",
+       x = "Date", y = "Unemployment Rate (%)") +
+    theme_bw()+
+  theme(strip.background = element_rect(
+    color = "black",  # Border color
+    fill = "#FFF", # Fill color
+    size = 0.5,          # Border size
+    linetype = "dashed"  # Border line type
+  ))
+```
+
+
+By "zooming" into out date and looking at just a 6 year period we can clearly see annual seasonality with two seasonal periods per year (once around Jan and again around July). This process is likely tied to seasonal hiring in Sep-Nov for holiday work (lowering unemployment) & an influx of recent graduates in Apr/May (increasing unemployment).
 
 Referencing the full series displayed in Q2 cyclical patterns can be seen, they were more frequent during the early 1900's but have slowed down and become more gradual after the 1970's.
 
