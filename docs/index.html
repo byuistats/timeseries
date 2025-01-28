@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.40">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Applied Time Series Analysis – BYU-Idaho Time Series</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./images/TSFavicon.png" rel="icon" type="image/png">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-549806ee2085284f45b00abea8c6df48.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-8ea72dc5fed832574809a9c94082fbbb.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-dc9ff929994d342fd2034119e2f81dae.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark-4d8eee02f33473bdaf141da458b39a65.min.css" rel="prefetch" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body class="nav-fixed">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a href="./index.html" class="navbar-brand navbar-brand-logo">
+    <img src="./images/TSfavicon_inv.png" alt="" class="navbar-logo">
+    </a>
+    <a class="navbar-brand" href="./index.html">
+    <span class="navbar-title">BYU-Idaho Time Series</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link active" href="./index.html" aria-current="page"> 
+<span class="menu-text">Table of Contents</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./resource_blog.html"> 
+<span class="menu-text">Resources</span></a>
+  </li>  
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-1" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Chapter 1</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-1">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1.html">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_1.html">
+ <span class="dropdown-text">Course Introduction</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_2.html">
+ <span class="dropdown-text">Plots Trends, and Seasonal Variation</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_3.html">
+ <span class="dropdown-text">Averages for Time Series</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 4</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_4.html">
+ <span class="dropdown-text">Additive Models</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 5</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_1_lesson_5.html">
+ <span class="dropdown-text">Multiplicative Models</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-2" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Chapter 2</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-2">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_2.html">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_2_lesson_1.html">
+ <span class="dropdown-text">Covariance and Correlation</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_2_lesson_2.html">
+ <span class="dropdown-text">Autocorrelation Concepts</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_2_lesson_3.html">
+ <span class="dropdown-text">Exploration of Autocorrelation Concepts</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-3" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Chapter 3</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-3">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3.html">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_1.html">
+ <span class="dropdown-text">Leading Variables and Associated Variables</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_2.html">
+ <span class="dropdown-text">Exponential Smoothing (EWMA)</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_3.html">
+ <span class="dropdown-text">Holt-Winters Method (Additive Models) - Part 1</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 4</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_4.html">
+ <span class="dropdown-text">Holt-Winters Method (Additive Models) - Part 2</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 5</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_3_lesson_5.html">
+ <span class="dropdown-text">Holt-Winters Method (Multiplicative Models)</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-4" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Chapter 4</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-4">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4.html">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_1.html">
+ <span class="dropdown-text">White Noise and Random Walks - Part 1</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_2.html">
+ <span class="dropdown-text">White Noise and Random Walks - Part 2</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_3.html">
+ <span class="dropdown-text">Autoregressive (AR) Models</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 4</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_4_lesson_4.html">
+ <span class="dropdown-text">Fitted AR Models</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-5" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Chapter 5</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-5">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_5.html">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_5_lesson_1.html">
+ <span class="dropdown-text">Linear Models, GLS, and Seasonal Indicator Variables</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_5_lesson_2.html">
+ <span class="dropdown-text">Harmonic Seasonal Variables - Part 1</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 3</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_5_lesson_3.html">
+ <span class="dropdown-text">Harmonic Seasonal Variables - Part 2</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 4</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_5_lesson_4.html">
+ <span class="dropdown-text">Transformations and Non-Linear Models</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 5</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_5_lesson_5.html">
+ <span class="dropdown-text">Forecasting, Inverse Transformation, and Bias Correction</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-6" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Chapter 6</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-6">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_6.html">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_6_lesson_1.html">
+ <span class="dropdown-text">Moving Average (MA) Models</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_6_lesson_2.html">
+ <span class="dropdown-text">Autoregressive Moving Average (ARMA) Models</span></a>
+  </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-chapter-7" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Chapter 7</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-chapter-7">    
+        <li class="dropdown-header">Overview</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_7.html">
+ <span class="dropdown-text">Lessons &amp; Homework</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 1</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_7_lesson_1.html">
+ <span class="dropdown-text">Introduction to Non-stationary Models and Differencing</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_7_lesson_2.html">
+ <span class="dropdown-text">Seasonal ARIMA Models</span></a>
+  </li>  
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Lesson 2</li>
+        <li>
+    <a class="dropdown-item" href="./chapter_7_lesson_3.html">
+ <span class="dropdown-text">ARCH and GARCH Models</span></a>
+  </li>  
+    </ul>
+  </li>
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+  <a href="" class="quarto-color-scheme-toggle quarto-navigation-tool  px-1" onclick="window.quartoToggleColorScheme(); return false;" title="Toggle dark mode"><i class="bi"></i></a>
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#course-content" id="toc-course-content" class="nav-link active" data-scroll-target="#course-content">Course Content</a></li>
+  <li><a href="#course-outcomes" id="toc-course-outcomes" class="nav-link" data-scroll-target="#course-outcomes">Course Outcomes</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Applied Time Series Analysis</h1>
+<p class="subtitle lead">In-Class Activities and Homework Exercises</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="course-content" class="level2">
+<h2 class="anchored" data-anchor-id="course-content">Course Content</h2>
+<div class="callout callout-style-simple callout-tip no-icon">
+<div class="callout-body d-flex">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-body-container">
+<section id="chapter-1---time-series-data" class="level3">
+<h3 class="anchored" data-anchor-id="chapter-1---time-series-data"><a href="chapter_1.html">Chapter 1 - Time Series Data</a></h3>
+</section>
+<section id="chapter-2---autocorrelation-concepts" class="level3">
+<h3 class="anchored" data-anchor-id="chapter-2---autocorrelation-concepts"><a href="chapter_2.html">Chapter 2 - Autocorrelation Concepts</a></h3>
+</section>
+<section id="chapter-3---exploration-of-autocorrelation-concepts" class="level3">
+<h3 class="anchored" data-anchor-id="chapter-3---exploration-of-autocorrelation-concepts"><a href="chapter_3.html">Chapter 3 - Exploration of Autocorrelation Concepts</a></h3>
+</section>
+<section id="chapter-4---basic-stochastic-models" class="level3">
+<h3 class="anchored" data-anchor-id="chapter-4---basic-stochastic-models"><a href="chapter_4.html">Chapter 4 - Basic Stochastic Models</a></h3>
+</section>
+<section id="chapter-5---regression" class="level3">
+<h3 class="anchored" data-anchor-id="chapter-5---regression"><a href="chapter_5.html">Chapter 5 - Regression</a></h3>
+</section>
+<section id="chapter-6---stationary-models" class="level3">
+<h3 class="anchored" data-anchor-id="chapter-6---stationary-models"><a href="chapter_6.html">Chapter 6 - Stationary Models</a></h3>
+</section>
+<section id="chapter-7---non-stationary-models" class="level3">
+<h3 class="anchored" data-anchor-id="chapter-7---non-stationary-models"><a href="chapter_7.html">Chapter 7 - Non-Stationary Models</a></h3>
+</section>
+</div>
+</div>
+</div>
+</section>
+<section id="course-outcomes" class="level2">
+<h2 class="anchored" data-anchor-id="course-outcomes">Course Outcomes</h2>
+<div class="callout callout-style-simple callout-note no-icon callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<strong>Chapter 1</strong>
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<section id="lesson-1" class="level5">
+<h5 class="anchored" data-anchor-id="lesson-1">Lesson 1</h5>
+<details>
+<summary>
+Introduce the course structure and syllabus
+</summary>
+<ul>
+<li>Get to know each other</li>
+<li>Describe key concepts in time series analysis</li>
+<li>Explore an example time series interactively</li>
+</ul>
+</details>
+</section>
+<section id="lesson-2" class="level5">
+<h5 class="anchored" data-anchor-id="lesson-2">Lesson 2</h5>
+<details>
+<summary>
+Use technical language to describe the main features of time series data
+</summary>
+<ul>
+<li>Define time series analysis</li>
+<li>Define time series</li>
+<li>Define sampling interval</li>
+<li>Define serial dependence or autocorrelation</li>
+<li>Define a time series trend</li>
+<li>Define seasonal variation</li>
+<li>Define cycle</li>
+<li>Differentiate between deterministic and stochastic trends</li>
+</ul>
+</details>
+<details>
+<summary>
+Plot time series data to visualize trends, seasonal patterns, and potential outliers
+</summary>
+<ul>
+<li>Plot a “ts” object</li>
+<li>Plot the estimated trend of a time series by computing the mean across one full period</li>
+</ul>
+</details>
+</section>
+<section id="lesson-3" class="level5">
+<h5 class="anchored" data-anchor-id="lesson-3">Lesson 3</h5>
+<details>
+<summary>
+Decompose time series into trends, seasonal variation, and residuals
+</summary>
+<ul>
+<li>Define smoothing</li>
+<li>Compute the centered moving average for a time series</li>
+<li>Estimate the trend component using moving averages</li>
+</ul>
+</details>
+<details>
+<summary>
+Plot time series data to visualize trends, seasonal patterns, and potential outliers
+</summary>
+<ul>
+<li>Plot the estimated trend of a time series using a moving average</li>
+<li>Make box plots to examine seasonality</li>
+<li>Interpret the trend and seasonal pattern observed in a time series</li>
+</ul>
+</details>
+</section>
+<section id="lesson-4" class="level5">
+<h5 class="anchored" data-anchor-id="lesson-4">Lesson 4</h5>
+<details>
+<summary>
+Use R to describe key features of time series data
+</summary>
+<ul>
+<li>Import CSV data and convert to tsibble format</li>
+</ul>
+</details>
+<details>
+<summary>
+Decompose time series into trends, seasonal variation, and residuals
+</summary>
+<ul>
+<li>Implement additive decomposition</li>
+<li>Explain how to remove seasonal variation using an estimate for seasonal component of a time series</li>
+<li>Compute the estimators of seasonal variation for an additive model</li>
+<li>Calculate the random component for an additive model</li>
+<li>Compute a seasonally-adjusted time series based on an additive model</li>
+</ul>
+</details>
+</section>
+<section id="lesson-5" class="level5">
+<h5 class="anchored" data-anchor-id="lesson-5">Lesson 5</h5>
+<details>
+<summary>
+Decompose time series into trends, seasonal variation, and residuals
+</summary>
+<ul>
+<li>Explain the differences between additive and multiplicative models</li>
+<li>Implement multiplicative decomposition</li>
+<li>Compute the estimators of seasonal variation for a multiplicative model</li>
+<li>Calculate the random component for a multiplicative model</li>
+<li>Compute a seasonally-adjusted time series based on a multiplicative model</li>
+</ul>
+</details>
+</section>
+</div>
+</div>
+</div>
+<div class="callout callout-style-simple callout-note no-icon callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-2-contents" aria-controls="callout-2" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<strong>Chapter 2</strong>
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-2" class="callout-2-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<section id="lesson-1-1" class="level5">
+<h5 class="anchored" data-anchor-id="lesson-1-1">Lesson 1</h5>
+<details>
+<summary>
+Compute the key statistics used to describe the linear relationship between two variables
+</summary>
+<ul>
+<li>Compute the sample mean</li>
+<li>Compute the sample variance</li>
+<li>Compute the sample standard deviation</li>
+<li>Compute the sample covariance</li>
+<li>Compute the sample correlation coefficient</li>
+<li>Explain sample covariance using a scatter plot</li>
+</ul>
+</details>
+<details>
+<summary>
+Interpret the key statistics used to describe sample data
+</summary>
+<ul>
+<li>Interpret the sample mean</li>
+<li>Interpret the sample variance</li>
+<li>Interpret the sample standard deviation</li>
+<li>Interpret the sample covariance</li>
+<li>Interpret the sample correlation coefficient</li>
+</ul>
+</details>
+</section>
+<section id="lesson-2-1" class="level5">
+<h5 class="anchored" data-anchor-id="lesson-2-1">Lesson 2</h5>
+<details>
+<summary>
+Define key terms in time series analysis
+</summary>
+<ul>
+<li>Define the ensemble of a time series</li>
+<li>Define the expected value (or mean function) of a time series model</li>
+<li>Define the sample estimate of the population mean of a time series</li>
+<li>Define the variance function of a time series model</li>
+<li>State the constant variance estimator for a time series model</li>
+<li>Explain the stationarity assumption</li>
+<li>Explain the stationary variance assumption</li>
+<li>Define lag</li>
+<li>Define autocorrelation</li>
+<li>Define the second-order stationary time series</li>
+<li>Explain the autocovariance function in Equation (2.11)</li>
+<li>Explain the lag k autocorrelation function in Equation (2.12)</li>
+<li>Define the autocovariance function, acvf</li>
+<li>Define the sample autocorrelation function, acf</li>
+</ul>
+</details>
+<details>
+<summary>
+Calculate sample estimates of autocovariance and autocorrelation functions from time series data
+</summary>
+<ul>
+<li>Define the sample autocovariance function, c_k</li>
+<li>Define the sample autocorrelation function, r_k</li>
+</ul>
+</details>
+</section>
+<section id="lesson-3-1" class="level5">
+<h5 class="anchored" data-anchor-id="lesson-3-1">Lesson 3</h5>
+<details>
+<summary>
+Explain the theoretical implications of autocorrelation for the estimation of time series statistics
+</summary>
+<ul>
+<li>Explain how positive autocorrelation leads to underestimation of variance in short time series</li>
+<li>Explain how negative autocorrelation can improve efficiency of sample mean estimate</li>
+</ul>
+</details>
+<details>
+<summary>
+Interpret correlograms to identify significant lags, correlations, trends, and seasonality
+</summary>
+<ul>
+<li>Create a correlogram</li>
+<li>Interpret a correlogram</li>
+<li>Define a sampling distribution</li>
+<li>State the sampling distribution of rk</li>
+<li>Explain the concept of a confidence interval</li>
+<li>Conduct a single hypothesis test using a correlogram</li>
+<li>Describe the problems associated with multiple hypothesis testing in a correlogram</li>
+<li>Differentiate statistical and practical significance</li>
+<li>Diagnose non-stationarity using a correlogram</li>
+</ul>
+</details>
+</section>
+</div>
+</div>
+</div>
+<div class="callout callout-style-simple callout-note no-icon callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-3-contents" aria-controls="callout-3" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<strong>Chapter 3</strong>
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-3" class="callout-3-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<section id="lesson-1-2" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-1-2">Lesson 1</h3>
+<details>
+<summary>
+Explain the purpose and limitations of forecasting
+</summary>
+<ul>
+<li>Define lead time</li>
+<li>Define forecasting</li>
+<li>Differentiate causation from correlation</li>
+</ul>
+</details>
+<details>
+<summary>
+Explain why there is not one correct model to describe a time series
+</summary>
+<ul>
+<li>Explain why there can be several suitable models for a given time series</li>
+</ul>
+</details>
+<details>
+<summary>
+Use cross-correlation analysis to quantify lead/lag relationships
+</summary>
+<ul>
+<li>Explain forecasting by leading indicators</li>
+<li>Define the population k-lag ccvf</li>
+<li>Define the population k-lag ccf</li>
+<li>Define the sample k-lag ccvf</li>
+<li>Define the sample k-lag ccf</li>
+<li>Estimate an ccf for two time series</li>
+<li>Interpret whether a variable is a leading indicator using a cross-correlogram</li>
+</ul>
+</details>
+<details>
+<summary>
+Evaluate the limitations of forecasting models based on past trends
+</summary>
+<ul>
+<li>Explain how unexpected future events may invalidate forecast trends</li>
+<li>Avoid over-extrapolation of fitted trends beyond reasonable time horizons</li>
+</ul>
+</details>
+</section>
+<section id="lesson-2-2" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-2-2">Lesson 2</h3>
+<details>
+<summary>
+Implement simple exponential smoothing to estimate local mean levels
+</summary>
+<ul>
+<li>Explain forecasting by extrapolation</li>
+<li>State the assumptions of exponential smoothing</li>
+<li>Define exponential weighted moving average (EWMA)</li>
+<li>State the exponential smoothing forecasting equation</li>
+<li>State the EWMA in geometric series form (in terms of x_t only Eq 3.18)</li>
+<li>Explain the EWMA intuitively</li>
+<li>Define the one-step-ahead prediction error (1PE)</li>
+<li>State the SS1PE used to estimate the smoothing parameter of a EWMA</li>
+<li>Indicate when the EWMA smoothing parameter is optimally set as 1/n</li>
+</ul>
+</details>
+</section>
+<section id="lesson-3-2" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-3-2">Lesson 3</h3>
+<details>
+<summary>
+Implement the Holt-Winter method to forecast time series
+</summary>
+<ul>
+<li>Justify the need for the Holt-Winters method</li>
+<li>Describe how to obtain initial parameters for the Holt-Winters algorithm</li>
+<li>Explain the Holt-Winters update equations for additive decomposition models</li>
+<li>Explain the purpose of the parameters <span class="math inline">\(\alpha\)</span>, <span class="math inline">\(\beta\)</span>, and <span class="math inline">\(\gamma\)</span></li>
+<li>Interpret the coefficient estimates <span class="math inline">\(a_t\)</span>, <span class="math inline">\(b_t\)</span>, and <span class="math inline">\(s_t\)</span> of the Holt-Winters algorithm</li>
+<li>Explain the Holt-Winters forecasting equation for additive decomposition models, Equation (3.22)</li>
+</ul>
+</details>
+</section>
+<section id="lesson-4-1" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-4-1">Lesson 4</h3>
+<details>
+<summary>
+Implement the Holt-Winter method to forecast time series
+</summary>
+<ul>
+<li>Compute the Holt-Winters estimate by hand</li>
+<li>Use HoltWinters() to forecast additive model time series</li>
+<li>Plot the Holt-Winters decomposition of a time series (see Fig 3.10)</li>
+<li>Plot the Holt-Winters fitted values versus the original time series (see Fig 3.11)</li>
+<li>Superimpose plots of the Holt-Winters predictions with the time series realizations (see Fig 3.13)</li>
+</ul>
+</details>
+</section>
+<section id="lesson-5-1" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-5-1">Lesson 5</h3>
+<details>
+<summary>
+Implement the Holt-Winter method to forecast time series
+</summary>
+<ul>
+<li>Explain the Holt-Winters method equations for multiplicative decomposition models</li>
+<li>Explain the purpose of the paramters <span class="math inline">\(\alpha\)</span>, <span class="math inline">\(\beta\)</span>, and <span class="math inline">\(\gamma\)</span></li>
+<li>Interpret the coefficient estimates <span class="math inline">\(a_t\)</span>, <span class="math inline">\(b_t\)</span>, and <span class="math inline">\(s_t\)</span> of the Holt-Winters smoothing algorithm</li>
+<li>Explain the Holt-Winters forecasting equation for multiplicative decomposition models, Equation (3.23)</li>
+<li>Use HoltWinters() to forecast multiplicative model time series</li>
+<li>Plot the Holt-Winters decomposition of a TS (see Fig 3.10)</li>
+<li>Plot the Holt-Winters fitted values versus the original time series (see Fig 3.11)</li>
+<li>Superimpose plots of the Holt-Winters predictions with the time series realizations (see Fig 3.13)</li>
+</ul>
+</details>
+</section>
+</div>
+</div>
+</div>
+<div class="callout callout-style-simple callout-note no-icon callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-4-contents" aria-controls="callout-4" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<strong>Chapter 4</strong>
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-4" class="callout-4-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<section id="lesson-1-3" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-1-3">Lesson 1</h3>
+<details>
+<summary>
+Characterize the properties of discrete white noise
+</summary>
+<ul>
+<li>Define Residual error</li>
+<li>Define discrete white noise (DWN)</li>
+<li>Define Gaussian white noise</li>
+<li>Simulate Gaussian white noise with R</li>
+<li>Plot DWN simulation results</li>
+<li>State DWN second order properties</li>
+<li>Explain how to estimate (or fit) a DWN process</li>
+<li>State the assumptions needed to categorize residual error series as white noise</li>
+</ul>
+</details>
+<details>
+<summary>
+Characterize the properties of a random walk
+</summary>
+<ul>
+<li>Define a random walk</li>
+</ul>
+</details>
+<details>
+<summary>
+Simulate realizations from basic time series models in R
+</summary>
+<ul>
+<li>Simulate a random walk</li>
+<li>Plot a random walk</li>
+</ul>
+</details>
+</section>
+<section id="lesson-2-3" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-2-3">Lesson 2</h3>
+<details>
+<summary>
+Characterize the properties of a random walk
+</summary>
+<ul>
+<li>Define the second order properties of a random walk</li>
+<li>Define the backward shift operator</li>
+<li>Use the backward shift operator to state a random walk as a sequence of white noise realizations</li>
+<li>Define a random walk with drift</li>
+</ul>
+</details>
+<details>
+<summary>
+Simulate realizations from basic time series models in R
+</summary>
+<ul>
+<li>Simulate a random walk</li>
+<li>Plot a random walk</li>
+</ul>
+</details>
+<details>
+<summary>
+Fit time series models to data and interpret fitted parameters
+</summary>
+<ul>
+<li>Motive the need for differencing in time series analysis</li>
+<li>Define the difference operator</li>
+<li>Explain the relationship between the difference operator and the backward shift operator</li>
+<li>Test whether a series is a random walk using first differences</li>
+<li>Explain how to estimate a random walk with increasing slope using Holt-Winters</li>
+<li>Estimate the drift parameter of a random walk</li>
+</ul>
+</details>
+</section>
+<section id="lesson-3-3" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-3-3">Lesson 3</h3>
+<details>
+<summary>
+Characterize the properties of an <span class="math inline">\(AR(p)\)</span> stochastic process
+</summary>
+<ul>
+<li>Define an <span class="math inline">\(AR(p)\)</span> stochastic process</li>
+<li>Express an <span class="math inline">\(AR(p)\)</span> process using the backward shift operator</li>
+<li>State an <span class="math inline">\(AR(p)\)</span> forecast (or prediction) function</li>
+<li>Identify stationarity of an <span class="math inline">\(AR(p)\)</span> process using the backward shift operator</li>
+<li>Determine the stationarity of an <span class="math inline">\(AR(p)\)</span> process using a characteristic equation</li>
+</ul>
+</details>
+<details>
+<summary>
+Check model adequacy using diagnostic plots like correlograms of residuals
+</summary>
+<ul>
+<li>Characterize a random walk’s second order characteristics using a correlogram</li>
+<li>Define partial autocorrelations</li>
+<li>Explain how to use a partial correlogram to decide what model would be suitable to estimate an <span class="math inline">\(AR(p)\)</span> process</li>
+<li>Demonstrate the use of partial correlogram via simulation</li>
+</ul>
+</details>
+</section>
+<section id="lesson-4-2" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-4-2">Lesson 4</h3>
+<details>
+<summary>
+Fit time series models to data and interpret fitted parameters
+</summary>
+<ul>
+<li>Fit an <span class="math inline">\(AR(p)\)</span> model to simulated data</li>
+<li>Explain the difference between parameters of the data generating process and estimates</li>
+<li>Calculate confidence intervals for AR coefficient estimates</li>
+<li>Interpret AR coefficient estimates in the context of the source and nature of historical data</li>
+</ul>
+</details>
+<details>
+<summary>
+Check model adequacy using diagnostic plots like correlograms of residuals
+</summary>
+<ul>
+<li>Compare AR fitted models to an underlying data generating process</li>
+<li>Explain the limitations of stochastic model fitting as evidence in favor or against real world arguments.</li>
+</ul>
+</details>
+</section>
+</div>
+</div>
+</div>
+<div class="callout callout-style-simple callout-note no-icon callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-5-contents" aria-controls="callout-5" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<strong>Chapter 5</strong>
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-5" class="callout-5-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<section id="lesson-1-4" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-1-4">Lesson 1</h3>
+<details>
+<summary>
+Explain the difference between stochastic and deterministic trends in time series
+</summary>
+<ul>
+<li>Describe deterministic trends as smooth, predictable changes over time</li>
+<li>Define stochastic trends as random, unpredictable fluctuations</li>
+<li>Explain the different treatment of stochastic and deterministic trends when forecasting</li>
+</ul>
+</details>
+<details>
+<summary>
+Fit linear regression models to time series data
+</summary>
+<ul>
+<li>Define a linear time series model</li>
+<li>Explain why ordinary linear regression systematically underestimates of the standard error of parameter estimates when the error terms are autocorrelated</li>
+<li>Apply generalized least squares GLS in R to estimate linear regression model parameters</li>
+<li>Explain how to estimate the autocorrelation input for the GLS algorithm</li>
+<li>Compare GLS and OLS standard error estimates to evaluate autocorrelation bias</li>
+<li>Identify an appropriate function to model the trend in a given time series</li>
+<li>Represent seasonal factors in a regression model using indicator variables</li>
+<li>Fit a linear model for a simulated time series with linear time trend and <span class="math inline">\(AR(p)\)</span> error</li>
+<li>Use acf and pacf to test for autocorrelation in the residuals</li>
+<li>Estimate a seasonal indicator model using GLS</li>
+<li>Forecast using a fitted GLS model with seasonal indicator variables</li>
+</ul>
+</details>
+<details>
+<summary>
+Apply differencing to nonstationary time series
+</summary>
+<ul>
+<li>Transform a non-stationary linear to a stationary process using differencing</li>
+<li>State how to remove a polynomial trend of order <span class="math inline">\(m\)</span></li>
+</ul>
+</details>
+<details>
+<summary>
+Simulate time series
+</summary>
+<ul>
+<li>Simulate a time series with a linear time trend and a <span class="math inline">\(AR(p)\)</span> error</li>
+</ul>
+</details>
+</section>
+<section id="lesson-2-4" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-2-4">Lesson 2</h3>
+<details>
+<summary>
+Fit linear regression models to time series data
+</summary>
+<ul>
+<li>Describe a Fourier series</li>
+<li>Explain how a few terms in a Fourier series can be used to fit a seasonal component</li>
+<li>Motivate the use of the harmonic seasonal model</li>
+<li>Represent seasonal factors using harmonic seasonal terms</li>
+</ul>
+</details>
+</section>
+<section id="lesson-3-4" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-3-4">Lesson 3</h3>
+<details>
+<summary>
+Fit linear regression models to time series data
+</summary>
+<ul>
+<li>State the additive model with harmonic seasonal component</li>
+<li>Simulate a time series with harmonic seasonal components</li>
+<li>Identify an appropriate function to model the trend in a given time series</li>
+<li>Identify a parsimonious set of harmonic terms for use in a regression model</li>
+<li>Fit the additive model with harmonic seasonal component to real-world data</li>
+<li>Evaluate residuals using a correlogram and partial correlogram to ensure they meet the assumptions</li>
+</ul>
+</details>
+<details>
+<summary>
+Apply model selection criteria
+</summary>
+<ul>
+<li>Use AIC to aid in model selection</li>
+</ul>
+</details>
+</section>
+<section id="lesson-4-3" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-4-3">Lesson 4</h3>
+<details>
+<summary>
+Apply logarithmic transformations to time series
+</summary>
+<ul>
+<li>Explain when to use a log-transformation</li>
+<li>Estimate a harmonic seasonal model using GLS with a log-transformed series</li>
+<li>Explain how to use logarithms to linearize certain non-linear trends</li>
+</ul>
+</details>
+<details>
+<summary>
+Apply non-linear models to time series
+</summary>
+<ul>
+<li>Explain when to use non-linear models</li>
+<li>Simulate a time series with an exponential trend</li>
+<li>Fit a time series model with an exponential trend</li>
+</ul>
+</details>
+<!--
+From Daniel: 
+
+5.  Regression
+5.1.    Purpose
+•   Explain the different treatment of stochastic and deterministic trends on forecasting
+5.2.    Linear Models
+5.2.1.  Definition
+•   Define a linear time series model
+•   State the exogeneity assumption: the expected value of the error terms is zero
+5.2.2.  Stationarity
+•   Transform a non-stationary linear to a stationary process using differencing
+•   State how to remove a polynomial trend of order m
+5.2.3.  Simulation
+•   Simulate a time series with a linear time trend and a AR(p) error
+5.3.    Fitted Models
+5.3.1.  Model fitted to simulated data
+•   Estimate a linear model for a simulated time series with linear time trend and AR(p) error
+5.3.2.  Model fitted to the temperature series
+•   Use acf and pacf to test for autocorrelation bias in standard errors
+•   Explain intuitively why autocorrelated error terms leads to bias of estimated standard errors
+5.3.3.  Autocorrelation and the estimation and sample statistics*
+5.4.    Generalized Least Squares
+5.4.1.  GLS fit to simulated series
+•   Estimate a linear model using the GLS algorithm
+•   Compare GLS and OLS standard error estimates to evaluate autocorrelation bias
+•   Explain the process to estimate the autocorrelation input for the GLS algorithm
+5.4.2.  Confidence interval for the trend in the temperature series
+5.5.    Linear Models with seasonal variables
+5.5.1.  Introduction
+5.5.2.  Additive seasonal indicator variables
+•   State the additive model with seasonal indicator variables (eq 5.7 & 5.8)
+•   Create seasonal indicator variables using the factor() and cycle() functions
+5.5.3.  Example seasonal model for the temperature series
+•   Estimate a seasonal indicator model using GLS
+•   Forecast using a GLS fitted seasonal indicator model
+5.6.    Harmonic Seasonal Models
+•   Motivate the use of the harmonic seasonal model
+•   State the additive model with harmonic seasonal component
+•   Explain the use of higher frequency harmonic components to model seasonal variation
+5.6.2.  Simulation
+•   Simulate a time series with harmonic seasonal components
+5.6.3.  Fit to the simulated series
+•   Use a t-ratio to decide the statistical significance of harmonic coefficient estimates
+•   Use AIC to aid in model selection
+•   Illustrate the limitations of AIC
+5.6.4.  Harmonic model fitted to the temperature series
+•   Fit the additive model with harmonic seasonal component to real-world data
+•   Evaluate residuals using a correlogram and partial correlogram to ensure they meet the exogeneity assumption
+•   Model residuals using an AR(p) model to meet the exogeneity assumption
+5.7.    Logarithmic transformations
+5.7.1.  Introduction
+•   Explain when to use a log-transformation
+5.7.2.  Example using the air passenger series
+•   Estimate a harmonic seasonal model using GLS with a log-transformed series
+5.8.    Non-linear model
+5.8.1.  Introduction
+•   Explain when to use non-linear models
+•   Explain how to use logarithms to transform non-linear into linear functions
+5.8.2.  Example of a simulated and fitted non-linear series
+•   Simulate a time series with a non-linear exponential trend
+•   Fit a non-linear exponential trend.
+5.9.    Forecasting from regression
+5.9.1.  Introduction
+5.9.2.  Prediction in R
+•   Use a log-transformation to multiplicative time series
+•   Forecast using the inverse-transform and bias correction of a log-transformed model
+5.10.   Inverse Transform and Bias Correction
+5.10.1. Log-normal residual errors
+•   State the bias correction procedure for log-transform estimates (eq 5.19)
+5.10.2. Empirical correction factor for forecasting means
+•   Explain when to use the bias correction factor
+5.10.3. Example using the air passenger data
+•   Use the bias correction factor for a log-transform model
+
+-->
+</section>
+<section id="lesson-5-2" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-5-2">Lesson 5</h3>
+<details>
+<summary>
+Apply logarithmic transformations to time series
+</summary>
+<ul>
+<li>Apply a log-transformation to a multiplicative time series</li>
+</ul>
+</details>
+<details>
+<summary>
+Apply the bias correction factor for inverse transformations
+</summary>
+<ul>
+<li>State the bias correction procedure for log-transform estimates <!-- (eq 5.19) --></li>
+<li>Explain when to use the bias correction factor</li>
+<li>Use the bias correction factor for a log-transform model</li>
+<li>Forecast using the inverse-transform and bias correction of a log-transformed model</li>
+</ul>
+</details>
+<!--
+From Daniel: 
+
+5.6.    Harmonic Seasonal Models
+•   Motivate the use of the harmonic seasonal model
+•   State the additive model with harmonic seasonal component
+•   Explain the use of higher frequency harmonic components to model seasonal variation
+5.6.2.  Simulation
+•   Simulate a time series with harmonic seasonal components
+5.6.3.  Fit to the simulated series
+•   Use a t-ratio to decide the statistical significance of harmonic coefficient estimates
+•   Use AIC to aid in model selection
+•   Illustrate the limitations of AIC
+5.6.4.  Harmonic model fitted to the temperature series
+•   Fit the additive model with harmonic seasonal component to real-world data
+•   Evaluate residuals using a correlogram and partial correlogram to ensure they meet the exogeneity assumption
+•   Model residuals using an AR(p) model to meet the exogeneity assumption
+5.7.    Logarithmic transformations
+5.7.1.  Introduction
+•   Explain when to use a log-transformation
+5.7.2.  Example using the air passenger series
+•   Estimate a harmonic seasonal model using GLS with a log-transformed series
+5.8.    Non-linear model
+5.8.1.  Introduction
+•   Explain when to use non-linear models
+•   Explain how to use logarithms to transform non-linear into linear functions
+5.8.2.  Example of a simulated and fitted non-linear series
+•   Simulate a time series with a non-linear exponential trend
+•   Fit a non-linear exponential trend.
+5.9.    Forecasting from regression
+5.9.1.  Introduction
+5.9.2.  Prediction in R
+•   Use a log-transformation to multiplicative time series
+•   Forecast using the inverse-transform and bias correction of a log-transformed model
+5.10.   Inverse Transform and Bias Correction
+5.10.1. Log-normal residual errors
+•   State the bias correction procedure for log-transform estimates (eq 5.19)
+5.10.2. Empirical correction factor for forecasting means
+•   Explain when to use the bias correction factor
+5.10.3. Example using the air passenger data
+•   Use the bias correction factor for a log-transform model
+
+-->
+</section>
+</div>
+</div>
+</div>
+<div class="callout callout-style-simple callout-note no-icon callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<strong>Chapter 6</strong>
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-6" class="callout-6-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<section id="lesson-1-5" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-1-5">Lesson 1</h3>
+<details>
+<summary>
+Characterize the properties of moving average (MA) models
+</summary>
+<ul>
+<li>Define a moving average (MA) process</li>
+<li>Write an MA(q) model in terms of the backward shift operator</li>
+<li>State the mean and variance of an MA(q) process</li>
+<li>Explain the autocorrelation function of an MA(q) process</li>
+<li>Define an invertible MA process</li>
+</ul>
+</details>
+<details>
+<summary>
+Fit time series models to data and interpret fitted parameters
+</summary>
+<ul>
+<li>Determine an appropriate MA(q) model to fit to a time series based on the ACF plot</li>
+<li>Fit an MA(q) model to data in R using the arima() function</li>
+<li>Assess model fit by examining residual diagnostic plots</li>
+<li>Interpret the fitted MA coefficients</li>
+</ul>
+</details>
+</section>
+<section id="lesson-2-5" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-2-5">Lesson 2</h3>
+<details>
+<summary>
+Define autoregressive moving average (ARMA) models
+</summary>
+<ul>
+<li>Write the equation for an ARMA(p,q) model</li>
+<li>Express an ARMA model in terms of the backward shift operators for the AR and MA components</li>
+<li>State facts about ARMA processes related to stationarity, invertibility, special cases, parsimony, and parameter redundancy</li>
+<li>Use ACF and PACF plots to determine if an AR, MA or ARMA model is appropriate for a time series</li>
+</ul>
+</details>
+<details>
+<summary>
+Apply an iterative time series modeling process
+</summary>
+<ul>
+<li>Fit a regression model to capture trend and seasonality</li>
+<li>Examine residual diagnostic plots to assess autocorrelation</li>
+<li>Fit an ARMA model to the residuals if needed</li>
+<li>Check the residuals of the ARMA model for white noise</li>
+<li>Forecast the original series by combining the regression and ARMA model forecasts</li>
+</ul>
+</details>
+</section>
+</div>
+</div>
+</div>
+<div class="callout callout-style-simple callout-note no-icon callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-7-contents" aria-controls="callout-7" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<strong>Chapter 7</strong>
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-7" class="callout-7-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<section id="lesson-1-6" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-1-6">Lesson 1</h3>
+<details>
+<summary>
+Explain the concept of non-stationarity in time series
+</summary>
+<ul>
+<li>Define non-stationarity and its implications for time series analysis</li>
+<li>Identify non-stationary behavior in time series plots</li>
+</ul>
+</details>
+<details>
+<summary>
+Apply differencing to remove non-stationarity
+</summary>
+<ul>
+<li>Explain the concept of differencing and its role in removing non-stationarity</li>
+<li>Use differencing to transform non-stationary time series into stationary ones</li>
+<li>Interpret the results of differencing on time series plots and ACF/PACF</li>
+</ul>
+</details>
+<details>
+<summary>
+Identify integrated models and ARIMA notation
+</summary>
+<ul>
+<li>Define integrated models and their relationship to differencing</li>
+<li>Understand the ARIMA notation and its components (p, d, q)</li>
+<li>Recognize the role of the ‘d’ parameter in ARIMA models</li>
+</ul>
+</details>
+</section>
+<section id="lesson-2-6" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-2-6">Lesson 2</h3>
+<details>
+<summary>
+Identify seasonal ARIMA models
+</summary>
+<ul>
+<li>Define seasonal ARIMA models and their notation (p, d, q)(P, D, Q)[m]</li>
+<li>Identify the need for seasonal ARIMA models in time series with seasonal patterns</li>
+</ul>
+</details>
+<details>
+<summary>
+Apply the fitting procedure for seasonal ARIMA models
+</summary>
+<ul>
+<li>Describe the steps involved in fitting seasonal ARIMA models</li>
+<li>Determine the appropriate order of differencing (d and D) based on ACF/PACF plots</li>
+<li>Select the order of AR and MA terms (p, q, P, Q) using ACF/PACF plots and model selection criteria</li>
+</ul>
+</details>
+<details>
+<summary>
+Fit seasonal ARIMA models to time series data using R
+</summary>
+<ul>
+<li>Use R to fit seasonal ARIMA models</li>
+<li>Interpret the output for the ARIMA models, including coefficients and model diagnostics</li>
+<li>Forecast future values using the fitted seasonal ARIMA model</li>
+</ul>
+</details>
+</section>
+<section id="lesson-3-5" class="level3">
+<h3 class="anchored" data-anchor-id="lesson-3-5">Lesson 3</h3>
+<details>
+<summary>
+Explain the concept of volatility in time series
+</summary>
+<ul>
+<li>Define volatility and its importance in financial and climate time series</li>
+<li>Identify patterns of volatility in time series plots</li>
+</ul>
+</details>
+<details>
+<summary>
+Interpret ARCH and GARCH models
+</summary>
+<ul>
+<li>Define ARCH models and their extensions, including GARCH models</li>
+<li>Understand the role of ARCH/GARCH models in capturing time-varying volatility</li>
+</ul>
+</details>
+<details>
+<summary>
+Simulate and fit GARCH models using R
+</summary>
+<ul>
+<li>Simulate GARCH processes using R</li>
+<li>Fit GARCH models to time series data using R</li>
+<li>Interpret the R output for GARCH models, including coefficients and model diagnostics</li>
+</ul>
+</details>
+<details>
+<summary>
+Apply GARCH modeling to real-world time series
+</summary>
+<ul>
+<li>Use GARCH models to analyze volatility in financial time series</li>
+<li>Apply GARCH models to climate time series to understand changing variability</li>
+<li>Incorporate GARCH models into forecasts and simulations for improved accuracy</li>
+</ul>
+</details>
+</section>
+</div>
+</div>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const disableStylesheet = (stylesheets) => {
+    for (let i=0; i < stylesheets.length; i++) {
+      const stylesheet = stylesheets[i];
+      stylesheet.rel = 'prefetch';
+    }
+  }
+  const enableStylesheet = (stylesheets) => {
+    for (let i=0; i < stylesheets.length; i++) {
+      const stylesheet = stylesheets[i];
+      stylesheet.rel = 'stylesheet';
+    }
+  }
+  const manageTransitions = (selector, allowTransitions) => {
+    const els = window.document.querySelectorAll(selector);
+    for (let i=0; i < els.length; i++) {
+      const el = els[i];
+      if (allowTransitions) {
+        el.classList.remove('notransition');
+      } else {
+        el.classList.add('notransition');
+      }
+    }
+  }
+  const toggleGiscusIfUsed = (isAlternate, darkModeDefault) => {
+    const baseTheme = document.querySelector('#giscus-base-theme')?.value ?? 'light';
+    const alternateTheme = document.querySelector('#giscus-alt-theme')?.value ?? 'dark';
+    let newTheme = '';
+    if(darkModeDefault) {
+      newTheme = isAlternate ? baseTheme : alternateTheme;
+    } else {
+      newTheme = isAlternate ? alternateTheme : baseTheme;
+    }
+    const changeGiscusTheme = () => {
+      // From: https://github.com/giscus/giscus/issues/336
+      const sendMessage = (message) => {
+        const iframe = document.querySelector('iframe.giscus-frame');
+        if (!iframe) return;
+        iframe.contentWindow.postMessage({ giscus: message }, 'https://giscus.app');
+      }
+      sendMessage({
+        setConfig: {
+          theme: newTheme
+        }
+      });
+    }
+    const isGiscussLoaded = window.document.querySelector('iframe.giscus-frame') !== null;
+    if (isGiscussLoaded) {
+      changeGiscusTheme();
+    }
+  }
+  const toggleColorMode = (alternate) => {
+    // Switch the stylesheets
+    const alternateStylesheets = window.document.querySelectorAll('link.quarto-color-scheme.quarto-color-alternate');
+    manageTransitions('#quarto-margin-sidebar .nav-link', false);
+    if (alternate) {
+      enableStylesheet(alternateStylesheets);
+      for (const sheetNode of alternateStylesheets) {
+        if (sheetNode.id === "quarto-bootstrap") {
+          toggleBodyColorMode(sheetNode);
+        }
+      }
+    } else {
+      disableStylesheet(alternateStylesheets);
+      toggleBodyColorPrimary();
+    }
+    manageTransitions('#quarto-margin-sidebar .nav-link', true);
+    // Switch the toggles
+    const toggles = window.document.querySelectorAll('.quarto-color-scheme-toggle');
+    for (let i=0; i < toggles.length; i++) {
+      const toggle = toggles[i];
+      if (toggle) {
+        if (alternate) {
+          toggle.classList.add("alternate");     
+        } else {
+          toggle.classList.remove("alternate");
+        }
+      }
+    }
+    // Hack to workaround the fact that safari doesn't
+    // properly recolor the scrollbar when toggling (#1455)
+    if (navigator.userAgent.indexOf('Safari') > 0 && navigator.userAgent.indexOf('Chrome') == -1) {
+      manageTransitions("body", false);
+      window.scrollTo(0, 1);
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+        manageTransitions("body", true);
+      }, 40);  
+    }
+  }
+  const isFileUrl = () => { 
+    return window.location.protocol === 'file:';
+  }
+  const hasAlternateSentinel = () => {  
+    let styleSentinel = getColorSchemeSentinel();
+    if (styleSentinel !== null) {
+      return styleSentinel === "alternate";
+    } else {
+      return false;
+    }
+  }
+  const setStyleSentinel = (alternate) => {
+    const value = alternate ? "alternate" : "default";
+    if (!isFileUrl()) {
+      window.localStorage.setItem("quarto-color-scheme", value);
+    } else {
+      localAlternateSentinel = value;
+    }
+  }
+  const getColorSchemeSentinel = () => {
+    if (!isFileUrl()) {
+      const storageValue = window.localStorage.getItem("quarto-color-scheme");
+      return storageValue != null ? storageValue : localAlternateSentinel;
+    } else {
+      return localAlternateSentinel;
+    }
+  }
+  const darkModeDefault = false;
+  let localAlternateSentinel = darkModeDefault ? 'alternate' : 'default';
+  // Dark / light mode switch
+  window.quartoToggleColorScheme = () => {
+    // Read the current dark / light value 
+    let toAlternate = !hasAlternateSentinel();
+    toggleColorMode(toAlternate);
+    setStyleSentinel(toAlternate);
+    toggleGiscusIfUsed(toAlternate, darkModeDefault);
+  };
+  // Ensure there is a toggle, if there isn't float one in the top right
+  if (window.document.querySelector('.quarto-color-scheme-toggle') === null) {
+    const a = window.document.createElement('a');
+    a.classList.add('top-right');
+    a.classList.add('quarto-color-scheme-toggle');
+    a.href = "";
+    a.onclick = function() { try { window.quartoToggleColorScheme(); } catch {} return false; };
+    const i = window.document.createElement("i");
+    i.classList.add('bi');
+    a.appendChild(i);
+    window.document.body.appendChild(a);
+  }
+  // Switch to dark mode if need be
+  if (hasAlternateSentinel()) {
+    toggleColorMode(true);
+  } else {
+    toggleColorMode(false);
+  }
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
