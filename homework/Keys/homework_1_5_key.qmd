@@ -1,0 +1,206 @@
+---
+title: "Time Series Homework: Chapter 1 Lesson 5 Key"
+subtitle: "Please_put_your_name_here"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+---
+
+```{r, echo=FALSE, message=FALSE}
+
+# Loading R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, 
+               tsibble, fable,
+               feasts, tsibbledata,
+               fable.prophet,
+               patchwork,
+               lubridate, 
+               rio,
+               ggplot2
+               )
+```
+
+## Data
+
+```{r}
+vessels <- rio::import("https://byuistats.github.io/timeseries/data/Vessels_Trade_US.csv")
+```
+
+## Questions
+
+### Question 1: Context and Measurement (10 points)
+
+The first part of any time series analysis is context. You cannot properly analyze data without knowing what the data is measuring. Without context, the most simple features of data can be obscure and inscrutable. This homework assignment will center around the series below.
+
+Please research the time series. In the spaces below, give the data collection process, unit of analysis, and meaning of each observation for the series.
+
+#### a) **Vessels Cleared in Foreign Trade for United States**
+
+<https://fred.stlouisfed.org/series/M03022USM583NNBR>
+
+::: {.callout-note title="Answer" icon="false"}
+Data Collection: This data is a monthly summary of vessels cleared for foreign trade that are departing from the U.S to foreign destinations. Before the vessel can leave there are various checks including customs clearance, security checks and payment of duties and fees. During the cargo declaration, the details of the goods, such as origin, destination, description and importantly weight is recorded. This is when the number of tons per 100 cubic feet would be recorded.
+
+Unit of Analysis: The data is recorded in number of thousands of net tons per 100 cubic feet excluding engine space, crew space, etc. Recorded data spans from 1893 to 1941.
+
+Meaning of an Observation: The weight of foreign trade cleared in a single month recorded in net tons of 100 cubic feet.
+:::
+
+### Question 2: Seasonally Adjusted Series - Calculation and Plot (10 points)
+
+#### a) Decompose the Vessels Cleared in Foreign Trade series using the multiplicative decomposition model. Show the first 10 rows of results from the decomposition like shown in the Time Series Notebook.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+# Please provide your code here
+vessel_tsibble <- vessels %>% 
+  mutate(date = dmy(date)) %>% #convert to date year month data type
+  mutate(year_month = yearmonth(date)) %>% #extract the year and month
+  as_tsibble(index = year_month) #make the year month the index of the timeseries
+
+vessel_decomp <-  vessel_tsibble |>
+  model(feasts::classical_decomposition(vessels,#decompose function to get out random, adjusted seasonal values and trend
+                                        type = "mult"))  |>
+  components() |>
+  select(!.model)
+
+head(vessel_decomp, 10)
+
+```
+:::
+
+#### b) Illustrate the original, trend, and the seasonally adjusted series in the same plot. Use the appropriate axis labels, units, and captions.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+# Please provide your code here
+# Please provide your code here
+
+ggplot(vessel_decomp) +
+  geom_line(data = vessel_decomp, aes(x = year_month, y = vessels), color = "black") +
+  geom_line(data = vessel_decomp, aes(x = year_month, y = season_adjust), color = "#D55E00", size = 1.1) +
+  geom_line(data = vessel_decomp, aes(x = year_month, y = trend), color = "#0072B2", size = 1.1) +
+  labs(
+    x = "Year",
+    y = "Vessels Cleared (Thousands of Net Tons)",
+    title = "Vessels Cleared in Foreign Trade (1893-1941)",
+    subtitle = "Original Data, Trend, and Seasonally Adjusted Series",
+    caption = "Source: U.S. Department of Commerce\nData exclude domestic trade between U.S. and its territories."
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 14),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    legend.title = element_blank(),
+    legend.position = "bottom",
+    legend.text = element_text(size = 12),
+    plot.caption = element_text(hjust = 0, size = 10)
+  ) +
+  guides(color = guide_legend(override.aes = list(size = 2)))
+```
+:::
+
+### Question 3: Seasonally Adjusted Series - Analysis (30 points)
+
+#### a) Plot the random component of the multiplicative decomposition from Q2a.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+# Please provide your code here
+vessel_random <- vessel_decomp %>%
+  select(year_month, random)
+
+# Plot the random component using ggplot2
+ggplot(vessel_random, aes(x = year_month, y = random)) +
+  geom_line(color = "darkblue", size = 1) +
+  labs(
+    x = "Year",
+    y = "Random Component",
+    title = "Random Component of Vessels Cleared Decomposition",
+    subtitle = "Multiplicative Decomposition of Vessels Cleared (1893-1941)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 14),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12)
+  ) #plot this random component
+
+```
+:::
+
+#### b) Use the additive decomposition method to decompose the Vessels Cleared in Foreign Trade series. Plot the random component.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+# Please provide your code here
+vessel_decomp_additive <- vessel_tsibble %>%
+  model(classical_decomposition(vessels, type = "add")) %>%
+  components()
+
+vessel_random <- vessel_decomp_additive %>%
+  select(year_month, random)
+
+# Plot the random component using ggplot2
+ggplot(vessel_random, aes(x = year_month, y = random)) +
+  geom_line(color = "darkred", size = 1) +
+  labs(
+    x = "Year",
+    y = "Random Component",
+    title = "Random Component of Vessels Cleared Decomposition",
+    subtitle = "Additive Decomposition of Vessels Cleared (1893-1941)"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 18, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 14),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12)
+  )
+```
+:::
+
+#### c) Please describe the differences between the random component series and use it as part of your justification for why we use the multiplicative decomposition model instead of the additive model to seasonally adjust the series.
+
+::: {.callout-note title="Answer" icon="false"}
+Differences:
+
+*Constant Variance (Multiplicative) vs. Increasing Variance (Additive): The multiplicative error terms exhibit relatively constant variance over time, fluctuating around a mean of 1. In contrast, the additive error terms show increasing variance. The fluctuations become larger in magnitude over time, particularly noticeable after 1920.
+
+*Magnitude Related to Level (Additive): In the additive model, larger errors seem to coincide with periods where the original time series (not shown here, but inferable) had higher values. This suggests the magnitude of the error is dependent on the level of the series—a characteristic of multiplicative seasonality.
+
+Justification for Multiplicative Model:
+
+*The key difference—increasing variance in the additive model's errors—is the primary reason why a multiplicative decomposition is more appropriate for this data.
+
+*Assumption Violation: Additive models assume the seasonal component is constant over time and adds to the trend and random components. The increasing variance in the additive residuals violates this assumption. It indicates the seasonal fluctuations are not constant but are proportional to the level of the series.
+
+*Non-Constant Seasonal Effect: When the magnitude of seasonal swings changes proportionally with the level of the series, it indicates a multiplicative relationship. As the series grows, the seasonal fluctuations also grow larger.
+
+*Multiplicative Model's Alignment with Data Characteristics: The multiplicative model, by allowing the seasonal effect to be a proportion of the series level, accurately captures the increasing variance observed in the data. Its residuals, having a relatively constant variance, better fulfill the assumptions of a decomposition model.
+
+In summary: The changing variance of the error terms in the additive model signals that the seasonal effect is not constant, but rather grows or shrinks along with the level of the series. This strongly suggests a multiplicative relationship between the components of the time series, making the multiplicative decomposition model a better choice for seasonally adjusting this data. The multiplicative model will more effectively isolate the seasonal component, leaving behind residuals that are closer to true random noise.
+:::
+
+## Rubric
+
+|                                                       |                                                                                                                                                                                                                                                          |                                                                                                                                                                                         |
+|-------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Criteria**                                          | **Mastery (10)**                                                                                                                                                                                                                                         | **Incomplete (0)**                                                                                                                                                                      |
+| **Question 1: Context and Measurement**               | The student provides a clear and detailed explanation of the data collection process, unit of analysis, and meaning of each observation for the series                                                                                                   | The student provides a basic explanation of the data context, but some details are missing or unclear.                                                                                  |
+|                                                       | **Mastery (5)**                                                                                                                                                                                                                                          | **Incomplete (0)**                                                                                                                                                                      |
+| **Question 2a: Multiplicative Decomposition**         | Correctly applies the multiplicative decomposition model. Displays the first ten rows of decomposition results (trend, seasonal, and random components) in a clear, organized format with appropriate labeling.                                          | Incorrectly applies the decomposition model, produces inaccurate results, or fails to present the first ten rows correctly, or the presentation needs to be clearer and more organized. |
+|                                                       | **Mastery (5)**                                                                                                                                                                                                                                          | **Incomplete (0)**                                                                                                                                                                      |
+| **Question 2b: Plot**                                 | Accurately illustrates all three series in a single, clear plot where each series is distinguishable. Clearly labels the axes with appropriate units and includes informative captions. All elements are well-presented and properly formatted.          | Attempts to create a plot, but with significant inaccuracies or lack of clarity. The plot may not effectively communicate the results due to labeling or presentation issues.           |
+|                                                       | **Mastery (5)**                                                                                                                                                                                                                                          | **Incomplete (0)**                                                                                                                                                                      |
+| **Question 3a: Multiplicative Random Component Plot** | Plots the random component of the multiplicative decomposition with clear axis labels, appropriate units, and proper formatting for readability.                                                                                                         | Lacks proper labeling (e.g., missing axis labels, incorrect units), or presents a poorly formatted and unclear plot.                                                                    |
+|                                                       | **Mastery (5)**                                                                                                                                                                                                                                          | **Incomplete (0)**                                                                                                                                                                      |
+| **Question 3b: Additive Random Component Plot**       | Correctly applies the additive decomposition method to decompose the series and accurately plots the random component with clear axis labels, units, and proper formatting.	                                                                              | Fails to correctly apply the decomposition method, inaccurately plots the random component, or provides a plot that lacks proper labeling, units, or formatting.                        |
+|                                                       | **Mastery (20)**                                                                                                                                                                                                                                         | **Incomplete (0)**                                                                                                                                                                      |
+| **Question 3c: Random Component Analysis**            | Clearly describes the differences between the random components derived from the multiplicative and additive decomposition models, and provides a logical and well-reasoned justification for using the multiplicative model based on these differences.	 | The description of the differences between the random components or provides an unclear, unsupported, or incorrect justification for using the multiplicative model.                    |
+| **Total Points**                                      | **50**                                                                                                                                                                                                                                                   |                                                                                                                                                                                         |
