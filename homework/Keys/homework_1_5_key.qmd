@@ -3,11 +3,12 @@ title: "Time Series Homework: Chapter 1 Lesson 5 Key"
 subtitle: "Please_put_your_name_here"
 format: 
   html:
+    code-fold: true
     embed-resources: true
     toc: true
 ---
 
-```{r, echo=FALSE, message=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 
 # Loading R packages
 if (!require("pacman")) install.packages("pacman")
@@ -24,7 +25,7 @@ pacman::p_load(tidyverse,
 
 ## Data
 
-```{r}
+```{r, warning=FALSE}
 vessels <- rio::import("https://byuistats.github.io/timeseries/data/Vessels_Trade_US.csv")
 ```
 
@@ -50,7 +51,7 @@ Meaning of an Observation: The weight of foreign trade cleared in a single month
 
 ### Question 2: Seasonally Adjusted Series - Calculation and Plot (10 points)
 
-#### a) Decompose the Vessels Cleared in Foreign Trade series using the multiplicative decomposition model. Show the first 10 rows of results from the decomposition like shown in the Time Series Notebook.
+#### a) Decompose the Vessels Cleared in Foreign Trade series using the multiplicative decomposition model. Show the first 10 rows of results from the decomposition as shown in the Time Series Notebook.
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r}
@@ -74,7 +75,7 @@ head(vessel_decomp, 10)
 #### b) Illustrate the original, trend, and the seasonally adjusted series in the same plot. Use the appropriate axis labels, units, and captions.
 
 ::: {.callout-note title="Answer" icon="false"}
-```{r}
+```{r, warning=FALSE}
 # Please provide your code here
 # Please provide your code here
 
@@ -109,7 +110,7 @@ ggplot(vessel_decomp) +
 #### a) Plot the random component of the multiplicative decomposition from Q2a.
 
 ::: {.callout-note title="Answer" icon="false"}
-```{r}
+```{r, warning=FALSE}
 # Please provide your code here
 vessel_random <- vessel_decomp %>%
   select(year_month, random)
@@ -120,7 +121,7 @@ ggplot(vessel_random, aes(x = year_month, y = random)) +
   labs(
     x = "Year",
     y = "Random Component",
-    title = "Random Component of Vessels Cleared Decomposition",
+    title = "Random Component of Vessels Cleared",
     subtitle = "Multiplicative Decomposition of Vessels Cleared (1893-1941)"
   ) +
   theme_minimal(base_size = 12) +
@@ -137,7 +138,7 @@ ggplot(vessel_random, aes(x = year_month, y = random)) +
 #### b) Use the additive decomposition method to decompose the Vessels Cleared in Foreign Trade series. Plot the random component.
 
 ::: {.callout-note title="Answer" icon="false"}
-```{r}
+```{r, warning=FALSE}
 # Please provide your code here
 vessel_decomp_additive <- vessel_tsibble %>%
   model(classical_decomposition(vessels, type = "add")) %>%
@@ -152,7 +153,7 @@ ggplot(vessel_random, aes(x = year_month, y = random)) +
   labs(
     x = "Year",
     y = "Random Component",
-    title = "Random Component of Vessels Cleared Decomposition",
+    title = "Random Component of Vessels Cleared",
     subtitle = "Additive Decomposition of Vessels Cleared (1893-1941)"
   ) +
   theme_minimal(base_size = 12) +
@@ -168,23 +169,22 @@ ggplot(vessel_random, aes(x = year_month, y = random)) +
 #### c) Please describe the differences between the random component series and use it as part of your justification for why we use the multiplicative decomposition model instead of the additive model to seasonally adjust the series.
 
 ::: {.callout-note title="Answer" icon="false"}
-Differences:
 
-*Constant Variance (Multiplicative) vs. Increasing Variance (Additive): The multiplicative error terms exhibit relatively constant variance over time, fluctuating around a mean of 1. In contrast, the additive error terms show increasing variance. The fluctuations become larger in magnitude over time, particularly noticeable after 1920.
+Differences in Random Component Series:
 
-*Magnitude Related to Level (Additive): In the additive model, larger errors seem to coincide with periods where the original time series (not shown here, but inferable) had higher values. This suggests the magnitude of the error is dependent on the level of the series—a characteristic of multiplicative seasonality.
+Multiplicative Error: The error term in the multiplicative model fluctuates around 1. Crucially, the magnitude of the fluctuations appears relatively constant over time.
 
-Justification for Multiplicative Model:
+Additive Error: The error term in the additive model fluctuates around 0, but the magnitude of the fluctuations changes significantly over time. Notice the larger variance in the later part of the series compared to the beginning.
 
-*The key difference—increasing variance in the additive model's errors—is the primary reason why a multiplicative decomposition is more appropriate for this data.
+Justification for Multiplicative Decomposition:
 
-*Assumption Violation: Additive models assume the seasonal component is constant over time and adds to the trend and random components. The increasing variance in the additive residuals violates this assumption. It indicates the seasonal fluctuations are not constant but are proportional to the level of the series.
+The key observation is the changing variance in the additive error term. This indicates that the seasonal fluctuations in the original data are not constant in magnitude but rather grow or shrink proportionally to the level of the series itself.
 
-*Non-Constant Seasonal Effect: When the magnitude of seasonal swings changes proportionally with the level of the series, it indicates a multiplicative relationship. As the series grows, the seasonal fluctuations also grow larger.
+Looking at the original series, the vessel traffic increases significantly over time. Simultaneously, the seasonal swings become more pronounced. This pattern directly corresponds to a multiplicative relationship: larger traffic values lead to larger seasonal variations.
 
-*Multiplicative Model's Alignment with Data Characteristics: The multiplicative model, by allowing the seasonal effect to be a proportion of the series level, accurately captures the increasing variance observed in the data. Its residuals, having a relatively constant variance, better fulfill the assumptions of a decomposition model.
+An additive model assumes constant seasonal effects regardless of the level of the series. This is clearly violated in this case. If we were to use an additive model, we would likely under-adjust for seasonality in the later periods of high traffic and over-adjust in the early periods of low traffic.
 
-In summary: The changing variance of the error terms in the additive model signals that the seasonal effect is not constant, but rather grows or shrinks along with the level of the series. This strongly suggests a multiplicative relationship between the components of the time series, making the multiplicative decomposition model a better choice for seasonally adjusting this data. The multiplicative model will more effectively isolate the seasonal component, leaving behind residuals that are closer to true random noise.
+In summary: The multiplicative decomposition model is preferred because the changing variance in the additive model's error term indicates a non-constant seasonal effect. The multiplicative model, where seasonality is proportional to the level of the series, better captures the observed pattern of increasing seasonal fluctuations alongside increasing traffic levels in the original data. This proportionality is visually confirmed by both the error components plot and the original data plot. A multiplicative model will lead to a more accurate seasonally adjusted series in this situation.
 :::
 
 ## Rubric
