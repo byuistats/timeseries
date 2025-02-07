@@ -45,18 +45,13 @@ Please research the time series. The subheadings below has a link to a source to
 <https://www.bls.gov/cps/cps_htgm.htm>
 
 ::: {.callout-note title="Answer" icon="false"}
-
-**Data collection process:**
-The primary method for collecting US unemployment data is the Current Population Survey (CPS). This is a *monthly* survey conducted by the U.S. Census Bureau on behalf of the Bureau of Labor Statistics (BLS).
+**Data collection process:** The primary method for collecting US unemployment data is the Current Population Survey (CPS). This is a *monthly* survey conducted by the U.S. Census Bureau on behalf of the Bureau of Labor Statistics (BLS).
 
 Sampling: The CPS uses a large rotating sample of approximately 60,000 eligible households (about 110,000 individuals) selected to represent the entire US population.
 
-**Unit of Analysis:**
-The unit of analysis is an individual person within the sampled households. Each person aged 16 and older is classified into one of the categories: employed, unemployed, or not in the labor force.
+**Unit of Analysis:** The unit of analysis is an individual person within the sampled households. Each person aged 16 and older is classified into one of the categories: employed, unemployed, or not in the labor force.
 
-**Meaning of each Observation:**
-A given observation represents the percentage of unemployed persons within the labor force during any given month. $$ \frac{Unemployed}{Employed+Unemployed}$$
-
+**Meaning of each Observation:** A given observation represents the percentage of unemployed persons within the labor force during any given month. $$ \frac{Unemployed}{Employed+Unemployed}$$
 :::
 
 ### Question 2 - Estimating the Trend: Annual Aggregation (10 points)
@@ -84,7 +79,7 @@ ggplot(data= unemp_rate %>% filter(date >= "1980-01-01" & date <= "2023-12-01" )
        subtitle = "1980-2023",
        x = "Date", y = "Unemployment Rate (%)") +
     theme_minimal() +
-    labs(caption = "Blue Line: Annual Mean, Solid black Line: Monthly Unemployment Rate") +
+    labs(caption = "Blue Line: Annual Mean \nSolid black Line: Monthly Unemployment Rate") +
     scale_y_continuous(labels = scales::percent_format(scale = 1))
 
 ```
@@ -94,13 +89,25 @@ ggplot(data= unemp_rate %>% filter(date >= "1980-01-01" & date <= "2023-12-01" )
 
 ##### a) Describe the US Unemployment time series and its trend. Comment on the time series trend characteristics, seasonal variation, and cycle.
 
-::: {.callout-note title="Answer" icon="false"}
+:::: {.callout-note title="Answer" icon="false"}
+####### Trend Characteristics
 
-###### Define, describe, link to the process that generated the data.
+This series exhibits significant stochastic patterns and elements. While the series fluctuates significantly, it generally fluctuates or *trends* towards the same value, approximately 5%, and does not exhibit a significant long-term upward or downward movement. This makes sense when we connect the context of our data, unemployment rates cannot realistically be 0% and rarely if ever surpass 20%, it is generally accepted that a natural unemployment rate or static level of roughly 5% exists.
 
-This series exhibits significant stochastic patterns and elements. While the series fluctuates significantly, it generally fluctuates around the same value, approximately 5%, and does not exhibit a significant long-term upward or downward trend. 
+####### Seasonal Variation
+
+It is difficult to understand or visualize seasonality when we have a large number of seasons contained within our full timeframe.
+
+By "zooming" into our data (filtering to a smaller timeframe) and looking at just a 6 year period we can clearly see annual seasonality with two seasonal periods per year (once around Jan and again around July). This process is likely tied to seasonal hiring in Sep-Nov for holiday work (lowering unemployment) & an influx of recent graduates in Apr/May (increasing unemployment).
+
+Here are two examples of how you can visualize or present this:
+
+::: {.panel-tabset .nav-pills}
+## GGplot
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 ggplot() +
   geom_line(data = unemp_rate %>% filter(date >= "2012-01-01" & date <= "2016-01-01" ), aes(x = date, y = value), color = "black", linetype = "solid", size = 0.5)+
   labs(title = "US Unemployment Rate Over Time with Annual Mean",
@@ -109,8 +116,11 @@ ggplot() +
     theme_bw()
 ```
 
+## GGforce
 
 ```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 library(ggplot2)
 library(ggforce)
 library(dplyr)
@@ -118,7 +128,7 @@ library(dplyr)
 # Assuming 'unemp_rate' is your data frame with 'date' and 'value' columns
 
 ggplot(unemp_rate, aes(x = date, y = value)) +
-  geom_line(color = "black", linetype = "solid", size = 0.5) +
+  geom_line(color = "black", linetype = "solid", linewidth = 0.5) +
   ggforce::facet_zoom(ylim = c(4.5,9.5), xlim = c(as.Date("2012-01-01"), as.Date("2016-01-01")), horizontal = FALSE, shrink = FALSE)+
   labs(title = "US Unemployment Rate Over Time with Annual Mean",
        subtitle = "Emphasis on 2012-2016",
@@ -127,29 +137,29 @@ ggplot(unemp_rate, aes(x = date, y = value)) +
   theme(strip.background = element_rect(
     color = "black",  # Border color
     fill = "#FFF", # Fill color
-    size = 0.5,          # Border size
+    linewidth = 0.5,          # Border size
     linetype = "dashed"  # Border line type
   ))
 ```
-
-
-By "zooming" into out date and looking at just a 6 year period we can clearly see annual seasonality with two seasonal periods per year (once around Jan and again around July). This process is likely tied to seasonal hiring in Sep-Nov for holiday work (lowering unemployment) & an influx of recent graduates in Apr/May (increasing unemployment).
-
-Referencing the full series displayed in Q2 cyclical patterns can be seen, they were more frequent during the early 1900's but have slowed down and become more gradual after the 1970's.
-
 :::
+
+###### Cycle
+
+Referencing the full series displayed in Queation 2 significant and dynamic cyclical patterns can be observed. In this case these are business cycles, they were more frequent during the early 1900's (not shown in the key version) but have slowed down and become more gradual after the 1970's.
+
+::::
 
 ##### b) What does the trend represent? What do you suspect is causing the patterns in the trend? *Hint: Research the Natural Unemployment Rate*
 
 ::: {.callout-note title="Answer" icon="false"}
-The natural unemployment rate represents the baseline level of unemployment in a healthy economy, it is estimated to be roughly 4.5% and consists of frictional & structural unemployment but not cyclical unemployment. 
-When the unemployment rate is above the natural rate, we would expect it to trend downward as the economy adjusts, and similarly, if it is below the natural rate, it is likely to trend upward. The remaining fluctuations are likely influenced by economic cycles, labor market conditions, and policy decisions and other unpredictable events.
+The natural unemployment rate represents the baseline level of unemployment in a healthy economy, it is estimated to be roughly 4.5% and consists of frictional & structural unemployment but not cyclical unemployment. When the unemployment rate is above the natural rate, we would expect it to trend downward as the economy adjusts, and similarly, if it is below the natural rate, it is likely to trend upward. The remaining fluctuations are likely influenced by economic cycles, labor market conditions, and policy decisions and other unpredictable events.
 :::
 
-##### c) Please justify whether the *trend??? (series)* is deterministic or stochastic.
+##### c) Please justify whether the trend is deterministic or stochastic.
 
 ::: {.callout-note title="Answer" icon="false"}
-Based on the overwhelming impact of economic cycles and other random shifts on the series, this series is stochastic.
+The *trend* of this series is a horizontal line at roughly 5%, and is therefore deterministic, the series as a whole however is stochastic.
+This is due to the overwhelming impact of economic cycles and other random shifts in the series.
 :::
 
 <!-- Try not to touch the table markdown below -->
@@ -157,7 +167,7 @@ Based on the overwhelming impact of economic cycles and other random shifts on t
 ## Rubric
 
 |  |  |  |
-|---------------|---------------------------------|------------------------|
+|------------------|-------------------------------|-----------------------|
 | **Criteria** | **Mastery (10)** | **Incomplete (0)** |
 | **Question 1: Context and Measurement** | The student demonstrates a clear understanding of the context for the data series (US unemployment). The explanation includes details about the data collection process, unit of analysis, and the meaning of each observation. | The student fails to provide a clear understanding of the context for one or more data series. |
 |  | **Mastery (10)** | **Incomplete (0)** |

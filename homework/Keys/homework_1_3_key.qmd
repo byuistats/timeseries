@@ -102,17 +102,20 @@ Please create a box plot to illustrate the monthly averages in the US Unemployme
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r}
-# Please provide your code here
-# Please provide your code here
+library(dplyr)
+library(plotly)
+library(datasets)
+library(ggplot2)
 
-# Calculate monthly averages across all years
-monthly_avg <- unemp_rate.t %>%
-  group_by(month) %>%  # Group by month
-  summarise(average_value = mean(value, na.rm = TRUE))  # Calculate the average unemployment rate for each month
+mydata2 = unemp_rate.t %>% 
+    mutate(month = as.factor(month)) %>%
+    group_by(month) %>% 
+    mutate(OutlierFlag = case_when((value<quantile(value,1/3,na.rm=T)-1.5*IQR(value,na.rm=T)) | (value>quantile(value,2/3,na.rm=T)+1.5*IQR(value,na.rm=T)) ~ "Outlier", TRUE ~"NonOutlier"))
 
-# Create a box plot of monthly averages
-plot1 <- ggplot(unemp_rate.t, aes(x = factor(month), y = value)) +  # X-axis: month, Y-axis: unemployment rate
-  geom_boxplot(staplewidth = 0.5) +  # Create the box plot
+# boxplot
+p <- ggplot(mydata2 %>% filter(OutlierFlag=="NonOutlier"), aes(x = month, y = value)) +
+    geom_boxplot(outlier.shape = NA)+
+    geom_point(data=mydata2 %>% filter(OutlierFlag=="Outlier"),aes(group=month,label1=year,label2=value),color="#E69F00",size=1)+
   labs(
     x = "Month",  # X-axis label
     y = "Unemployment Rate (%)",  # Y-axis label
@@ -122,10 +125,12 @@ plot1 <- ggplot(unemp_rate.t, aes(x = factor(month), y = value)) +  # X-axis: mo
   scale_y_continuous(labels = scales::percent_format(scale = 1)) +  # Format Y-axis as percentages
   theme_bw() +  # Use a clean black-and-white theme
   theme(plot.title = element_text(hjust = 0.5))  # Center the plot title
-plot1
+
+ggplotly(p, tooltip=c("label1","label2"))
+
 ```
 
-<!-- Delete this and put your written answer here. The three colons mark the end of your answer. -->
+
 :::
 
 ### Question 3 - Seasonal Averages: Analysis (20 points)
