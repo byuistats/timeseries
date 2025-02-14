@@ -13,13 +13,14 @@ editor: source
 
 # Loading R packages
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, 
+pacman::p_load(plotly,
+               tidyverse, 
                tsibble, fable,
                feasts, tsibbledata,
                fable.prophet,
                patchwork,
                lubridate, 
-               rio 
+               rio
 )
 ```
 
@@ -101,17 +102,20 @@ Please create a box plot to illustrate the monthly averages in the US Unemployme
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r}
-# Please provide your code here
-# Please provide your code here
+library(dplyr)
+library(plotly)
+library(datasets)
+library(ggplot2)
 
-# Calculate monthly averages across all years
-monthly_avg <- unemp_rate.t %>%
-  group_by(month) %>%  # Group by month
-  summarise(average_value = mean(value, na.rm = TRUE))  # Calculate the average unemployment rate for each month
+mydata2 = unemp_rate.t %>% 
+    mutate(month = as.factor(month)) %>%
+    group_by(month) %>% 
+    mutate(OutlierFlag = case_when((value<quantile(value,1/3,na.rm=T)-1.5*IQR(value,na.rm=T)) | (value>quantile(value,2/3,na.rm=T)+1.5*IQR(value,na.rm=T)) ~ "Outlier", TRUE ~"NonOutlier"))
 
-# Create a box plot of monthly averages
-ggplot(unemp_rate.t, aes(x = factor(month), y = value)) +  # X-axis: month, Y-axis: unemployment rate
-  geom_boxplot(fill = "green4", staplewidth = 0.5) +  # Create the box plot
+# boxplot
+p <- ggplot(mydata2 %>% filter(OutlierFlag=="NonOutlier"), aes(x = month, y = value)) +
+    geom_boxplot(outlier.shape = NA)+
+    geom_point(data=mydata2 %>% filter(OutlierFlag=="Outlier"),aes(group=month,label1=year,label2=value),color="#E69F00",size=1)+
   labs(
     x = "Month",  # X-axis label
     y = "Unemployment Rate (%)",  # Y-axis label
@@ -122,9 +126,21 @@ ggplot(unemp_rate.t, aes(x = factor(month), y = value)) +  # X-axis: month, Y-ax
   theme_bw() +  # Use a clean black-and-white theme
   theme(plot.title = element_text(hjust = 0.5))  # Center the plot title
 
+output <- ggplotly(p, tooltip=c("label1","label2"))
+
+# makes boxplot outliers invisible and hover info off
+for (i in 1:length(output$x$data)){
+    if (output$x$data[[i]]$type=="box"){
+        output$x$data[[i]]$marker$opacity = 0  
+        output$x$data[[i]]$hoverinfo = "none"
+    }
+}
+
+output
+
 ```
 
-<!-- Delete this and put your written answer here. The three colons mark the end of your answer. -->
+
 :::
 
 ### Question 3 - Seasonal Averages: Analysis (20 points)
@@ -132,15 +148,15 @@ ggplot(unemp_rate.t, aes(x = factor(month), y = value)) +  # X-axis: month, Y-ax
 ##### a) Describe the seasonality of the US unemployment time series. Comment on the series' periods of highest and lowest unemployment. Are there any notable outliers?
 
 ::: {.callout-note title="Answer" icon="false"}
-Here in the box plot we can see that the highest median unemployment rates are typically around the beginning of the year from January to Februrary, then later in the year, June and July have higher unemployment rates once again. While the periods with the lowest unemployment range from April and May, as well as September and October since they have smaller interquartile ranges. The unemployment values here can be due to seasonal employment patterns. One noticiable outlier here is found in the month of April. In April 2020, the highest unemployment rate was ever recorded due to the COVID pandemic. However, there doesn’t seem to be a month that has a significantly higher unemployment rate than the other.
+Here in the box plot we can see that the highest median unemployment rates are typically around the beginning of the year from January to Februrary, then later in the year, June and July have higher unemployment rates once again. The periods with the lowest unemployment range from April and May, as well as September and October. The unemployment values here can be due to seasonal employment patterns. One noticiable outlier here is found in the month of April. In April 2020, the highest unemployment rate was ever recorded due to the COVID pandemic. However, there doesn’t seem to be a month that has a significantly higher unemployment rate than the other.
 :::
 
 ##### b) Please explain the patterns you found. Include information from your prior research on the series.
 
 ::: {.callout-note title="Answer" icon="false"}
-Perhaps one reason as to why there are increases in unemployment rates at the beginning of the year and towards the summer months is because certain industries experience significant employment fluctuations due to seasonal demand for workers. For example, ski resorts increase their workforce during the winter to meet the needs of the snow skiing season. Employment in education sees notable shifts at the start and end of the school year, while retail businesses tend to hire additional staff during the holiday season toward the end of the year. Another rise in the average unemployment rate is because many jobs related to education, such as school staff, teachers, and other educational workers, end during the summer months, leading to temporary increases in unemployment as these workers wait for the next school year.
+Perhaps one reason as to why there are increases in unemployment rates at the beginning of the year and towards the summer months is because certain industries experience significant employment fluctuations due to seasonal demand for workers.
 
-Another clear example is the rise in unemployment before switching to summer months, largely due to shifts in industries like agriculture and tourism, where jobs often peak or wind down, leading to employment changes. Additionally, a wave of new job seekers enters the market around this time as recent high school and college graduates begin looking for work. Since it can take some time for these individuals to secure employment, it temporarily drives up unemployment rates.
+Another clear example is a wave of new job seekers enters the market around this time as recent high school and college graduates begin looking for work. Since it can take some time for these individuals to secure employment, it temporarily drives up unemployment rates. Additionally, there is rise in unemployment before switching to summer months, largely due to shifts in industries like agriculture and tourism, where jobs often peak or wind down, leading to employment changes.
 :::
 
 ### Rubric
