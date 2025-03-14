@@ -57,7 +57,7 @@ Deaths per 100,000 people in the United States
 
 **Meaning:**
 
-Each observation is the total number of deaths that year, the population and the mortality rate per 100,000 people.
+Each observation is the population, number of deaths and the mortality rate per 100,000 people on an annual level.
 :::
 
 ### Question 2 - US Mortality Rate: Visualization (30 points)
@@ -65,11 +65,11 @@ Each observation is the total number of deaths that year, the population and the
 ##### a) Please plot the US Mortality Rate series (mortality per 100,000).
 
 ::: {.callout-note title="Answer" icon="false"}
-```{r}
+```{r, warning=FALSE}
 ggplot(mortality, aes(x = year, y = `mort_rate_per_100,000`)) +
   geom_line(color = "forestgreen", size = 1) +
   labs(
-    title = "U.S. Mortality Rate per 100,000 Population (1968-2021)",
+    title = "U.S. Mortality Rate per 100,000 (1968-2021)",
     x = "Year",
     y = "Mortality Rate per 100,000",
   ) +
@@ -109,7 +109,7 @@ fitted_values <- fitted(mortality_model)
 # Add the fitted values to the plot and include a legend
 ggplot() +
   geom_line(data = mortality, aes(x = year, y = `mort_rate_per_100,000`, color = "Original Data"), size = 1.5) +
-  geom_line(data = fitted_values, aes(x = year, y = .fitted, color = "Fitted (Minimized SS1PE)"), size = 1, linetype = "dashed") +
+  geom_line(data = fitted_values, aes(x = year, y = .fitted, color = "Fitted (Minimized SS1PE)"), size = 1) +
   labs(
     title = "U.S. Mortality Rate per 100,000 Population (1968-2021)",
     x = "Year",
@@ -117,8 +117,7 @@ ggplot() +
     caption = "Fitted Exponential Smoothing Model Added (Minimized SS1PE)"
   ) +
   theme_minimal(base_size = 15) +
-  scale_color_manual(name = "Legend", values = c("Original Data" = "blue", "Fitted (Minimized SS1PE)" = "red")) +
-  guides(color = guide_legend(override.aes = list(linetype = c("solid", "dashed"))))
+  scale_color_manual(name = "Legend", values = c("Original Data" = "blue", "Fitted (Minimized SS1PE)" = "red")) 
 
 ```
 :::
@@ -141,7 +140,7 @@ fitted_values_alpha_0.2 <- fitted(mortality_model_alpha_0.2)
 # Add the fitted values to the plot and include a legend
 ggplot() +
   geom_line(data = mortality, aes(x = year, y = `mort_rate_per_100,000`, color = "Original Data"), size = 1.5) +
-  geom_line(data = fitted_values_alpha_0.2, aes(x = year, y = .fitted, color = "Fitted (Alpha = 0.2)"), size = 1, linetype = "dotted") +
+  geom_line(data = fitted_values_alpha_0.2, aes(x = year, y = .fitted, color = "Fitted (Alpha = 0.2)"), size = 1) +
   labs(
     title = "U.S. Mortality Rate per 100,000 Population (1968-2021)",
     x = "Year",
@@ -149,8 +148,7 @@ ggplot() +
     caption = "Fitted Exponential Smoothing Model Added (Alpha = 0.2)"
   ) +
   theme_minimal(base_size = 15) +
-  scale_color_manual(name = "Legend", values = c("Original Data" = "blue", "Fitted (Alpha = 0.2)" = "forestgreen")) +
-  guides(color = guide_legend(override.aes = list(linetype = c("solid", "dotted"))))
+  scale_color_manual(name = "Legend", values = c("Original Data" = "blue", "Fitted (Alpha = 0.2)" = "forestgreen"))
 
 ```
 :::
@@ -179,7 +177,7 @@ ggplot() +
   geom_line(data = mortality, aes(x = year, y = `mort_rate_per_100,000`, color = "Original Data"), size = 1) +
   
   # Add the fitted values from the exponential smoothing model in red with customized dash pattern
-  geom_line(aes(x = fitted_values_alpha_1_n$year, y = fitted_values_alpha_1_n$.fitted, color = "Fitted with Alpha = 1/n"), size = 1, linetype = "dotted") +
+  geom_line(aes(x = fitted_values_alpha_1_n$year, y = fitted_values_alpha_1_n$.fitted, color = "Fitted with Alpha = 1/n"), size = 1) +
   
   # Labels and title
   labs(
@@ -204,8 +202,7 @@ ggplot() +
     legend.spacing.x = unit(0.2, 'cm')
   ) +
   # Add the legend
-  scale_color_manual(name = "Legend", values = c("Original Data" = "blue", "Fitted with Alpha = 1/n" = "red")) +
-  guides(color = guide_legend(override.aes = list(linetype = c("solid", "dotted"))))
+  scale_color_manual(name = "Legend", values = c("Original Data" = "blue", "Fitted with Alpha = 1/n" = "red")) 
 
 
 ```
@@ -214,7 +211,7 @@ ggplot() +
 ##### d) Which of the smoothing parameter values you tried before work best for the series? Justify your answer.
 
 ::: {.callout-note title="Answer" icon="false"}
-<!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
+Each of these different parameters has different strengths and weaknesses. The SSP1E choice of parameter puts its focus on recent observations rather than historical observation. This parameter would be useful for trying to forecast the number of deaths in 2022 due to Covid. The smoothing parameter of 0.2 balances responsiveness and stability when forecasting mortality rates. This value allows the model to capture recent changes without overreacting to random fluctuations, providing a smoother, more reliable forecast. The smoothing parameter of 1/n places the most emphasis on historical data, which allows longer term trends to be visible. Remember, choosing the optimal smoothing parameter often involves considering the specific characteristics of the data, the purpose of the analysis and potential external influences.
 :::
 
 ### Question 5 - US Mortality Rate: Excess Mortality (30 points)
@@ -260,13 +257,13 @@ Excess mortality refers to the number of deaths beyond what is typically expecte
 ##### c) Which excess mortality rate estimate do you think is correct? Some commentators would suggest you are choosing the parameters to defend your political goals, not to conduct a scientific analysis. Please comment on the difficulty of choosing parameter values to estimate the death toll of Covid-19.
 
 ::: {.callout-note title="Answer" icon="false"}
-<!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
+Based off the data and the alpha of 0.2 there is a good balance between the previous data having an effect where the expected value is prevalent, without having too much of an impact. Selecting parameter values in time series analysis, such as the smoothing parameter α in exponential smoothing, is challenging due to the need to balance modeling assumptions, data characteristics, and methodological choices. Different assumptions such as what weight to place on historical data can very much vary by opinion and knowledge of the series. It is very important to understand the big picture of the situation. Furthermore, for this reason it is important to be transparent with the parameters chosen and how one arrived to choose them in order to gain credibility that the purposes are meant to conduct a scientific analysis. The alpha of 0.2 could be considered to be more correct as it looks mostly to what we have seen historically while still taking into account more recent changes in mortality rates. This shows that there is a large discrepancy between what we were expecting based on past years and that Covid did have a large effect on mortality rates.
 :::
 
 ### Rubric
 
 |                                                               |                                                                                                                                                                                                                                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-|-----------------|-------------------|------------------------------------|
+|---------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Criteria**                                                  | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                    | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | **Question 1: Context and Measurement**                       | The student thoroughly researches the data collection process, unit of analysis, and meaning of each observation for both the requested time series. Clear and comprehensive explanations are provided.                                                                                                                                                                             | The student does not adequately research or provide information on the data collection process, unit of analysis, and meaning of each observation for the specified series.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 |                                                               | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                     | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
