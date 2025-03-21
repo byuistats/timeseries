@@ -1,0 +1,123 @@
+---
+title: "Time Series Homework: new data"
+subtitle: "Please_put_your_name_here"
+format: 
+  html:
+    page-layout: full
+    embed-resources: true
+    toc: true
+    fig-width: 15
+    fig-height: 7
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Loading R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, 
+               tsibble, fable,
+               feasts, tsibbledata,
+               fable.prophet,
+               patchwork,
+               lubridate, 
+               rio,
+               ggplot2,
+               kableExtra
+               )
+```
+
+```{r}
+SouthernSeaIce <- read_csv("../../data/SouthernSeaIce.csv")
+#https://nsidc.org/sites/default/files/g02135-v003-userguide_1_1.pdf
+#https://masie_web.apps.nsidc.org/pub/DATASETS/NOAA/G02135/
+#https://nsidc.org/about/data-use-and-copyright
+```
+
+```{r}
+df <- read_csv("C:/RData/testData - Sheet4.csv") %>% 
+  mutate(yearmonth = yearmonth(Date))
+
+df2 <- read_csv("C:/RData/POPTHM.csv") %>% 
+  mutate(yearmonth = yearmonth(observation_date))
+
+df2 <- df %>% left_join(df2, by="yearmonth") %>%
+  mutate(`Deaths per 100000` = (Deaths/POPTHM)*100000) %>%
+  select(-c(observation_date))
+         
+ggplot(df2, aes(x=yearmonth, y=`Deaths per 100000`, color=`ICD Sub-Chapter`))+
+  geom_line() +
+  theme(legend.position = "none")+
+  facet_wrap(~`ICD Sub-Chapter`, scales= "free")
+```
+
+```{r}
+
+sickness <- df %>% 
+  as_tsibble(index=yearmonth, key = `ICD Sub-Chapter`)
+
+SouthernSeaIce_ts <- SouthernSeaIce %>%
+  mutate(yearmonth = yearmonth(make_date(year, mo))) %>%
+  as_tsibble(index = yearmonth)
+
+```
+
+
+```{r}
+# scan_gaps(df_processed)
+# 
+
+df_processed <- df2 %>%
+  mutate(
+    Year = as.factor(Year),
+    `ICD Sub-Chapter` = factor(`ICD Sub-Chapter`),
+    Month = factor(Month, levels=c("Jan", "Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))
+  ) %>%
+  as_tsibble(key = `ICD Sub-Chapter`,index=yearmonth) 
+sickness_hw <- df_processed|>
+  model(Additive = ETS(`Deaths per 100000` ~
+        trend("A", alpha = 0.1, beta = 0.005) +
+        error("A") +
+        season("A", gamma = 0.01),
+        opt_crit = "amse", nmse = 1))
+# 
+# 
+# # 1. Get the components tsibble
+component_tsibble <- components(sickness_hw)
+# 
+# 2. Pivot the components to long format
+component_long <- component_tsibble %>%
+  dplyr::select(-c(".model")) %>%
+  pivot_longer(
+    cols = -c(yearmonth, `ICD Sub-Chapter`), # Columns to pivot (exclude Date and ICD Sub-Chapter)
+    names_to = "Component",        # Name for the new column containing component names
+    values_to = "Value"           # Name for the new column containing component values
+  ) %>%
+  mutate(
+    Component = factor(Component, levels=c("Deaths per 100000", "level", "slope","season","remainder"))
+  )
+
+for(code in unique(component_long$`ICD Sub-Chapter`)){
+  data <- filter(component_long, `ICD Sub-Chapter` == code)
+  p <- ggplot(data, aes(x = yearmonth, y = Value, color = Component)) +
+  geom_line() +
+  facet_wrap(~Component, scales = "free_y", ncol=1) + # Facet by Component, stack vertically
+  labs(
+    title = code,
+    y = "Component Value"
+  ) +
+  theme_minimal()+
+  theme(legend.position = "bottom")
+  print(p)
+}
+# 3. Autoplot the long format data and facet by Component
+
+autoplot(SouthernSeaIce_ts, .vars = area)
+
+SouthernSeaIce_hw <- SouthernSeaIce_ts|>
+  model(Additive = ETS(area ~
+        trend("A", alpha = 0.01, beta = 0.0000002) +
+        error("A") +
+        season("A", gamma = 0.0001),
+        opt_crit = "amse", nmse = 1))
+autoplot(components(SouthernSeaIce_hw))
+```
