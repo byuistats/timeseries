@@ -305,3 +305,25 @@ usd1_exchange_updated |>
     plot.subtitle = element_text(hjust = 0.5)
   )
 
+# Delete these commands..........
+# Used to make a poster, but they are meaningless
+# usd1_exchange_updated |>
+#   group_by(currency) %>%
+#   mutate(max = mean(rate)) %>%
+#   mutate(rate = rate / mean(rate)) %>%
+#   ggplot(aes(x = date, y = rate, color = currency)) +
+#   geom_line() +
+#   ylim(0, 3) +
+#   labs(
+#     x = "Date",
+#     y = "Exchange Rate",
+#     title = "USD Exchange Rates",
+#     # subtitle = "Multiple currency pairs shown"
+#   ) +
+#   theme_minimal() +
+#   theme(
+#     plot.title = element_text(hjust = 0.5),
+#     plot.subtitle = element_text(hjust = 0.5),
+#     panel.grid.major = element_blank(),
+#     panel.grid.minor = element_blank()
+#   )
