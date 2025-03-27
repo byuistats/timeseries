@@ -34,10 +34,10 @@ SouthernSeaIce <- read_csv("../../data/SouthernSeaIce.csv")
 ```
 
 ```{r}
-df <- read_csv("C:/RData/testData - Sheet4.csv") %>% 
+df <- read_csv("../../data/ILLNESS_CDCWONDER.csv") %>% 
   mutate(yearmonth = yearmonth(Date))
 
-df2 <- read_csv("C:/RData/POPTHM.csv") %>% 
+df2 <- read_csv("../../data/POPTHM.csv") %>% 
   mutate(yearmonth = yearmonth(observation_date))
 
 df2 <- df %>% left_join(df2, by="yearmonth") %>%
@@ -121,3 +121,25 @@ SouthernSeaIce_hw <- SouthernSeaIce_ts|>
         opt_crit = "amse", nmse = 1))
 autoplot(components(SouthernSeaIce_hw))
 ```
+
+
+```{r}
+malnutrition <- df_processed|> filter(`ICD Sub-Chapter` == "Malnutrition")
+
+malnutrition_A_hw <- malnutrition|>
+  model(Additive = ETS(`Deaths per 100000` ~
+        trend("A", alpha = 0.1, beta = 0.005) +
+        error("A") +
+        season("A", gamma = 0.01),
+        opt_crit = "amse", nmse = 1))
+autoplot(components(malnutrition_A_hw))
+
+malnutrition_M_hw <- malnutrition|>
+  model(Mult = ETS(`Deaths per 100000` ~
+        trend("M", alpha = 0.1, beta = 0.005) +
+        error("M") +
+        season("M", gamma = 0.01),
+        opt_crit = "amse", nmse = 1))
+autoplot(components(malnutrition_M_hw))
+```
+
