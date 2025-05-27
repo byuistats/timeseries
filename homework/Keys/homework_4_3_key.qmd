@@ -1,0 +1,224 @@
+---
+title: "Time Series Homework: Chapter 4 Lesson 3"
+subtitle: "Please_put_your_name_here"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Loading R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, 
+               tsibble, fable,
+               feasts, tsibbledata,
+               fable.prophet,
+               patchwork,
+               lubridate, 
+               rio,
+               ggplot2,
+               kableExtra
+               )
+```
+
+## Data
+
+```{r, message=FALSE}
+
+ind_prod <- rio::import("https://byuistats.github.io/timeseries/data/ind_prod_us.csv")
+```
+
+## Questions
+
+### Question 1 - AR(1) with non-zero mean (10 points)
+
+An AR(1) process with a non-zero mean $\mu$ can be expressed by either:
+
+$$x_t-\mu=\alpha_1(x_{t-1}-\mu)+w_t \hspace{5mm}\mbox{or}\hspace{5mm}x_t=\alpha_0+\alpha_1x_{t-1}+w_t$$
+
+#### a) Define a similar relationship for an AR(2) process with mean $\mu$
+
+::: {.callout-note title="Answer" icon="false"}
+$$
+x_t - \mu = \alpha_1(x_{t-1} - \mu) + \alpha_2(x_{t-2} - \mu) + w_t
+$$
+:::
+
+### Question 2 - Stationarity (25 points)
+
+#### a) Show that the series {$x_t$} given by $x_t=\frac{3}{2}x_{t-1}-\frac{1}{2}x_{t-2}+w_t$ is non-stationary. Please use the characteristic equation method.
+
+::: {.callout-note title="Answer" icon="false"}
+$$
+1 - \frac{3}{2}B + \frac{1}{2}B^2 = 0 
+$$
+
+We then calculate the value of $B$ using the polyroot function.
+
+```{r}
+polyroot(c(1, -3/2, .5)) |> abs() |> round(3)
+```
+
+This shows that $B$ is equal to 1 and 2. Because the absolute value of at least one of the coefficients is less than or equal to 1, it is non stationary.
+:::
+
+#### b) Please simulate the series {$x_t$} using 1000 realizations and calculate the first difference {$y_t$}, where $y_t=\nabla x_t$.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r, warning=FALSE}
+set.seed(123)
+n_rep <- 1000
+alpha0 <- 0
+alpha1 <- 1.5
+alpha2 <- -0.5
+sigma_sqr <- 9
+
+dat_ts <- tibble(w = rnorm(n = n_rep, sd = sqrt(sigma_sqr))) |>
+    mutate(
+      index = 1:n(),
+      x = 0
+    ) |>
+  mutate(y = w - lag(w)) |>
+    tsibble::as_tsibble(index = index)
+
+# Simulate x values
+dat_ts$x[1] <- alpha0 + dat_ts$w[1]
+dat_ts$x[2] <- alpha0 + alpha1 * ( dat_ts$x[1] - alpha0 ) + dat_ts$w[2]
+for (i in 3:nrow(dat_ts)) {
+  dat_ts$x[i] <- alpha0 + 
+    alpha1 * ( dat_ts$x[i-1] - alpha0 ) + 
+    alpha2 * ( dat_ts$x[i-2] - alpha0 ) + 
+    dat_ts$w[i]
+}
+
+dat_ts |> 
+  autoplot(.vars = x) +
+    labs(
+      x = "Time",
+      y = "Simulated Time Series",
+      title = paste("Simulated Values from an AR(2) Process with Mean", alpha0)
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+dat_ts |> 
+  autoplot(.vars = y) +
+    labs(
+      x = "Time",
+      y = "Simulated Time Series",
+      title = paste("Simulated Values from the first difference of an AR(2) Process with Mean", alpha0)
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+:::
+
+#### c) Prove that $y_t$ is stationary, use the characteristic equation method.
+
+::: {.callout-note title="Answer" icon="false"}
+$$
+1 - (\frac{3}{2} - 1)B + \frac{1}{2}B^2 = 0 
+$$
+
+$$
+1 - \frac{1}{2}B + \frac{1}{2}B^2 = 0 
+$$
+
+We then calculate the value of $B$ using the polyroot function.
+
+```{r}
+polyroot(c(1, -1/2, .5)) |> abs() |> round(3)
+```
+
+This shows that $B$ is equal to 1.414. Because the absolute value of all of the coefficients is greater than 1, it is stationary.
+:::
+
+### Question 3 - Partial Correlogram (40 points)
+
+#### a) Please use the Holt-Winters method to decompose the US Industrial Production Index. Please justify your choice of parameters. Use the context and your understanding of the series as part of your answers.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r, warning = FALSE}
+
+ind_prod$date <- as.Date(ind_prod$date)
+
+# Create a time series object
+ind_prod_tsibble <- ts(ind_prod$ind_prod_indx, start = c(1919, 1), frequency = 12) 
+
+ind_prod_tsibble <- ind_prod_tsibble %>% as_tsibble(index=date)
+
+
+ipi_hw <- ind_prod_tsibble |>
+  model(Additive = ETS(value ~
+        trend("M", alpha=0.95, beta=0.001) +    
+        error("M") +   
+        season("M", gamma=0.05),    
+        opt_crit = "amse", nmse = 1))  
+
+autoplot(components(ipi_hw))
+
+report(ipi_hw)
+
+```
+
+The values chosen were $\alpha$ at a value of 0.95, $\beta$ at a value of 0.001, $\gamma$ at a value of 0.05. A multiplicative model was chosen The high value for $\alpha$ was selected as there could be large fluctuations and economic shocks that could affect the series. By setting $\alpha$ at a higher value we place greater emphasis on more recent values to affect the level. $\beta$ and $\gamma$ are set to lower values, as the long term trend is consistent as is the seasonality. Any changes that may occur would be gradual and so the smaller values are set to reflect that.
+:::
+
+#### b) Plot the remainder (random) component of the decomposed series.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+random <- ipi_hw |>
+  residuals() |>
+  as_tibble() 
+
+```
+:::
+
+```{r}
+ggplot(random, aes(x = index, y = .resid))+
+  geom_line() +
+  labs(x= "Date",
+       y = "Residual",
+       title = "Plot of the Random Component of the Decomposed Series")
+```
+
+#### c) Plot a partial correlogram of the random component of the the US Industrial Production Index. What kind of autoregressive process would you pick to model the random component?
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+
+pacf(random$.resid)
+
+```
+
+The partial correlogram of the remainder component indicates significant autocorrelation at lag 1 and lag 2, suggesting an AR(2) process is appropriate. The first lag shows a positive relationship, meaning the current value is influenced by the immediate past, while the second lag shows a weaker, negative relationship, introducing a slight oscillatory effect. Beyond lag 2, there are no practically significant autocorrelations, confirming that higher-order terms are unnecessary. The AR(2) model efficiently captures the short-term dependencies in the random component without overfitting, as well after determining the residual component of the AR(2) model, it demonstrates a white noise process and that the model effectively captures the small fluctuations in the data well.
+
+<!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
+:::
+
+### Rubric
+
+|                                           |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+|------------------------|------------------------|------------------------|
+| **Criteria**                              | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **Question 1a: AR(2) with non-zero mean** | Students show the mathematical relationship between the parameters of the two expressions for the AR(2) case. They demonstrate this by using algebraic steps to connect the parameters in a clear and logical manner, showing a solid understanding of the mathematical equivalence between the two representations.                                                                                                                                                                                                                                                                                   | Students show the mathematical relationship between the parameters of the two expressions. They demonstrate this by using algebraic steps to connect the parameters in a clear and logical manner, showing a solid understanding of the mathematical equivalence between the two representations.                                                                                                                                                                                                                                    |
+|                                           | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **Question 2a: Non-stationarity**         | Responses show that the series is non-stationary using the characteristic equation method. They derive the characteristic equation, find the roots with polyroot(), and identify if any roots lie outside the unit circle using the absolute value if necessary. Submissions provide clear steps, including deriving the characteristic equation, using polyroot, and interpreting the results to conclude non-stationarity.                                                                                                                                                                           | Submissions make errors in computing the characteristic equation or incorrectly interpret the roots. Responses lack clarity in their mathematical steps or misunderstand the concept of stationarity.                                                                                                                                                                                                                                                                                                                                |
+|                                           | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **Question 2b: Simulation**               | Respones simulate the series {\$x_t\$} and {\$y_t\$}. Students provide clear and well-commented code that is easy to follow and execute the first-difference calculation process accurately.                                                                                                                                                                                                                                                                                                                                                                                                           | Sturents' code may lack clarity or sufficient comments, making it difficult to follow. They might make errors in the simulation process or fail to provide clear explanations for each step                                                                                                                                                                                                                                                                                                                                          |
+|                                           | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **Question 2c: Stationarity**             | Responses show that the series is non-stationary using the characteristic equation method. They derive the characteristic equation, find the roots with polyroot(), and identify if any roots lie outside the unit circle using the absolute value if necessary. Submissions provide clear steps, including deriving the characteristic equation, using polyroot, and interpreting the results to conclude non-stationarity.                                                                                                                                                                           | Submissions may lack coherence or precision in articulating how the absence of correlations at higher lags indicates stationarity in {\$y_t\$}. Additionally, they may overlook the importance of discussing the statistical significance of autocorrelations or fail to provide sufficient evidence from the correlogram to support their explanation.                                                                                                                                                                              |
+|                                           | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **Question 3a: Decomposition**            | Responses apply the Holt-Winters method to decompose the US Industrial Production Index, providing a report of the parameters chosen and justifying their choice. They provide a clear explanation for selecting values for the smoothing parameters (alpha, beta, and gamma) based on their understanding of the series and its characteristics. Proficient submissions show a solid grasp of the method and how the chosen parameters correspond to the trend, seasonality, and noise in the data. They consider contextual factors such as historical behavior to inform their parameter selection. | Students attempt to use the Holt-Winters method but lack clarity in justifying their parameter choices. They may struggle to explain why specific values were selected or fail to relate them to the Industrial Production Index. Below expectations submissions may lack coherence in explaining how the chosen parameters align with the data's components and may overlook contextual factors. Overall, their analysis may lack clarity, suggesting a need for improvement in understanding time series decomposition techniques. |
+|                                           | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **Question 3b: Plot**                     | Responses plot the remainder (random) component of the decomposed series. They provide a well-labeled and clear plot that effectively visualizes the random component.                                                                                                                                                                                                                                                                                                                                                                                                                                 | Plot that lacks clarity, with insufficient labeling or unclear visualization of the random component.                                                                                                                                                                                                                                                                                                                                                                                                                                |
+|                                           | **Mastery (20)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| **Question 3c: Partial Correlogram**      | Responses plot a partial correlogram of the remainder component and provide a clear interpretation regarding the choice of autoregressive process. They articulate how the significant coefficients in the partial correlogram indicate the lag values of the autoregressive process. Submissions effectively identify the practically significant autocorrelations in the partial correlogram and relate them to the characteristics of potential autoregressive processes, providing a coherent explanation for their choice.                                                                        | Student struggles to accurately plot the partial correlogram of the remainder component or provide a clear interpretation regarding the choice of autoregressive process. They may produce a plot that lacks clarity or fail to effectively communicate the autocorrelation patterns. Submissions overlook important details or fail to provide a coherent explanation for their choice of autoregressive process based on the partial correlogram.                                                                                  |
+| **Total Points**                          | **75**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
