@@ -22,7 +22,7 @@ pacman::p_load(nlme,tsibble, fable,feasts, tsibbledata,
 
 ## Data
 
-```{r, message=FALSE}
+```{r, message=FALSE, warning=FALSE}
 
 ## Selected Walmart Stock Price
 
@@ -59,12 +59,13 @@ plot_ly(stock_ts, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') %>%
 
 ## Women's Clothing Retail Sales
 
-retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
+retail_ts <- rio::import("https://raw.githubusercontent.com/TBrost/BYUI-Timeseries-Drafts/refs/heads/master/data/retail_by_business_type.csv") |>
   filter(naics == 44812) |>
-  filter(month >= yearmonth(my("Jan 2004")) & month <= yearmonth(my("Dec 2006"))) |>
   mutate(month_seq = 1:n()) |>
-  mutate(year = year(month)) |>
+  mutate(month = ym(month),
+         year = year(month)) |>
   mutate(month_num = month(month)) |>
+  filter(month >= ym("2004 Jan") & month <= ym("2006 Dec"))|>
   as_tsibble(index = month)
 
 

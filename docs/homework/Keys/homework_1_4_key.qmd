@@ -1,0 +1,437 @@
+---
+title: "Time Series Homework: Chapter 1 Lesson 2"
+subtitle: "Please_put_your_name_here"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+editor: source
+---
+
+```{r}
+#| message: false
+#| echo: false
+
+# Loading R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(tidyverse, 
+               tsibble, fable,
+               feasts, tsibbledata,
+               fable.prophet,
+               patchwork,
+               lubridate, 
+               rio 
+)
+```
+
+## Data
+
+```{r}
+# Weather data for Rexburg
+rex_temp <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv")
+```
+
+## Questions
+
+### Question 1: Context and Measurement (10 points)
+
+The first step of any time series analysis is gathering context. You cannot properly analyze data without knowing what the data is measuring. Without context, the most simple features of data can be obscure and inscrutable. This homework assignment will center around the series below.
+
+Please research the time series. In the spaces below, give the data collection process, unit of analysis, and meaning of each observation for the series.
+
+#### a) Rexburg, ID Daily High Temperatures
+
+::: {.callout-note title="Answer" icon="false"}
+**Data Collection:** The Madison County Rexburg Airport has a weather station that consistently reports reliable data of various metrics. In the case of missing or erroneous measurements from the station, data from nearby stations adjust records according to typical seasonal and intra-station differences. The National Weather Service (NWS) records daily high and low temperatures every six hours, at 0050, 0650, 1250, and 1850 UTC. The daily high is the highest reliable temperature reported between local midnight to midnight.
+
+**Unit of Analysis:** The daily temperature is recorded in degrees fairenheit from 1999 to 2023.
+
+**Meaning of an Observation:** The highest temperature recorded in a single day between local midnight to midnight.
+:::
+
+### Question 2: Visualization (5 points)
+
+Please plot the Rexburg Daily Temperature series choosing the range and frequency to illustrate the data in the most readable format. Use the appropriate axis labels, units, and captions.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+library(ggplot2)
+# Filter data for the last 5 years (2018-2023) or some reasonable period to properly view seasonality
+filtered_data <- subset(rex_temp, dates >= as.Date("2018-01-01")) # Base R
+
+
+# filtered_data <- filter(rex_temp, dates >= as.Date("2018-01-01")) # Tidyverse 
+
+ggplot(filtered_data, aes(x = dates, y = rexburg_airport_high)) +
+  geom_line(color = "blue") +
+  labs(title = "Rexburg Daily High Temperatures (2018 - 2023)", 
+       x = "Date", 
+       y = "Temperature (°F)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_x_date(date_breaks = "3 months", date_labels = "%b %Y") +  # Show month and year
+  theme(plot.caption = element_text(hjust = 0.5, size = 10)) +
+  labs(caption = "This plot shows the daily high temperatures in Rexburg from 2018 to 2023, capturing the seasonal fluctuations clearly.\nWinter months typically show lower temperatures, while summer months show peaks around 80-90°F.") +
+  theme(plot.caption = element_text(size = 8, hjust = 0.5))
+```
+
+*Plot caption could also just be text like this*
+
+:::
+
+### Question 3: Additive Decomposition - Manual Approach (25 points)
+
+This exercise will guide you through all the steps to conduct an **additive decomposition** of the Rexburg Daily Temperature Series. The first step is to aggregate the daily series to a monthly frequency to ease on the calculation. The code below accomplished the task.
+
+#### a) Please use AI to comment and explain the steps of the code below. Replace the code below with the fully explained code.
+
+```{r}
+# Weather data for Rexburg
+monthly_tsibble <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") |> 
+  mutate(date2 = ymd(dates)) |>
+  mutate(year_month = yearmonth(date2)) |>
+  as_tibble() |>
+  group_by(year_month) |>
+  summarize(average_daily_high_temp = mean(rexburg_airport_high)) |>
+  ungroup() |> 
+  as_tsibble(index = year_month)
+
+view(monthly_tsibble) 
+```
+
+##### Commented
+
+```{r}
+# Step 1: Import the CSV file containing Rexburg weather data using rio::import
+# 'rio' is a versatile library for data import/export; the URL directly imports the CSV file.
+monthly_tsibble <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") |>
+  
+  # Step 2: Use mutate to create a new column 'date2', which is a properly formatted date object.
+  # 'ymd' is a lubridate function that converts a string to a Date object in Year-Month-Day format.
+  mutate(date2 = ymd(dates)) |>
+  
+  # Step 3: Create another column 'year_month' using mutate, which extracts the year and month
+  # from the 'date2' column, and turns it into a year-month object (used for time series analysis).
+  # 'yearmonth' is a lubridate function that creates a year-month representation of the date.
+  mutate(year_month = yearmonth(date2)) |>
+  
+  # Step 4: Group the data by 'year_month'. Grouping is necessary because we want to calculate
+  # the average daily high temperature for each year-month period.
+  group_by(year_month) |>
+  
+  # Step 5: Summarize the data by calculating the average daily high temperature for each month.
+  # The mean function is applied to the 'average_daily_high_temp' column to compute the monthly average.
+  summarize(average_daily_high_temp = mean(rexburg_airport_high)) |>
+  
+  # Step 6: Ungroup the data after summarization.
+  # Ungrouping is done to remove the group structure from the data, which is no longer needed.
+  ungroup() |>
+  
+  # Step 7: Convert the resulting data frame into a tsibble (time series tibble).
+  # A tsibble is a special type of tibble used in time series analysis.
+  # The 'year_month' column is set as the time index for this tsibble.
+  as_tsibble(index = year_month)
+
+# Step 8: View the resulting tsibble to inspect the data.
+# 'view' is used to open the tsibble in a viewer for easy exploration.
+view(monthly_tsibble)
+
+```
+
+#### b) Please calculate the centered moving average of the Rexburg Monthly Temperature Series. Plot the series.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+#| warning: false
+# Please provide your code here
+monthly_tsibble <- monthly_tsibble |> 
+  mutate(
+    m_hat = (
+          (1/2) * lag(average_daily_high_temp, 6)
+          + lag(average_daily_high_temp, 5)
+          + lag(average_daily_high_temp, 4)
+          + lag(average_daily_high_temp, 3)
+          + lag(average_daily_high_temp, 2)
+          + lag(average_daily_high_temp, 1)
+          + average_daily_high_temp
+          + lead(average_daily_high_temp, 1)
+          + lead(average_daily_high_temp, 2)
+          + lead(average_daily_high_temp, 3)
+          + lead(average_daily_high_temp, 4)
+          + lead(average_daily_high_temp, 5)
+          + (1/2) * lead(average_daily_high_temp, 6)
+        ) / 12
+  )
+
+ggplot(monthly_tsibble %>% filter(year_month >= as.Date("2010-01-01") & year_month <= as.Date("2018-01-01"))) +
+  geom_line(aes(x = year_month, y = average_daily_high_temp, color = "Avg. Monthly High")) +
+  geom_line(aes(x = year_month, y = m_hat, color = "Centered \nMoving Avg.")) +
+      labs(
+  x = "Month",
+  y = "Daily High",
+  title = "Avg. Monthly High Temps (Fahrenheit) in Rexburg",
+  color = "Series"
+) +
+#coord_cartesian(ylim = c(0,4500)) +
+theme(plot.title = element_text(hjust = 0.5),
+      legend.position = "bottom")+
+  scale_color_manual(values = c("black", "blue"))
+
+```
+:::
+
+#### c) Please calculate the seasonally adjusted series. Plot the series
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+library(pander)
+# Step 1: Calculate the initial seasonal effect (s_hat)
+# The seasonal component estimate (s_hat) is calculated by subtracting the trend (manual_moving_average)
+# from the observed temperature values (average_daily_high_temp). This isolates the seasonal pattern.
+adjusted_data <- monthly_tsibble %>% 
+  mutate(s_hat = average_daily_high_temp - m_hat)  # Compute the seasonal estimate (s_hat)
+
+# Step 2: Extract the year and month
+# 'mutate()' is used to extract the year and month from the 'year_month' column.
+# The 'year()' function extracts the year, and 'month()' extracts the month as an abbreviated format (e.g., Jan, Feb).
+adjusted_data <- adjusted_data %>%
+  mutate(
+    year = year(year_month),   # Extract the year from 'year_month'
+    month = month(year_month, label = TRUE, abbr = TRUE)  # Extract the month as a labeled, abbreviated name (Jan, Feb, etc.)
+  )
+
+# Step 3: Calculate the monthly mean of the seasonal component (s_hat_bar)
+# Group the data by 'month' to compute the mean of the seasonal component (s_hat_bar) for each month.
+# 'na.rm = TRUE' ensures missing values (NA) are ignored during calculation.
+adjusted_data <- adjusted_data %>% 
+  group_by(month) %>%  
+  mutate(s_hat_bar = mean(s_hat, na.rm = TRUE))  # Calculate the mean seasonal effect for each month
+
+# Step 4: Calculate the overall mean of the monthly seasonal means
+# Now calculate the overall mean of these monthly seasonal means (s_hat_bar).
+# 'unique()' is used to ensure only one value per month is considered when calculating the overall mean.
+mean_s_hat_bar <- mean(unique(adjusted_data$s_hat_bar), na.rm = TRUE)  # Compute the overall mean across all months
+
+# Step 5: Adjust the seasonal component
+# Adjust the seasonal means by subtracting the overall mean (mean_s_hat_bar) from the monthly seasonal means (s_hat_bar).
+# This ensures the seasonal component is centered around zero (i.e., its total sum over all months is zero).
+adjusted_data <- adjusted_data %>%
+  mutate(s_adjusted_means = s_hat_bar - mean_s_hat_bar)  # Adjust seasonal effects to be centered around zero
+
+# Step 6: Create a summary of the seasonal adjusted means
+# 'as_tibble()' converts the tsibble to a tibble for easier viewing.
+# 'select()' is used to keep only relevant columns: 'month', 's_hat_bar', and 's_adjusted_means'.
+seasonal_adjusted_means = adjusted_data %>% 
+  as_tibble() %>% 
+  select(month, s_hat_bar, s_adjusted_means) %>%  # Select the relevant columns for the summary
+  head(12)  # Display the first 12 rows (corresponding to each month)
+
+# Step 7: Display the results
+pander(seasonal_adjusted_means)  # View the adjusted seasonal means summary
+
+```
+
+```{r}
+
+############## CHANGE TO SEASONAL SERIES NOT THE SEASONAL PIECE ALONE ############
+
+
+#| warning: false
+ggplot(adjusted_data %>% filter(year_month > as.Date("2018-01-01")), aes(x = year_month, y = s_adjusted_means)) +
+  geom_line(color = "steelblue", size = 1) +  # Use a nice color and thicker line for visibility
+  labs(
+    title = "Seasonal Temperature Series for Rexburg",  # Descriptive title
+    subtitle = "Seasonal Effects Extracted to Reveal Underlying seasonality",  # Subtitle
+    x = "Date", 
+    y = "Seasonally Adjusted Means (°F)",  # Updated y-axis label
+    caption = "Data: Rexburg weather, adjusted for seasonality"  # Improved caption
+  )
+
+```
+
+
+:::
+
+#### d) Please calculate the random component. Please plot the series.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+#| warning: false
+random <- adjusted_data %>% 
+  mutate(random_comp = average_daily_high_temp - m_hat - s_adjusted_means)
+
+# Step 2: Plot the random component series
+ggplot(random, aes(x = year_month, y = random_comp)) +
+  geom_line(color = "darkred", size = 0.7) +  # Plot the random component as a red line
+  labs(title = "Random Component of Rexburg Monthly Temperature Series",
+       x = "Date", 
+       y = "Random Component (°F)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+:::
+
+### Question 4: Additive Decomposition - R's Decompose (15)
+
+#### a) Please use additive decomposition model described in the Time Series notebook to decompose the Rexburg Monthly Temperature Series. Plot the algorithm's output.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+#| warning: false
+rex_decomp <- monthly_tsibble |>
+  model(feasts::classical_decomposition(average_daily_high_temp, type = "add")) |>
+  components()
+
+# Plot the decomposition components with appropriate labels
+autoplot(rex_decomp) +
+  labs(
+    title = "Classical Decomposition of Rexburg Monthly Temperatures",
+    subtitle = "Decomposed into Trend, Seasonal, and Random Components",
+    x = "Date",
+    y = "Temperature (°F)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),      # Make the title stand out
+    plot.subtitle = element_text(size = 12),                 # Slightly smaller subtitle
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+:::
+
+#### b) You can also decompose without aggregating the data series. The following code completes the additive decomposition with the original data set. Please use AI to comment and explain how to accomplish the task. Replace the code below with the fully explained code.
+
+```{r}
+#| eval: false
+# Weather data for Rexburg
+daily_tsibble <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") |>
+  mutate(year_month_day = ymd(dates)) |>
+  select(-imputed, -dates) |>
+  # as_tibble() |>
+  as_tsibble(index = year_month_day)
+
+daily_tsibble %>% head
+
+daily_decompose <- daily_tsibble  |>
+  model(feasts::classical_decomposition(rexburg_airport_high ~ season(365.25),
+                                        type = "add"))  |>
+  components()
+
+
+daily_decompose |> autoplot(.vars = random)
+```
+
+##### Commented
+
+```{r}
+# Import weather data for Rexburg from a CSV file hosted online.
+daily_tsibble <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") |>
+  # Convert the 'dates' column to a proper date format using the `ymd()` function.
+  mutate(year_month_day = ymd(dates)) |>
+  # Remove the 'imputed' and original 'dates' columns.  We're using the new date column.
+  select(-imputed, -dates) |>
+  # Convert the data frame to a tsibble object, specifying 'year_month_day' as the time index.
+  # This is crucial for time series analysis functions to work correctly.  A tsibble is a special
+  # data frame for time series analysis.  It enforces a regular time index, which is important for many time series operations.
+  as_tsibble(index = year_month_day)
+
+
+# Display the first few rows of the tsibble to inspect the data.
+daily_tsibble %>% head()
+
+
+# Decompose the time series into its components: trend, seasonality, and remainder.
+daily_decompose <- daily_tsibble  |>
+  # Fit a classical decomposition model to the 'rexburg_airport_high' variable (daily high temperatures).
+  # `classical_decomposition()` function from the `feasts` package is used for this purpose.
+  #   - `season(365.25)` specifies the length of the seasonal period (365.25 days for a year, accounting for leap years).
+  #   - `type = "add"` indicates that an additive decomposition model should be used (Trend + Seasonality + Remainder = Observed).
+  # An additive model is appropriate when the magnitude of the seasonal fluctuations does not change with the level of the series.  If
+  # the seasonal fluctuations change with the level of the series, a multiplicative model would be more appropriate.
+  model(feasts::classical_decomposition(rexburg_airport_high ~ season(365.25), type = "add"))  |>
+  # Extract the decomposed components (trend, seasonality, and remainder) from the model.
+  components()
+
+
+# Plot the 'random' component (remainder) of the decomposition.  The remainder is what's left
+# after the trend and seasonality have been removed.  It should ideally be random noise, centered
+# around zero, with no obvious patterns.  If there are patterns in the remainder, it suggests
+# that the model has not captured all of the structure in the data.
+daily_decompose |> autoplot(.vars = random)
+
+# You could also plot other components:
+# daily_decompose |> autoplot(.vars = trend)    # Plot the trend component.
+# daily_decompose |> autoplot(.vars = season_year) # Plot the seasonal component.
+# daily_decompose |> autoplot()  # Plot all components and the original data.
+
+```
+
+### Question 5: Seasonally Adjusted Series - Analysis (20 points)
+
+#### a) Justify why we use the additive decomposition model to seasonally adjust the Rexburg Daily Temperature series.
+
+::: {.callout-note title="Answer" icon="false"}
+There are various reasons why we use the additive decomposition model to seasonally adjust the rexburg daily temperatures. The first reason being the nature of the data with the season fluctuations being constant over time. In other words, the size of the seasonal effect ie: (the difference between the summer highs and winter lows) does not change as the trend changes. For example, if, on average, summer highs are 90°F and winter lows are 30°F, these differences will remain fairly consistent over time, even if there is a gradual warming trend that pushes both summer and winter temperatures higher. For instance, if the trend increases by 5°F, both summer highs and winter lows increase by roughly 5°F, but the seasonal gap between summer and winter (about 60°F) stays the same.
+
+As in contrast to a multiplicative model, the seasonal fluctuations change in proportion to the trend. As the trend increases or decreases, the magnitude of the seasonal variation also increases or decreases. It is best used when the seasonal effect is multiplied by the trend.
+
+In the Rexburg weather data, the difference between the hottest and coldest days of the year does not grow larger or smaller as overall temperatures change. Because this is constant, the seasonal variance aligns with the assumptions of the additive model where the seasonal effect is independent of the trend and is added to the overall temperature.
+:::
+
+#### b) You calculated the random component of the series using three different procedures. Are the random component series the same? Are there patterns that are similar across all the random component series? Propose an explanation for the commonalities.
+
+::: {.callout-note title="Answer" icon="false"}
+Given the random component being calculated in three different ways, the random component series are not the same. This is because the first & second methods use monthly aggregate (avg) data, while the third method uses daily data. The daily data will capture more short term flucutations of random noise, while the monthly will smooth out these short term effects, which will lead to a different random component.
+
+There are similarities between the three procedures. They all aim to removing the long-term trend and recurring seasonal patterns to show the short-term variability or anomalies in the data. For example, an unusually cold or hot month (or day) will show up in all three random component series as a spike or dip, regardless of the method used. Furthermore, certain periods in the series may show more random fluctuations or weather patterns. Usually, transitions between weather seasons tend to have greater unpredictability in temperature, which would show in all three random component series. Lastly, any outliers in the series will show as sharp deviations across both procedures. The outliers are usually unrelated to long-term trend or seasonal cycles and will appear in the random component.
+
+The commonalities in the random component series can all be explained by the fact that each method is trying to isolate the same underlying cause–the part of the data that can’t be explained by the trend or seasonal patterns. Removing the seasonal and trend components will leave behind the short-term fluctuations like a filter. While all methods are a little different in the way of calculating the random component, they will each capture the same general underlying pattern. In context of the Rexburg temperature data, they will lead to similar patterns in uncovering the random component or otherwise the unpredictable fluctuations in the temperature data.
+:::
+
+<!-- Try not to touch the table markdown below -->
+
+## Rubric
+
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+| **Criteria**                                      | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                            |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+| **Question 1: Context and Measurement**           | The student thoroughly researches the data collection process, unit of analysis, and meaning of each observation for both the requested time series. Clear and comprehensive explanations are provided.                                                                                                                                                                                                                                                                                                      | The student does not adequately research or provide information on the data collection process, unit of analysis, and meaning of each observation for the specified series.                                                                                                                                                                   |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+|                                                   | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                            |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+| **Question 2: Visualization**                     | Chooses a reasonable manual range for the Rexburg Daily Temperature series, providing a readable plot that captures the essential data trends. Creates a plot with accurate and clear axis labels, appropriate units, and a caption that enhances the understanding of the Rexburg Daily Temperature series.                                                                                                                                                                                                 | Attempts manual range selection, but with significant issues impacting the readability of the plot. The chosen range may obscure important data trends, demonstrating a limited understanding of graphical representation.Fails to include, axis labels, units, or captions, leaving the visual representation and interpretation incomplete. |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+|                                                   | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                            |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+| **Question 3a: Monthly Aggregation**              | The code has been updated with comments and clear explanations of what each command and function does. The student shows they understand the intuition behind the procedure.                                                                                                                                                                                                                                                                                                                                 | The code has not been updated or the comments and explanation do not provide enough evidence to prove the student understand the code.                                                                                                                                                                                                        |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+|                                                   | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                            |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+| **Question 3b: Centered Moving Average**          | Correctly calculates the centered moving average. Clearly presents the results with well-labeled axes, titles, and a properly formatted plot. \| Incorrectly calculates the centered moving average or omits it entirely. The plot is either missing or poorly presented, lacking clear labels, titles, or proper formatting, making it difficult to interpret the results. \|                                                                                                                               |                                                                                                                                                                                                                                                                                                                                               |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+|                                                   | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                            |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+| **Question 3c: Seasonally Adjusted Means Series** | Correctly calculates the seasonally adjusted means series using an appropriate method. Produces a clear, accurate plot of the seasonally adjusted time series with well-labeled axes and titles. \| Incorrect calculation or missing/incorrect plot. Plot lacks essential elements like labels, titles, or fails to represent the seasonally adjusted series. \|                                                                                                                                             |                                                                                                                                                                                                                                                                                                                                               |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+|                                                   | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                            |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+| **Question 3d: Random Component Series**          | Correctly calculates the random component of the series by removing the trend and seasonal components. Produces a clear, accurate plot with well-labeled axes, titles, and proper formatting.                                                                                                                                                                                                                                                                                                                | Incorrectly calculates the random component, omits steps (e.g., does not remove trend/seasonality), or the plot is unclear or missing essential elements like labels and titles.                                                                                                                                                              |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+|                                                   | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                            |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+| **Question 4a: Decompose Monthly**                | Correctly applies the additive decomposition model to the Rexburg Monthly Temperature Series. Clearly presents the trend, seasonal, and random components in well-labeled plots, with appropriate titles, axes labels, and formatting.                                                                                                                                                                                                                                                                       | Fails to correctly apply the additive decomposition model, resulting in incorrect or incomplete separation of the trend, seasonal, and random components. The plot is either missing or poorly presented, lacking proper labels, titles, or clear distinction between components.\                                                            |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+|                                                   | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                            |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+| **Question 4b: Decompose Daily**                  | The code has been updated with comments and clear explanations of what each command and function does. The student shows they understand the intuition behind the procedure.                                                                                                                                                                                                                                                                                                                                 | The code has not been updated or the comments and explanation do not provide enough evidence to prove the student understand the code.                                                                                                                                                                                                        |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+|                                                   | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                            |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+| **Question 5a: Modeling Justification**           | Clearly differentiates between the multiplicative and additive model assumptions, and shows how the series best matches the additive model's assumptions.                                                                                                                                                                                                                                                                                                                                                    | It's not clear that the student understands the difference between the additive and multiplicative model or their assumptions.                                                                                                                                                                                                                |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+|                                                   | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                            |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+| **Question 5b: Random Component Analysis**        | Compares the random components derived from three different procedures, accurately stating whether they are the same or different. Identifies and explains any observed similarities or differences. Proposes a logical, well-reasoned explanation for why similar patterns might exist in the random components, using relevant time series concepts (e.g., common noise factors, model assumptions). \| Fails to correctly compare the random components, or provides an unclear or inaccurate comparison. | Fails to provide a clear or accurate explanation for the commonalities, or provides irrelevant reasoning.                                                                                                                                                                                                                                     |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+
+| **Total Points**                                  | **75**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |                                                                                                                                                                                                                                                                                                                                               |         |
++---------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------+

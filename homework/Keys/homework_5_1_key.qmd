@@ -1,0 +1,195 @@
+---
+title: "Time Series Homework: Chapter 5 Lesson 1"
+subtitle: "Please_put_your_name_here"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Loading R packages
+
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(nlme,tsibble, fable,feasts, tsibbledata,
+               fable.prophet, patchwork,lubridate, 
+               rio,ggplot2,kableExtra,tidyquant, 
+               dplyr , plotly,tidymodels, 
+               multilevelmod, broom.mixed
+)
+```
+
+## Data
+
+```{r, message=FALSE, warning=FALSE}
+
+## Women's Clothing Retail Sales
+
+retail_ts <- rio::import("https://raw.githubusercontent.com/TBrost/BYUI-Timeseries-Drafts/refs/heads/master/data/retail_by_business_type.csv") |>
+  filter(naics == 44812) |>
+  mutate(month_seq = 1:n()) |>
+  mutate(month = ym(month),
+         year = year(month)) |>
+  mutate(month_num = month(month)) |>
+  filter(month >= ym("2004 Jan") & month <= ym("2006 Dec"))|>
+  as_tsibble(index = month)
+
+
+```
+
+## Questions
+
+### Question 1 - Key Definitions (10 points)
+
+Answer the prompt to the learning outcome below. Include any mathematical expressions or illustrations that may accompany the definitions and ideas if available.
+
+::: {.callout-note title="Answer" icon="false"}
+-   **Define a linear time series model**
+
+    A model which expresses the current value of a series as a linear combination of its own past values. It can be written in the following form: $x_t = \alpha_0 + \alpha_1u_{1,t}+...+\alpha_mu_{m,t}+z_t$.
+
+-   **Represent seasonal factors in a regression model using indicator variables**
+
+    These are constant terms in the model which indicate whether a month is represented or not. They will equal 1 when $t$ is representing that month and 0 otherwise. For example if it is the month of January the model may look like $x_t = \alpha_1t + \beta_1 + z_t$ and February like so $x_t = \alpha_1t + \beta_2 + z_t$.
+
+-   **State how to remove a polynomial trend of order m**
+
+    We can remove the polynomial trend by taking the $m$ difference.
+:::
+
+
+### Question 2 - Linear model with additive seasonal indicator variables (40 points)
+
+##### a) Use OLS to estimate a linear model with a linear trend, an intercept of 0 and additive seasonal indicator variables of the Women's Clothing Retail Sales data set. Please report the estimates for the monthly seasonal indicator variables in a professionally formatted table. (See an example [HERE](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html#tbl-chocolateParameterEstIndicator))
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+retail_ts <- retail_ts |>
+  mutate(stats_time = year + (month_num-1)/12,
+         month_ = factor(month_num))
+
+
+
+
+dat_lm <- retail_ts|>
+  model(lm = TSLM(sales_millions ~ 0+stats_time + month_))
+
+
+
+tidy(dat_lm) 
+
+```
+:::
+
+##### b) Please interpret all of the estimated coefficients
+
+::: {.callout-note title="Answer" icon="false"}
+The coefficients for the month indicators in a linear model with an intercept of 0 represent the expected number of sales in each month during the baseline time period, which is when the time variable equals zero. However, if the time series does not actually include data for that baseline period (e.g., year zero), these coefficients do not have a meaningful standalone interpretation. To make sense of them, it is more informative to consider how they compare to the average sales during the first observed year by accounting for the time trend. This helps contextualize the monthly differences within a realistic timeframe of the data.
+
+
+:::
+
+##### c) Suppose that instead of estimating a model with an intercept of zero, you omit the month of July and let the model estimate an intercept. What would be the interpretation of the intercept estimate and the other coefficients?
+
+::: {.callout-note title="Answer" icon="false"}
+The interpretation of the intercept would be the same as the coefficient for July above. However the interpretation of the other coefficients would be different and would be the difference between that particular month and July. This can be especially informative as a positive value means there are more sales in that month than July and a negative number would show there are less sales in that month than July.
+:::
+
+##### d) Please make a five year forecast using the model you estimated in Part a. Use 95% confidence bands.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+num_years_to_forecast <- 5
+df <- data.frame(
+  month_ = factor(1:12), 
+  estimate = tidy(dat_lm) |> slice(2:13) |> pull(estimate)  
+  
+)
+num_years_to_forecast <- 5
+num_months_to_forecast <- num_years_to_forecast * 12
+
+
+last_time <- max(retail_ts$stats_time)
+last_month <- retail_ts$month_num[which.max(retail_ts$stats_time)]
+
+
+new_dat <- tibble(
+  stats_time = seq(from = last_time + 1/12, by = 1/12, length.out = num_months_to_forecast),
+  
+    alpha = tidy(dat_lm) |> slice(1) |> pull(estimate),
+  month_num = rep(1:12, times = num_years_to_forecast)
+) |>
+  mutate(month_ = factor(month_num, levels = levels(retail_ts$month_))) |>
+  left_join(df, by = "month_")
+
+
+retail_forecast <- dat_lm |>
+  forecast(new_data = as_tsibble(new_dat, index = stats_time))
+
+
+retail_forecast |>
+  autoplot(retail_ts, level = 95) +
+  labs(
+    title = "Retail Sales Forecast",
+    subtitle = "5-Year",
+    y = "Sales ($ Millions)",
+    x = "Time (Numeric)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+:::
+
+### Rubric
+
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                                 | **Mastery (10)**                                                                                                                                                                                                                                                   | **Incomplete (0)**                                                                                                                                                                                |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| #### **Question 1: Definitions**                                | The student correctly defined each of the terms and included mathematical expressions or illustration if available in the text or the Time Series Notebook                                                                                                         | The student did not provide a correct definition for one or more of the terms.                                                                                                                    |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                                 | **Mastery (10)**                                                                                                                                                                                                                                                   | **Incomplete (0)**                                                                                                                                                                                |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| #### **Question 2a: OLS linear trend**                          | Students estimate the linear model using OLS and provide well-commented code. Results are presented clearly in a professionally formatted table.                                                                                                                   | Students struggle to estimate the linear model using OLS or provide poorly commented code. Results may be unclear or inaccurately presented in the table format.                                  |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                                 | **Mastery (5)**                                                                                                                                                                                                                                                    | **Incomplete (0)**                                                                                                                                                                                |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| #### **Question 2b: Autocorrelation plots**                     | Students create clear plots with appropriate labeling and provide well-commented code.                                                                                                                                                                             | Plots have insufficient clarity, labeling, or code comments, hindering the analysis of autocorrelation.                                                                                           |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                                 | **Mastery (10)**                                                                                                                                                                                                                                                   | **Incomplete (0)**                                                                                                                                                                                |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| #### **Question 2c: Residual AR(p) modeling**                   | Students fit residuals appropriately, selecting order based on correlogram and partial correlogram. They also include statistical evidence using R statistical tests of AR(p) model fit. They provide well-commented code and present their results clearly        | Submissions struggle to fit residuals or select the order of autoregressive model using plots and statistical evidence                                                                            |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                                 | **Mastery (15)**                                                                                                                                                                                                                                                   | **Incomplete (0)**                                                                                                                                                                                |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| #### **Question 2d: GLS linear trend AR(p) errors**             | Students accurately estimate the linear model using GLS using their results in part c. Results are presented clearly in a professionally formatted table that includes a comparison of the GLS and OLS point estimates, standard errors, and confidence intervals. | Submissions don't implement the GLS algorithm correctly. Students don't display the results professionally, or they don't include a comparison to OLS results.                                    |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                                 | **Mastery (15)**                                                                                                                                                                                                                                                   | **Incomplete (0)**                                                                                                                                                                                |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| #### **Question 2e: Autocorrelation Bias**                      | Students provide clear analysis of autocorrelation bias and its forecasting implications. They point out the connection between standard errors and forecasting confidence bands.                                                                                  | Students may provide incomplete or inaccurate analysis of autocorrelation bias or its forecasting implications, lacking clarity or depth in discussion of its importance.                         |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                                 | **Mastery (10)**                                                                                                                                                                                                                                                   | **Incomplete (0)**                                                                                                                                                                                |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| #### **Question 3a: OLS additive seasonal indicator variables** | Students accurately estimate the linear model using OLS, including seasonal indicator variables, and provide well-commented code. Results are presented clearly in a professionally formatted table.                                                               | Students struggle to estimate the linear model using OLS or provide poorly commented code. Results may be unclear or inaccurately presented in the table format.                                  |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                                 | **Mastery (10)**                                                                                                                                                                                                                                                   | **Incomplete (0)**                                                                                                                                                                                |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| #### **Question 3b: Coefficient interpretation**                | Students provide a correct interpretation of the coefficient for January (including the correct units). and relate to the effect on the Women's Clothing Retail Sales.                                                                                             | Interpretation of the coefficient for January is incomplete, inaccurate, or unclear, lacking a direct connection to its effect on the Women's Clothing Retail Sales.                              |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                                 | **Mastery (10)**                                                                                                                                                                                                                                                   | **Incomplete (0)**                                                                                                                                                                                |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| #### **Question 3c: Perfect Colinearity**                       | Students provide a clear interpretation of the intercept estimate in the context of the Women's Clothing Retail Sales data, considering how it relates to the additive seasonal indicator variables                                                                | Interpretation of the intercept estimate may be incomplete, inaccurate, or unclear. It doesn't make clear the perfect colinearity problem and the correct interpretation of the dropped variable. |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                                 | **Mastery (10)**                                                                                                                                                                                                                                                   | **Incomplete (0)**                                                                                                                                                                                |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| #### **Question 4d: Forecast**                                  | Students accurately make the five-year forecast using the estimated model, including 95% confidence bands in their plot.                                                                                                                                           | Students encounter difficulties in making the five-year forecast or don't include the forecast plot. Code may be poorly commented or the inclusion of confidence bands may be omitted.\           |
+|                                                                 |                                                                                                                                                                                                                                                                    | \                                                                                                                                                                                                 |
+|                                                                 |                                                                                                                                                                                                                                                                    | \                                                                                                                                                                                                 |
+|                                                                 |                                                                                                                                                                                                                                                                    | \                                                                                                                                                                                                 |
+|                                                                 |                                                                                                                                                                                                                                                                    | \                                                                                                                                                                                                 |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Total Points**                                                | **105**                                                                                                                                                                                                                                                            |                                                                                                                                                                                                   |
++-----------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+

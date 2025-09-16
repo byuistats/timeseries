@@ -1,0 +1,175 @@
+---
+title: "Time Series Homework: Chapter 1 Lesson 3 Key"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+editor: source
+---
+
+```{r}
+#| message: false
+#| echo: false
+
+# Loading R packages
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(plotly,
+               tidyverse, 
+               tsibble, fable,
+               feasts, tsibbledata,
+               fable.prophet,
+               patchwork,
+               lubridate, 
+               rio
+)
+```
+
+## Data
+
+```{r}
+# Macroeconomic Data: unemployment rate
+unemp_rate <- rio::import("https://byuistats.github.io/timeseries/data/unemp_rate.csv")
+
+```
+
+## Questions
+
+### Question 1 - Estimating the Trend: Centered Moving Average (10 points)
+
+Please plot the US Unemployment time series and superimpose the centered moving average series $\hat{m}_{t}$ in the same graph. Don't use an R command; rather, do it by coding $\hat{m}_{t}$ like in Chapter 1: Lesson 3. Use the appropriate axis labels, units, and captions.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r, warning=FALSE}
+# Please provide your code here
+# Create a tibble (data frame) with necessary columns from the original 'unemp_rate' dataset
+# Extract 'date' and 'value' columns, and derive 'year' and 'month' using lubridate
+unemp_rate.t <- tibble(
+  dates = pull(unemp_rate, date),  # Extract 'date' column
+  year = lubridate::year(pull(unemp_rate, date)),  # Extract the year from 'date'
+  month = lubridate::month(pull(unemp_rate, date)),  # Extract the month from 'date'
+  value = pull(unemp_rate, value)  # Extract 'value' column (unemployment rate)
+)
+
+# Convert to a 'tsibble' (time series tibble) and calculate the 'line_value' using lag and lead values
+unemp_rate_ts <- unemp_rate.t %>%
+  # Create a new 'index' column for time series using 'yearmonth' (for monthly data)
+  mutate(index = tsibble::yearmonth(dates),
+         # Calculate 'line_value' as the average of the current value, past 6 months (lag), and next 6 months (lead)
+         line_value = (0.5 * lag(value, 6, default = NA) +  # 6 months prior, weighted by 0.5
+                       lag(value, 5, default = NA) +  # 5 months prior
+                       lag(value, 4, default = NA) +  # 4 months prior
+                       lag(value, 3, default = NA) +  # 3 months prior
+                       lag(value, 2, default = NA) +  # 2 months prior
+                       lag(value, 1, default = NA) +  # 1 month prior
+                       value +  # Current value
+                       lead(value, 1, default = NA) +  # 1 month ahead
+                       lead(value, 2, default = NA) +  # 2 months ahead
+                       lead(value, 3, default = NA) +  # 3 months ahead
+                       lead(value, 4, default = NA) +  # 4 months ahead
+                       lead(value, 5, default = NA) +  # 5 months ahead
+                       0.5 * lead(value, 6, default = NA)) / 12) %>%  # 6 months ahead, weighted by 0.5, then average over 12
+  as_tsibble(index = index)  # Convert the resulting data frame into a tsibble, using 'index' as the time index
+
+# Plot the unemployment rate data
+autoplot(unemp_rate_ts, value) +  # Plot the unemployment rate ('value') from the tsibble
+  # Add a line representing the 'line_value' (smoothed data) to the graph
+  geom_line(data = unemp_rate_ts, 
+            aes(x = index, y = line_value),  # Map 'index' (dates) and 'line_value' (smoothed data)
+            color = "red4",  # Line color set to red
+            size = 1) +  # Set line thickness
+  # Add labels to the plot
+  labs(
+    x = "Date",  # X-axis label
+    y = "Unemployment Rate (%)",  # Y-axis label
+    title = "US Unemployment Rate with Manually Computed Centered Moving Average",  # Plot title
+    caption = "Red Line: Centered Moving Average, Black Line: Monthly Unemployment Rate"
+  ) +
+  # Set Y-axis to percentage format
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +  # Display y-axis values as percentages
+  # Use a clean black and white theme
+  theme_bw() +
+  # Center the plot title
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+<!-- Delete this and put your written answer here. The three colons mark the end of your answer. -->
+:::
+
+### Question 2 - Seasonal Averages: Side-by-Side Box Plots by Month (10 points)
+
+Please create a box plot to illustrate the monthly averages in the US Unemployment time series. Use the appropriate axis labels, units, and captions.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+library(dplyr)
+library(plotly)
+library(datasets)
+library(ggplot2)
+
+mydata2 = unemp_rate.t %>% 
+    mutate(month = as.factor(month)) %>%
+    group_by(month) %>% 
+    mutate(OutlierFlag = case_when((value<quantile(value,1/3,na.rm=T)-1.5*IQR(value,na.rm=T)) | (value>quantile(value,2/3,na.rm=T)+1.5*IQR(value,na.rm=T)) ~ "Outlier", TRUE ~"NonOutlier"))
+
+# boxplot
+p <- ggplot(mydata2 %>% filter(OutlierFlag=="NonOutlier"), aes(x = month, y = value)) +
+    geom_boxplot(outlier.shape = NA)+
+    geom_point(data=mydata2 %>% filter(OutlierFlag=="Outlier"),aes(group=month,label1=year,label2=value),color="#E69F00",size=1)+
+  labs(
+    x = "Month",  # X-axis label
+    y = "Unemployment Rate (%)",  # Y-axis label
+    title = "Monthly Unemployment Rate Distribution"  # Plot title
+  ) +
+  scale_x_discrete(labels = month.abb) +  # Label X-axis with month names
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +  # Format Y-axis as percentages
+  theme_bw() +  # Use a clean black-and-white theme
+  theme(plot.title = element_text(hjust = 0.5))  # Center the plot title
+
+
+output <- ggplotly(p, tooltip=c("label1","label2"))
+
+# makes boxplot outliers invisible and hover info off
+for (i in 1:length(output$x$data)){
+    if (output$x$data[[i]]$type=="box"){
+        output$x$data[[i]]$marker$opacity = 0  
+        output$x$data[[i]]$hoverinfo = "none"
+    }
+}
+
+output
+```
+
+
+:::
+
+### Question 3 - Seasonal Averages: Analysis (20 points)
+
+##### a) Describe the seasonality of the US unemployment time series. Comment on the series' periods of highest and lowest unemployment. Are there any notable outliers?
+
+::: {.callout-note title="Answer" icon="false"}
+Here in the box plot we can see that the highest median unemployment rates are typically around the beginning of the year from January to Februrary, then later in the year, June and July have higher unemployment rates once again. The periods with the lowest unemployment range from April and May, as well as September and October. The unemployment values here can be due to seasonal employment patterns. One noticiable outlier here is found in the month of April. In April 2020, the highest unemployment rate was ever recorded due to the COVID pandemic. However, there doesn’t seem to be a month that has a significantly higher unemployment rate than the other.
+:::
+
+##### b) Please explain the patterns you found. Include information from your prior research on the series.
+
+::: {.callout-note title="Answer" icon="false"}
+Perhaps one reason as to why there are increases in unemployment rates at the beginning of the year industries experience significant employment fluctuations due to lay offs holiday season demand in retail for workers. 
+
+Another clear example is a wave of new job seekers enters the market around this time as recent high school and college graduates begin looking for work. Since it can take some time for these individuals to secure employment, it temporarily drives up unemployment rates. Additionally, there is rise in unemployment before switching to summer months, largely due to shifts in industries like agriculture and tourism, where jobs often peak or wind down, leading to employment changes.
+:::
+
+### Rubric
+
+|                                         |                                                                                                                                                                                                                                                                                                 |                                                                                                                                                                                                                                                                                                     |
+|--------------|-----------------------------|-----------------------------|
+| **Criteria**                            | **Mastery (20)**                                                                                                                                                                                                                                                                                | **Incomplete (0)**                                                                                                                                                                                                                                                                                  |
+| **Question 1: Centered Moving Average** | The student correctly employs the centering procedure to seasonally adjust the US unemployment series.                                                                                                                                                                                          | The student does not employ the centering procedure to seasonally adjust the US unemployment series.                                                                                                                                                                                                |
+|                                         | **Mastery (10)**                                                                                                                                                                                                                                                                                | **Incomplete (0)**                                                                                                                                                                                                                                                                                  |
+| **Question 2: Box Plot**                | Creates a clear and well-constructed box plot that effectively illustrates seasonality in the US Unemployment time series. Labels both the x and y-axes, including appropriate units. Ensures clarity and accuracy in axis labeling, contributing to the overall understanding of the box plot. | There are mistakes in the plot. Fails to include any axis labels or units, resulting in an incomplete representation that lacks essential context.                                                                                                                                                  |
+|                                         | **Mastery (10)**                                                                                                                                                                                                                                                                                | **Incomplete (0)**                                                                                                                                                                                                                                                                                  |
+| **Question 3a: Description**            | Provides an accurate description of the seasonality in the US Unemployment time series, capturing key patterns and trends effectively. Shows a good understanding of the recurring cycles.                                                                                                      | Attempts to identify peaks and troughs but with significant inaccuracies or lack of clarity in the commentary. Shows a limited understanding of the variations. Fails to identify or comment on notable outliers, providing no insight into unusual data points in the US Unemployment time series. |
+|                                         | **Mastery (10)**                                                                                                                                                                                                                                                                                | **Incomplete (0)**                                                                                                                                                                                                                                                                                  |
+| **Question 3b: Patterns**               | Shows understanding of the data to infer meaning in the seasonal averages. It's clear the student did background research on the unemployment time series                                                                                                                                       | Shows a lack of effort. It's not clear the student understands the meaning of the data.                                                                                                                                                                                                             |
+| **Total Points**                        | **50**                                                                                                                                                                                                                                                                                          |                                                                                                                                                                                                                                                                                                     |
