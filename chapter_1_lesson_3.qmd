@@ -275,19 +275,21 @@ pacman::p_load("tsibble", "fable",
                "fable.prophet", "tidyverse",
                "patchwork", "rio")
 
-# read in the data from a csv and make the tsibble
-# change the line below to include your file path
-chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv")
-start_date <- lubridate::ymd("2004-01-01")
-date_seq <- seq(start_date,
-                start_date + months(nrow(chocolate_month)-1),
-                by = "1 months")
-chocolate_tibble <- tibble(
-  dates = date_seq,
-  year = lubridate::year(date_seq),
-  month = lubridate::month(date_seq),
-  value = pull(chocolate_month, chocolate)
-)
+
+# read in the data from a csv
+chocolate_month <- rio::import("https://byuistats.github.io/timeseries/data/chocolate.csv") |>
+  # creating a date column 
+  mutate(dates = ym(Month))
+
+# create a tibble including variables dates, year, month, value
+chocolate_tibble <- chocolate_month |>
+  transmute(
+    dates,
+    year  = year(dates), 
+    month = month(dates),
+    value = chocolate
+  )
+
 chocolate_month_ts <- chocolate_tibble |>
   mutate(index = tsibble::yearmonth(dates)) |>
   as_tsibble(index = index)
