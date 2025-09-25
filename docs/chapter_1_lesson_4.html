@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.6.40">
+<meta name="generator" content="quarto-1.5.55">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -72,12 +72,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-html/tippy.umd.min.js"></script>
 <script src="site_libs/quarto-html/anchor.min.js"></script>
 <link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-549806ee2085284f45b00abea8c6df48.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
-<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark-8ea72dc5fed832574809a9c94082fbbb.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-text-highlighting-styles">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-dark.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-dc9ff929994d342fd2034119e2f81dae.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
-<link href="site_libs/bootstrap/bootstrap-dark-4d8eee02f33473bdaf141da458b39a65.min.css" rel="prefetch" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-dark.min.css" rel="prefetch" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -353,7 +353,7 @@ window.Quarto = {
         <li class="dropdown-header">Lesson 4</li>
         <li>
     <a class="dropdown-item" href="./chapter_5_lesson_4.html">
- <span class="dropdown-text">Transformations and Non-Linear Models</span></a>
+ <span class="dropdown-text">Transformations, Forecasting adn Bias Correction</span></a>
   </li>  
         <li><hr class="dropdown-divider"></li>
         <li class="dropdown-header">Lesson 5</li>
@@ -415,6 +415,24 @@ window.Quarto = {
     <a class="dropdown-item" href="./chapter_7_lesson_3.html">
  <span class="dropdown-text">ARCH and GARCH Models</span></a>
   </li>  
+    </ul>
+  </li>
+  <li class="nav-item dropdown ">
+    <a class="nav-link dropdown-toggle" href="#" id="nav-menu-homework-keys" role="link" data-bs-toggle="dropdown" aria-expanded="false">
+ <span class="menu-text">Homework Keys</span>
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="nav-menu-homework-keys">    
+        <li class="dropdown-header">Chapter 1</li>
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Chapter 2</li>
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Chapter 3</li>
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Chapter 4</li>
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Chapter 5</li>
+        <li><hr class="dropdown-divider"></li>
+        <li class="dropdown-header">Chapter 6</li>
     </ul>
   </li>
 </ul>
@@ -555,35 +573,26 @@ Decompose time series into trends, seasonal variation, and residuals
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># This only works if the data are in ascending order with no missing values</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Note: This file is not in the right order, so this code gives the wrong tsibble</span></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># unless you sort the Excel file before proceeding.</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>start_date <span class="ot">&lt;-</span> lubridate<span class="sc">::</span><span class="fu">ymd</span>(<span class="st">"2017-01-01"</span>)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>date_seq <span class="ot">&lt;-</span> <span class="fu">seq</span>(start_date,</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>                start_date <span class="sc">+</span> <span class="fu">months</span>(<span class="fu">nrow</span>(deaths_df)<span class="sc">-</span><span class="dv">1</span>),</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>                <span class="at">by =</span> <span class="st">"1 months"</span>)</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>deaths_tibble <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>  <span class="at">dates =</span> date_seq,</span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>  <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(date_seq),</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>  <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(date_seq),</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>  <span class="at">value =</span> <span class="fu">pull</span>(deaths_df, Deaths)</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Method 2: Build using the date information in the Excel file</span></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a>deaths_tibble <span class="ot">&lt;-</span> deaths_df <span class="sc">|&gt;</span></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">date_str =</span> <span class="fu">paste</span>(<span class="st">"1"</span>, Month, Year),</span>
-<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> <span class="fu">dmy</span>(date_str),</span>
-<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(dates),</span>
-<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(dates),</span>
-<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">value =</span> Deaths</span>
-<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(dates, year, month, value)  <span class="sc">|&gt;</span> </span>
-<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>()</span>
-<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the index variable and convert to a tsibble</span></span>
-<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>deaths_ts <span class="ot">&lt;-</span> deaths_tibble <span class="sc">|&gt;</span></span>
-<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(dates)) <span class="sc">|&gt;</span></span>
-<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index) <span class="sc">|&gt;</span></span>
-<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(index, dates, year, month, value) <span class="sc">|&gt;</span></span>
-<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">deaths =</span> value) <span class="co"># rename value to emphasize data context</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>deaths_tibble <span class="ot">&lt;-</span> deaths_df <span class="sc">|&gt;</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">date_str =</span> <span class="fu">paste</span>(<span class="st">"1"</span>, Month, Year),</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> <span class="fu">dmy</span>(date_str),</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(dates),</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> lubridate<span class="sc">::</span><span class="fu">month</span>(dates),</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">value =</span> Deaths</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(dates, year, month, value)  <span class="sc">|&gt;</span> </span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tibble</span>()</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Create the index variable and convert to a tsibble</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>deaths_ts <span class="ot">&lt;-</span> deaths_tibble <span class="sc">|&gt;</span></span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearmonth</span>(dates)) <span class="sc">|&gt;</span></span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index) <span class="sc">|&gt;</span></span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(index, dates, year, month, value) <span class="sc">|&gt;</span></span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">deaths =</span> value) <span class="co"># rename value to emphasize data context</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>This results in a tsibble. The first few rows are given here:</p>
 <div class="cell">
@@ -797,79 +806,79 @@ Check Your Understanding
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2017 Jun</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3492</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3492</span></td>
 <td style="text-align: center; min-width: 0in;">NA</td>
 <td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2017 Jul</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3730</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3730</span></td>
 <td style="text-align: center; min-width: 0in;">3351.6</td>
 <td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2017 Aug</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3409</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3409</span></td>
 <td style="text-align: center; min-width: 0in;">3350</td>
 <td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2017 Sep</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3572</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3572</span></td>
 <td style="text-align: center; min-width: 0in;">3343.2</td>
 <td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2017 Oct</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3629</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3629</span></td>
 <td style="text-align: center; min-width: 0in;">3326.2</td>
 <td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2017 Nov</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3408</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3408</span></td>
 <td style="text-align: center; min-width: 0in;">3316.5</td>
 <td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2017 Dec</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3391</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3318.6</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3391</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3318.6</span></td>
 <td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2018 Jan</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3010</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3010</span></td>
 <td style="text-align: center; min-width: 0in;">3312.1</td>
 <td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2018 Feb</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">2734</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">2734</span></td>
 <td style="text-align: center; min-width: 0in;">3308</td>
 <td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2018 Mar</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3015</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3015</span></td>
 <td style="text-align: center; min-width: 0in;">3311.7</td>
 <td style="text-align: center; min-width: 0in;">-296.7</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2018 Apr</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">2979</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">2979</span></td>
 <td style="text-align: center; min-width: 0in;">3313.2</td>
 <td style="text-align: center; min-width: 0in;">-334.2</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2018 May</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3443</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3443</span></td>
 <td style="text-align: center; min-width: 0in;">3307.8</td>
 <td style="text-align: center; min-width: 0in;">135.2</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2018 Jun</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3514</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3514</span></td>
 <td style="text-align: center; min-width: 0in;">3292.4</td>
 <td style="text-align: center; min-width: 0in;">221.6</td>
 </tr>
@@ -1188,17 +1197,17 @@ Check Your Understanding
 <td style="text-align: center; min-width: 0in;">NA</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2018</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 <td style="text-align: center; min-width: 0in;">-296.7</td>
 <td style="text-align: center; min-width: 0in;">-334.2</td>
 <td style="text-align: center; min-width: 0in;">135.2</td>
@@ -1256,34 +1265,34 @@ Check Your Understanding
 <td style="text-align: center; min-width: 0in;">NA</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">Mean</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-350.2</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-695.8</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-370.4</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-344.6</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">96.3</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">277.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">361.9</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">321.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">318.6</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">362.2</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">Mean</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-350.2</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-695.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-370.4</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-344.6</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">96.3</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">277.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">361.9</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">321.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">318.6</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">362.2</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$ \bar s_t $$</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$~$$ ______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$~$$ ______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$~$$ ______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$~$$ ______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$~$$ ______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$~$$ ______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$~$$ ______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$~$$ ______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$~$$ ______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$~$$ ______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$~$$ ______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$~$$ ______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$ \bar s_t $$</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
 </tr>
 </tbody>
 </table>
@@ -1773,7 +1782,7 @@ Download Assignment
 <div class="callout-body-container callout-body">
 <!-- ## need to update href link to correct files when we get them -->
 <p><a href="https://byuistats.github.io/timeseries/homework/homework_1_4.qmd" download="homework_1_4.qmd"> homework_1_4.qmd </a></p>
-<p><a href="https://github.com/TBrost/BYUI-Timeseries-Drafts/raw/master/handouts/chapter_1_4_handout.xlsx" download="chapter_1_4_handout.xlsx"> Tables-Handout-Excel </a></p>
+<p><a href="https://byuistats.github.io/timeseries/handouts/chapter_1_4_handout.xlsx" download="chapter_1_4_handout.xlsx"> Tables-Handout-Excel </a></p>
 </div>
 </div>
 <!-- Solutions  -->
@@ -1804,127 +1813,127 @@ Download Assignment
 <td style="text-align: center; min-width: 0in;">2017 Jan</td>
 <td style="text-align: center; min-width: 0in;">3034</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">-345.2</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3379.2</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">NA</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">-345.2</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">NA</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3379.2</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2017 Feb</td>
 <td style="text-align: center; min-width: 0in;">2748</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">-690.8</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3438.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">NA</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">-690.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">NA</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3438.8</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2017 Mar</td>
 <td style="text-align: center; min-width: 0in;">3164</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">-365.3</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3529.3</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">NA</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">-365.3</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">NA</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3529.3</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2017 Apr</td>
 <td style="text-align: center; min-width: 0in;">3238</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">-339.6</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3577.6</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">NA</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">-339.6</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">NA</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3577.6</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2017 May</td>
 <td style="text-align: center; min-width: 0in;">3416</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">101.4</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3314.6</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">NA</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">101.4</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">NA</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3314.6</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2017 Jun</td>
 <td style="text-align: center; min-width: 0in;">3492</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">282.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3209.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">NA</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">282.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">NA</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3209.5</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2017 Jul</td>
 <td style="text-align: center; min-width: 0in;">3730</td>
 <td style="text-align: center; min-width: 0in;">3351.6</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">378.4</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">366.9</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">11.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3363.1</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">378.4</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">366.9</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">11.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3363.1</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2017 Aug</td>
 <td style="text-align: center; min-width: 0in;">3409</td>
 <td style="text-align: center; min-width: 0in;">3350</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">59</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">326.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">-267.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3082.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">59</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">326.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">-267.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3082.5</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2017 Sep</td>
 <td style="text-align: center; min-width: 0in;">3572</td>
 <td style="text-align: center; min-width: 0in;">3343.2</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">228.8</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">323.7</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">-94.9</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3248.3</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">228.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">323.7</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">-94.9</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3248.3</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2017 Oct</td>
 <td style="text-align: center; min-width: 0in;">3629</td>
 <td style="text-align: center; min-width: 0in;">3326.2</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">302.8</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">367.2</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">-64.4</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3261.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">302.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">367.2</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">-64.4</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3261.8</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2017 Nov</td>
 <td style="text-align: center; min-width: 0in;">3408</td>
 <td style="text-align: center; min-width: 0in;">3316.5</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">91.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">35.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">56</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3372.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">91.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">35.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">56</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3372.5</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2017 Dec</td>
 <td style="text-align: center; min-width: 0in;">3391</td>
 <td style="text-align: center; min-width: 0in;">3318.6</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">72.4</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">-62.8</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">135.2</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3453.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">72.4</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">-62.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">135.2</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3453.8</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2018 Jan</td>
 <td style="text-align: center; min-width: 0in;">3010</td>
 <td style="text-align: center; min-width: 0in;">3312.1</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">-302.1</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">-345.2</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">43.1</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3355.2</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">-302.1</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">-345.2</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">43.1</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3355.2</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2018 Feb</td>
 <td style="text-align: center; min-width: 0in;">2734</td>
 <td style="text-align: center; min-width: 0in;">3308</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #E69F00 !important;">-574</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">-690.8</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">116.7</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #009E73 !important;">3424.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">-574</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">-690.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">116.7</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3424.8</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2018 Mar</td>
@@ -1991,17 +2000,17 @@ Download Assignment
 <td style="text-align: center; min-width: 0in;">NA</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">378.4</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">59</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">228.8</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">302.8</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">91.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">72.4</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">378.4</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">59</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">228.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">302.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">91.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">72.4</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2018</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-302.1</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-574</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-302.1</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-574</span></td>
 <td style="text-align: center; min-width: 0in;">-296.7</td>
 <td style="text-align: center; min-width: 0in;">-334.2</td>
 <td style="text-align: center; min-width: 0in;">135.2</td>
@@ -2059,34 +2068,34 @@ Download Assignment
 <td style="text-align: center; min-width: 0in;">NA</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">Mean</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-350.2</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-695.8</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-370.4</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-344.6</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">96.3</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">277.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">361.9</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">321.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">318.6</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">362.2</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">30.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-67.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">Mean</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-350.2</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-695.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-370.4</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-344.6</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">96.3</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">277.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">361.9</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">321.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">318.6</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">362.2</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">30.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-67.8</span></td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">$$ \bar s_t $$</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-345.2</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-690.8</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-365.4</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-339.6</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">101.3</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">282.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">366.9</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">326.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">323.6</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">367.2</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">35.5</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: #0072B2 !important;">-62.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$ \bar s_t $$</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-345.2</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-690.8</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-365.4</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-339.6</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">101.3</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">282.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">366.9</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">326.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">323.6</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">367.2</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">35.5</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">-62.8</span></td>
 </tr>
 </tbody>
 </table>
@@ -2328,6 +2337,8 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
   });
   clipboard.on('success', onCopySuccess);
   if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
     const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
       text: getTextToCopy,
       container: window.document.getElementById('quarto-embedded-source-code-modal')
@@ -2438,6 +2449,7 @@ window.document.addEventListener("DOMContentLoaded", function (event) {
       if (window.Quarto?.typesetMath) {
         window.Quarto.typesetMath(note);
       }
+      // TODO in 1.5, we should make sure this works without a callout special case
       if (note.classList.contains("callout")) {
         return note.outerHTML;
       } else {
