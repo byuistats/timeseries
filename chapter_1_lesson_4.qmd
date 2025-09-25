@@ -82,24 +82,16 @@ This is a demonstration of two ways to convert an Excel
 or csv data file to a tsibble.
 
 ```{r}
+
+
 deaths_df <- rio::import("https://byuistats.github.io/timeseries/data/traffic_deaths.xlsx")
 
 # Method 1: Create date from scratch based on pattern of rows
 # This only works if the data are in ascending order with no missing values
 # Note: This file is not in the right order, so this code gives the wrong tsibble
 # unless you sort the Excel file before proceeding.
-start_date <- lubridate::ymd("2017-01-01")
-date_seq <- seq(start_date,
-                start_date + months(nrow(deaths_df)-1),
-                by = "1 months")
-deaths_tibble <- tibble(
-  dates = date_seq,
-  year = lubridate::year(date_seq),
-  month = lubridate::month(date_seq),
-  value = pull(deaths_df, Deaths)
-)
 
-# Method 2: Build using the date information in the Excel file
+
 deaths_tibble <- deaths_df |>
   mutate(
     date_str = paste("1", Month, Year),
@@ -110,6 +102,7 @@ deaths_tibble <- deaths_df |>
   ) |>
   dplyr::select(dates, year, month, value)  |> 
   tibble()
+
 
 # Create the index variable and convert to a tsibble
 deaths_ts <- deaths_tibble |>
