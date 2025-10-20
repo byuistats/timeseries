@@ -1,6 +1,6 @@
 ---
-title: "Harmonic Seasonal Variables - Part 2"
-subtitle: "Chapter 5: Lesson 3"
+title: "Forecasting, Inverse Transformation, and Bias Correction"
+subtitle: "Chapter 5: Lesson 5"
 format: html
 editor: source
 sidebar: false
@@ -35,596 +35,536 @@ source("common_functions.R")
 ```
 
 
-```{r}
-#| echo: false
-#| label: functions_for_sine_and_cosine_plots
-
-# Okabe-Ito color palette
-okabe_ito_colors <- c("#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#E69F00", "#56B4E9")
-
-plot_sine <- function(cycle_length = 12, i_values = c(1:6), amplitude = rep(1, length(i_values)), spacing = 4, title = "Sine Functions with Different Frequencies", min_t = 0, max_t = cycle_length) {
-  
-  create_sine_df <- function(i, cycle_length, amplitude) {
-    df <- tibble(
-      t = seq(from = min_t, to = max_t, length.out = 501),
-      value = amplitude[which(i_values == i)] * sin(2 * pi * i * t / cycle_length),
-      i = right(paste0(" ", as.character(i)), 2)
-    )
-  }
-  
-  sine_df <- tibble(t = as.integer(), value = as.numeric(), i = as.character())
-  for (i in i_values) {
-    sine_df <- sine_df |> bind_rows(create_sine_df(i, cycle_length, amplitude))
-  }
-  
-  ggplot(sine_df, aes(x = t, y = value - spacing * as.numeric(i), color = i)) +
-    geom_line(linewidth = 1) +
-    scale_y_continuous(
-      breaks = -spacing * (i_values),
-      minor_breaks = NULL,
-      labels = NULL
-    ) +
-    scale_x_continuous(
-      breaks = c(-12:12),
-      minor_breaks = NULL
-    ) +
-    scale_color_manual(values = okabe_ito_colors[1:length(i_values)], name = "i") +
-    labs(x = "t", y = "Sine Value", title = title) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-}
-
-plot_cosine <- function(cycle_length = 12, i_values = c(1:6), amplitude = rep(1, length(i_values)), spacing = 4, title = "Cosine Functions with Different Frequencies", min_t = 0, max_t = cycle_length) {
-  
-  create_cosine_df <- function(i, cycle_length, amplitude) {
-    df <- tibble(
-      t = seq(from = min_t, to = max_t, length.out = 501),
-      value = amplitude[which(i_values == i)] * cos(2 * pi * i * t / cycle_length),
-      i = right(paste0(" ", as.character(i)), 2)
-    )
-  }
-  
-  cosine_df <- tibble(t = as.integer(), value = as.numeric(), i = as.character())
-  for (i in i_values) {
-    cosine_df <- cosine_df |> bind_rows(create_cosine_df(i, cycle_length, amplitude))
-  }
-  
-  ggplot(cosine_df, aes(x = t, y = value - spacing * as.numeric(i), color = i)) +
-    geom_line(linewidth = 1) +
-    scale_y_continuous(
-      breaks = -spacing * (i_values),
-      minor_breaks = NULL,
-      labels = NULL
-    ) +
-    scale_x_continuous(
-      breaks = c(-12:12),
-      minor_breaks = NULL
-    ) +
-    scale_color_manual(values = okabe_ito_colors[1:length(i_values)], name = "i") +
-    labs(x = "t", y = "Cosine Value", title = title) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-}
-```
-
-
 ## Learning Outcomes
 
-{{< include outcomes/_chapter_5_lesson_3_outcomes.qmd >}}
+{{< include outcomes/_chapter_5_lesson_5_outcomes.qmd >}}
 
 
 
 
 ## Preparation
 
--   Review Section 5.6
+-   Read Sections 5.9-5.11
+
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
 
 
 
 
-## Class Activity: Monthly Average High Temperature in Rexburg (20 min)
+## Class Activity: Anti-Log Transformation and Bias Correction on Simulated Data (10 min)
 
-### Visualization of the Time Series
+### Forecasts for a Simulated Time Series
 
-<a id="weather">Consider</a> the mean monthly high temperature in Rexburg.
+[In the previous lesson](https://byuistats.github.io/timeseries/chapter_5_lesson_4.html#Simulation), we simulated a time series with an exponential trend. In this lesson, we will forecast future values based on our model.
+
+@fig-simTSplot shows the simulated time series and the time series after the natural logarithm is applied.
 
 ```{r}
-#| label: weather1
+#| label: fig-simTSplot
+#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
 #| code-fold: true
 #| code-summary: "Show the code"
-#| warning: false
+#| fig-height: 3.5
 
-weather_df <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather_monthly.csv") |>
-  mutate(dates = my(date_text)) |>
-  filter(dates >= my("1/2008") & dates <= my("12/2023")) |>
-  rename(x = avg_daily_high_temp) |>
-  mutate(TIME = 1:n()) |>
+set.seed(12345)
+
+n_years <- 9 # Number of years to simulate
+n_months <- n_years * 12 # Number of months
+sigma <- .05 # Standard deviation of random term
+
+z_t <- rnorm(n = n_months, mean = 0, sd = sigma)
+
+dates_seq <- seq(floor_date(now(), unit = "year"), length.out=n_months + 1, by="-1 month") |>
+  floor_date(unit = "month") |> sort() |> head(n_months)
+
+sim_ts <- tibble(
+  t = 1:n_months,
+  dates = dates_seq,
+  random = arima.sim(model=list(ar=c(.5,0.2)), n = n_months, sd = 0.02),
+  x_t = exp(2 + 0.015 * t +
+              0.03 * sin(2 * pi * 1 * t / 12) + 0.04 * cos(2 * pi * 1 * t / 12) + 
+              0.05 * sin(2 * pi * 2 * t / 12) + 0.03 * cos(2 * pi * 2 * t / 12) +
+              0.01 * sin(2 * pi * 3 * t / 12) + 0.005 * cos(2 * pi * 3 * t / 12) +
+              random
+  )
+) |>
   mutate(
-    cos1 = cos(2 * pi * 1 * TIME/12),
-    cos2 = cos(2 * pi * 2 * TIME/12),
-    cos3 = cos(2 * pi * 3 * TIME/12),
-    cos4 = cos(2 * pi * 4 * TIME/12),
-    cos5 = cos(2 * pi * 5 * TIME/12),
-    cos6 = cos(2 * pi * 6 * TIME/12),
-    sin1 = sin(2 * pi * 1 * TIME/12),
-    sin2 = sin(2 * pi * 2 * TIME/12),
-    sin3 = sin(2 * pi * 3 * TIME/12),
-    sin4 = sin(2 * pi * 4 * TIME/12),
-    sin5 = sin(2 * pi * 5 * TIME/12),
-    sin6 = sin(2 * pi * 6 * TIME/12)) |>
-  as_tsibble(index = TIME)
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12),
+    sin6 = sin(2 * pi * 6 * t / 12)) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  as_tsibble(index = dates)
 
-weather_df |>
-  as_tsibble(index = dates) |>
-  autoplot(.vars = x) +
-  geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
+sim_plot_raw <- sim_ts |>
+  autoplot(.vars = x_t) +
+  labs(
+    x = "Month",
+    y = "x_t",
+    title = "Simulated Time Series"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+sim_plot_log <- sim_ts |>
+  autoplot(.vars = log(x_t)) +
+  labs(
+    x = "Month",
+    y = "log(x_t)",
+    title = "Logarithm of Simulated Time Series"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+sim_plot_raw | sim_plot_log
+```
+
+We can use the `forecast()` function to predict future values of this time series. @tbl-forecastSim displays the output of the `forecast()` command. Note that the column labeled `x_t` (i.e. $x_t$), representing the time series is populated with information tied to a normal distribution. The mean and standard deviation specified are the estimated parameters for the distribution of the predicted values of $\log(x_t)$. If you raise $e$ to the power of the mean, you get the values in the `.mean` column.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| results: false
+
+# Fit model (OLS)
+sim_reduced_linear_lm1 <- sim_ts |>
+  model(sim_reduced_linear1 = TSLM(log(x_t) ~ std_t + 
+        sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
+
+# Compute forecast
+n_years_forecast <- 5
+n_months_forecast <- 12 * n_years_forecast
+
+new_dat <- tibble(t = n_months:(n_months + n_months_forecast )) |>
+  mutate(
+    dates = seq(max(dates_seq), length.out=n_months_forecast + 1, by="1 month") 
+  ) |>
+  mutate(
+    std_t = (t - mean(pull(sim_ts, t))) / sd(pull(sim_ts, t)),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    cos1 = cos(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12)
+  ) |>
+  as_tsibble(index = dates)
+
+sim_reduced_linear_lm1 |> 
+  forecast(new_data = new_dat)
+```
+
+```{r}
+#| label: tbl-forecastSim
+#| tbl-cap: "Output of the forecast() command for the simulated time series"
+#| echo: false
+
+sim_reduced_linear_lm1 |> 
+  forecast(new_data = new_dat) |>
+  dplyr::select(.model, dates, x_t, .mean, t, std_t, sin1, cos1, sin2, cos2, sin3, cos3) |>
+  mutate(" " = "...") |>
+  display_partial_table(4,2)
+```
+
+@fig-forecastSim illustrates the forecasted values for the time series.
+
+```{r}
+#| label: fig-forecastSim
+#| fig-cap: "Forecasted values of the time series with 95% confidence bands"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+sim_forecast_plot_regular <- sim_reduced_linear_lm1 |> 
+  forecast(new_data = new_dat) |>
+  autoplot(sim_ts, level = 95) +
+  labs(
+    x = "Month",
+    y = "x_t",
+    title = "Simulated Time Series"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "inset") +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+sim_forecast_plot_logged <- sim_reduced_linear_lm1 |> 
+  forecast(new_data = new_dat) |>
+  autoplot(sim_ts, level = 95) +
+  scale_y_continuous(trans = "log", labels = trans_format("log")) +
+  labs(
+    x = "Month",
+    y = "log(x_t)",
+    title = "Logarithm of Simulated Time Series"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "inset")  +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+sim_forecast_plot_regular
+```
+
+
+### Bias Correction
+
+The forecasts presented above were computed by raising $e$ to the power of the predicted log-values. Unfortunately, this introduces bias in the forecasted means. This bias tends to be large if the regression model does not fit the data closely.
+
+The textbook points out that the bias correction should only be applied for means, not for simulated values. This means that if you are simulating transformed values, and you apply the inverse of your original transformation, the resulting values are appropriate.
+
+When we apply the inverse transform to the residual series, we introduce a bias. 
+<!-- See p. 116 -->
+  We can account for this bias applying one of two adjustments to our mean values. The theory behind this transformations is alluded to in the textbook, but is not essential.
+
+There are two common patterns observed in the residual series: (1) Gaussian white noise or (2) Negatively-skewed values. Note that negatively-skewed values are the same as left-skewed values. 
+
+We can use the skewness statistic to assess the shape of the residual series.
+When the skewness is less than -1 or greater than 1, we say that the distribution is highly skewed. For skewness values between -1 and -0.5 or between 0.5 and 1, we say there is moderate skewness. If skewness lies between -0.5 and 0.5, the distribution is considered roughly symmetric.
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+#### Log-Normal Correction
+
+##### Normally-Distributed Residual Series
+
+If the residual series follows a normal distribution, we multiply the means of the forecasted values $\hat x_t$ by the factor $e^{\frac{1}{2} \sigma^2}$:
+  
+$$
+  \hat x_t' = e^{\frac{1}{2} \sigma^2} \cdot \hat x_t
+$$
+
+where 
+$\left\{ \hat x_t: t = 1, \ldots, n \right\}$ 
+gives the values of the forecasted series, and 
+$\left\{ \hat x_t': t = 1, \ldots, n \right\}$ 
+is the adjusted forecasted values.
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+  
+::: {.column width="45%"}
+
+#### Emperical Correction
+
+##### Negatively-Skewed Residual Series
+
+If the residual series demonstrates negative skewness, then we can adjust the forecasts $\left\{ \hat x_t \right\}$ as follows:
+  
+$$
+  \hat x_t' = e^{\widehat{\log x_t}} \sum_{t=1}^{n} \frac{e^{z_t}}{n}
+$$
+
+where $\left\{ \widehat{\log x_t}: t = 1, \ldots, n \right\}$ is the forecasted series obtained by fitting the log-regression model.
+
+$\left\{ z_t \right\}$ is the residual series from this fitted model in the log-transformed units.
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+The code given below can be used to compute the corrected mean values for the simulated data.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+sim_model_values <- sim_reduced_linear_lm1 |>
+  glance()
+
+sim_model_check <- sim_model_values |>
+  mutate(
+    sigma = sqrt(sigma2),
+    lognorm_cf = exp((1/2) * sigma2),
+    empirical_cf = sim_reduced_linear_lm1 |>
+      residuals() |>
+      pull(.resid) |>
+      exp() |>
+      mean()) |>
+  select(.model, r_squared, sigma2, sigma, lognorm_cf, empirical_cf)
+
+sim_pred <- sim_reduced_linear_lm1 |> 
+  forecast(new_data = new_dat) |>
+  mutate(.mean_correction = .mean * sim_model_check$empirical_cf) |>
+  select(t, x_t, .mean, .mean_correction)
+
+sim_model_check
+```
+
+From this, we observe that for the simulated data, $R^2 = `r sim_model_check |> select(r_squared) |> pull() |> round(3)`$. 
+This indicates that the model explains a high proportion of the variation in the data. The log-normal adjustment is 
+$`r sim_model_check |> select(lognorm_cf) |> pull() |> round(5)`$, 
+and the emperical adjustment is 
+$`r sim_model_check |> select(empirical_cf) |> pull() |> round(5)`$. 
+Both of these values are extremely close to 1, so they will have a negligible impact on the predicted values.
+
+This result does not generalize. In other situations, there can be a substantial effect of this bias on the predicted means.
+
+
+
+
+
+
+
+
+
+
+
+### Histogram of residuals
+
+@fig-ResidualHistogramSimulatedTS gives a histogram of the residuals and compute the skewness of the residual series.
+
+```{r}
+#| label: fig-ResidualHistogramSimulatedTS
+#| fig-cap: "Histogram of the values in the residual series based on the model with a linear trend and seasonal Fourier terms where i≤3"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+sim_resid_df <- sim_reduced_linear_lm1 |> 
+  residuals() |> 
+  as_tibble() |> 
+  dplyr::select(.resid) |>
+  rename(x = .resid) 
+  
+sim_resid_df |>
+  mutate(density = dnorm(x, mean(sim_resid_df$x), sd(sim_resid_df$x))) |>
+  ggplot(aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 0.01) +
+    geom_line(aes(x = x, y = density)) +
+    theme_bw() +
     labs(
-      x = "Month",
-      y = "Mean Daily High Temperature (Fahrenheit)",
-      title = "Time Plot of Mean Daily Rexburg High Temperature by Month",
-      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals from the Reduced Linear Model"
     ) +
-    theme_minimal() +
     theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.subtitle = element_text(hjust = 0.5)
+      plot.title = element_text(hjust = 0.5)
     )
 ```
 
 
-
-### Model Selection
-
+We can use the command `skewness(sim_resid_df$x)` to compute the skewness of these residuals: `r skewness(sim_resid_df$x) |> round(3)`. This number is close to zero (specifically between -0.5 and 0.5,) so we conclude that the residual series is approximately normally distributed. We can apply the log-normal correction to our mean forecast values.
 
 
-::: {.callout-note icon=false title="Standardizing the Time Variable" collapse="false"}
-<!-- Begin hiding code for standardizing the time varaible -->
-  
-
-#### Standardizing the Time Variable
 
 
-To avoid serious floating point errors, we standardize the time variable. First, compute the sine and cosine terms using the original time variable, then transform the time variable by subtracting its mean and dividing by its standard deviation. (In other words, compute a $z$-score.)
 
-The model is adjusted accordingly after fitting.
+## Class Activity: Apple Revenue (10 min)
 
-::: {.callout-warning}
-When the independent variable (the measure of time) is large, floating point errors in the computation of the regression coefficents can be substantial. 
-:::
-  
-We will demonstrate standardizing the time variable below.
+We take another look at the quarterly revenue reported by Apple Inc. from Q1 of 2005 through Q1 of 2012
 
-#### Computing the standardized time variable
+### Visualizing the Time Series
 
-Our time variable was a simple incremented value counting the months ranging from 
-`r weather_df |> as_tibble() |> dplyr::select(TIME) |> head(1) |> pull()` 
-(representing `r weather_df |> as_tibble() |> dplyr::select(date_text) |> head(1) |> pull()`) 
-to 
-`r weather_df |> as_tibble() |> dplyr::select(TIME) |> tail(1) |> pull()` 
-(representing `r weather_df |> as_tibble() |> dplyr::select(date_text) |> tail(1) |> pull()`).
+@fig-appleTS gives the time plot illustrating the quarterly revenue reported by Apple from the first quarter of 2005 through the first quarter of 2012. 
 
 ```{r}
-#| label: weather20
-#| echo: false
+#| label: fig-appleTS
+#| fig-cap: "Apple quarterly revenue figures (in billions of U.S. dollars) from Q1 of 2005 to Q1 of 2012; the figure on the left presents the revenue in dollars and the figure on the right gives the logarithm of the quarterly revenue; a simple linear regression line is given for reference"
+#| code-fold: true
+#| code-summary: "Show the code"
 
-stats_unrounded <- weather_df |>
-  as_tibble() |>
-  dplyr::select(TIME) |>
-  summarize(mean = mean(TIME), sd = sd(TIME))
+apple_raw <- rio::import("https://byuistats.github.io/timeseries/data/apple_revenue.csv") |>
+  mutate(dates = round_date(mdy(date), unit = "quarter")) |>
+  arrange(dates)
 
-stats <- stats_unrounded |>
-  round_df(3)
+apple_ts <- apple_raw |>
+  filter(dates <= my("Jan 2012")) |>
+  dplyr::select(dates, revenue_billions) |>
+  mutate(t = 1:n()) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  mutate(
+    sin1 = sin(2 * pi * 1 * t / 4),
+    cos1 = cos(2 * pi * 1 * t / 4),
+    cos2 = cos(2 * pi * 2 * t / 4)
+  ) |>
+  as_tsibble(index = dates)
+
+apple_plot_regular <- apple_ts |>
+  autoplot(.vars = revenue_billions) +
+  stat_smooth(method = "lm", 
+              formula = y ~ x, 
+              geom = "smooth",
+              se = FALSE,
+              color = "#E69F00",
+              linetype = "dotted") +
+    labs(
+      x = "Quarter",
+      y = "Revenue (Billions USD)",
+      title = "Apple Revenue (in Billions USD)"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+apple_plot_transformed <- apple_ts |>
+  autoplot(.vars = log(revenue_billions)) +
+  stat_smooth(method = "lm", 
+              formula = y ~ x, 
+              geom = "smooth",
+              se = FALSE,
+              color = "#E69F00",
+              linetype = "dotted") +
+    labs(
+      x = "Quarter",
+      y = "Logarithm of Revenue",
+      title = "Logarithm of Apple Revenue"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+apple_plot_regular | apple_plot_transformed
 ```
 
 
-We standardize this variable by the transformation:
-  
-$$
-zTIME 
-  = \frac{t - \bar t}{s_t}
-  = \frac{t - `r stats$mean`}{`r stats$sd`}
-$$
-  
-where the mean of the variable `TIME` is $\bar t = `r stats$mean`$, and the standard deviation is $s_t = `r stats$sd`$.
+### Finding a Suitable Model
+
+We start by fitting a cubic trend to the logarithm of the quarterly revenues. The full model is fitted here:
 
 ```{r}
-#| label: weather21
-weather_df <- weather_df |>
-  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME))
-```
-
-Now, we fit the trend components of the models using `zTIME` instead of `TIME`.
-We will start by modeling a cubic trend term. 
-
-:::
-<!-- End of the Standardizing the Time Variable section -->
-
-
-
-
-<!-- Model Selection: Cubic Trends -->
-
-::: {.callout-note icon=false title="Cubic Trends" collapse="false"}
-<!-- Begin hiding code for cubic trends -->
-
-#### Cubic Trend: Full Model
-
-Visually, we can identify a positive linear trend in the data. It is possible that there are higher-order properties of the trend. We will include a quadratic and cubic term in our search for a model.
-
-In addition to modeling the trend, we need to include terms for the seasonal component. We start with a full model that includes all six of the the sine and cosine terms from the summation above.
-
-```{r}
-#| label: weather2
+#| label: appleCubicFull
 #| code-fold: true
 #| code-summary: "Show the code"
 
 # Cubic model with standardized time variable
 
-full_cubic_lm <- weather_df |>
-  model(full_cubic = TSLM(x ~ zTIME + I(zTIME^2) + I(zTIME^3) +
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 ))
-
-full_cubic_lm |>
+apple_full_cubic_lm <- apple_ts |>
+  model(apple_full_cubic = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + I(std_t^3) +
+    sin1 + cos1 + cos2 )) # Note sin2 is omitted
+apple_full_cubic_lm |>
   tidy() |>
-  mutate(sig = p.value < 0.05) 
-
-forecast_df <- full_cubic_lm |> forecast(weather_df, ) |> as_tibble() |> dplyr::select(zTIME, .mean) |> rename(pred = .mean)
-
-weather_df |>
-  left_join(forecast_df, by = "zTIME") |>
-  as_tsibble(index = dates) |>
-  autoplot(.vars = x) +
-  geom_smooth(method = "lm", se = FALSE, color = "#F0E442") +
-  geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
-    labs(
-      x = "Month",
-      y = "Mean Daily High Temperature (Fahrenheit)",
-      title = "Time Plot of Mean Daily Rexburg High Temperature by Month",
-      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.subtitle = element_text(hjust = 0.5)
-    )
+  mutate(sig = p.value < 0.05)
 ```
 
-The cubic term in the trend is not significant, but the quadratic term is. We will fit a quadratic model. 
-
-::: {.callout-caution}
-If you choose a different range of dates, you may get a different result. The regression model is fitted to the data, not to the physical situation.
-:::
-
-
-:::
-<!-- End hiding code for cubic model -->
-
-
-
-
-
-<!-- Model Selection: Quadratic Trends -->
-
-::: {.callout-note icon=false title="Quadratic Trends" collapse="false"}
-<!-- Begin hiding code for quadratic trends -->
-
-#### Quadratic Trend: Full Model
-
-We now fit a quadratic model that includes all of the seasonal terms.
+The quadratic and cubic trend terms are not statistically signficant. We now eliminate the cubic term and fit a full model with a quadratic trend.
 
 ```{r}
-#| label: weather3
+#| label: appleQuadraticFull
 #| code-fold: true
 #| code-summary: "Show the code"
 
-full_quadratic_lm <- weather_df |>
-  model(full_quadratic = TSLM(x ~ zTIME + I(zTIME^2) +
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 ))
-
-full_quadratic_lm |>
+apple_full_quad_lm <- apple_ts |>
+  model(apple_full_quad = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + 
+    sin1 + cos1 + cos2 )) # Note sin2 is omitted
+apple_full_quad_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
 ```
 
-The coefficient on the quadratic trend term is very small and negative. This suggests the data may indicate a decrease in the *rate* of global warming.
-
-
-#### Quadratic Trend: Reduced Model 1
-
-Eliminating the $i=4$ and $i=5$ terms, we get the model:
+The quadratic trend term is not statistically significant. Nevertheless, we will still fit a reduced model with a quadratic trend but we will omit the non-signficant seasonal Fourier term, `cos1`.
 
 ```{r}
-#| label: weather4
+#| label: appleQuadReduced1
 #| code-fold: true
 #| code-summary: "Show the code"
 
-reduced1_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_1  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6))
+# Quadratic trend with standardized time variable
 
-reduced1_quadratic_lm |>
+apple_reduced_quad_lm1 <- apple_ts |>
+  model(apple_reduced_quad1 = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) +
+    sin1 + cos2 )) # Note sin2 is omitted
+apple_reduced_quad_lm1 |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
 
-#### Quadratic Trend: Reduced Model 2
-
-Sequentially removing the cosine term for $i = 3$, we get:
+The quadratic trend term is still not statistically significant. We will fit a full model with a linear trend.
 
 ```{r}
-#| label: weather5
+#| label: appleLinearFull
 #| code-fold: true
 #| code-summary: "Show the code"
 
-reduced2_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_2  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos6))
+# Linear trend with standardized time variable
 
-reduced2_quadratic_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
-```
-
-#### Quadratic Trend: Reduced Model 3
-
-This is the quadratic model obtained by eliminating the $i=6$ term from the previous model.
-
-```{r}
-#| label: weather6
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced3_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_3  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2 + sin3))
-
-reduced3_quadratic_lm |>
+apple_full_linear_lm <- apple_ts |>
+  model(apple_full_linear = TSLM(log(revenue_billions) ~ std_t + 
+    sin1 + cos1 + cos2 )) # Note sin2 is omitted
+apple_full_linear_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
 
-#### Quadratic Trend: Reduced Model 4
-
-This is similar to the previous model, except both the sine and cosine terms are included for $i=3$.
+The coefficient on the `cos1` seasonal Fourier term is not statistically significant. 
+We now fit a reduced model that only contains the significant terms from the full model with a linear trend.
 
 ```{r}
-#| label: weather7
+#| label: appleLinearReduced1
 #| code-fold: true
 #| code-summary: "Show the code"
 
-reduced4_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_4  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
+# Linear trend with standardized time variable
 
-reduced4_quadratic_lm |>
+apple_reduced_linear_lm1 <- apple_ts |>
+  model(apple_reduced_linear1 = TSLM(log(revenue_billions) ~ std_t + 
+    sin1 + cos2 )) # Note sin2 is omitted
+apple_reduced_linear_lm1 |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
 
-#### Quadratic Trend: Reduced Model 5
-
-This quadratic model only includes the $i=1$ and $i=2$ terms.
+All the terms are statistically significant in this model. We now compare the models we have fitted using the AIC, AICc, and BIC criterion.
 
 ```{r}
-#| label: weather8
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced5_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_5  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2))
-
-reduced5_quadratic_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-#### Quadratic Trend: Reduced Model 6
-
-This model includes a quadratic effect for time, but only includes the sine and cosine terms corresponding to $i=1$.
-
-```{r}
-#| label: weather9
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced6_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_6  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1))
-
-reduced6_quadratic_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-:::
-<!-- End quadratic model -->
-
-
-
-
-
-<!-- Model Selection: Linear Trend -->
-
-::: {.callout-note icon=false title="Linear Trends" collapse="false"}
-<!-- Begin hiding code for linear trends -->
-
-
-#### Linear Trend: Full Model
-
-This is the full model with a linear time component. All of the period functions are included from $i=1$ to $i=6$.
-
-```{r}
-#| label: weather10
-#| code-fold: true
-#| code-summary: "Show the code"
-
-full_linear_lm <- weather_df |>
-  model(full_linear = TSLM(x ~ zTIME +
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 ))
-
-full_linear_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
-```
-
-#### Linear Trend: Reduced Model 1
-
-This linear model excludes the terms corresponding to $i=4$ and $i=5$.
-
-```{r}
-#| label: weather11
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced1_linear_lm <- weather_df |>
-  model(reduced_linear_1  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6))
-
-reduced1_linear_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-#### Linear Trend: Reduced Model 2
-
-This represents the reduction of the previous model by eliminating the cosine term for $i=3$.
-
-```{r}
-#| label: weather12
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced2_linear_lm <- weather_df |>
-  model(reduced_linear_2  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos6))
-
-reduced2_linear_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
-```
-
-#### Linear Trend: Reduced Model 3
-
-This model is similar to the previous one, but the cosine term associated with $i=6$ has been excluded.
-
-```{r}
-#| label: weather13
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced3_linear_lm <- weather_df |>
-  model(reduced_linear_3  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2 + sin3))
-
-reduced3_linear_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-#### Linear Trend: Reduced Model 4
-
-This model consists of a linear trend with all the periodic terms associated with $i=1$ through $i=3$.
-
-```{r}
-#| label: weather14
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced4_linear_lm <- weather_df |>
-  model(reduced_linear_4  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
-
-reduced4_linear_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-#### Linear Trend: Reduced Model 5
-
-This model has a linear trend and only includes the periodic terms corresponding to $i=1$ and $i=2$.
-
-```{r}
-#| label: weather15
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced5_linear_lm <- weather_df |>
-  model(reduced_linear_5  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2))
-
-reduced5_linear_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-#### Linear Trend: Reduced Model 6
-
-This simple model includes a linear trend and period terms associated with $i=1$.
-
-```{r}
-#| label: weather16
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced6_linear_lm <- weather_df |>
-  model(reduced_linear_6  = TSLM(x ~ zTIME + sin1 + cos1))
-
-reduced6_linear_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-:::
-<!-- End of linear model output -->
-
-
-
-
-
-
-::: {.callout-note icon=false title="Model Comparison" collapse="false"}
-<!-- Begin hiding code for model comparison -->
-
-
-#### Model Comparison
-
-Now, we compare all the models side-by-side.
-
-```{r}
-#| label: weather17
-#| code-fold: true
-#| code-summary: "Show the code"
+#| label: modelComparisonApple
 #| output: false
+#| code-fold: true
+#| code-summary: "Show the code"
 
-model_combined <- weather_df |>
+model_combined <- apple_ts |>
   model(
-    full_cubic = TSLM(x ~ TIME + I(TIME^2) + I(TIME^3) +
-      sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-      + sin4 + cos4 + sin5 + cos5 + cos6),
-    full_quadratic = TSLM(x ~ TIME + I(TIME^2) +
-      sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-      + sin4 + cos4 + sin5 + cos5 + cos6),
-    full_linear = TSLM(x ~ TIME  +
-      sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-      + sin4 + cos4 + sin5 + cos5 + cos6 ),
-    reduced_quadratic_1  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6),
-    reduced_quadratic_2  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos6),
-    reduced_quadratic_3  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3),
-    reduced_quadratic_4  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
-    reduced_quadratic_5  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1 + sin2 + cos2),
-    reduced_quadratic_6  = TSLM(x ~ TIME + I(TIME^2) + sin1 + cos1),
-    reduced_linear_1  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + cos6),
-    reduced_linear_2  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos6),
-    reduced_linear_3  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3),
-    reduced_linear_4  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
-    reduced_linear_5  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2),
-    reduced_linear_6  = TSLM(x ~ TIME + sin1 + cos1)
+    apple_full_cubic = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + I(std_t^3) +
+                    sin1 + cos1 + cos2),
+    apple_full_quad = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + 
+                    sin1 + cos1 + cos2),
+    apple_reduced_quad1 = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + 
+                    sin1 + cos2),
+    apple_full_linear = TSLM(log(revenue_billions) ~ std_t +
+                    sin1 + cos1 + cos2),
+    apple_reduced_linear1 = TSLM(log(revenue_billions) ~ std_t + 
+                    sin1 + cos2 )
   )
 
 glance(model_combined) |>
   select(.model, AIC, AICc, BIC)
 ```
 
-
 ```{r}
-#| label: weather18
+#| label: tbl-ModelComparisonApple
+#| tbl-cap: "Comparison of the AIC, AICc, and BIC values for the models fitted to the logarithm of the simulated time series."
 #| echo: false
 
 combined_models <- glance(model_combined) |> 
@@ -636,6 +576,7 @@ minimum <- combined_models |>
     AICc = which(min(AICc)==AICc),
     BIC = which(min(BIC)==BIC)
   )
+
 combined_models |>
   rename(Model = ".model") |>
   round_df(1) |>
@@ -645,480 +586,342 @@ combined_models |>
   display_table()
 ```
 
-We look for the smallest value of the AIC, AICc, and BIC criteria. These methods do not have to agree with each other, and they provide different perspectives based on their various algorithms. Notice that the AIC and AICc criteria both suggest the model we titled "Reduced Quadratic 1:"
+We will apply the `apple_reduced_linear1` model.
 
-\begin{align*}
-  x_t &= \beta_0 + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 
-                        + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-                        + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-                        + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_7 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)  
-                        + \beta_8 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_9 \cos \left( \frac{2\pi \cdot 6 t}{12} \right) 
-               \phantom{+ \beta_9 \sin \left( \frac{2\pi \cdot 6 t}{12} \right)}
-      + z_t
-\end{align*}
+### Using the Residuals to Determine the Appropriate Correction
 
-The BIC criteria points to the "Reduced Quadratic 5" model:
-
-\begin{align*}
-  x_t &= \beta_0 + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 
-            + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) + z_t
-\end{align*}
-
-If there are two competing models that are both satisfactory, it is usually preferable to choose the more parsimonious (or simpler) model.
-
-Sometimes there will be a model that does not attain the lowest value of these measures, yet you may still want to use it if the AIC, AICc, and BIC values are not too much larger than the smallest values. Why might you do this? If the model is particularly interpretable or makes logical sense in the context of the physical situation, it is better than a model with a lower AIC that is not readily interpretable. 
-
-You may even choose to include terms that are not statistically significant, if you determine they are practically important. For example, if a quadratic term is significant, but the linear term is not, it is a good practice to include the linear term anyway.
-
-Notice that the linear models corresponding to the "Reduced Quadratic 1" and "Reduced Quadratic 5" models have AIC/AICc/BIC values that are not much larger than the minimum values. Given other external evidence related to global warming, it is unlikely that the second derivative of the function representing the Earth's mean temperature is negative. In other words, it does not seem like the rate at which the earth is warming is decreasing. Even if there is a quadratic component to the trend, it is not visible to the eye in the time plot.
-
-For these reasons, we will apply the "Reduced Linear 5" model. This model implies a linear trend in the mean temperature of the Earth. The BIC for this model is not much bigger than the BIC for the "Reduced Quadratic 5" model. This model is simpler than the "Reduced Quadratic 1," "Reduced Quadratic 5," and "Reduced Linear 1" models. 
-
-\begin{align*}
-  x_t &= \beta_0 + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right)  
-            + \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ + \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) + z_t
-\end{align*}
-
-:::
-<!-- End of model comparison -->
-
-
-
-::: {.callout-note icon=false title="Model Fitting" collapse="false"}
-<!-- Begin hiding code for model fitting -->
-
-#### Model Fitting
-
-The model we have chosen is the "Reduced Linear 5" model. For convenience, we reprint the coefficients here.
-
-##### Reduced Linear 5
+The residuals of this model are illustrated in @fig-residualHistogramAppleRevenue.
 
 ```{r}
-#| label: weather22
 #| code-fold: true
 #| code-summary: "Show the code"
+#| label: fig-residualHistogramAppleRevenue
+#| fig-cap: "Histogram of the residuals from the reduced model with a linear trend component"
 
-reduced5_linear_lm <- weather_df |>
-  model(reduced_linear_5  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2))
-
-reduced5_linear_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-
-r5lin_coef_unrounded <- reduced5_linear_lm |>
-  tidy() |>
-  select(term, estimate, std.error)
-
-r5lin_coef <- r5lin_coef_unrounded |>
-  round_df(3)
-```
-
-The fitted model is therefore:
-
-\begin{align*}
-  x_t &= \hat \beta_0 + \hat \beta_1 \left( zTIME \right)  \\
-      & ~~~~~~~~~~ + \hat \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \hat \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~ + \hat \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \hat \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
-      &= \hat \beta_0 + \hat \beta_1 \left( \frac{t - \bar t}{s_t} \right)  \\
-      & ~~~~~~~~~~ + \hat \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \hat \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~ + \hat \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \hat \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
-      &= `r r5lin_coef$estimate[1]` 
-            + `r r5lin_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right) \\ 
-      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
-\end{align*}
-
-The linear trend term can be simplified, if desired, but it is not necessary.
-
-\begin{align*}
-  x_t 
-      &= `r r5lin_coef$estimate[1]` 
-            + `r r5lin_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right) \\ 
-      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
-      &= `r r5lin_coef$estimate[1]` 
-            + `r r5lin_coef$estimate[2]` \left( \frac{t}{`r stats$sd`} \right)
-            - `r r5lin_coef$estimate[2]` \left( \frac{`r stats$mean`}{`r stats$sd`} \right) \\ 
-      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right)  
-      \\
-      &= `r r5lin_coef$estimate[1]` 
-            + `r ( r5lin_coef_unrounded$estimate[2] / stats_unrounded$sd ) |> round(3)` t
-            - `r ( r5lin_coef_unrounded$estimate[2] * stats_unrounded$mean / stats_unrounded$sd ) |> round(3)` \\ 
-      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
-      &= `r ( r5lin_coef_unrounded$estimate[1] -  r5lin_coef_unrounded$estimate[2] * stats_unrounded$mean / stats_unrounded$sd ) |> round(3)`
-            + `r ( r5lin_coef_unrounded$estimate[2] / stats_unrounded$sd ) |> round(3)` t  \\ 
-      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
-\end{align*}
-
-
-
-
-
-<!-- ::: {.callout-important icon=false title="Comparison of Standardized and Unstandardized Time Variable" collapse="true"} -->
-<!-- <!-- Begin code for comparison of unstandardized and standardized time variables --> -->
-
-<!-- #### Comparison of Standardized and Unstandardized Time Variable -->
-
-<!-- For comparison, note the values of the parameters if we fit the same model without standardizing the time variable: -->
-
-<!-- ```{r} -->
-<!-- #| label: weather2a -->
-<!-- #| code-fold: true -->
-<!-- #| code-summary: "Show the code" -->
-
-<!-- # Reduced linear 5 model with unstandardized time variable -->
-
-<!-- reduced5_linear_lm_unstandardized <- weather_df |> -->
-<!--   model(reduced_linear_5_unstandardized  = TSLM(x ~ TIME + sin1 + cos1 + sin2 + cos2)) -->
-
-<!-- reduced5_linear_lm_unstandardized |> -->
-<!--   tidy() |> -->
-<!--   mutate(sig = p.value < 0.05) -->
-
-<!-- r5lin_unstd_coef_unrounded <- reduced5_linear_lm_unstandardized |> -->
-<!--   tidy() |> -->
-<!--   select(term, estimate, std.error) -->
-
-<!-- r5lin_unstd_coef <- r5lin_unstd_coef_unrounded |> -->
-<!--   round_df(3) -->
-
-<!-- r5lin_unstd_coef$estimate -->
-<!-- ``` -->
-
-<!-- Notice that the variable `TIME` is statistically significant for the unstandardized case but not the standardized case. -->
-
-<!-- :::  -->
-<!-- <!-- End of collapsed comparison of models --> -->
-
-
-
-
-
-##### Reduced Quadratic 5
-
-To illustrate how to incorporate the quadratic term, we also fit the model called "Reduced Quadratic 5".
-
-```{r}
-#| label: weather23
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced5_quadratic_lm <- weather_df |>
-  model(reduced_quadratic_5  = TSLM(x ~ zTIME + I(zTIME^2) + sin1 + cos1 + sin2 + cos2))
-
-reduced5_quadratic_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-
-r5quad_coef <- reduced5_quadratic_lm |>
-  tidy() |>
-  select(term, estimate, std.error) |>
-  round_df(3)
-```
-
-The fitted model is:
-
-\begin{align*}
-  x_t &= \hat \beta_0 + \hat \beta_1 \left( zTIME \right) + \hat \beta_2 \left( zTIME \right)^2  \\
-      & ~~~~~~~~~~ + \hat \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \hat \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~ + \hat \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \hat \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
-      &= \hat \beta_0 + \hat \beta_1 \left( \frac{t - \bar t}{s_t} \right) + \hat \beta_2 \left( \frac{t - \bar t}{s_t} \right)^2 \\
-      & ~~~~~~~~~~ + \hat \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \hat \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~ + \hat \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \hat \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
-      &= `r r5quad_coef$estimate[1]` 
-            + `r r5quad_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right)
-            + (`r r5quad_coef$estimate[3]`) \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right)^2 \\ 
-      & ~~~~~~~~~~~~~~~~~ + (`r r5quad_coef$estimate[4]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + (`r r5quad_coef$estimate[5]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~ + `r r5quad_coef$estimate[6]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + (`r r5quad_coef$estimate[7]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
-\end{align*}
-
-If we want, we could rewrite this by expanding out the polynomial in the first three terms, but it is not necessary.
-
-:::
-<!-- End of Model Fitting -->
-
-
-
-::: {.callout-note icon=false title="Comparison of Fitted Values" collapse="false"}
-<!-- Begin hiding code for Comparison of Fitted Values -->
-
-#### Comparison of Fitted Values
-
-This time plot shows the original temperature data superimposed with the fitted curves based on three models.
-
-```{r}
-#| label: weather19
-#| code-fold: true
-#| code-summary: "Show the code"
-
-num_months <- weather_df |> 
+apple_resid_df <- model_combined |> 
+  dplyr::select(apple_reduced_linear1) |>
+  residuals() |> 
   as_tibble() |> 
-  dplyr::select(TIME) |> 
-  tail(1) |> 
-  pull()
-
-df <- tibble( TIME = seq(1, num_months, 0.01) ) |>
-  mutate(
-    cos1 = cos(2 * pi * 1 * TIME/12),
-    cos2 = cos(2 * pi * 2 * TIME/12),
-    cos3 = cos(2 * pi * 3 * TIME/12),
-    cos4 = cos(2 * pi * 4 * TIME/12),
-    cos5 = cos(2 * pi * 5 * TIME/12),
-    cos6 = cos(2 * pi * 6 * TIME/12),
-    sin1 = sin(2 * pi * 1 * TIME/12),
-    sin2 = sin(2 * pi * 2 * TIME/12),
-    sin3 = sin(2 * pi * 3 * TIME/12),
-    sin4 = sin(2 * pi * 4 * TIME/12),
-    sin5 = sin(2 * pi * 5 * TIME/12),
-    sin6 = sin(2 * pi * 6 * TIME/12)) |>
-  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME)) |>
-  as_tsibble(index = TIME)
-
-quad1_ts <- reduced1_quadratic_lm |>
-  forecast(df) |>
-  as_tibble() |>
-  dplyr::select(TIME, .mean) |>
-  rename(value = .mean) |>
-  mutate(Model = "Quadratic 1")
-
-quad5_ts <- reduced5_quadratic_lm |>
-  forecast(df) |>
-  as_tibble() |>
-  dplyr::select(TIME, .mean) |>
-  rename(value = .mean) |>
-  mutate(Model = "Quadratic 5")
-
-linear5_ts <- reduced5_linear_lm |>
-  forecast(df) |>
-  as_tibble() |>
-  dplyr::select(TIME, .mean) |>
-  rename(value = .mean) |>
-  mutate(Model = "Linear 5")
-
-data_ts <- weather_df |> 
-  as_tibble() |>
-  rename(value = x) |>
-  mutate(Model = "Data") |>
-  dplyr::select(TIME, value, Model)
-
-combined_ts <- bind_rows(data_ts, quad1_ts, quad5_ts, linear5_ts) 
-point_ts <- combined_ts |> filter(TIME == floor(TIME))
-
-okabe_ito_colors <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
-
-combined_ts |>
-  ggplot(aes(x = TIME, y = value, color = Model)) +
-  geom_line() +
-  geom_point(data = point_ts) +
-  labs(
-      x = "Month Number",
-      y = "Temperature (Fahrenheit)",
-      title = "Monthly Average of Daily High Temperatures in Rexburg",
-      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
-  ) +    
-  scale_color_manual(
-    values = okabe_ito_colors[1:nrow(combined_ts |> as_tibble() |> select(Model) |> unique())], 
-    name = ""
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    plot.subtitle = element_text(hjust = 0.5),
-    legend.position = "top", # Position the legend at the top
-    legend.direction = "horizontal" # Set the legend direction to horizontal
-  )
-```
-:::
-<!-- End of Comparison of Fitted Values -->
-
-
-
-
-## Small-Group Activity: Fall River Flow Rate (35 min)
-
-The Fall River is a tributary of the Henrys Fork of the Snake River northeast of Rexburg, Idaho. The United States Geological Survey (USGS) provides data every fifteen minutes on the flow rate (in cubic feet per second, cfs) of this river.
-
-This map shows the location of the monitoring station. On the left, you can see where Highway 20 intersects with Main St. in Ashton, Idaho.
-
-![Map of the fall river monitoring station](images/fallriver_map.png)
-Here is a glimpse of the raw data:
-
-```{r}
-#| label: fallriver1
-#| echo: false
-
-temp <- rio::import("https://byuistats.github.io/timeseries/data/fallriver.parquet")
-
-last_year <- temp |>
-  mutate(year = year(ymd_hm(datetime))) |>
-  summarize(max = max(year)) |>
-  pull()
-
-first_year <- temp |>
-  mutate(year = year(ymd_hm(datetime))) |>
-  summarize(min = min(year)) |>
-  pull()
-
-temp |>
-  dplyr::select(-comments) |>
-  display_partial_table(4,4)
+  dplyr::select(.resid) |>
+  rename(x = .resid) 
+  
+apple_resid_df |>
+  mutate(density = dnorm(x, mean(apple_resid_df$x), sd(apple_resid_df$x))) |>
+  ggplot(aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 0.05) +
+    geom_line(aes(x = x, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals from the Reduced Model with a Linear Trend"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
 ```
 
+Using the command `skewness(apple_resid_df$x)`, we compute the skewness of these residuals as: `r skewness(apple_resid_df$x) |> round(3)`. This number is not close to zero (it is between -1 and -0.5) indicating moderate negative skewness. We would therefore apply the empirical correction to our mean forecast values.
 
-The `r last_year` water year goes from October 1, `r last_year - 1` to September 30, `r last_year`. The data starts with the `r first_year + 1` water year and goes through the `r last_year` water year.
+### Applying the Correction Factor
 
-We will average the flow rates across the first and last half of each month, so there are 24 values in a year. For various reasons, there are gaps in the data, even after averaging across the first and last half of the month. We impute the missing values by linear interpolation using the `zoo` package. This just means that when we encounter NAs, we fit a line between the most recent observed value and the next observed value. Then, we fill all the NAs in with the value given by the liner relationship between the two points.
-
-Here are a few of the values, after averaging:
+@tbl-correctedModelApple summarizes some of the corrected mean values. Note that in this particular case, the corrected values are very close to the uncorrected values.
 
 ```{r}
-#| label: fallriver2
 #| code-fold: true
 #| code-summary: "Show the code"
 
-# load necessary packages
-pacman::p_load(zoo) # for linear interpolation of missing values
+apple_model_values <- model_combined |> 
+  dplyr::select(apple_reduced_linear1) |>
+  glance()
 
-# create the tsibble
-fallriver_ts0 <- rio::import("https://byuistats.github.io/timeseries/data/fallriver.parquet") |>
-  mutate(date = ymd_hm(datetime)) |>
-  dplyr::select(datetime, date, flow) |>
-  mutate(dates = ymd(paste0(year(date), "/", month(date), "/", day(date)))) |>
-  group_by(dates) |>
-  summarize(flow = mean(flow), .groups = "keep") |>
-  ungroup() |> 
+apple_model_check <- apple_model_values |>
+  mutate(
+    sigma = sqrt(sigma2),
+    lognorm_cf = exp((1/2) * sigma2),
+    empirical_cf = apple_reduced_linear_lm1 |>
+      residuals() |>
+      pull(.resid) |>
+      exp() |>
+      mean()) |>
+  select(.model, r_squared, sigma2, sigma, lognorm_cf, empirical_cf)
+
+apple_pred <- model_combined |> 
+  dplyr::select(apple_reduced_linear1) |>
+  forecast(new_data = apple_ts) |>
+  mutate(.mean_correction = .mean * apple_model_check$empirical_cf) |>
+  select(t, revenue_billions, .mean, .mean_correction)
+
+apple_model_check
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_pred <- model_combined |> 
+  dplyr::select(apple_reduced_linear1) |>
+  forecast(new_data = apple_ts) |>
+  mutate(.mean_correction = .mean * apple_model_check$empirical_cf) |>
+  select(t, revenue_billions, .mean, .mean_correction)
+```
+
+```{r}
+#| label: tbl-correctedModelApple
+#| tbl-cap: "Fitted values for the model representing Apple's quarterly revenue"
+#| echo: false
+
+apple_pred |>
+  display_partial_table(4,2)
+```
+
+### Plotting the Fitted Values
+
+These fitted values are illustrated in @fig-AppleRevenueFittedPlot.
+
+```{r}
+#| label: fig-AppleRevenueFittedPlot
+#| fig-cap: "Apple Inc.'s quarterly revenue in billions of U.S. dollars through first quarter of 2012 (in black) and the fitted regression model (in blue)"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_ts |>
+  autoplot(.vars = revenue_billions) +
+  geom_line(data = apple_pred, aes(x = dates, y = .mean_correction), color = "#56B4E9") +
+    labs(
+      x = "Quarter",
+      y = "Revenue (Billions USD)",
+      title = "Apple Revenue in Billions of U.S. Dollars"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+This time series was used as an example. We are obviously not interested in forecasting future values using this model. However, this is an excellent example of real-world exponential growth in a time series with a seasonal component. Limiting factors prevent exponential growth from being sustainable in the long run. After 2012, the Apple quarterly revenues follow a different, but very impressive, model. This is illustrated in @fig-AppleRevenueAllTime.
+
+```{r}
+#| label: fig-AppleRevenueAllTime
+#| fig-cap: "Apple Inc.'s quarterly revenue in billions of U.S. dollars; values beginning with the first quarter of 2012 are shown in orange"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_raw |>
+  dplyr::select(dates, revenue_billions) |>
   as_tsibble(index = dates) |>
-  fill_gaps() |> 
-  read.zoo() %>% 
-  # impute missing values by interpolation
-  na.approx(xout = seq(start(.), end(.), "day")) %>% 
-  fortify.zoo() |>
-  rename(
-    flow = ".", 
-    dates = Index
-  ) |>
-  mutate(round_day = ifelse(day(dates) <= 15, 1, 16)) |>
-  mutate(dates2 = ymd(paste0(year(dates), "/", month(dates), "/", round_day))) |>
-  group_by(dates2) |>
-  summarize(flow = mean(flow)) |>
-  ungroup() |> 
-  rename(dates = dates2) |>
-  as_tsibble(index = dates, regular = FALSE)
+  autoplot(.vars = revenue_billions) +
+  geom_line(
+    data = apple_raw |> filter(dates >= my("Jan 2012")), 
+    aes(x = dates, y = revenue_billions), 
+    color = "#D55E00"
+  ) +
+  labs(
+    x = "Quarter",
+    y = "Revenue (Billions USD)",
+    title = "Apple Revenue (in Billions USD)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
 
+
+
+## Choose One of the Following Small-Group Activities (25 min)
+
+### Small-Group Activity: Retail Sales (All Other General Merchandise Stores)
+
+The code below downloads and gives the time plot for the total monthly sales in the United States for retail stores with the NAICS category 45299, "All Other General Merchandise Stores." The time plot is given in Figure @fig-RetailSalesGeneralMerch.
+
 ```{r}
-#| label: fallriver3
-#| echo: false
-
-fallriver_ts0 |>
-  display_partial_table(4,4)
-```
-
-
-```{r}
-#| label: fallriver4
+#| label: fig-RetailSalesGeneralMerch
+#| fig-cap: "Time plot of the total monthly retail sales for all other general merchandise stores (45299)"
 #| code-fold: true
 #| code-summary: "Show the code"
 
-fallriver_ts <- fallriver_ts0 |>
-  # compute additional variables needed for the regression
-  mutate(TIME = 1:n()) |>
+# Read in retail sales data for "all other general merchandise stores"
+retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
+  filter(naics == 45299) |>
+  filter(as_date(month) >= my("Jan 1998")) |>
+  mutate(t = 1:n()) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
   mutate(
-    cos1 = cos(2 * pi * 1 * TIME / 24),
-    cos2 = cos(2 * pi * 2 * TIME / 24),
-    cos3 = cos(2 * pi * 3 * TIME / 24),
-    cos4 = cos(2 * pi * 4 * TIME / 24),
-    cos5 = cos(2 * pi * 5 * TIME / 24),
-    cos6 = cos(2 * pi * 6 * TIME / 24),
-    cos7 = cos(2 * pi * 7 * TIME / 24),
-    cos8 = cos(2 * pi * 8 * TIME / 24),
-    cos9 = cos(2 * pi * 9 * TIME / 24),
-    cos10 = cos(2 * pi * 10 * TIME / 24),
-    cos11 = cos(2 * pi * 11 * TIME / 24),
-    cos12 = cos(2 * pi * 12 * TIME / 24),
-    sin1 = sin(2 * pi * 1 * TIME / 24),
-    sin2 = sin(2 * pi * 2 * TIME / 24),
-    sin3 = sin(2 * pi * 3 * TIME / 24),
-    sin4 = sin(2 * pi * 4 * TIME / 24),
-    sin5 = sin(2 * pi * 5 * TIME / 24),
-    sin6 = sin(2 * pi * 6 * TIME / 24),
-    sin7 = sin(2 * pi * 7 * TIME / 24),
-    sin8 = sin(2 * pi * 8 * TIME / 24),
-    sin9 = sin(2 * pi * 9 * TIME / 24),
-    sin10 = sin(2 * pi * 10 * TIME / 24),
-    sin11 = sin(2 * pi * 11 * TIME / 24),
-    # sin12 = sin(2 * pi * 12 * TIME / 24) # zero for all integer values of t
-  ) 
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12)
+  ) |>
+  as_tsibble(index = month)
 
-# plot the time series
-fallriver_ts |>
-  autoplot(.vars = flow) +
-  labs(
-      x = "Date",
-      y = "Flow (cubic feet per second, cfs)",
-      title = "Fall River Flow Rate",
-      subtitle = "Above the Yellowstone Canal near Squirrel, Idaho"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    plot.subtitle = element_text(hjust = 0.5)
-  )
+retail_ts |>
+  autoplot(.vars = sales_millions) +
+  stat_smooth(method = "lm", 
+              formula = y ~ x, 
+              geom = "smooth",
+              se = FALSE,
+              color = "#E69F00",
+              linetype = "dotted") +
+    labs(
+      x = "Month",
+      y = "Sales (Millions of U.S. Dollars)",
+      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
 ```
+
+<!-- @fig-retailSideBySidePlot shows the "All other general merchandise" retail sales data. -->
+```{r}
+#| include: false
+#| label: fig-retailSideBySidePlot
+#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| results: asis
+#| fig-height: 3.5
+
+retail_plot_raw <- retail_ts |>
+    autoplot(.vars = sales_millions) +
+    labs(
+      x = "Month",
+      y = "sales_millions",
+      title = "Other General Merchandise Sales"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+retail_plot_log <- retail_ts |>
+    autoplot(.vars = log(sales_millions)) +
+    labs(
+      x = "Month",
+      y = "log(sales_millions)",
+      title = "Logarithm of Other Gen. Merch. Sales"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+retail_plot_raw | retail_plot_log
+```
+
 
 
 <!-- Check Your Understanding -->
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
-Use the Fall River flow data to do the following.
+Use the retail sales data to do the following.
 
--   Explore various linear models for the flow of the Fall River over time.
--   Choose a model to represent the data, and justify your decision.
+-   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
+-   Use the residuals to determine the appropriate correction for the data.
+-   Forecast the data for the next 5 years.
+-   Apply the appropriate correction to the forecasted values.
+-   Plot the fitted (forecasted) values along with the time series.
 
 :::
+
+
+
+
+
+
+
+
+
+
+
+
+### Small-Group Activity: Industrial Electricity Consumption in Texas
+
+
+These data represent the amount of electricity used each month for industrial applications in Texas.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+elec_ts <- rio::import("https://byuistats.github.io/timeseries/data/electricity_tx.csv") |>
+  dplyr::select(-comments) |>
+  mutate(month = my(month)) |>
+  mutate(
+    t = 1:n(),
+    std_t = (t - mean(t)) / sd(t)
+  ) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12)
+  ) |>
+  as_tsibble(index = month)
+
+elec_plot_raw <- elec_ts |>
+    autoplot(.vars = megawatthours) +
+    labs(
+      x = "Month",
+      y = "Megawatt-hours",
+      title = "Texas' Industrial Electricity Use"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+elec_plot_log <- elec_ts |>
+    autoplot(.vars = log(megawatthours)) +
+    labs(
+      x = "Month",
+      y = "log(Megwatt-hours)",
+      title = "Log of Texas' Industrial Electricity Use"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+elec_plot_raw | elec_plot_log
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the Texas industrial electricity consumption data to do the following.
+
+-   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
+-   Use the residuals to determine the appropriate correction for the data.
+-   Forecast the data for the next 5 years.
+-   Apply the appropriate correction to the forecasted values.
+-   Plot the fitted (forecasted) values along with the time series.
+
+:::
+
+
+
+
+
+
+
+
 
 
 
@@ -1139,7 +942,7 @@ Use the Fall River flow data to do the following.
 
 ## Download Homework
 
-<a href="https://byuistats.github.io/timeseries/homework/homework_5_3.qmd" download="homework_5_3.qmd"> homework_5_3.qmd </a>
+<a href="https://byuistats.github.io/timeseries/homework/homework_5_5.qmd" download="homework_5_5.qmd"> homework_5_5.qmd </a>
 
 :::
 
@@ -1148,55 +951,138 @@ Use the Fall River flow data to do the following.
 
 
 <a href="javascript:showhide('Solutions1')"
-style="font-size:.8em;">Small-Group Activity</a>
+style="font-size:.8em;">Small-Group Activity: Retail Sales</a>
   
 ::: {#Solutions1 style="display:none;"}
     
-Here are the coefficients for two possible models that could be fitted to the Fall River flow data. 
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the retail sales data to do the following.
+
+-   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
+-   Use the residuals to determine the appropriate correction for the data.
+-   Forecast the data for the next 5 years.
+-   Apply the appropriate correction to the forecasted values.
+-   Plot the fitted (forecasted) values along with the time series.
+
+:::
 
 ```{r}
-#| label: fallriverSolutions
+#| label: ExponentialQuadraticFull1a
 #| code-fold: true
 #| code-summary: "Show the code"
 
-river_full_lm <- fallriver_ts |>
-  model(river_full_lm  = TSLM(flow ~ TIME 
-                              + sin1 + cos1 + sin2 + cos2 
-                              + sin3 + cos3 + sin4 + cos4 
-                              + sin5 + cos5 + sin6 + cos6 
-                              + sin7 + cos7 + sin8 + cos8
-                              + sin9 + cos9 + sin10 + cos10
-                              + sin11 + cos11       + cos12
-                              )
-        )
-
-river_full_lm |>
+retail_full_quad_lm <- retail_ts |>
+  model(retail_full_quad = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
+retail_full_quad_lm |>
   tidy() |>
-  mutate(sig = p.value < 0.05)
+  mutate(sig = p.value < 0.05) 
+
+retail_resid_df <- retail_full_quad_lm |> 
+  residuals() |> 
+  as_tibble() |> 
+  dplyr::select(.resid) |>
+  rename(x = .resid) 
+  
+retail_resid_df |>
+  mutate(density = dnorm(x, mean(retail_resid_df$x), sd(retail_resid_df$x))) |>
+  ggplot(aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 0.02) +
+    geom_line(aes(x = x, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals from the Full Quadratic Model"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+skewness(retail_resid_df$x)
 ```
 
-```{r}
-#| label: fallriverSolutions2
-#| code-fold: true
-#| code-summary: "Show the code"
-
-river_reduced1_lm <- fallriver_ts |>
-  model(river_reduced1_lm  = TSLM(flow ~ TIME 
-                              + sin1 + cos1 + sin2 + cos2 
-                              + sin3 + cos3 + sin4 + cos4 
-                              + sin5 + cos5
-                              )
-        )
-
-river_reduced1_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-
+There is little skewness. We will use the log-normal correction factor.
 
 :::
 
 
 
 
+
+
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Small-Group Activity: Texas Industrial Electricity Usage</a>
+  
+::: {#Solutions2 style="display:none;"}
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the Texas industrial electricity consumption data to do the following.
+
+-   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
+-   Use the residuals to determine the appropriate correction for the data.
+-   Forecast the data for the next 5 years.
+-   Apply the appropriate correction to the forecasted values.
+-   Plot the fitted (forecasted) values along with the time series.
+
+:::    
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Cubic model with standardized time variable
+
+elec_full_cubic_lm <- elec_ts |>
+  model(elec_full_cubic = TSLM(log(megawatthours) ~ std_t + I(std_t^2) + I(std_t^3) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + sin4 + cos4 + sin5 + cos5 + cos6)) # Note sin6 is omitted
+elec_full_cubic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+# Quadratic model with standardized time variable
+
+elec_full_quadratic_lm <- elec_ts |>
+  model(elec_full_cubic = TSLM(log(megawatthours) ~ std_t + I(std_t^2) + 
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + sin4 + cos4 + sin5 + cos5 + cos6)) # Note sin6 is omitted
+elec_full_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+elec_resid_df <- elec_full_quadratic_lm |> 
+  residuals() |> 
+  as_tibble() |> 
+  dplyr::select(.resid) |>
+  rename(x = .resid) 
+  
+elec_resid_df |>
+  mutate(density = dnorm(x, mean(elec_resid_df$x), sd(elec_resid_df$x))) |>
+  ggplot(aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 0.02) +
+    geom_line(aes(x = x, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals from the Full Quadratic Model"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+skewness(elec_resid_df$x)
+```
+
+There is moderate negative skewness. We will use the emperical correction factor.
+
+:::
