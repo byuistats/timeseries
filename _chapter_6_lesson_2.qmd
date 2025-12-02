@@ -199,7 +199,9 @@ weather_df <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_w
     sin4 = sin(2 * pi * 4 * TIME/12),
     sin5 = sin(2 * pi * 5 * TIME/12),
     sin6 = sin(2 * pi * 6 * TIME/12)) |>
-  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME)) |>
+  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME),
+         month_index = month(dates),
+         month_index = factor(month_index, levels = 1:12, labels = month.abb)) |>
   as_tsibble(index = TIME)
 
 weather_df |>
@@ -292,7 +294,7 @@ We chose the "Reduced Linear 5" model. For convenience, we reprint the coefficie
 #| code-summary: "Show the code"
 
 reduced5_linear_lm <- weather_df |>
-  model(reduced_linear_5  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2))
+  model(reduced_linear_5  = TSLM(x ~ zTIME + month_index))
 
 reduced5_linear_lm |>
   tidy() |>
@@ -317,21 +319,23 @@ stats <- stats_unrounded |>
 The fitted model is:
 
 \begin{align*}
-  x_t 
-      &= \hat \beta_0 + \hat \beta_1 \left( \frac{t - \bar t}{s_t} \right)  \\
-      & ~~~~~~~~~~ + \hat \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \hat \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~ + \hat \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \hat \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
-      &= `r r5lin_coef$estimate[1]` 
-            + `r r5lin_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right) \\ 
-      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
+  \log(x_t) &= \beta_0 
+            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
+          + s_t  + z_t
 \end{align*}
+
+\begin{align*}
+  s_t=
+    
+    \begin{cases}
+        \Delta\beta_2 , & t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
+        \Delta\beta_3 , & t = 2, 14, 26, \ldots ~~~~ ~~(March) \\
+        ~~~~~~~~⋮ & ~~~~~~~~~~~~⋮ \\
+        \Delta\beta_{12} , & t = 12, 24, 36, \ldots ~~~~ (December) 
+      \end{cases}
+\end{align*}
+
+
 
 ### Fiiting an ARMA(p,q) Model
 
