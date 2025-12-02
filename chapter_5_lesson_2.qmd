@@ -1,7 +1,9 @@
 ---
 title: "Transformations, Forecasting and Bias Correction"
 subtitle: "Chapter 5: Lesson 2"
-format: html
+format:
+  html:
+    embed-resources: true
 editor: source
 sidebar: false
 ---
@@ -37,14 +39,14 @@ source("common_functions.R")
 
 ## Learning Outcomes
 
-{{< include outcomes/_chapter_5_lesson_4_outcomes.qmd >}}
+#{{< include outcomes/_chapter_5_lesson_4_outcomes.qmd >}}
 
 
 
 
 ## Preparation
 
--   Read Sections 5.7, 5.9, 5.11
+-   Read Sections 5.7, 5.9-5.11
 
 
 
@@ -75,12 +77,16 @@ source("common_functions.R")
 ## Class Activity: Simulate an Exponential Trend with a Seasonal Component (15 min)
 
 
-<a id="Simulation">We</a> will simulate code that has a seasonal component and impose an exponential trend.
+There are a lot of processes that grow over time at a regular rate. These growing variables
+may be modeled as exponential functions. Exponential functions can be difficult to model in a linear regression,
+so we can use a logarithmic transformation to make the function linear and easier to work with. 
+
+We will simulate code that has a seasonal component and impose an exponential trend.
 
 ::: {.callout-note icon=false title="Figures" collapse="false"}
 <!-- Begin hiding code for Figures -->
 
-@fig-simTSplot shows the simulated time series and the time series after the natural logarithm is applied.
+@fig-simTSplot shows the simulated time series and it's natural logarithm.
 
 ```{r}
 #| label: fig-simTSplot
@@ -90,74 +96,125 @@ source("common_functions.R")
 #| results: asis
 #| fig-height: 3.5
 
-set.seed(12345)
+n_years  <- 9
+n_months <- n_years * 12
+sigma    <- 0.05
 
-n_years <- 9 # Number of years to simulate
-n_months <- n_years * 12 # Number of months
-sigma <- .05 # Standard deviation of random term
+# Dates
+dates_seq <- seq(
+  floor_date(now(), unit = "year"),
+  length.out = n_months + 1,
+  by = "-1 month"
+) |>
+  floor_date(unit = "month") |>
+  sort() |>
+  head(n_months)
 
-z_t <- rnorm(n = n_months, mean = 0, sd = sigma)
+t <- 1:n_months
 
-dates_seq <- seq(floor_date(now(), unit = "year"), length.out=n_months + 1, by="-1 month") |>
-  floor_date(unit = "month") |> sort() |> head(n_months)
+# Month-of-year index: 1 = Jan, ..., 12 = Dec
+month_index  <- ((t - 1) %% 12) + 1
+month_factor <- factor(month_index, levels = 1:12, labels = month.abb)
 
+# ----- KEY PART: indicator-style seasonal effects by month -----
+
+# Compute the seasonal effect for each month-of-year
+# using your original harmonic coefficients, but evaluated
+# once per month instead of for every t.
+seasonal_effect_by_month <- sapply(1:12, function(m) {
+  0.03 * sin(2 * pi * 1 * m / 12) + 0.04 * cos(2 * pi * 1 * m / 12) +
+  0.05 * sin(2 * pi * 2 * m / 12) + 0.03 * cos(2 * pi * 2 * m / 12) +
+  0.01 * sin(2 * pi * 3 * m / 12) + 0.005 * cos(2 * pi * 3 * m / 12)
+})
+
+# Map each time point to its month-specific seasonal effect
+seasonal_term <- seasonal_effect_by_month[month_index]
+
+# AR(2) noise as before
+random_ar <- arima.sim(model = list(ar = c(0.5, 0.2)),
+                       n = n_months, sd = 0.02)
+
+# Build tsibble
 sim_ts <- tibble(
-  t = 1:n_months,
-  dates = dates_seq,
-  random = arima.sim(model=list(ar=c(.5,0.2)), n = n_months, sd = 0.02),
-  x_t = exp(2 + 0.015 * t +
-      0.03 * sin(2 * pi * 1 * t / 12) + 0.04 * cos(2 * pi * 1 * t / 12) + 
-      0.05 * sin(2 * pi * 2 * t / 12) + 0.03 * cos(2 * pi * 2 * t / 12) +
-      0.01 * sin(2 * pi * 3 * t / 12) + 0.005 * cos(2 * pi * 3 * t / 12) +
-      random
-    )
-  ) |>
-  mutate(
-    cos1 = cos(2 * pi * 1 * t / 12),
-    cos2 = cos(2 * pi * 2 * t / 12),
-    cos3 = cos(2 * pi * 3 * t / 12),
-    cos4 = cos(2 * pi * 4 * t / 12),
-    cos5 = cos(2 * pi * 5 * t / 12),
-    cos6 = cos(2 * pi * 6 * t / 12),
-    sin1 = sin(2 * pi * 1 * t / 12),
-    sin2 = sin(2 * pi * 2 * t / 12),
-    sin3 = sin(2 * pi * 3 * t / 12),
-    sin4 = sin(2 * pi * 4 * t / 12),
-    sin5 = sin(2 * pi * 5 * t / 12),
-    sin6 = sin(2 * pi * 6 * t / 12)) |>
+  t       = t,
+  dates   = dates_seq,
+  month   = month_factor,
+  random  = random_ar,
+  seasonal = seasonal_term,
+  x_t     = exp(2 + 0.015 * t + seasonal + random)
+) |>
   mutate(std_t = (t - mean(t)) / sd(t)) |>
   as_tsibble(index = dates)
 
+# (Optional) create explicit 0/1 indicator columns for each month
+sim_ts <- sim_ts |>
+  bind_cols(
+    model.matrix(~ month - 1, data = sim_ts) |>
+      as_tibble()
+  )
+
+# Plots
 plot_raw <- sim_ts |>
-    autoplot(.vars = x_t) +
-    labs(
-      x = "Month",
-      y = "x_t",
-      title = "Simulated Time Series"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
+  autoplot(x_t) +
+  labs(
+    x = "Month",
+    y = "x_t",
+    title = "Simulated Time Series"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 
 plot_log <- sim_ts |>
-    autoplot(.vars = log(x_t)) +
-    labs(
-      x = "Month",
-      y = "log(x_t)",
-      title = "Logarithm of Simulated Time Series"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
+  autoplot(log(x_t)) +
+  labs(
+    x = "Month",
+    y = "log(x_t)",
+    title = "Logarithm of Simulated Time Series"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 
 plot_raw | plot_log
 ```
 
-We will compute the (natural) logarithm of the time series values before fitting any linear models. So, our response variable will be $\log(x_t)$, rather than $x_t$.
 
-Even though there is no visual evidence of curvature in the trend for the logarithm of the time series, we will start by fitting a model that allows for a cubic trend. (In practice, we would probably not fit this model. However, there are some things that will occur that are helpful to understand the underlying process.)
+
+
+We will use (natural) logarithm of the time series before fitting any linear models. So, our response variable will be $\log(x_t)$, rather than $x_t$.
+
+Even though there is no visual evidence of curvature in the trend for the logarithm of the time series, we will start by fitting a model that allows for a cubic trend. (In practice, we would probably not fit this model. However, we want to understand how to evaluate among different model specifications. 
+:::
+
+### Model Selection Information Criteria: Balancing Fit and Complexity
+
+In a previous activity, we compared the Cubic, Quadratic, and Linear models. You might have noticed that adding more variables (like $t^2$ and $t^3$) almost always increases the $R^2$ value and reduces the residual sum of squares. However, a model that hugs the training data too tightly (overfitting) often fails when forecasting new data.The question that Inforcation Criteria answer is how to select the best forecasting model, we need a way to penalize complexity. We use Information Criteria to find the "Goldilocks" model: one that fits the data well but remains simple enough to generalize.
+
+::: {.callout-tip icon=false}
+### AIC, AICc, and BIC
+
+The motivation behind Information Criteria is based on Parsimony. Parsimony is often associated with Occam's Razor: Given two models with similar predictive power, the simpler one is preferred. We want the model that explains the signal with the fewest possible parameters.The structure of all Information Criteria follow the same basic structure:
+
+$$\text{IC} = \text{Badness of Fit} + \text{Penalty for Complexity}$$
+We want to minimize this value. The "Badness of Fit" is measured by $-2\log(\mathcal{L})$, where $\mathcal{L}$ is the likelihood (how probable the data is given the model). The "Penalty" increases as we add parameters ($k$).1. 
+
+##### AIC (Akaike Information Criterion)
+$$AIC = -2\log(\mathcal{L}) + 2k$$
+
+The AIC is founded on Information Theory. It estimates the relative amount of information lost when a model is used to represent the process that generated the data (using Kullback-Leibler divergence). Intuitively, it tries to predict which model will have the lowest prediction error on future data. The AIC is xxcellent for forecasting. It tends to prefer slightly more complex models than BIC.
+
+##### AICc (Corrected AIC)
+
+$$AICc = AIC + \frac{2k(k+1)}{n - k - 1}$$
+
+When the sample size ($n$) is small, the standard AIC tends to select models that are too complex (overfitting). In practice, use AICc instead of AIC when $n$ is finite. As $n \to \infty$, AICc converges to AIC. Since time series data is often limited, AICc is a great metric.
+
+##### BIC (Bayesian Information Criterion)
+
+$$BIC = -2\log(\mathcal{L}) + k\ln(n)$$
+The BIC is founded on Bayesian Inference. It attempts to estimate the probability that a specific model is the "true" model among the set of candidates.Notice the penalty is $k\ln(n)$ rather than $2k$. Since $\ln(n) > 2$ for any dataset with $n > 7$, BIC penalizes complexity much more strictly than AIC. Use BIC when you want your model choice to be conservative given uncertainty in modeling or forecasting. It is great for explanatory modeling (understanding relationships), but sometimes under-fits for forecasting purposes.Summary Rule of ThumbLower is Better. The absolute number means nothing; only the difference between models matters.If AICc and BIC disagree, rely on AICc for forecasting and BIC for explanation.
+
+In our specific simulated example below, the Linear model had the lowest AICc and BIC. Even though the Cubic model had more parameters to "wiggle" and fit the training data, the Information Criteria penalized those extra parameters ($\beta_2$ and $\beta_3$) because they did not contribute enough information to justify their "cost."
+
 
 :::
 <!-- End figures -->
@@ -166,9 +223,6 @@ Even though there is no visual evidence of curvature in the trend for the logari
 
 ## Cubic
 
-
-::: {.callout-note icon=false title="Cubic Model" collapse="false"}
-<!-- Begin hiding code for cubic model -->
 
 #### Cubic Model
 
@@ -180,28 +234,21 @@ After taking the (natural) logarithm of $x_t$, we fit a cubic model to the log-t
   \log(x_t) &= \beta_0 
             + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
             + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 
-            + \beta_3 \left( \frac{t - \mu_t}{\sigma_t} \right)^3 \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_4 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \beta_5 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_6 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \beta_7 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_8 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)
-            + \beta_9 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_{10} \sin \left( \frac{2\pi \cdot 4 t}{12} \right)
-            + \beta_{11} \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_{12} \sin \left( \frac{2\pi \cdot 5 t}{12} \right)
-            + \beta_{13} \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            \phantom{+ \beta_{15} \sin \left( \frac{2\pi \cdot 6 t}{12} \right)}
-            + \beta_{14} \cos \left( \frac{2\pi \cdot 6 t}{12} \right) 
-      + z_t
+            + \beta_3 \left( \frac{t - \mu_t}{\sigma_t} \right)^3 + s_t + z_t
 \end{align*}
 
+
+
+\begin{align*}
+  s_t=
+    
+    \begin{cases}
+        \Delta\beta_2 , & t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
+        \Delta\beta_3 , & t = 2, 14, 26, \ldots ~~~~ ~~(March) \\
+        ~~~~~~~~⋮ & ~~~~~~~~~~~~⋮ \\
+        \Delta\beta_{12} , & t = 12, 24, 36, \ldots ~~~~ (December) 
+      \end{cases}
+\end{align*}
 
 ```{r}
 #| label: simulatedExponentialTS1
@@ -210,25 +257,21 @@ After taking the (natural) logarithm of $x_t$, we fit a cubic model to the log-t
 
 # Cubic model with standardized time variable
 
-full_cubic_lm <- sim_ts |>
-  model(full_cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) +
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
-full_cubic_lm |>
+cubic_lm <- sim_ts |>
+  model(cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) + month )) #Jan is ommited 
+cubic_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
 
 
-Note that neither the quadratic nor the cubic terms are statistically significant in this model. We will eliminate the cubic term and fit a model with a quadratic trend.
+Note that neither the quadratic nor the cubic terms are statistically significant in this model. 
 
-:::
+
 <!-- End of cubic model -->
 
 ## Quadratic
 
-::: {.callout-note icon=false title="Quadratic Model" collapse="false"}
-<!-- Begin hiding code for quadratic model -->
 
 #### Quadratic Model
 
@@ -241,26 +284,18 @@ The full model with a quadratic trend is written as:
 \begin{align*}
   \log(x_t) &= \beta_0 
             + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
-            + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_7 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)
-            + \beta_8 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_9 \sin \left( \frac{2\pi \cdot 4 t}{12} \right)
-            + \beta_{10} \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_{11} \sin \left( \frac{2\pi \cdot 5 t}{12} \right)
-            + \beta_{12} \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-           \phantom{+ \beta_{14} \sin \left( \frac{2\pi \cdot 6 t}{12} \right)}
-            + \beta_{13} \cos \left( \frac{2\pi \cdot 6 t}{12} \right) 
-      + z_t
+            + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 + s_t  + z_t
+\end{align*}
+
+\begin{align*}
+  s_t=
+    
+    \begin{cases}
+        \Delta\beta_2 , & t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
+        \Delta\beta_3 , & t = 2, 14, 26, \ldots ~~~~ ~~(March) \\
+        ~~~~~~~~⋮ & ~~~~~~~~~~~~⋮ \\
+        \Delta\beta_{12} , & t = 12, 24, 36, \ldots ~~~~ (December) 
+      \end{cases}
 \end{align*}
 
 ```{r}
@@ -268,81 +303,18 @@ The full model with a quadratic trend is written as:
 #| code-fold: true
 #| code-summary: "Show the code"
 
-full_quad_lm <- sim_ts |>
-  model(full_quad = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
-full_quad_lm |>
+quad_lm <- sim_ts |>
+  model(quad = TSLM(log(x_t) ~ std_t + I(std_t^2)  + month)) # Note sin6 is omitted
+quad_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
 ```
 
-Now, note that the quadratic term is statistically significant. It was not significant when the cubic term was included in the model, but it is now.
-
-##### Reduced Quadratic Trend: Model 1
-
-This model omits all the Fourier (sine and cosine) terms that are not significant in the previous model.
-
-```{r}
-#| label: simulatedExponentialQuadratic1
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced_quadratic_lm1 <- sim_ts |>
-  model(reduced_quadratic1 = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
-reduced_quadratic_lm1 |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-All the terms are statistically significant in this model.
-
-##### Reduced Quadratic Trend: Model 2
-
-This model only includes the Fourier series terms where $i=1$ or $i=2$.
-
-```{r}
-#| label: simulatedExponentialQuadratic2
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced_quadratic_lm2 <- sim_ts |>
-  model(reduced_quadratic2 = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
-    sin1 + cos1 + sin2 + cos2))
-reduced_quadratic_lm2 |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
-```
-
-As we would expect, all the terms are statistically significant. (They were all significant in the previous model, so it is not surprising that they are still significant.)
-
-##### Reduced Quadratic Trend: Model 3
-
-This model is reduced to include only the Fourier series terms for $i=1$.
-
-```{r}
-#| label: simulatedExponentialQuadratic4
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced_quadratic_lm3 <- sim_ts |>
-  model(reduced_quadratic3 = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
-    sin1 + cos1)) 
-reduced_quadratic_lm3 |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
-```
-
-All the terms in this parsimonious model are statistically significant.
-
-:::
+Note the quadratic term is not significant.
 <!-- End of quadratic model -->
 
 ## Linear
 
-::: {.callout-note icon=false title="Linear Model" collapse="false"}
-<!-- Begin hiding code for linear model -->
 
 #### Linear Model
 
@@ -355,26 +327,18 @@ First, we fit a full model with a linear trend. We can express this model as:
 
 \begin{align*}
   \log(x_t) &= \beta_0 
-            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_6 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)
-            + \beta_7 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_8 \sin \left( \frac{2\pi \cdot 4 t}{12} \right)
-            + \beta_9 \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_{10} \sin \left( \frac{2\pi \cdot 5 t}{12} \right)
-            + \beta_{11} \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            \phantom{+ \beta_{13} \sin \left( \frac{2\pi \cdot 6 t}{12} \right)}
-            + \beta_{12} \cos \left( \frac{2\pi \cdot 6 t}{12} \right) 
-      + z_t
+            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) + s_t  + z_t
+\end{align*}
+
+\begin{align*}
+  s_t=
+    
+    \begin{cases}
+        \Delta\beta_2 , & t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
+        \Delta\beta_3 , & t = 2, 14, 26, \ldots ~~~~ ~~(March) \\
+        ~~~~~~~~⋮ & ~~~~~~~~~~~~⋮ \\
+        \Delta\beta_{12} , & t = 12, 24, 36, \ldots ~~~~ (December) 
+      \end{cases}
 \end{align*}
 
 
@@ -383,87 +347,24 @@ First, we fit a full model with a linear trend. We can express this model as:
 #| code-fold: true
 #| code-summary: "Show the code"
 
-full_linear_lm <- sim_ts |>
-  model(full_linear = TSLM(log(x_t) ~ std_t + 
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
-full_linear_lm |>
+linear_lm <- sim_ts |>
+  model(linear = TSLM(log(x_t) ~ std_t + month)) # Note sin6 is omitted
+linear_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
 
-##### Reduced Linear Trend: Model 1
 
-This model excludes the terms that were not significant in the full model with a linear trend. 
-
-```{r}
-#| label: simulatedExponentialLinear1
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced_linear_lm1 <- sim_ts |>
-  model(reduced_linear1 = TSLM(log(x_t) ~ std_t + 
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
-reduced_linear_lm1 |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-All of the terms are significant in this model.
-
-##### Reduced Linear Trend: Model 2
-
-We reduce the model to see if a more parsimonious model will suffice. This model contains a linear trend and the Fourier series terms associated with $i=1$ and $i=2$.
-
-```{r}
-#| label: simulatedExponentialLinear2
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced_linear_lm2 <- sim_ts |>
-  model(reduced_linear2 = TSLM(log(x_t) ~ std_t + 
-    sin1 + cos1 + sin2 + cos2))
-reduced_linear_lm2 |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
-```
-
-All the terms in this model are statistically significant.
-
-##### Reduced Linear Trend: Model 3
-
-Finally, we fit a more reduced model that includes a linear trend and only the Fourier terms associated with $i=1$.
-
-```{r}
-#| label: simulatedExponentialLinear3
-#| code-fold: true
-#| code-summary: "Show the code"
-
-reduced_linear_lm3 <- sim_ts |>
-  model(reduced_linear3 = TSLM(log(x_t) ~ std_t + 
-    sin1 + cos1)) 
-reduced_linear_lm3 |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
-
-```
-
-Each of these terms is significant.
-
-:::
 <!-- End of linear model -->
 
 :::
 
 
-::: {.callout-note icon=false title="Model Comparison" collapse="false"}
-<!-- Begin hiding code for model comparison -->
-
 #### Comparison of Fitted Models
 
 ##### AIC, AICc, and BIC
 
-We will now compare the models we fitted above. #tbl-ModelComparison gives the AIC, AICc, and BIC of the models fitted above.
+We will now compare the models we fitted above. @tbl-ModelComparison gives the AIC, AICc, and BIC of the models fitted above.
 
 ```{r}
 #| label: modelComparison
@@ -473,21 +374,9 @@ We will now compare the models we fitted above. #tbl-ModelComparison gives the A
 
 model_combined <- sim_ts |>
   model(
-    full_cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) +
-                    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-                  + sin4 + cos4 + sin5 + cos5 + cos6 ),
-    full_quad = TSLM(log(x_t) ~ std_t + I(std_t^2) + 
-                       sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-                     + sin4 + cos4 + sin5 + cos5 + cos6 ),
-    reduced_quadratic1 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
-    reduced_quadratic2 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1 + sin2 + cos2),
-    reduced_quadratic3 = TSLM(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1),
-    full_linear = TSLM(log(x_t) ~ std_t + 
-                         sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-                       + sin4 + cos4 + sin5 + cos5 + cos6 ),
-    reduced_linear1 = TSLM(log(x_t) ~ std_t + sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
-    reduced_linear2 = TSLM(log(x_t) ~ std_t + sin1 + cos1 + sin2 + cos2),
-    reduced_linear3 = TSLM(log(x_t) ~ std_t + sin1 + cos1) 
+    cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) +month),
+    quad = TSLM(log(x_t) ~ std_t + I(std_t^2) + month),
+    linear = TSLM(log(x_t) ~ std_t + month )
   )
 
 glance(model_combined) |>
@@ -516,88 +405,47 @@ combined_models |>
   format_cells(rows = minimum$AICc, cols = 3, "bold") |>
   format_cells(rows = minimum$BIC, cols = 4, "bold") |>
   display_table()
+
+
+
 ```
 
-The model with the lowest AIC and AICc values is the reduced quadratic trend model 1.
-This can be written as:
-
-\begin{align*}
-  \log(x_t) &= \beta_0 
-            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
-            + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_7 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)
-            + \beta_8 \cos \left( \frac{2\pi \cdot 3 t}{12} \right)
-      + z_t
-\end{align*}
-
-The model with the lowest BIC is the reduced linear trend model 1. We express this model as:
-
-\begin{align*}
-  \log(x_t) &= \beta_0 
-            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_6 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)
-            + \beta_7 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) 
-      + z_t
-\end{align*}
-
-Both of these models have very low AIC, AICc, and BIC values. 
-
-We will take a deeper look at the residuals of these two models to assess if there is evidence of autocorrelation in the random terms. We compute the autocorrelation function and the partial autocorrelation function of the residuals for both. If there is evidence of autocorrelation, we will use the GLS algorithm to fit the models, since it will take into account the autocorrelation in the terms.
-
-::: 
-<!-- End of model comparison -->
 
 
 
-::: {.callout-note icon=false title="Autocorrelation of the Random Component" collapse="false"}
-<!-- Begin hiding code for checking autocorrelation of the random component -->
 
 #### Investigating Autocorrelation of the Random Component
 
 Recall that if there is autocorrelation in the random component, the standard error of the parameter estimates tends to be underestimated. We can account for this autocorrelation using Generalized Least Squares, GLS, if needed.
 
-##### Reduced Quadratic Trend: Model 1
+##### Linear Trend
 
-@fig-QuadACF illustrates the ACF of the reduced model 1 with quadratic trend.
+@fig-QuadACF illustrates the ACF of the model with a linear trend.
 
 ```{r}
 #| label: fig-QuadACF
-#| fig-cap: "ACF of reduced model 1 with a quadratic trend"
+#| fig-cap: "ACF of model linear trend"
 #| code-fold: true
 #| code-summary: "Show the code"
 
-resid_q1_ts <- reduced_quadratic_lm1 |>
+linear_ts <- linear_lm |>
   residuals() 
 
-acf(resid_q1_ts$.resid, plot=TRUE, lag.max = 25)
+acf(linear_ts$.resid, plot=TRUE, lag.max = 25)
 ```
 
 Notice that the residual correlogram indicates a positive autocorrelation in the values. This suggests that the standard errors of the regression coefficients will be underestimated, which means that some predictors can appear to be statistically significant when they are not. 
 
 
-@fig-QuadPACF illustrates the PACF of the reduced model 1 with quadratic trend.
+@fig-QuadPACF illustrates the PACF of the model with a linear trend.
 
 ```{r}
 #| label: fig-QuadPACF
-#| fig-cap: "PACF of reduced model 1 with a quadratic trend"
+#| fig-cap: "PACF of model linear trend"
 #| code-fold: true
 #| code-summary: "Show the code"
 
-pacf(resid_q1_ts$.resid, plot=TRUE, lag.max = 25)
+pacf(linear_ts$.resid, plot=TRUE, lag.max = 25)
 ```
 
 Only the first partial autocorrelation is statistically significant. The partial autocorrelation plot indicates that an $AR(1)$ model could adequately model the random component of the logarithm of the time series.
@@ -609,7 +457,7 @@ The first few partial autocorrelation values are:
 #| code-fold: true
 #| code-summary: "Show the code"
 
-pacf(resid_q1_ts$.resid, plot=FALSE, lag.max = 10)
+pacf(linear_ts$.resid, plot=FALSE, lag.max = 10)
 ```
 
 
@@ -617,7 +465,7 @@ pacf(resid_q1_ts$.resid, plot=FALSE, lag.max = 10)
 ```{r}
 #| echo: false
 
-alphas_quad <- pacf(resid_q1_ts$.resid, plot=FALSE, lag.max = 25) 
+alphas_quad <- pacf(linear_ts$.resid, plot=FALSE, lag.max = 25) 
 ```
 
 The partial autocorrelation when $k=1$ is approximately `r alphas_quad$acf[1] |> round(3)`. We will use this value as we recompute the regression coefficients.
@@ -626,15 +474,19 @@ The partial autocorrelation when $k=1$ is approximately `r alphas_quad$acf[1] |>
 #| code-fold: true
 #| code-summary: "Show the code"
 
+
+linear_pacf <- pacf(linear_ts$.resid, plot=FALSE, lag.max = 25)
+lag_1 <- linear_pacf$acf[1]
+
 # Load additional packages
 pacman::p_load(tidymodels, multilevelmod,
   nlme, broom.mixed)
 
 temp_spec <- linear_reg() |>
-  set_engine("gls", correlation = nlme::corAR1(0.479))
+  set_engine("gls", correlation = nlme::corAR1(lag_1))
 
 temp_gls <- temp_spec |>
-  fit(log(x_t) ~ std_t + I(std_t^2) + sin1 + cos1 + sin2 + cos2 + sin3 + cos3, data = sim_ts)
+  fit(log(x_t) ~ std_t +month, data = sim_ts)
 
 tidy(temp_gls) |>
   mutate(
@@ -643,81 +495,16 @@ tidy(temp_gls) |>
   ) 
 ```
 
-The quadratic term is not statistically significant in this model! After accounting for the autocorrelation in the random component, the quadratic component of the trend is not statistically significant. This is a great example of an instance where ordinary linear regression leads to errant results.
 
-We now consider the reduced model 1 where the trend is linear.
-
-
-##### Reduced Linear Trend: Model 1
-
-@fig-LinearACF illustrates the ACF of the reduced model 1 with linear trend.
-
-```{r}
-#| label: fig-LinearACF
-#| fig-cap: "ACF of reduced model 1 with a linear trend"
-
-resid_lin1_ts <- reduced_linear_lm1 |>
-  residuals() 
-
-acf(resid_lin1_ts$.resid, plot=TRUE, lag.max = 25)
-```
-
-We observe evidence of autocorrelation in the random terms.
-
-@fig-LinearPACF illustrates the PACF of the reduced model 1 with linear trend.
-
-```{r}
-#| label: fig-LinearPACF
-#| fig-cap: "ACF of reduced model 1 with a linear trend"
-#| code-fold: true
-#| code-summary: "Show the code"
-
-alphas_lin <- pacf(resid_lin1_ts$.resid, plot=FALSE, lag.max = 25) 
-pacf(resid_lin1_ts$.resid, plot=TRUE, lag.max = 25)
-```
-
-We will use the PACF when $k=1$ to apply the GLS algorithm.
-The first few partial autocorrelation values are:
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-pacf(resid_lin1_ts$.resid, plot=FALSE, lag.max = 10)
-```
-
-```{r}
-#| echo: false
-
-alphas_lin <- pacf(resid_lin1_ts$.resid, plot=FALSE, lag.max = 25) 
-```
-
-The partial autocorrelation when $k=1$ is approximately `r alphas_lin$acf[1] |> round(3)`. We will use this value as we recompute the regression coefficients.
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-# Load additional packages
-pacman::p_load(tidymodels, multilevelmod,
-  nlme, broom.mixed)
-
-temp_spec <- linear_reg() |>
-  set_engine("gls", correlation = nlme::corAR1(0.497))
-
-temp_gls <- temp_spec |>
-  fit(log(x_t) ~ std_t + sin1 + cos1 + sin2 + cos2 + sin3 + cos3, data = sim_ts)
-
-tidy(temp_gls) |>
-  mutate(
-    lower = estimate + qnorm(0.025) * std.error,
-    upper = estimate + qnorm(0.975) * std.error
-  ) 
-```
 
 
 @fig-finalFittedPlot illustrates the original time series (in black) and the fitted model (in blue). 
 For reference, a dotted line illustrating the simple least squares line is plotted on this figure for reference. It helps highlight the exponential shape of the trend.
+
+```{r}
+
+```
+
 
 ```{r}
 #| label: fig-finalFittedPlot
@@ -725,8 +512,8 @@ For reference, a dotted line illustrating the simple least squares line is plott
 #| code-fold: true
 #| code-summary: "Show the code"
 
-forecast_df <- reduced_linear_lm1 |> 
-  forecast(sim_ts) |> # computes the anti-log of the predicted values and returns them as .mean
+forecast_df <- linear_lm |> 
+  forecast(sim_ts) |>
   as_tibble() |> 
   dplyr::select(std_t, .mean) |> 
   rename(pred = .mean)
@@ -735,13 +522,12 @@ sim_ts |>
   left_join(forecast_df, by = "std_t") |>
   as_tsibble(index = dates) |>
   autoplot(.vars = x_t) +
-  geom_smooth(method = "lm", formula = 'y ~ x', se = FALSE, color = "#E69F00", linewidth = 0.5, linetype = "dotted") +
   geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
     labs(
       x = "Month",
       y = "Simulated Time Series",
       title = "Time Plot of Simulated Time Series with an Exponential Trend",
-      subtitle = "Predicted values based on the full cubic model are given in blue"
+      subtitle = "Predicted values based on the full linear model are given in blue"
     ) +
     theme_minimal() +
     theme(
@@ -750,119 +536,6 @@ sim_ts |>
     )
 ```
 
-
-:::
-<!-- End of Checking Autocorrelation of Residuals -->
-
-
-
-
-::: {.callout-note icon=false title="Comparison of the Fitted Coefficients to the Simulation Parameters" collapse="false"}
-<!-- Begin hiding code for the comparison -->
-
-#### Comparison of Model Coefficients
-
-```{r}
-#| echo: false
-
-coeffs <- tidy(temp_gls) |> 
-  select(term, estimate) 
-```
-
-Note that the mean of the $x_t$ values is $\bar x_t = `r mean(sim_ts$x_t) |> round(3)`$, and the standard deviation is $s_t = `r sd(sim_ts$x_t) |> round(3)`$.
-
-The fitted model is:
-\begin{align*}
-  \hat x_t 
-      &= e^{
-          `r coeffs |> filter(term == "(Intercept)") |> select(estimate) |> pull() |> round(3)` 
-          + `r coeffs |> filter(term == "std_t") |> select(estimate) |> pull() |> round(3)` 
-                ~ \left( \frac{t - `r mean(sim_ts$x_t) |> round(3)`}{`r sd(sim_ts$x_t) |> round(3)`} \right)
-          + `r coeffs |> filter(term == "sin1") |> select(estimate) |> pull() |> round(3)` 
-                ~ \sin \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "cos1") |> select(estimate) |> pull() |> round(3)` 
-                ~ \cos \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "sin2") |> select(estimate) |> pull() |> round(3)` 
-                ~ \sin \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "cos2") |> select(estimate) |> pull() |> round(3)` 
-                ~ \cos \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "sin3") |> select(estimate) |> pull() |> round(3)` 
-                ~ \sin \left( \frac{2 \pi \cdot 3 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "cos3") |> select(estimate) |> pull() |> round(3)` 
-                ~ \cos \left( \frac{2 \pi \cdot 3 t }{ 12 } \right)
-     }
-     \\
-     &= e^{
-          `r coeffs |> filter(term == "(Intercept)") |> select(estimate) |> pull() |> round(3)` 
-          + `r coeffs |> filter(term == "std_t") |> select(estimate) |> pull() |> round(3)` 
-                ~ \left( \frac{t}{`r sd(sim_ts$x_t) |> round(3)`} \right)
-          - `r coeffs |> filter(term == "std_t") |> select(estimate) |> pull() |> round(3)` 
-                ~ \left( \frac{`r mean(sim_ts$x_t) |> round(3)`}{`r sd(sim_ts$x_t) |> round(3)`} \right)
-          + `r coeffs |> filter(term == "sin1") |> select(estimate) |> pull() |> round(3)` 
-                ~ \sin \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "cos1") |> select(estimate) |> pull() |> round(3)` 
-                ~ \cos \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "sin2") |> select(estimate) |> pull() |> round(3)` 
-                ~ \sin \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "cos2") |> select(estimate) |> pull() |> round(3)` 
-                ~ \cos \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "sin3") |> select(estimate) |> pull() |> round(3)` 
-                ~ \sin \left( \frac{2 \pi \cdot 3 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "cos3") |> select(estimate) |> pull() |> round(3)` 
-                ~ \cos \left( \frac{2 \pi \cdot 3 t }{ 12 } \right)
-     }
-     \\
-     &= e^{
-          `r coeffs |> filter(term == "(Intercept)") |> select(estimate) |> pull() |> round(3)` 
-          + `r ((coeffs |> filter(term == "std_t") |> select(estimate) |> pull() ) / sd(sim_ts$x_t)) |> round(3)` ~ t
-          - `r ((coeffs |> filter(term == "std_t") |> select(estimate) |> pull()) * (mean(sim_ts$x_t) / sd(sim_ts$x_t))) |> round(3)`
-          + `r coeffs |> filter(term == "sin1") |> select(estimate) |> pull() |> round(3)` 
-                ~ \sin \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "cos1") |> select(estimate) |> pull() |> round(3)` 
-                ~ \cos \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "sin2") |> select(estimate) |> pull() |> round(3)` 
-                ~ \sin \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "cos2") |> select(estimate) |> pull() |> round(3)` 
-                ~ \cos \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "sin3") |> select(estimate) |> pull() |> round(3)` 
-                ~ \sin \left( \frac{2 \pi \cdot 3 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "cos3") |> select(estimate) |> pull() |> round(3)` 
-                ~ \cos \left( \frac{2 \pi \cdot 3 t }{ 12 } \right)
-     }
-     \\
-     &= e^{
-          `r ((coeffs |> filter(term == "(Intercept)") |> select(estimate) |> pull()) - ((coeffs |> filter(term == "std_t") |> select(estimate) |> pull()) * (mean(sim_ts$x_t) / sd(sim_ts$x_t)))) |> round(3)`
-          + `r ((coeffs |> filter(term == "std_t") |> select(estimate) |> pull() ) / sd(sim_ts$x_t)) |> round(3)` ~ t
-          + `r coeffs |> filter(term == "sin1") |> select(estimate) |> pull() |> round(3)` 
-                ~ \sin \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "cos1") |> select(estimate) |> pull() |> round(3)` 
-                ~ \cos \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "sin2") |> select(estimate) |> pull() |> round(3)` 
-                ~ \sin \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "cos2") |> select(estimate) |> pull() |> round(3)` 
-                ~ \cos \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "sin3") |> select(estimate) |> pull() |> round(3)` 
-                ~ \sin \left( \frac{2 \pi \cdot 3 t }{ 12 } \right) 
-          + `r coeffs |> filter(term == "cos3") |> select(estimate) |> pull() |> round(3)` 
-                ~ \cos \left( \frac{2 \pi \cdot 3 t }{ 12 } \right)
-     }
-\end{align*}
-
-Notice how well this matches the original model used to simulate the data.
-
-\begin{align*}
-  x_t &= e^{
-          2 + 0.015 t +
-       0.03 ~ \sin \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) + 0.04 ~ \cos \left( \frac{2 \pi \cdot 1 t }{ 12 } \right) + 
-       0.05 ~ \sin \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) + 0.03 ~ \cos \left( \frac{2 \pi \cdot 2 t }{ 12 } \right) +
-       0.01 ~ \sin \left( \frac{2 \pi \cdot 3 t }{ 12 } \right) + 0.005 ~ \cos \left( \frac{2 \pi \cdot 3 t }{ 12 } \right) +
-        z_t
-     }
-\end{align*}
-where $z_t = 0.5 z_{t-1} + 0.2 z_{t-2} + w_t$ and $w_t$ is a white noise process with standard deviation of 0.02.
-
-:::
-<!-- End of the big reveal -->
 
 
 
@@ -904,58 +577,57 @@ Use @fig-RetailSalesGeneralMerch to explain the following questions to a partner
 -   What is the shape of the trend of this time series?
 -   Which decomposition would be more appropriate: additive or multiplicative? Justify your answer.
 -   Apply the appropriate transformation to the time series. 
--   Fit appropriate  models utilizing the Fourier terms for seasonal components.
+-   Fit appropriate  models utilizing the indicator terms for seasonal components.
 -   Determine the "best" model for these data. Justify your decision.
-<!-- -   Check for autocorrelation in the random terms. -->
-<!-- -   Use GLS to fit the model, if there is evidence of autocorrelation in the random component. -->
-<!-- -   Refine your choice of the "best" model, if necessary. Justify your actions. -->
+-   Check for autocorrelation in the random terms.
+-   Use GLS to fit the model, if there is evidence of autocorrelation in the random component.
 -   Plot the fitted values and the time series on the same figure.
 
-Do the following to explore a cubic trend model with all the seasonal Fourier terms.
-
--   Fit a full model with a cubic trend and the logarithm of the time series for the response, including all the Fourier seasonal terms. (Be sure to include the linear and quadratic components of the trend.)
--   Fit a full model with a cubic trend and the logarithm of the time series for the response, but use indicator seasonal variables.  (Be sure to include the linear and quadratic components of the trend.)
--   Compare the coefficients on the linear, quadratic, and cubic terms between the two models above. Why would we observe this result?
--   Why does the coefficient on the intercept term differ in the two models?
 
 :::
 
 ## Class Activity: Anti-Log Transformation and Bias Correction on Simulated Data (10 min)
 
 ### Forecasts for a Simulated Time Series
-We can use the `forecast()` function to predict future values of this time series. @tbl-forecastSim-2 displays the output of the `forecast()` command. Note that the column labeled `x_t` (i.e. $x_t$), representing the time series is populated with information tied to a normal distribution. The mean and standard deviation specified are the estimated parameters for the distribution of the predicted values of $\log(x_t)$. If you raise $e$ to the power of the mean, you get the values in the `.mean` column.
+We can use the `forecast()` function to predict future values of this time series. The code fold below displays the output of the `forecast()` command. Note that the column labeled `x_t` (i.e. $x_t$), representing the time series is populated with information tied to a normal distribution. The mean and standard deviation specified are the estimated parameters for the distribution of the predicted values of $\log(x_t)$. If you raise $e$ to the power of the mean, you get the values in the `.mean` column.
 
 ```{r}
 #| code-fold: true
-#| code-summary: "Show the code"
+#| code-summary: "Forecast of Simulated Data: Show the code"
 #| results: false
 
 # Fit model (OLS)
 sim_reduced_linear_lm1 <- sim_ts |>
-  model(sim_reduced_linear1 = TSLM(log(x_t) ~ std_t + 
-        sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
+  model(sim_reduced_linear1 = TSLM(log(x_t) ~ std_t + month))
 
-# Compute forecast
-n_years_forecast <- 5
+
+# Number of years / months to forecast
+n_years_forecast  <- 5
 n_months_forecast <- 12 * n_years_forecast
 
-new_dat <- tibble(t = n_months:(n_months + n_months_forecast )) |>
+# Last observed t and date from the simulated data
+last_t    <- max(sim_ts$t)
+last_date <- max(sim_ts$dates)
+
+# Build new data consistent with the indicator-variable spec
+new_dat <- tibble(
+  # Future time index (no overlap with observed sample)
+  t = last_t + seq_len(n_months_forecast),
+  
+  # Future monthly dates, starting one month after the last observed date
+  dates = seq(
+    from = last_date %m+% months(1),
+    by   = "1 month",
+    length.out = n_months_forecast
+  )
+) |>
   mutate(
-    dates = seq(max(dates_seq), length.out=n_months_forecast + 1, by="1 month") 
-  ) |>
-  mutate(
-    std_t = (t - mean(pull(sim_ts, t))) / sd(pull(sim_ts, t)),
-    sin1 = sin(2 * pi * 1 * t / 12),
-    cos1 = cos(2 * pi * 1 * t / 12),
-    sin2 = sin(2 * pi * 2 * t / 12),
-    cos2 = cos(2 * pi * 2 * t / 12),
-    sin3 = sin(2 * pi * 3 * t / 12),
-    cos3 = cos(2 * pi * 3 * t / 12),
-    sin4 = sin(2 * pi * 4 * t / 12),
-    cos4 = cos(2 * pi * 4 * t / 12),
-    sin5 = sin(2 * pi * 5 * t / 12),
-    cos5 = cos(2 * pi * 5 * t / 12),
-    cos6 = cos(2 * pi * 6 * t / 12)
+    # Month-of-year index and factor (same as in sim_ts)
+    month_index = ((t - 1) %% 12) + 1,
+    month = factor(month_index, levels = 1:12, labels = month.abb),
+    
+    # Standardized time using the *training* t from sim_ts
+    std_t = (t - mean(pull(sim_ts, t))) / sd(pull(sim_ts, t))
   ) |>
   as_tsibble(index = dates)
 
@@ -963,17 +635,7 @@ sim_reduced_linear_lm1 |>
   forecast(new_data = new_dat)
 ```
 
-```{r}
-#| label: tbl-forecastSim-2
-#| tbl-cap: "Output of the forecast() command for the simulated time series"
-#| echo: false
 
-sim_reduced_linear_lm1 |> 
-  forecast(new_data = new_dat) |>
-  dplyr::select(.model, dates, x_t, .mean, t, std_t, sin1, cos1, sin2, cos2, sin3, cos3) |>
-  mutate(" " = "...") |>
-  display_partial_table(4,2)
-```
 
 @fig-forecastSim-2 illustrates the forecasted values for the time series.
 
@@ -1012,19 +674,17 @@ sim_forecast_plot_logged <- sim_reduced_linear_lm1 |>
     plot.title = element_text(hjust = 0.5)
   )
 
-sim_forecast_plot_regular
+sim_forecast_plot_regular | sim_forecast_plot_logged
 ```
 
 
 ### Bias Correction
 
-The forecasts presented above were computed by raising $e$ to the power of the predicted log-values. Unfortunately, this introduces bias in the forecasted means. This bias tends to be large if the regression model does not fit the data closely.
+The forecasts presented on the left figure were computed by raising $e$ to the power of the predicted log-values. Unfortunately, this introduces bias in the forecasted means. This bias tends to be large if the regression model does not fit the data closely.
 
-The textbook points out that the bias correction should only be applied for means, not for simulated values. This means that if you are simulating transformed values, and you apply the inverse of your original transformation, the resulting values are appropriate.
+The textbook points out that the bias correction should only be applied for means, not for simulated values. This means that if you are simulating transformed values, and you apply the inverse of your original transformation, the resulting values are inappropriate.
 
-When we apply the inverse transform to the residual series, we introduce a bias. 
-<!-- See p. 116 -->
-  We can account for this bias applying one of two adjustments to our mean values. The theory behind this transformations is alluded to in the textbook, but is not essential.
+When we apply the inverse transform to the residual series, we introduce a bias. We can account for this bias applying one of two adjustments to our mean values. The theory behind this transformations is alluded to in the textbook, but is not essential.
 
 There are two common patterns observed in the residual series: (1) Gaussian white noise or (2) Non-Normal values. 
 
@@ -1097,18 +757,16 @@ sim_model_check <- sim_model_values |>
       pull(.resid) |>
       exp() |>
       mean()) |>
-  select(.model, r_squared, sigma2, sigma, lognorm_cf, empirical_cf)
+  select(lognorm_cf, empirical_cf)
 
-sim_pred <- sim_reduced_linear_lm1 |> 
-  forecast(new_data = new_dat) |>
-  mutate(.mean_correction = .mean * sim_model_check$empirical_cf) |>
-  select(t, x_t, .mean, .mean_correction)
+# sim_pred <- sim_reduced_linear_lm1 |> 
+#   forecast(new_data = new_dat) |>
+#   mutate(.mean_correction = .mean * sim_model_check$empirical_cf) |>
+#   select(t, x_t, .mean, .mean_correction)
 
-sim_model_check
 ```
 
-From this, we observe that for the simulated data, $R^2 = `r sim_model_check |> select(r_squared) |> pull() |> round(3)`$. 
-This indicates that the model explains a high proportion of the variation in the data. The log-normal adjustment is 
+The log-normal adjustment is 
 $`r sim_model_check |> select(lognorm_cf) |> pull() |> round(5)`$, 
 and the emperical adjustment is 
 $`r sim_model_check |> select(empirical_cf) |> pull() |> round(5)`$. 
@@ -1187,46 +845,51 @@ apple_raw <- rio::import("https://byuistats.github.io/timeseries/data/apple_reve
 apple_ts <- apple_raw |>
   filter(dates <= my("Jan 2012")) |>
   dplyr::select(dates, revenue_billions) |>
-  mutate(t = 1:n()) |>
-  mutate(std_t = (t - mean(t)) / sd(t)) |>
   mutate(
-    sin1 = sin(2 * pi * 1 * t / 4),
-    cos1 = cos(2 * pi * 1 * t / 4),
-    cos2 = cos(2 * pi * 2 * t / 4)
+    t     = row_number(),
+    std_t = (t - mean(t)) / sd(t),
+    # quarter-of-year as indicator-style factor
+    qtr   = factor(quarter(dates), levels = 1:4, labels = paste0("Q", 1:4))
   ) |>
   as_tsibble(index = dates)
 
+# Plots stay the same, now just using the updated apple_ts
+
 apple_plot_regular <- apple_ts |>
   autoplot(.vars = revenue_billions) +
-  stat_smooth(method = "lm", 
-              formula = y ~ x, 
-              geom = "smooth",
-              se = FALSE,
-              color = "#E69F00",
-              linetype = "dotted") +
-    labs(
-      x = "Quarter",
-      y = "Revenue (Billions USD)",
-      title = "Apple Revenue (in Billions USD)"
-    ) +
-    theme_minimal() +
-    theme(plot.title = element_text(hjust = 0.5))
+  stat_smooth(
+    method  = "lm",
+    formula = y ~ x,
+    geom    = "smooth",
+    se      = FALSE,
+    color   = "#E69F00",
+    linetype = "dotted"
+  ) +
+  labs(
+    x = "Quarter",
+    y = "Revenue (Billions USD)",
+    title = "Apple Revenue (in Billions USD)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 
 apple_plot_transformed <- apple_ts |>
   autoplot(.vars = log(revenue_billions)) +
-  stat_smooth(method = "lm", 
-              formula = y ~ x, 
-              geom = "smooth",
-              se = FALSE,
-              color = "#E69F00",
-              linetype = "dotted") +
-    labs(
-      x = "Quarter",
-      y = "Logarithm of Revenue",
-      title = "Logarithm of Apple Revenue"
-    ) +
-    theme_minimal() +
-    theme(plot.title = element_text(hjust = 0.5))
+  stat_smooth(
+    method  = "lm",
+    formula = y ~ x,
+    geom    = "smooth",
+    se      = FALSE,
+    color   = "#E69F00",
+    linetype = "dotted"
+  ) +
+  labs(
+    x = "Quarter",
+    y = "Logarithm of Revenue",
+    title = "Logarithm of Apple Revenue"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 
 apple_plot_regular | apple_plot_transformed
 ```
@@ -1243,47 +906,28 @@ We start by fitting a cubic trend to the logarithm of the quarterly revenues. Th
 
 # Cubic model with standardized time variable
 
-apple_full_cubic_lm <- apple_ts |>
-  model(apple_full_cubic = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + I(std_t^3) +
-    sin1 + cos1 + cos2 )) # Note sin2 is omitted
-apple_full_cubic_lm |>
+apple_cubic_lm <- apple_ts |>
+  model(apple_cubic = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + I(std_t^3) +qtr )) 
+apple_cubic_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
 
-The quadratic and cubic trend terms are not statistically signficant. We now eliminate the cubic term and fit a full model with a quadratic trend.
+The quadratic and cubic trend terms are not statistically significant. We now eliminate the cubic term and fit a full model with a quadratic trend.
 
 ```{r}
 #| label: appleQuadraticFull
 #| code-fold: true
 #| code-summary: "Show the code"
 
-apple_full_quad_lm <- apple_ts |>
-  model(apple_full_quad = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + 
-    sin1 + cos1 + cos2 )) # Note sin2 is omitted
-apple_full_quad_lm |>
+apple_quad_lm <- apple_ts |>
+  model(apple_quad = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + qtr )) 
+apple_quad_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05) 
 ```
 
-The quadratic trend term is not statistically significant. Nevertheless, we will still fit a reduced model with a quadratic trend but we will omit the non-signficant seasonal Fourier term, `cos1`.
-
-```{r}
-#| label: appleQuadReduced1
-#| code-fold: true
-#| code-summary: "Show the code"
-
-# Quadratic trend with standardized time variable
-
-apple_reduced_quad_lm1 <- apple_ts |>
-  model(apple_reduced_quad1 = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) +
-    sin1 + cos2 )) # Note sin2 is omitted
-apple_reduced_quad_lm1 |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-The quadratic trend term is still not statistically significant. We will fit a full model with a linear trend.
+The quadratic trend term is not statistically significant. We will fit a full model with a linear trend.
 
 ```{r}
 #| label: appleLinearFull
@@ -1292,31 +936,13 @@ The quadratic trend term is still not statistically significant. We will fit a f
 
 # Linear trend with standardized time variable
 
-apple_full_linear_lm <- apple_ts |>
-  model(apple_full_linear = TSLM(log(revenue_billions) ~ std_t + 
-    sin1 + cos1 + cos2 )) # Note sin2 is omitted
-apple_full_linear_lm |>
+apple_linear_lm <- apple_ts |>
+  model(apple_linear = TSLM(log(revenue_billions) ~ std_t + qtr ))
+apple_linear_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 ```
 
-The coefficient on the `cos1` seasonal Fourier term is not statistically significant. 
-We now fit a reduced model that only contains the significant terms from the full model with a linear trend.
-
-```{r}
-#| label: appleLinearReduced1
-#| code-fold: true
-#| code-summary: "Show the code"
-
-# Linear trend with standardized time variable
-
-apple_reduced_linear_lm1 <- apple_ts |>
-  model(apple_reduced_linear1 = TSLM(log(revenue_billions) ~ std_t + 
-    sin1 + cos2 )) # Note sin2 is omitted
-apple_reduced_linear_lm1 |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
 
 All the terms are statistically significant in this model. We now compare the models we have fitted using the AIC, AICc, and BIC criterion.
 
@@ -1328,16 +954,9 @@ All the terms are statistically significant in this model. We now compare the mo
 
 model_combined <- apple_ts |>
   model(
-    apple_full_cubic = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + I(std_t^3) +
-                    sin1 + cos1 + cos2),
-    apple_full_quad = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + 
-                    sin1 + cos1 + cos2),
-    apple_reduced_quad1 = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + 
-                    sin1 + cos2),
-    apple_full_linear = TSLM(log(revenue_billions) ~ std_t +
-                    sin1 + cos1 + cos2),
-    apple_reduced_linear1 = TSLM(log(revenue_billions) ~ std_t + 
-                    sin1 + cos2 )
+    apple_cubic = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + I(std_t^3) +qtr),
+    apple_quad = TSLM(log(revenue_billions) ~ std_t + I(std_t^2)+qtr),
+    apple_linear = TSLM(log(revenue_billions) ~ std_t +qtr)
   )
 
 glance(model_combined) |>
@@ -1368,7 +987,7 @@ combined_models |>
   display_table()
 ```
 
-We will apply the `apple_reduced_linear1` model.
+We will apply the `apple_linear` model.
 
 ### Using the Residuals to Determine the Appropriate Correction
 
@@ -1381,7 +1000,7 @@ The residuals of this model are illustrated in @fig-residualHistogramAppleRevenu
 #| fig-cap: "Histogram of the residuals from the reduced model with a linear trend component"
 
 apple_resid_df <- model_combined |> 
-  dplyr::select(apple_reduced_linear1) |>
+  dplyr::select(apple_linear) |>
   residuals() |> 
   as_tibble() |> 
   dplyr::select(.resid) |>
@@ -1415,14 +1034,14 @@ Using the command `skewness(apple_resid_df$x)`, we compute the skewness of these
 #| code-summary: "Show the code"
 
 apple_model_values <- model_combined |> 
-  dplyr::select(apple_reduced_linear1) |>
+  dplyr::select(apple_linear) |>
   glance()
 
 apple_model_check <- apple_model_values |>
   mutate(
     sigma = sqrt(sigma2),
     lognorm_cf = exp((1/2) * sigma2),
-    empirical_cf = apple_reduced_linear_lm1 |>
+    empirical_cf = apple_linear_lm |>
       residuals() |>
       pull(.resid) |>
       exp() |>
@@ -1430,23 +1049,26 @@ apple_model_check <- apple_model_values |>
   select(.model, r_squared, sigma2, sigma, lognorm_cf, empirical_cf)
 
 apple_pred <- model_combined |> 
-  dplyr::select(apple_reduced_linear1) |>
+  dplyr::select(apple_linear) |>
   forecast(new_data = apple_ts) |>
   mutate(.mean_correction = .mean * apple_model_check$empirical_cf) |>
   select(t, revenue_billions, .mean, .mean_correction)
 
-apple_model_check
-```
 
+```
+The log-normal adjustment is 
+$`r sim_model_check |> select(lognorm_cf) |> pull() |> round(5)`$, 
+and the emperical adjustment is 
+$`r sim_model_check |> select(empirical_cf) |> pull() |> round(5)`$. 
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 
 apple_pred <- model_combined |> 
-  dplyr::select(apple_reduced_linear1) |>
+  dplyr::select(apple_linear) |>
   forecast(new_data = apple_ts) |>
-  mutate(.mean_correction = .mean * apple_model_check$empirical_cf) |>
+  mutate(.mean_correction = .mean * apple_model_check$empirical_cf) |>     
   select(t, revenue_billions, .mean, .mean_correction)
 ```
 
@@ -1456,6 +1078,9 @@ apple_pred <- model_combined |>
 #| echo: false
 
 apple_pred |>
+  as_tibble() |>
+  select(!revenue_billions) |>
+  select(!dates) |>
   display_partial_table(4,2)
 ```
 
@@ -1510,122 +1135,7 @@ apple_raw |>
 
 
 
-## Choose One of the Following Small-Group Activities (25 min)
-
-### Small-Group Activity: Retail Sales (All Other General Merchandise Stores)
-
-The code below downloads and gives the time plot for the total monthly sales in the United States for retail stores with the NAICS category 45299, "All Other General Merchandise Stores." The time plot is given in Figure @fig-RetailSalesGeneralMerch-2.
-
-```{r}
-#| label: fig-RetailSalesGeneralMerch-2
-#| fig-cap: "Time plot of the total monthly retail sales for all other general merchandise stores (45299)"
-#| code-fold: true
-#| code-summary: "Show the code"
-
-# Read in retail sales data for "all other general merchandise stores"
-retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
-  filter(naics == 45299) |>
-  filter(as_date(month) >= my("Jan 1998")) |>
-  mutate(t = 1:n()) |>
-  mutate(std_t = (t - mean(t)) / sd(t)) |>
-  mutate(
-    cos1 = cos(2 * pi * 1 * t / 12),
-    cos2 = cos(2 * pi * 2 * t / 12),
-    cos3 = cos(2 * pi * 3 * t / 12),
-    cos4 = cos(2 * pi * 4 * t / 12),
-    cos5 = cos(2 * pi * 5 * t / 12),
-    cos6 = cos(2 * pi * 6 * t / 12),
-    sin1 = sin(2 * pi * 1 * t / 12),
-    sin2 = sin(2 * pi * 2 * t / 12),
-    sin3 = sin(2 * pi * 3 * t / 12),
-    sin4 = sin(2 * pi * 4 * t / 12),
-    sin5 = sin(2 * pi * 5 * t / 12)
-  ) |>
-  as_tsibble(index = month)
-
-retail_ts |>
-  autoplot(.vars = sales_millions) +
-  stat_smooth(method = "lm", 
-              formula = y ~ x, 
-              geom = "smooth",
-              se = FALSE,
-              color = "#E69F00",
-              linetype = "dotted") +
-    labs(
-      x = "Month",
-      y = "Sales (Millions of U.S. Dollars)",
-      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
-    ) +
-    theme_minimal() +
-    theme(plot.title = element_text(hjust = 0.5))
-
-```
-
-<!-- @fig-retailSideBySidePlot-2 shows the "All other general merchandise" retail sales data. -->
-```{r}
-#| include: false
-#| label: fig-retailSideBySidePlot-2
-#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
-#| code-fold: true
-#| code-summary: "Show the code"
-#| results: asis
-#| fig-height: 3.5
-
-retail_plot_raw <- retail_ts |>
-    autoplot(.vars = sales_millions) +
-    labs(
-      x = "Month",
-      y = "sales_millions",
-      title = "Other General Merchandise Sales"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-
-retail_plot_log <- retail_ts |>
-    autoplot(.vars = log(sales_millions)) +
-    labs(
-      x = "Month",
-      y = "log(sales_millions)",
-      title = "Logarithm of Other Gen. Merch. Sales"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-
-retail_plot_raw | retail_plot_log
-```
-
-
-
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
-Use the retail sales data to do the following.
-
--   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
--   Use the residuals to determine the appropriate correction for the data.
--   Forecast the data for the next 5 years.
--   Apply the appropriate correction to the forecasted values.
--   Plot the fitted (forecasted) values along with the time series.
-
-:::
-
-
-
-
-
-
-
-
-
-
-
-
-### Small-Group Activity: Industrial Electricity Consumption in Texas
+## Small-Group Activity: Industrial Electricity Consumption in Texas
 
 
 These data represent the amount of electricity used each month for industrial applications in Texas.
@@ -1636,25 +1146,13 @@ These data represent the amount of electricity used each month for industrial ap
 
 elec_ts <- rio::import("https://byuistats.github.io/timeseries/data/electricity_tx.csv") |>
   dplyr::select(-comments) |>
-  mutate(month = my(month)) |>
+  mutate(date = my(month),
+         month = as.factor(month(date))) |>
   mutate(
     t = 1:n(),
     std_t = (t - mean(t)) / sd(t)
   ) |>
-  mutate(
-    cos1 = cos(2 * pi * 1 * t / 12),
-    cos2 = cos(2 * pi * 2 * t / 12),
-    cos3 = cos(2 * pi * 3 * t / 12),
-    cos4 = cos(2 * pi * 4 * t / 12),
-    cos5 = cos(2 * pi * 5 * t / 12),
-    cos6 = cos(2 * pi * 6 * t / 12),
-    sin1 = sin(2 * pi * 1 * t / 12),
-    sin2 = sin(2 * pi * 2 * t / 12),
-    sin3 = sin(2 * pi * 3 * t / 12),
-    sin4 = sin(2 * pi * 4 * t / 12),
-    sin5 = sin(2 * pi * 5 * t / 12)
-  ) |>
-  as_tsibble(index = month)
+  as_tsibble(index = date)
 
 elec_plot_raw <- elec_ts |>
     autoplot(.vars = megawatthours) +
@@ -1699,19 +1197,6 @@ Use the Texas industrial electricity consumption data to do the following.
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## Homework Preview (5 min)
 
 -   Review upcoming homework assignment
@@ -1724,7 +1209,7 @@ Use the Texas industrial electricity consumption data to do the following.
 
 ## Download Homework
 
-<a href="https://byuistats.github.io/timeseries/homework/homework_5_5.qmd" download="homework_5_5.qmd"> homework_5_5.qmd </a>
+<a href="https://byuistats.github.io/timeseries/homework/homework_5_2.qmd" download="homework_5_2.qmd"> homework_5_2.qmd </a>
 
 :::
 
@@ -1732,136 +1217,8 @@ Use the Texas industrial electricity consumption data to do the following.
 
 
 
-<a href="javascript:showhide('Solutions1')"
-style="font-size:.8em;">Small-Group Activity: Retail Sales</a>
   
-::: {#Solutions1 style="display:none;"}
-    
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
-Use the retail sales data to do the following.
-
--   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
--   Use the residuals to determine the appropriate correction for the data.
--   Forecast the data for the next 5 years.
--   Apply the appropriate correction to the forecasted values.
--   Plot the fitted (forecasted) values along with the time series.
-
-:::
-
-```{r}
-#| label: ExponentialQuadraticFull1a
-#| code-fold: true
-#| code-summary: "Show the code"
-
-retail_full_quad_lm <- retail_ts |>
-  model(retail_full_quad = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
-retail_full_quad_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
-
-retail_resid_df <- retail_full_quad_lm |> 
-  residuals() |> 
-  as_tibble() |> 
-  dplyr::select(.resid) |>
-  rename(x = .resid) 
-  
-retail_resid_df |>
-  mutate(density = dnorm(x, mean(retail_resid_df$x), sd(retail_resid_df$x))) |>
-  ggplot(aes(x = x)) +
-    geom_histogram(aes(y = after_stat(density)),
-        color = "white", fill = "#56B4E9", binwidth = 0.02) +
-    geom_line(aes(x = x, y = density)) +
-    theme_bw() +
-    labs(
-      x = "Values",
-      y = "Frequency",
-      title = "Histogram of Residuals from the Full Quadratic Model"
-    ) +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-
-skewness(retail_resid_df$x)
-```
-
-There is little skewness. We will use the log-normal correction factor.
-
-:::
-
-
-
-
-
-
-
-<a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Small-Group Activity: Texas Industrial Electricity Usage</a>
-  
-::: {#Solutions2 style="display:none;"}
-
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
-Use the Texas industrial electricity consumption data to do the following.
-
--   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
--   Use the residuals to determine the appropriate correction for the data.
--   Forecast the data for the next 5 years.
--   Apply the appropriate correction to the forecasted values.
--   Plot the fitted (forecasted) values along with the time series.
-
-:::  
-
-
-
-
-
-
-
-
-## Homework Preview (5 min)
-
--   Review upcoming homework assignment
--   Clarify questions
-
-
-
-
-::: {.callout-note icon=false}
-
-## Download Homework
-
-<a href="https://byuistats.github.io/timeseries/homework/homework_5_4.qmd" download="homework_5_4.qmd"> homework_5_4.qmd </a>
-
-:::
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- Solutions at the bottom of the page -->
+  <!-- Solutions at the bottom of the page -->
 
 <a href="javascript:showhide('Solutions')"
 style="font-size:.8em;">Small-Group Activity</a>
@@ -1869,9 +1226,6 @@ style="font-size:.8em;">Small-Group Activity</a>
 ::: {#Solutions style="display:none;"}
 
 #### Small-Group Activity: Retail Sales Code
-
-::: {.callout-tip icon=false title="Check Your Understanding Code" }
-
 
 ::: {.callout-caution icon=false title="Figures" collapse="false"}
 
@@ -1886,33 +1240,11 @@ style="font-size:.8em;">Small-Group Activity</a>
 # Read in retail sales data for "all other general merchandise stores"
 retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
   filter(naics == 45299) |>
-  mutate(t = 1:n()) |>
+  mutate(t = 1:n(),
+         month = as.factor((t - 1) %% 12 + 1),
+         month = factor(month, levels = 1:12, labels = month.abb)) |>
   mutate(std_t = (t - mean(t)) / sd(t)) |>
-  mutate(
-    cos1 = cos(2 * pi * 1 * t / 12),
-    cos2 = cos(2 * pi * 2 * t / 12),
-    cos3 = cos(2 * pi * 3 * t / 12),
-    cos4 = cos(2 * pi * 4 * t / 12),
-    cos5 = cos(2 * pi * 5 * t / 12),
-    cos6 = cos(2 * pi * 6 * t / 12),
-    sin1 = sin(2 * pi * 1 * t / 12),
-    sin2 = sin(2 * pi * 2 * t / 12),
-    sin3 = sin(2 * pi * 3 * t / 12),
-    sin4 = sin(2 * pi * 4 * t / 12),
-    sin5 = sin(2 * pi * 5 * t / 12)
-  ) |>
-  filter(as_date(month) >= my("Jan 1998")) |>
-  as_tsibble(index = month)
-
-retail_ts |>
-  autoplot(.vars = sales_millions) +
-    labs(
-      x = "Month",
-      y = "Sales (Millions of U.S. Dollars)",
-      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
-    ) +
-    theme_minimal() +
-    theme(plot.title = element_text(hjust = 0.5))
+  as_tsibble(index = t)
 
 ```
 
@@ -1929,7 +1261,7 @@ retail_ts |>
 plot_raw <- retail_ts |>
     autoplot(.vars = sales_millions) +
     labs(
-      x = "Month",
+      x = "Time",
       y = "sales_millions",
       title = "Other General Merchandise Sales"
     ) +
@@ -1941,7 +1273,7 @@ plot_raw <- retail_ts |>
 plot_log <- retail_ts |>
     autoplot(.vars = log(sales_millions)) +
     labs(
-      x = "Month",
+      x = "Time",
       y = "log(sales_millions)",
       title = "Logarithm of Other Gen. Merch. Sales"
     ) +
@@ -1966,16 +1298,14 @@ plot_raw | plot_log
 
 # Cubic model with standardized time variable
 
-full_cubic_lm <- retail_ts |>
-  model(full_cubic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) +
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6)) # Note sin6 is omitted
-full_cubic_lm |>
+cubic_lm <- retail_ts |>
+  model(cubic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) + month)) # Note sin6 is omitted
+cubic_lm |>
   tidy() |>
+  select(!`.model`)|>
   mutate(sig = p.value < 0.05)
 ```
 
-Note that each of the Fourier terms is statistically significant. 
 
 :::
 <!-- Cubic -->
@@ -1988,12 +1318,12 @@ Note that each of the Fourier terms is statistically significant.
 #| code-fold: true
 #| code-summary: "Show the code"
 
-full_quad_lm <- retail_ts |>
-  model(full_quad = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
-full_quad_lm |>
+quad_lm <- retail_ts |>
+  model(quad = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
+    month )) # Note sin6 is omitted
+quad_lm |>
   tidy() |>
+  select(!`.model`)|>
   mutate(sig = p.value < 0.05) 
 ```
 
@@ -2009,12 +1339,11 @@ full_quad_lm |>
 #| code-fold: true
 #| code-summary: "Show the code"
 
-full_linear_lm <- retail_ts |>
-  model(full_quadratic = TSLM(log(sales_millions) ~ std_t +
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
-full_linear_lm |>
+linear_lm <- retail_ts |>
+  model(linear = TSLM(log(sales_millions) ~ std_t +month )) # Note sin6 is omitted
+linear_lm |>
   tidy() |>
+  select(!`.model`)|>
   mutate(sig = p.value < 0.05) 
 ```
 
@@ -2034,39 +1363,9 @@ We will now compare the models we fitted above. #tbl-ModelComparison2 gives the 
 
 model_combined <- retail_ts |>
   model(
-    full_cubic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) +
-                    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-                  + sin4 + cos4 + sin5 + cos5 + cos6 ),
-    full_quadratic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
-                       sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-                     + sin4 + cos4 + sin5 + cos5 + cos6 ),
-    reduced_quadratic_fourier_i5 = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
-                       sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-                     + sin4 + cos4 + sin5 + cos5),
-    reduced_quadratic_fourier_i4 = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
-                       sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-                     + sin4 + cos4),
-    # reduced_quadratic_fourier_i3 = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
-    #                    sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
-    # reduced_quadratic_fourier_i2 = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
-    #                    sin1 + cos1 + sin2 + cos2),
-    # reduced_quadratic_fourier_i1 = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
-    #                    sin1 + cos1),
-    full_linear = TSLM(log(sales_millions) ~ std_t + 
-                         sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-                       + sin4 + cos4 + sin5 + cos5 + cos6 ),
-    reduced_linear_fourier_i5 = TSLM(log(sales_millions) ~ std_t + 
-                       sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-                     + sin4 + cos4 + sin5 + cos5),
-    reduced_linear_fourier_i4 = TSLM(log(sales_millions) ~ std_t + 
-                       sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-                     + sin4 + cos4),
-    # reduced_linear_fourier_i3 = TSLM(log(sales_millions) ~ std_t + 
-    #                    sin1 + cos1 + sin2 + cos2 + sin3 + cos3),
-    # reduced_linear_fourier_i2 = TSLM(log(sales_millions) ~ std_t + 
-    #                    sin1 + cos1 + sin2 + cos2),
-    # reduced_linear_fourier_i1 = TSLM(log(sales_millions) ~ std_t + 
-    #                    sin1 + cos1)
+    cubic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) + month),
+    quadratic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + month),
+    linear = TSLM(log(sales_millions) ~ std_t + month )
   )
 
 glance(model_combined) |>
@@ -2097,33 +1396,7 @@ combined_models |>
   display_table()
 ```
 
-The model with the lowest AIC, AICc, and BIC values is the full quadratic model.
-This can be written as:
-
-\begin{align*}
-  \log(x_t) &= \beta_0 
-            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
-            + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_3 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \beta_4 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_5 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \beta_6 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_7 \sin \left( \frac{2\pi \cdot 3 t}{12} \right)
-            + \beta_8 \cos \left( \frac{2\pi \cdot 3 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_9 \sin \left( \frac{2\pi \cdot 4 t}{12} \right)
-            + \beta_{10} \cos \left( \frac{2\pi \cdot 4 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            + \beta_{11} \sin \left( \frac{2\pi \cdot 5 t}{12} \right)
-            + \beta_{12} \cos \left( \frac{2\pi \cdot 5 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            \phantom{+ \beta_{13} \sin \left( \frac{2\pi \cdot 6 t}{12} \right)}
-            + \beta_{13} \cos \left( \frac{2\pi \cdot 6 t}{12} \right)
-      + z_t
-\end{align*}
+The model with the lowest AIC, AICc, and BIC values is the full cubic model.
 
 :::
 <!-- model comparison -->
@@ -2139,10 +1412,10 @@ We check for autocorrelation in the random component to determine if using GLS i
 #| label: fig-FullQuadACF
 #| fig-cap: "ACF of the full model with a quadratic trend"
 
-full_quad_ts <- full_quad_lm |>
+cubic_ts <- cubic_lm |>
   residuals() 
 
-acf(full_quad_ts$.resid, plot=TRUE, lag.max = 25)
+acf(cubic_ts$.resid, plot=TRUE, lag.max = 25)
 ```
 
 We observe evidence of autocorrelation in the random terms. In fact, there is something happening on an annual 
@@ -2155,8 +1428,8 @@ We observe evidence of autocorrelation in the random terms. In fact, there is so
 #| code-fold: true
 #| code-summary: "Show the code"
 
-alphas_quad <- pacf(full_quad_ts$.resid, plot=FALSE, lag.max = 25) 
-pacf(full_quad_ts$.resid, plot=TRUE, lag.max = 25)
+alphas_quad <- pacf(cubic_ts$.resid, plot=FALSE, lag.max = 25) 
+pacf(cubic_ts$.resid, plot=TRUE, lag.max = 25)
 ```
 
 :::
@@ -2174,7 +1447,7 @@ The first few partial autocorrelation values are:
 #| code-fold: true
 #| code-summary: "Show the code"
 
-pacf(full_quad_ts$.resid, plot=FALSE, lag.max = 10)
+pacf(cubic_ts$.resid, plot=FALSE, lag.max = 10)
 ```
 
 The partial autocorrelation when $k=1$ is approximately `r alphas_quad$acf[1] |> round(3)`. We will use this value as we recompute the regression coefficients.
@@ -2187,11 +1460,13 @@ The partial autocorrelation when $k=1$ is approximately `r alphas_quad$acf[1] |>
 pacman::p_load(tidymodels, multilevelmod,
   nlme, broom.mixed)
 
+lag_1 <- pacf(cubic_ts$.resid, plot=FALSE, lag.max = 10)$acf[1]
+
 temp_spec <- linear_reg() |>
-  set_engine("gls", correlation = nlme::corAR1(0.497))
+  set_engine("gls", correlation = nlme::corAR1(lag_1))
 
 temp_gls <- temp_spec |>
-  fit(log(sales_millions) ~ std_t + sin1 + cos1 + sin2 + cos2 + sin3 + cos3, data = retail_ts)
+  fit(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) + month, data = retail_ts)
 
 tidy(temp_gls) |>
   mutate(
@@ -2210,7 +1485,7 @@ For reference, a dotted line illustrating the simple least squares line is plott
 #| code-fold: true
 #| code-summary: "Show the code"
 
-forecast_df <- full_quad_lm |> 
+forecast_df <- cubic_lm |> 
   forecast(retail_ts) |>  # computes the anti-log of the predicted values and returns them as .mean
   as_tibble() |> 
   dplyr::select(std_t, .mean) |> 
@@ -2218,14 +1493,13 @@ forecast_df <- full_quad_lm |>
 
 retail_ts |>
   left_join(forecast_df, by = "std_t") |>
-  as_tsibble(index = month) |>
+  as_tsibble(index = t) |>
   autoplot(.vars = sales_millions) +
-  geom_smooth(method = "lm", formula = 'y ~ x', se = FALSE, color = "#E69F00", linewidth = 0.5, linetype = "dotted") +
   geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
     labs(
-      x = "Month",
+      x = "Time",
       y = "Simulated Time Series",
-      title = "Time Plot of Simulated Time Series with an Exponential Trend",
+      title = "Time Plot of Simulated Time Series with an Cubic Trend",
       subtitle = "Predicted values based on the full cubic model are given in blue"
     ) +
     theme_minimal() +
@@ -2236,40 +1510,14 @@ retail_ts |>
 ```
 
 
-:::
-<!-- GLS -->
-
-
-::: {#Solutions1 style="display:none;"}
-    
-<!-- Check Your Understanding -->
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
-Use the retail sales data to do the following.
-
--   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
--   Use the residuals to determine the appropriate correction for the data.
--   Forecast the data for the next 5 years.
--   Apply the appropriate correction to the forecasted values.
--   Plot the fitted (forecasted) values along with the time series.
-
-:::
 
 ```{r}
 #| label: ExponentialQuadraticFull1a-2
 #| code-fold: true
 #| code-summary: "Show the code"
 
-retail_full_quad_lm <- retail_ts |>
-  model(retail_full_quad = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
-    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
-retail_full_quad_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
 
-retail_resid_df <- retail_full_quad_lm |> 
+retail_resid_df <-  cubic_lm |> 
   residuals() |> 
   as_tibble() |> 
   dplyr::select(.resid) |>
@@ -2285,7 +1533,7 @@ retail_resid_df |>
     labs(
       x = "Values",
       y = "Frequency",
-      title = "Histogram of Residuals from the Full Quadratic Model"
+      title = "Histogram of Residuals from the Full Cubic Model"
     ) +
     theme(
       plot.title = element_text(hjust = 0.5)
@@ -2293,23 +1541,11 @@ retail_resid_df |>
 
 skewness(retail_resid_df$x)
 ```
-
-There is little skewness. We will use the log-normal correction factor.
-
 :::
 
 
 
-
-
-
-
-<a href="javascript:showhide('Solutions')"
-style="font-size:.8em;">Small-Group Activity: Texas Industrial Electricity Usage</a>
-  
-::: {#Solutions2 style="display:none;"}
-
-<!-- Check Your Understanding -->
+## Small-Group Activity: Industrial Electricity Consumption in Texas Solution
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
@@ -2329,23 +1565,21 @@ Use the Texas industrial electricity consumption data to do the following.
 
 # Cubic model with standardized time variable
 
-elec_full_cubic_lm <- elec_ts |>
-  model(elec_full_cubic = TSLM(log(megawatthours) ~ std_t + I(std_t^2) + I(std_t^3) +
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + sin4 + cos4 + sin5 + cos5 + cos6)) # Note sin6 is omitted
-elec_full_cubic_lm |>
+elec_cubic_lm <- elec_ts |>
+  model(elec_cubic = TSLM(log(megawatthours) ~ std_t + I(std_t^2) + I(std_t^3) + month)) # Note sin6 is omitted
+elec_cubic_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 
 # Quadratic model with standardized time variable
 
-elec_full_quadratic_lm <- elec_ts |>
-  model(elec_full_cubic = TSLM(log(megawatthours) ~ std_t + I(std_t^2) + 
-    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + sin4 + cos4 + sin5 + cos5 + cos6)) # Note sin6 is omitted
-elec_full_quadratic_lm |>
+elec_quadratic_lm <- elec_ts |>
+  model(elec_cubic = TSLM(log(megawatthours) ~ std_t + I(std_t^2) + month)) # Note sin6 is omitted
+elec_quadratic_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 
-elec_resid_df <- elec_full_quadratic_lm |> 
+elec_resid_df <- elec_quadratic_lm |> 
   residuals() |> 
   as_tibble() |> 
   dplyr::select(.resid) |>
@@ -2370,16 +1604,24 @@ elec_resid_df |>
 skewness(elec_resid_df$x)
 ```
 
-There is moderate negative skewness. We will use the emperical correction factor.
+
+
+
+:::
+<!-- GLS -->
+
+
+
 
 :::
 
 
-:::
-<!-- End of check your understanding colored code -->
 
-:::
-<!-- End of folded solution code -->
+
+
+
+
+
 
 
 

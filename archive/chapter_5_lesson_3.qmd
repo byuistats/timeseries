@@ -1,0 +1,1088 @@
+---
+title: "Forecasting, Inverse Transformation, and Bias Correction"
+subtitle: "Chapter 5: Lesson 5"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("common_functions.R")
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+## Learning Outcomes
+
+{{< include outcomes/_chapter_5_lesson_5_outcomes.qmd >}}
+
+
+
+
+## Preparation
+
+-   Read Sections 5.9-5.11
+
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+
+
+
+## Class Activity: Anti-Log Transformation and Bias Correction on Simulated Data (10 min)
+
+### Forecasts for a Simulated Time Series
+
+[In the previous lesson](https://byuistats.github.io/timeseries/chapter_5_lesson_4.html#Simulation), we simulated a time series with an exponential trend. In this lesson, we will forecast future values based on our model.
+
+@fig-simTSplot shows the simulated time series and the time series after the natural logarithm is applied.
+
+```{r}
+#| label: fig-simTSplot
+#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| fig-height: 3.5
+
+set.seed(12345)
+
+n_years <- 9 # Number of years to simulate
+n_months <- n_years * 12 # Number of months
+sigma <- .05 # Standard deviation of random term
+
+z_t <- rnorm(n = n_months, mean = 0, sd = sigma)
+
+dates_seq <- seq(floor_date(now(), unit = "year"), length.out=n_months + 1, by="-1 month") |>
+  floor_date(unit = "month") |> sort() |> head(n_months)
+
+sim_ts <- tibble(
+  t = 1:n_months,
+  dates = dates_seq,
+  random = arima.sim(model=list(ar=c(.5,0.2)), n = n_months, sd = 0.02),
+  x_t = exp(2 + 0.015 * t +
+              0.03 * sin(2 * pi * 1 * t / 12) + 0.04 * cos(2 * pi * 1 * t / 12) + 
+              0.05 * sin(2 * pi * 2 * t / 12) + 0.03 * cos(2 * pi * 2 * t / 12) +
+              0.01 * sin(2 * pi * 3 * t / 12) + 0.005 * cos(2 * pi * 3 * t / 12) +
+              random
+  )
+) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12),
+    sin6 = sin(2 * pi * 6 * t / 12)) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  as_tsibble(index = dates)
+
+sim_plot_raw <- sim_ts |>
+  autoplot(.vars = x_t) +
+  labs(
+    x = "Month",
+    y = "x_t",
+    title = "Simulated Time Series"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+sim_plot_log <- sim_ts |>
+  autoplot(.vars = log(x_t)) +
+  labs(
+    x = "Month",
+    y = "log(x_t)",
+    title = "Logarithm of Simulated Time Series"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+sim_plot_raw | sim_plot_log
+```
+
+We can use the `forecast()` function to predict future values of this time series. @tbl-forecastSim displays the output of the `forecast()` command. Note that the column labeled `x_t` (i.e. $x_t$), representing the time series is populated with information tied to a normal distribution. The mean and standard deviation specified are the estimated parameters for the distribution of the predicted values of $\log(x_t)$. If you raise $e$ to the power of the mean, you get the values in the `.mean` column.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| results: false
+
+# Fit model (OLS)
+sim_reduced_linear_lm1 <- sim_ts |>
+  model(sim_reduced_linear1 = TSLM(log(x_t) ~ std_t + 
+        sin1 + cos1 + sin2 + cos2 + sin3 + cos3))
+
+# Compute forecast
+n_years_forecast <- 5
+n_months_forecast <- 12 * n_years_forecast
+
+new_dat <- tibble(t = n_months:(n_months + n_months_forecast )) |>
+  mutate(
+    dates = seq(max(dates_seq), length.out=n_months_forecast + 1, by="1 month") 
+  ) |>
+  mutate(
+    std_t = (t - mean(pull(sim_ts, t))) / sd(pull(sim_ts, t)),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    cos1 = cos(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12)
+  ) |>
+  as_tsibble(index = dates)
+
+sim_reduced_linear_lm1 |> 
+  forecast(new_data = new_dat)
+```
+
+```{r}
+#| label: tbl-forecastSim
+#| tbl-cap: "Output of the forecast() command for the simulated time series"
+#| echo: false
+
+sim_reduced_linear_lm1 |> 
+  forecast(new_data = new_dat) |>
+  dplyr::select(.model, dates, x_t, .mean, t, std_t, sin1, cos1, sin2, cos2, sin3, cos3) |>
+  mutate(" " = "...") |>
+  display_partial_table(4,2)
+```
+
+@fig-forecastSim illustrates the forecasted values for the time series.
+
+```{r}
+#| label: fig-forecastSim
+#| fig-cap: "Forecasted values of the time series with 95% confidence bands"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+sim_forecast_plot_regular <- sim_reduced_linear_lm1 |> 
+  forecast(new_data = new_dat) |>
+  autoplot(sim_ts, level = 95) +
+  labs(
+    x = "Month",
+    y = "x_t",
+    title = "Simulated Time Series"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "inset") +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+sim_forecast_plot_logged <- sim_reduced_linear_lm1 |> 
+  forecast(new_data = new_dat) |>
+  autoplot(sim_ts, level = 95) +
+  scale_y_continuous(trans = "log", labels = trans_format("log")) +
+  labs(
+    x = "Month",
+    y = "log(x_t)",
+    title = "Logarithm of Simulated Time Series"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "inset")  +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+sim_forecast_plot_regular
+```
+
+
+### Bias Correction
+
+The forecasts presented above were computed by raising $e$ to the power of the predicted log-values. Unfortunately, this introduces bias in the forecasted means. This bias tends to be large if the regression model does not fit the data closely.
+
+The textbook points out that the bias correction should only be applied for means, not for simulated values. This means that if you are simulating transformed values, and you apply the inverse of your original transformation, the resulting values are appropriate.
+
+When we apply the inverse transform to the residual series, we introduce a bias. 
+<!-- See p. 116 -->
+  We can account for this bias applying one of two adjustments to our mean values. The theory behind this transformations is alluded to in the textbook, but is not essential.
+
+There are two common patterns observed in the residual series: (1) Gaussian white noise or (2) Negatively-skewed values. Note that negatively-skewed values are the same as left-skewed values. 
+
+We can use the skewness statistic to assess the shape of the residual series.
+When the skewness is less than -1 or greater than 1, we say that the distribution is highly skewed. For skewness values between -1 and -0.5 or between 0.5 and 1, we say there is moderate skewness. If skewness lies between -0.5 and 0.5, the distribution is considered roughly symmetric.
+
+<!-- Beginning of two columns -->
+::: columns
+::: {.column width="45%"}
+
+#### Log-Normal Correction
+
+##### Normally-Distributed Residual Series
+
+If the residual series follows a normal distribution, we multiply the means of the forecasted values $\hat x_t$ by the factor $e^{\frac{1}{2} \sigma^2}$:
+  
+$$
+  \hat x_t' = e^{\frac{1}{2} \sigma^2} \cdot \hat x_t
+$$
+
+where 
+$\left\{ \hat x_t: t = 1, \ldots, n \right\}$ 
+gives the values of the forecasted series, and 
+$\left\{ \hat x_t': t = 1, \ldots, n \right\}$ 
+is the adjusted forecasted values.
+
+:::
+
+::: {.column width="10%"}
+<!-- empty column to create gap -->
+:::
+  
+::: {.column width="45%"}
+
+#### Emperical Correction
+
+##### Negatively-Skewed Residual Series
+
+If the residual series demonstrates negative skewness, then we can adjust the forecasts $\left\{ \hat x_t \right\}$ as follows:
+  
+$$
+  \hat x_t' = e^{\widehat{\log x_t}} \sum_{t=1}^{n} \frac{e^{z_t}}{n}
+$$
+
+where $\left\{ \widehat{\log x_t}: t = 1, \ldots, n \right\}$ is the forecasted series obtained by fitting the log-regression model.
+
+$\left\{ z_t \right\}$ is the residual series from this fitted model in the log-transformed units.
+
+:::
+:::
+<!-- End of two columns -->
+
+
+
+The code given below can be used to compute the corrected mean values for the simulated data.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+sim_model_values <- sim_reduced_linear_lm1 |>
+  glance()
+
+sim_model_check <- sim_model_values |>
+  mutate(
+    sigma = sqrt(sigma2),
+    lognorm_cf = exp((1/2) * sigma2),
+    empirical_cf = sim_reduced_linear_lm1 |>
+      residuals() |>
+      pull(.resid) |>
+      exp() |>
+      mean()) |>
+  select(.model, r_squared, sigma2, sigma, lognorm_cf, empirical_cf)
+
+sim_pred <- sim_reduced_linear_lm1 |> 
+  forecast(new_data = new_dat) |>
+  mutate(.mean_correction = .mean * sim_model_check$empirical_cf) |>
+  select(t, x_t, .mean, .mean_correction)
+
+sim_model_check
+```
+
+From this, we observe that for the simulated data, $R^2 = `r sim_model_check |> select(r_squared) |> pull() |> round(3)`$. 
+This indicates that the model explains a high proportion of the variation in the data. The log-normal adjustment is 
+$`r sim_model_check |> select(lognorm_cf) |> pull() |> round(5)`$, 
+and the emperical adjustment is 
+$`r sim_model_check |> select(empirical_cf) |> pull() |> round(5)`$. 
+Both of these values are extremely close to 1, so they will have a negligible impact on the predicted values.
+
+This result does not generalize. In other situations, there can be a substantial effect of this bias on the predicted means.
+
+
+
+
+
+
+
+
+
+
+
+### Histogram of residuals
+
+@fig-ResidualHistogramSimulatedTS gives a histogram of the residuals and compute the skewness of the residual series.
+
+```{r}
+#| label: fig-ResidualHistogramSimulatedTS
+#| fig-cap: "Histogram of the values in the residual series based on the model with a linear trend and seasonal Fourier terms where i≤3"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+sim_resid_df <- sim_reduced_linear_lm1 |> 
+  residuals() |> 
+  as_tibble() |> 
+  dplyr::select(.resid) |>
+  rename(x = .resid) 
+  
+sim_resid_df |>
+  mutate(density = dnorm(x, mean(sim_resid_df$x), sd(sim_resid_df$x))) |>
+  ggplot(aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 0.01) +
+    geom_line(aes(x = x, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals from the Reduced Linear Model"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+
+We can use the command `skewness(sim_resid_df$x)` to compute the skewness of these residuals: `r skewness(sim_resid_df$x) |> round(3)`. This number is close to zero (specifically between -0.5 and 0.5,) so we conclude that the residual series is approximately normally distributed. We can apply the log-normal correction to our mean forecast values.
+
+
+
+
+
+## Class Activity: Apple Revenue (10 min)
+
+We take another look at the quarterly revenue reported by Apple Inc. from Q1 of 2005 through Q1 of 2012
+
+### Visualizing the Time Series
+
+@fig-appleTS gives the time plot illustrating the quarterly revenue reported by Apple from the first quarter of 2005 through the first quarter of 2012. 
+
+```{r}
+#| label: fig-appleTS
+#| fig-cap: "Apple quarterly revenue figures (in billions of U.S. dollars) from Q1 of 2005 to Q1 of 2012; the figure on the left presents the revenue in dollars and the figure on the right gives the logarithm of the quarterly revenue; a simple linear regression line is given for reference"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_raw <- rio::import("https://byuistats.github.io/timeseries/data/apple_revenue.csv") |>
+  mutate(dates = round_date(mdy(date), unit = "quarter")) |>
+  arrange(dates)
+
+apple_ts <- apple_raw |>
+  filter(dates <= my("Jan 2012")) |>
+  dplyr::select(dates, revenue_billions) |>
+  mutate(t = 1:n()) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  mutate(
+    sin1 = sin(2 * pi * 1 * t / 4),
+    cos1 = cos(2 * pi * 1 * t / 4),
+    cos2 = cos(2 * pi * 2 * t / 4)
+  ) |>
+  as_tsibble(index = dates)
+
+apple_plot_regular <- apple_ts |>
+  autoplot(.vars = revenue_billions) +
+  stat_smooth(method = "lm", 
+              formula = y ~ x, 
+              geom = "smooth",
+              se = FALSE,
+              color = "#E69F00",
+              linetype = "dotted") +
+    labs(
+      x = "Quarter",
+      y = "Revenue (Billions USD)",
+      title = "Apple Revenue (in Billions USD)"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+apple_plot_transformed <- apple_ts |>
+  autoplot(.vars = log(revenue_billions)) +
+  stat_smooth(method = "lm", 
+              formula = y ~ x, 
+              geom = "smooth",
+              se = FALSE,
+              color = "#E69F00",
+              linetype = "dotted") +
+    labs(
+      x = "Quarter",
+      y = "Logarithm of Revenue",
+      title = "Logarithm of Apple Revenue"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+apple_plot_regular | apple_plot_transformed
+```
+
+
+### Finding a Suitable Model
+
+We start by fitting a cubic trend to the logarithm of the quarterly revenues. The full model is fitted here:
+
+```{r}
+#| label: appleCubicFull
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Cubic model with standardized time variable
+
+apple_full_cubic_lm <- apple_ts |>
+  model(apple_full_cubic = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + I(std_t^3) +
+    sin1 + cos1 + cos2 )) # Note sin2 is omitted
+apple_full_cubic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+The quadratic and cubic trend terms are not statistically signficant. We now eliminate the cubic term and fit a full model with a quadratic trend.
+
+```{r}
+#| label: appleQuadraticFull
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_full_quad_lm <- apple_ts |>
+  model(apple_full_quad = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + 
+    sin1 + cos1 + cos2 )) # Note sin2 is omitted
+apple_full_quad_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+```
+
+The quadratic trend term is not statistically significant. Nevertheless, we will still fit a reduced model with a quadratic trend but we will omit the non-signficant seasonal Fourier term, `cos1`.
+
+```{r}
+#| label: appleQuadReduced1
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Quadratic trend with standardized time variable
+
+apple_reduced_quad_lm1 <- apple_ts |>
+  model(apple_reduced_quad1 = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) +
+    sin1 + cos2 )) # Note sin2 is omitted
+apple_reduced_quad_lm1 |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+The quadratic trend term is still not statistically significant. We will fit a full model with a linear trend.
+
+```{r}
+#| label: appleLinearFull
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Linear trend with standardized time variable
+
+apple_full_linear_lm <- apple_ts |>
+  model(apple_full_linear = TSLM(log(revenue_billions) ~ std_t + 
+    sin1 + cos1 + cos2 )) # Note sin2 is omitted
+apple_full_linear_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+The coefficient on the `cos1` seasonal Fourier term is not statistically significant. 
+We now fit a reduced model that only contains the significant terms from the full model with a linear trend.
+
+```{r}
+#| label: appleLinearReduced1
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Linear trend with standardized time variable
+
+apple_reduced_linear_lm1 <- apple_ts |>
+  model(apple_reduced_linear1 = TSLM(log(revenue_billions) ~ std_t + 
+    sin1 + cos2 )) # Note sin2 is omitted
+apple_reduced_linear_lm1 |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+```
+
+All the terms are statistically significant in this model. We now compare the models we have fitted using the AIC, AICc, and BIC criterion.
+
+```{r}
+#| label: modelComparisonApple
+#| output: false
+#| code-fold: true
+#| code-summary: "Show the code"
+
+model_combined <- apple_ts |>
+  model(
+    apple_full_cubic = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + I(std_t^3) +
+                    sin1 + cos1 + cos2),
+    apple_full_quad = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + 
+                    sin1 + cos1 + cos2),
+    apple_reduced_quad1 = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + 
+                    sin1 + cos2),
+    apple_full_linear = TSLM(log(revenue_billions) ~ std_t +
+                    sin1 + cos1 + cos2),
+    apple_reduced_linear1 = TSLM(log(revenue_billions) ~ std_t + 
+                    sin1 + cos2 )
+  )
+
+glance(model_combined) |>
+  select(.model, AIC, AICc, BIC)
+```
+
+```{r}
+#| label: tbl-ModelComparisonApple
+#| tbl-cap: "Comparison of the AIC, AICc, and BIC values for the models fitted to the logarithm of the simulated time series."
+#| echo: false
+
+combined_models <- glance(model_combined) |> 
+  select(.model, AIC, AICc, BIC)
+
+minimum <- combined_models |>
+  summarize(
+    AIC = which(min(AIC)==AIC),
+    AICc = which(min(AICc)==AICc),
+    BIC = which(min(BIC)==BIC)
+  )
+
+combined_models |>
+  rename(Model = ".model") |>
+  round_df(1) |>
+  format_cells(rows = minimum$AIC, cols = 2, "bold") |>
+  format_cells(rows = minimum$AICc, cols = 3, "bold") |>
+  format_cells(rows = minimum$BIC, cols = 4, "bold") |>
+  display_table()
+```
+
+We will apply the `apple_reduced_linear1` model.
+
+### Using the Residuals to Determine the Appropriate Correction
+
+The residuals of this model are illustrated in @fig-residualHistogramAppleRevenue.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| label: fig-residualHistogramAppleRevenue
+#| fig-cap: "Histogram of the residuals from the reduced model with a linear trend component"
+
+apple_resid_df <- model_combined |> 
+  dplyr::select(apple_reduced_linear1) |>
+  residuals() |> 
+  as_tibble() |> 
+  dplyr::select(.resid) |>
+  rename(x = .resid) 
+  
+apple_resid_df |>
+  mutate(density = dnorm(x, mean(apple_resid_df$x), sd(apple_resid_df$x))) |>
+  ggplot(aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 0.05) +
+    geom_line(aes(x = x, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals from the Reduced Model with a Linear Trend"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+Using the command `skewness(apple_resid_df$x)`, we compute the skewness of these residuals as: `r skewness(apple_resid_df$x) |> round(3)`. This number is not close to zero (it is between -1 and -0.5) indicating moderate negative skewness. We would therefore apply the empirical correction to our mean forecast values.
+
+### Applying the Correction Factor
+
+@tbl-correctedModelApple summarizes some of the corrected mean values. Note that in this particular case, the corrected values are very close to the uncorrected values.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_model_values <- model_combined |> 
+  dplyr::select(apple_reduced_linear1) |>
+  glance()
+
+apple_model_check <- apple_model_values |>
+  mutate(
+    sigma = sqrt(sigma2),
+    lognorm_cf = exp((1/2) * sigma2),
+    empirical_cf = apple_reduced_linear_lm1 |>
+      residuals() |>
+      pull(.resid) |>
+      exp() |>
+      mean()) |>
+  select(.model, r_squared, sigma2, sigma, lognorm_cf, empirical_cf)
+
+apple_pred <- model_combined |> 
+  dplyr::select(apple_reduced_linear1) |>
+  forecast(new_data = apple_ts) |>
+  mutate(.mean_correction = .mean * apple_model_check$empirical_cf) |>
+  select(t, revenue_billions, .mean, .mean_correction)
+
+apple_model_check
+```
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_pred <- model_combined |> 
+  dplyr::select(apple_reduced_linear1) |>
+  forecast(new_data = apple_ts) |>
+  mutate(.mean_correction = .mean * apple_model_check$empirical_cf) |>
+  select(t, revenue_billions, .mean, .mean_correction)
+```
+
+```{r}
+#| label: tbl-correctedModelApple
+#| tbl-cap: "Fitted values for the model representing Apple's quarterly revenue"
+#| echo: false
+
+apple_pred |>
+  display_partial_table(4,2)
+```
+
+### Plotting the Fitted Values
+
+These fitted values are illustrated in @fig-AppleRevenueFittedPlot.
+
+```{r}
+#| label: fig-AppleRevenueFittedPlot
+#| fig-cap: "Apple Inc.'s quarterly revenue in billions of U.S. dollars through first quarter of 2012 (in black) and the fitted regression model (in blue)"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_ts |>
+  autoplot(.vars = revenue_billions) +
+  geom_line(data = apple_pred, aes(x = dates, y = .mean_correction), color = "#56B4E9") +
+    labs(
+      x = "Quarter",
+      y = "Revenue (Billions USD)",
+      title = "Apple Revenue in Billions of U.S. Dollars"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+```
+
+This time series was used as an example. We are obviously not interested in forecasting future values using this model. However, this is an excellent example of real-world exponential growth in a time series with a seasonal component. Limiting factors prevent exponential growth from being sustainable in the long run. After 2012, the Apple quarterly revenues follow a different, but very impressive, model. This is illustrated in @fig-AppleRevenueAllTime.
+
+```{r}
+#| label: fig-AppleRevenueAllTime
+#| fig-cap: "Apple Inc.'s quarterly revenue in billions of U.S. dollars; values beginning with the first quarter of 2012 are shown in orange"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+apple_raw |>
+  dplyr::select(dates, revenue_billions) |>
+  as_tsibble(index = dates) |>
+  autoplot(.vars = revenue_billions) +
+  geom_line(
+    data = apple_raw |> filter(dates >= my("Jan 2012")), 
+    aes(x = dates, y = revenue_billions), 
+    color = "#D55E00"
+  ) +
+  labs(
+    x = "Quarter",
+    y = "Revenue (Billions USD)",
+    title = "Apple Revenue (in Billions USD)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+
+## Choose One of the Following Small-Group Activities (25 min)
+
+### Small-Group Activity: Retail Sales (All Other General Merchandise Stores)
+
+The code below downloads and gives the time plot for the total monthly sales in the United States for retail stores with the NAICS category 45299, "All Other General Merchandise Stores." The time plot is given in Figure @fig-RetailSalesGeneralMerch.
+
+```{r}
+#| label: fig-RetailSalesGeneralMerch
+#| fig-cap: "Time plot of the total monthly retail sales for all other general merchandise stores (45299)"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Read in retail sales data for "all other general merchandise stores"
+retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
+  filter(naics == 45299) |>
+  filter(as_date(month) >= my("Jan 1998")) |>
+  mutate(t = 1:n()) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12)
+  ) |>
+  as_tsibble(index = month)
+
+retail_ts |>
+  autoplot(.vars = sales_millions) +
+  stat_smooth(method = "lm", 
+              formula = y ~ x, 
+              geom = "smooth",
+              se = FALSE,
+              color = "#E69F00",
+              linetype = "dotted") +
+    labs(
+      x = "Month",
+      y = "Sales (Millions of U.S. Dollars)",
+      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+<!-- @fig-retailSideBySidePlot shows the "All other general merchandise" retail sales data. -->
+```{r}
+#| include: false
+#| label: fig-retailSideBySidePlot
+#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| results: asis
+#| fig-height: 3.5
+
+retail_plot_raw <- retail_ts |>
+    autoplot(.vars = sales_millions) +
+    labs(
+      x = "Month",
+      y = "sales_millions",
+      title = "Other General Merchandise Sales"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+retail_plot_log <- retail_ts |>
+    autoplot(.vars = log(sales_millions)) +
+    labs(
+      x = "Month",
+      y = "log(sales_millions)",
+      title = "Logarithm of Other Gen. Merch. Sales"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+retail_plot_raw | retail_plot_log
+```
+
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the retail sales data to do the following.
+
+-   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
+-   Use the residuals to determine the appropriate correction for the data.
+-   Forecast the data for the next 5 years.
+-   Apply the appropriate correction to the forecasted values.
+-   Plot the fitted (forecasted) values along with the time series.
+
+:::
+
+
+
+
+
+
+
+
+
+
+
+
+### Small-Group Activity: Industrial Electricity Consumption in Texas
+
+
+These data represent the amount of electricity used each month for industrial applications in Texas.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+elec_ts <- rio::import("https://byuistats.github.io/timeseries/data/electricity_tx.csv") |>
+  dplyr::select(-comments) |>
+  mutate(month = my(month)) |>
+  mutate(
+    t = 1:n(),
+    std_t = (t - mean(t)) / sd(t)
+  ) |>
+  mutate(
+    cos1 = cos(2 * pi * 1 * t / 12),
+    cos2 = cos(2 * pi * 2 * t / 12),
+    cos3 = cos(2 * pi * 3 * t / 12),
+    cos4 = cos(2 * pi * 4 * t / 12),
+    cos5 = cos(2 * pi * 5 * t / 12),
+    cos6 = cos(2 * pi * 6 * t / 12),
+    sin1 = sin(2 * pi * 1 * t / 12),
+    sin2 = sin(2 * pi * 2 * t / 12),
+    sin3 = sin(2 * pi * 3 * t / 12),
+    sin4 = sin(2 * pi * 4 * t / 12),
+    sin5 = sin(2 * pi * 5 * t / 12)
+  ) |>
+  as_tsibble(index = month)
+
+elec_plot_raw <- elec_ts |>
+    autoplot(.vars = megawatthours) +
+    labs(
+      x = "Month",
+      y = "Megawatt-hours",
+      title = "Texas' Industrial Electricity Use"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+elec_plot_log <- elec_ts |>
+    autoplot(.vars = log(megawatthours)) +
+    labs(
+      x = "Month",
+      y = "log(Megwatt-hours)",
+      title = "Log of Texas' Industrial Electricity Use"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+elec_plot_raw | elec_plot_log
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the Texas industrial electricity consumption data to do the following.
+
+-   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
+-   Use the residuals to determine the appropriate correction for the data.
+-   Forecast the data for the next 5 years.
+-   Apply the appropriate correction to the forecasted values.
+-   Plot the fitted (forecasted) values along with the time series.
+
+:::
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+
+
+::: {.callout-note icon=false}
+
+## Download Homework
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_5_5.qmd" download="homework_5_5.qmd"> homework_5_5.qmd </a>
+
+:::
+
+
+
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">Small-Group Activity: Retail Sales</a>
+  
+::: {#Solutions1 style="display:none;"}
+    
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the retail sales data to do the following.
+
+-   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
+-   Use the residuals to determine the appropriate correction for the data.
+-   Forecast the data for the next 5 years.
+-   Apply the appropriate correction to the forecasted values.
+-   Plot the fitted (forecasted) values along with the time series.
+
+:::
+
+```{r}
+#| label: ExponentialQuadraticFull1a
+#| code-fold: true
+#| code-summary: "Show the code"
+
+retail_full_quad_lm <- retail_ts |>
+  model(retail_full_quad = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 
+    + sin4 + cos4 + sin5 + cos5 + cos6 )) # Note sin6 is omitted
+retail_full_quad_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05) 
+
+retail_resid_df <- retail_full_quad_lm |> 
+  residuals() |> 
+  as_tibble() |> 
+  dplyr::select(.resid) |>
+  rename(x = .resid) 
+  
+retail_resid_df |>
+  mutate(density = dnorm(x, mean(retail_resid_df$x), sd(retail_resid_df$x))) |>
+  ggplot(aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 0.02) +
+    geom_line(aes(x = x, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals from the Full Quadratic Model"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+skewness(retail_resid_df$x)
+```
+
+There is little skewness. We will use the log-normal correction factor.
+
+:::
+
+
+
+
+
+
+
+<a href="javascript:showhide('Solutions')"
+style="font-size:.8em;">Small-Group Activity: Texas Industrial Electricity Usage</a>
+  
+::: {#Solutions2 style="display:none;"}
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Use the Texas industrial electricity consumption data to do the following.
+
+-   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
+-   Use the residuals to determine the appropriate correction for the data.
+-   Forecast the data for the next 5 years.
+-   Apply the appropriate correction to the forecasted values.
+-   Plot the fitted (forecasted) values along with the time series.
+
+:::    
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Cubic model with standardized time variable
+
+elec_full_cubic_lm <- elec_ts |>
+  model(elec_full_cubic = TSLM(log(megawatthours) ~ std_t + I(std_t^2) + I(std_t^3) +
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + sin4 + cos4 + sin5 + cos5 + cos6)) # Note sin6 is omitted
+elec_full_cubic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+# Quadratic model with standardized time variable
+
+elec_full_quadratic_lm <- elec_ts |>
+  model(elec_full_cubic = TSLM(log(megawatthours) ~ std_t + I(std_t^2) + 
+    sin1 + cos1 + sin2 + cos2 + sin3 + cos3 + sin4 + cos4 + sin5 + cos5 + cos6)) # Note sin6 is omitted
+elec_full_quadratic_lm |>
+  tidy() |>
+  mutate(sig = p.value < 0.05)
+
+elec_resid_df <- elec_full_quadratic_lm |> 
+  residuals() |> 
+  as_tibble() |> 
+  dplyr::select(.resid) |>
+  rename(x = .resid) 
+  
+elec_resid_df |>
+  mutate(density = dnorm(x, mean(elec_resid_df$x), sd(elec_resid_df$x))) |>
+  ggplot(aes(x = x)) +
+    geom_histogram(aes(y = after_stat(density)),
+        color = "white", fill = "#56B4E9", binwidth = 0.02) +
+    geom_line(aes(x = x, y = density)) +
+    theme_bw() +
+    labs(
+      x = "Values",
+      y = "Frequency",
+      title = "Histogram of Residuals from the Full Quadratic Model"
+    ) +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+
+skewness(elec_resid_df$x)
+```
+
+There is moderate negative skewness. We will use the emperical correction factor.
+
+:::
