@@ -275,7 +275,9 @@ weather_df <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_w
     sin4 = sin(2 * pi * 4 * TIME/12),
     sin5 = sin(2 * pi * 5 * TIME/12),
     sin6 = sin(2 * pi * 6 * TIME/12)) |>
-  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME)) |>
+  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME),
+         month_index = month(dates),
+         month_index = factor(month_index, levels = 1:12, labels = month.abb)) |>
   as_tsibble(index = TIME)
 
 weather_df |>
@@ -302,9 +304,9 @@ We chose the "Reduced Linear 5" model. For convenience, we reprint the coefficie
 #| label: weather22
 #| code-fold: true
 #| code-summary: "Show the code"
-
+#| 
 reduced5_linear_lm <- weather_df |>
-  model(reduced_linear_5  = TSLM(x ~ zTIME + sin1 + cos1 + sin2 + cos2))
+  model(reduced_linear_5  = TSLM(x ~ zTIME + month_index))
 
 reduced5_linear_lm |>
   tidy() |>
@@ -329,21 +331,23 @@ stats <- stats_unrounded |>
 The fitted model is:
 
 \begin{align*}
-  x_t 
-      &= \hat \beta_0 + \hat \beta_1 \left( \frac{t - \bar t}{s_t} \right)  \\
-      & ~~~~~~~~~~ + \hat \beta_2 \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + \hat \beta_3 \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~ + \hat \beta_4 \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + \hat \beta_5 \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
-      &= `r r5lin_coef$estimate[1]` 
-            + `r r5lin_coef$estimate[2]` \left( \frac{t - `r stats$mean`}{`r stats$sd`} \right) \\ 
-      & ~~~~~~~~~~~~~~~~~ + (`r r5lin_coef$estimate[3]`) \sin \left( \frac{2\pi \cdot 1 t}{12} \right) 
-            + (`r r5lin_coef$estimate[4]`) \cos \left( \frac{2\pi \cdot 1 t}{12} \right) \\
-      & ~~~~~~~~~~~~~~~~~ + `r r5lin_coef$estimate[5]` \sin \left( \frac{2\pi \cdot 2 t}{12} \right) 
-            + (`r r5lin_coef$estimate[6]`) \cos \left( \frac{2\pi \cdot 2 t}{12} \right) 
-      \\
+  \log(x_t) &= \beta_0 
+            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
+          + s_t  + z_t
 \end{align*}
+
+\begin{align*}
+  s_t=
+    
+    \begin{cases}
+        \Delta\beta_2 , & t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
+        \Delta\beta_3 , & t = 2, 14, 26, \ldots ~~~~ ~~(March) \\
+        ~~~~~~~~⋮ & ~~~~~~~~~~~~⋮ \\
+        \Delta\beta_{12} , & t = 12, 24, 36, \ldots ~~~~ (December) 
+      \end{cases}
+\end{align*}
+
+
 
 ```{r}
 #| code-fold: true
@@ -351,31 +355,13 @@ The fitted model is:
 #| label: fig-WeatherTimePlotWithForecast
 #| fig-cap: "Time plot of the monthly mean daily high temperatures in Rexburg Idaho, in degrees Fahrenheit; the fitted values from the regression model are given in orange"
 
-num_months <- weather_df |> 
-  as_tibble() |> 
-  dplyr::select(TIME) |> 
-  tail(1) |> 
-  pull()
-
-df <- tibble( TIME = seq(1, num_months, 0.01) ) |>
-  mutate(
-    cos1 = cos(2 * pi * 1 * TIME/12),
-    cos2 = cos(2 * pi * 2 * TIME/12),
-    cos3 = cos(2 * pi * 3 * TIME/12),
-    cos4 = cos(2 * pi * 4 * TIME/12),
-    cos5 = cos(2 * pi * 5 * TIME/12),
-    cos6 = cos(2 * pi * 6 * TIME/12),
-    sin1 = sin(2 * pi * 1 * TIME/12),
-    sin2 = sin(2 * pi * 2 * TIME/12),
-    sin3 = sin(2 * pi * 3 * TIME/12),
-    sin4 = sin(2 * pi * 4 * TIME/12),
-    sin5 = sin(2 * pi * 5 * TIME/12),
-    sin6 = sin(2 * pi * 6 * TIME/12)) |>
-  mutate(zTIME = (TIME - mean(TIME)) / sd(TIME)) |>
+df <- weather_df |>
+  as_tibble() |>
+  dplyr::select(TIME, zTIME, month_index) |>
   as_tsibble(index = TIME)
 
 linear5_ts <- reduced5_linear_lm |>
-  forecast(df) |>
+  forecast(new_data = df) |>
   as_tibble() |>
   dplyr::select(TIME, .mean) |>
   rename(value = .mean) |>
@@ -387,33 +373,42 @@ data_ts <- weather_df |>
   mutate(Model = "Data") |>
   dplyr::select(TIME, value, Model)
 
-combined_ts <- bind_rows(data_ts, linear5_ts) 
+combined_ts <- bind_rows(data_ts, linear5_ts)
+
+# points only at observed months (integer TIME)
 point_ts <- combined_ts |> filter(TIME == floor(TIME))
 
-okabe_ito_colors <- c("#000000", "#E69F00")
+okabe_ito_colors <- c("#000000", "#E69F00")  # Data, Linear 5
 
 combined_ts |>
   ggplot(aes(x = TIME, y = value, color = Model)) +
   geom_line() +
   geom_point(data = point_ts, alpha = 0.5) +
   labs(
-      x = "Month Number",
-      y = "Temperature (Fahrenheit)",
-      title = "Monthly Average of Daily High Temperatures in Rexburg",
-      subtitle = paste0("(", format(weather_df$dates %>% head(1), "%b %Y"), endash, format(weather_df$dates %>% tail(1), "%b %Y"), ")")
+    x = "Month Number",
+    y = "Temperature (Fahrenheit)",
+    title = "Monthly Average of Daily High Temperatures in Rexburg",
+    subtitle = paste0(
+      "(",
+      format(weather_df$dates %>% head(1), "%b %Y"),
+      endash,
+      format(weather_df$dates %>% tail(1), "%b %Y"),
+      ")"
+    )
   ) +    
   scale_color_manual(
-    values = okabe_ito_colors[1:nrow(combined_ts |> as_tibble() |> select(Model) |> unique())], 
+    values = okabe_ito_colors,
     name = ""
   ) +
   theme_minimal() +
   theme(
     plot.title = element_text(hjust = 0.5),
     plot.subtitle = element_text(hjust = 0.5),
-    legend.position = "top", # Position the legend at the top
-    legend.direction = "horizontal" # Set the legend direction to horizontal
+    legend.position = "top",
+    legend.direction = "horizontal"
   )
 ```
+
 
 
 ### Fitting an ARMA(p,q) Model
@@ -620,7 +615,9 @@ elec_ts <- rio::import("https://byuistats.github.io/timeseries/data/electricity_
     sin2 = sin(2 * pi * 2 * t / 12),
     sin3 = sin(2 * pi * 3 * t / 12),
     sin4 = sin(2 * pi * 4 * t / 12),
-    sin5 = sin(2 * pi * 5 * t / 12)
+    sin5 = sin(2 * pi * 5 * t / 12),
+    month_index = month(month),
+    month_index = factor(month_index, levels = 1:12, labels = month.abb)
   ) |>
   as_tsibble(index = month)
 
@@ -704,7 +701,8 @@ retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_
   filter(naics == 722511) |>
   mutate(
     month = yearmonth(as_date(month)),
-    month_number = month(month)
+    month_number = month(month),
+    month_index = factor(month_number, levels = 1:12, labels = month.abb)
   ) |>
   mutate(t = 1:n()) |>
   mutate(std_t = (t - mean(t)) / sd(t)) |>
@@ -765,8 +763,7 @@ retail_final_lm <- retail_ts |>
       (in_great_recession * std_t) + (after_great_recession * std_t) 
       + (in_great_recession * I(std_t^2) ) + (after_great_recession * I(std_t^2) )
       + (in_great_recession * I(std_t^3) ) + (after_great_recession * I(std_t^3) )
-      + sin1 + cos1 + sin2 + cos2 + sin3 + cos3
-      + sin4 + cos4 + sin5 + cos5 + cos6 # Note sin6 is omitted
+      + month_index # Note sin6 is omitted
     )
     ) 
 
