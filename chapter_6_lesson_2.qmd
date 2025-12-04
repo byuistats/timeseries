@@ -246,10 +246,6 @@ Here are some steps you can use to guide your work as you analyze time series wi
 
 ## Class Activity: Model for the Residuals from the Rexburg Weather Model (15 min)
 
-### Review
-
-We now review the model we built in [Chapter 5 Lesson 3](https://byuistats.github.io/timeseries/chapter_5_lesson_3.html#weather) for the monthly average of the daily high temperature in Rexburg, Idaho.
-
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -262,19 +258,6 @@ weather_df <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_w
   filter(dates >= my("1/2008") & dates <= my("12/2023")) |>
   rename(x = avg_daily_high_temp) |>
   mutate(TIME = 1:n()) |>
-  mutate(
-    cos1 = cos(2 * pi * 1 * TIME/12),
-    cos2 = cos(2 * pi * 2 * TIME/12),
-    cos3 = cos(2 * pi * 3 * TIME/12),
-    cos4 = cos(2 * pi * 4 * TIME/12),
-    cos5 = cos(2 * pi * 5 * TIME/12),
-    cos6 = cos(2 * pi * 6 * TIME/12),
-    sin1 = sin(2 * pi * 1 * TIME/12),
-    sin2 = sin(2 * pi * 2 * TIME/12),
-    sin3 = sin(2 * pi * 3 * TIME/12),
-    sin4 = sin(2 * pi * 4 * TIME/12),
-    sin5 = sin(2 * pi * 5 * TIME/12),
-    sin6 = sin(2 * pi * 6 * TIME/12)) |>
   mutate(zTIME = (TIME - mean(TIME)) / sd(TIME),
          month_index = month(dates),
          month_index = factor(month_index, levels = 1:12, labels = month.abb)) |>
@@ -298,21 +281,21 @@ weather_df |>
 ```
 
 
-We chose the "Reduced Linear 5" model. For convenience, we reprint the coefficients here.
+We chose a linear model model. For convenience, we print the coefficients here.
 
 ```{r}
 #| label: weather22
 #| code-fold: true
 #| code-summary: "Show the code"
 #| 
-reduced5_linear_lm <- weather_df |>
+linear_lm <- weather_df |>
   model(reduced_linear_5  = TSLM(x ~ zTIME + month_index))
 
-reduced5_linear_lm |>
+linear_lm |>
   tidy() |>
   mutate(sig = p.value < 0.05)
 
-r5lin_coef_unrounded <- reduced5_linear_lm |>
+r5lin_coef_unrounded <- linear_lm |>
   tidy() |>
   select(term, estimate, std.error)
 
@@ -360,7 +343,7 @@ df <- weather_df |>
   dplyr::select(TIME, zTIME, month_index) |>
   as_tsibble(index = TIME)
 
-linear5_ts <- reduced5_linear_lm |>
+linear5_ts <- linear_lm |>
   forecast(new_data = df) |>
   as_tibble() |>
   dplyr::select(TIME, .mean) |>
@@ -422,7 +405,7 @@ First, we create an acf and pacf plot of the residuals from the model above.
 #| fig-cap: "ACF Plot of the Residuals from the Rexburg Weather Model"
 #| warning: false
 
-reduced5_linear_lm |>
+linear_lm |>
   residuals() |>
   ACF() |> 
   autoplot(var = .resid)
@@ -436,7 +419,7 @@ reduced5_linear_lm |>
 #| fig-cap: "PACF Plot of the Residuals from the Rexburg Weather Model"
 #| warning: false
 
-reduced5_linear_lm |> 
+linear_lm |> 
   residuals() |>
   PACF() |>
   autoplot(var = .resid)
@@ -456,7 +439,7 @@ Here are summaries of some ARMA models that could be constructed.
 ```{r}
 #| output: false
 
-model_resid <- reduced5_linear_lm |>
+model_resid <- linear_lm |>
   residuals() |>
   select(-.model) |>
   model(
@@ -604,19 +587,7 @@ elec_ts <- rio::import("https://byuistats.github.io/timeseries/data/electricity_
     t = 1:n(),
     std_t = (t - mean(t)) / sd(t)
   ) |>
-  mutate(
-    cos1 = cos(2 * pi * 1 * t / 12),
-    cos2 = cos(2 * pi * 2 * t / 12),
-    cos3 = cos(2 * pi * 3 * t / 12),
-    cos4 = cos(2 * pi * 4 * t / 12),
-    cos5 = cos(2 * pi * 5 * t / 12),
-    cos6 = cos(2 * pi * 6 * t / 12),
-    sin1 = sin(2 * pi * 1 * t / 12),
-    sin2 = sin(2 * pi * 2 * t / 12),
-    sin3 = sin(2 * pi * 3 * t / 12),
-    sin4 = sin(2 * pi * 4 * t / 12),
-    sin5 = sin(2 * pi * 5 * t / 12),
-    month_index = month(month),
+  mutate(month_index = month(month),
     month_index = factor(month_index, levels = 1:12, labels = month.abb)
   ) |>
   as_tsibble(index = month)
@@ -706,19 +677,6 @@ retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_
   ) |>
   mutate(t = 1:n()) |>
   mutate(std_t = (t - mean(t)) / sd(t)) |>
-  mutate(
-    cos1 = cos(2 * pi * 1 * t / 12),
-    cos2 = cos(2 * pi * 2 * t / 12),
-    cos3 = cos(2 * pi * 3 * t / 12),
-    cos4 = cos(2 * pi * 4 * t / 12),
-    cos5 = cos(2 * pi * 5 * t / 12),
-    cos6 = cos(2 * pi * 6 * t / 12),
-    sin1 = sin(2 * pi * 1 * t / 12),
-    sin2 = sin(2 * pi * 2 * t / 12),
-    sin3 = sin(2 * pi * 3 * t / 12),
-    sin4 = sin(2 * pi * 4 * t / 12),
-    sin5 = sin(2 * pi * 5 * t / 12)
-  ) |>
   mutate(
     in_great_recession = ifelse(ym(month) >= my("December 2007") & month <= my("June 2009"), 1, 0),
     after_great_recession = ifelse(ym(month) > my("June 2009"), 1, 0)
