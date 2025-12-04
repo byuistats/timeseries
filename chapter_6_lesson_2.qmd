@@ -281,7 +281,28 @@ weather_df |>
 ```
 
 
-We chose a linear model model. For convenience, we print the coefficients here.
+We chose a linear model model. 
+
+
+\begin{align*}
+  \log(x_t) &= \beta_0 
+            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
+          + s_t  + z_t
+\end{align*}
+
+\begin{align*}
+  s_t=
+    
+    \begin{cases}
+        \Delta\beta_2 , & t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
+        \Delta\beta_3 , & t = 2, 14, 26, \ldots ~~~~ ~~(March) \\
+        ~~~~~~~~⋮ & ~~~~~~~~~~~~⋮ \\
+        \Delta\beta_{12} , & t = 12, 24, 36, \ldots ~~~~ (December) 
+      \end{cases}
+\end{align*}
+
+For convenience, we print the coefficients here.
+
 
 ```{r}
 #| label: weather22
@@ -289,7 +310,7 @@ We chose a linear model model. For convenience, we print the coefficients here.
 #| code-summary: "Show the code"
 #| 
 linear_lm <- weather_df |>
-  model(reduced_linear_5  = TSLM(x ~ zTIME + month_index))
+  model(linear_5  = TSLM(x ~ zTIME + month_index))
 
 linear_lm |>
   tidy() |>
@@ -315,7 +336,7 @@ The fitted model is:
 
 \begin{align*}
   \log(x_t) &= \beta_0 
-            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
+            + 0.688 \left( \frac{t - \mu_t}{\sigma_t} \right) 
           + s_t  + z_t
 \end{align*}
 
@@ -329,6 +350,8 @@ The fitted model is:
         \Delta\beta_{12} , & t = 12, 24, 36, \ldots ~~~~ (December) 
       \end{cases}
 \end{align*}
+
+However $\beta_1$ is for our normalized time variable. If we want to put it in terms of changes each month we would divide our estimate by $\sigma_t$ (getting an estimate of 0.0124). If we would want it in terms of changes each year we would multiply by 12 (getting an estimate of 0.148).
 
 
 
@@ -439,9 +462,11 @@ Here are summaries of some ARMA models that could be constructed.
 ```{r}
 #| output: false
 
-model_resid <- linear_lm |>
+model_resid <- linear_lm |> 
+  #We are taking the residuals of model 1
   residuals() |>
   select(-.model) |>
+  # WE are fitting AR/MA/ARMA models to the residuals
   model(
     auto = ARIMA(.resid ~ 1 + pdq(0:2,0,0:2) + PDQ(0, 0, 0)),
     a000 = ARIMA(.resid ~ 1 + pdq(0,0,0) + PDQ(0, 0, 0)),
@@ -523,6 +548,222 @@ combined_models |>
   display_table()
 ```
 
+::: {.panel-tabset}
+
+## Auto model
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+model_resid |>
+  tidy() |>
+  filter(.model == "auto") 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-ACFofResiduals-auto
+#| fig-cap: "ACF plot of the residuals from the model chosen by the algorithm"
+
+model_resid |>
+  select(auto) |>
+  residuals() |>
+  ACF() |>
+  autoplot(var = .resid)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-PACFofResiduals-auto
+#| fig-cap: "PACF plot of the residuals from the model chosen by the algorithm"
+
+model_resid |>
+  select(auto) |>
+  residuals() |>
+  PACF() |>
+  autoplot(var = .resid)
+```
+
+## ARMA(0,0) model
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+model_resid |>
+  tidy() |>
+  filter(.model == "a000") 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-ACFofResiduals-a000
+#| fig-cap: "ACF plot of the residuals from the $ARMA(0,0)$ model"
+
+model_resid |>
+  select(a000) |>
+  residuals() |>
+  ACF() |>
+  autoplot(var = .resid)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-PACFofResiduals-a000
+#| fig-cap: "PACF plot of the residuals from the $ARMA(0,0)$ model"
+
+model_resid |>
+  select(a000) |>
+  residuals() |>
+  PACF() |>
+  autoplot(var = .resid)
+```
+
+## ARMA(0,1) model
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+model_resid |>
+  tidy() |>
+  filter(.model == "a001") 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-ACFofResiduals-a001
+#| fig-cap: "ACF plot of the residuals from the $ARMA(0,1)$ model"
+
+model_resid |>
+  select(a001) |>
+  residuals() |>
+  ACF() |>
+  autoplot(var = .resid)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-PACFofResiduals-a001
+#| fig-cap: "PACF plot of the residuals from the $ARMA(0,1)$ model"
+
+model_resid |>
+  select(a001) |>
+  residuals() |>
+  PACF() |>
+  autoplot(var = .resid)
+```
+
+## ARMA(0,2) model
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+model_resid |>
+  tidy() |>
+  filter(.model == "a002") 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-ACFofResiduals-a002
+#| fig-cap: "ACF plot of the residuals from the $ARMA(0,2)$ model"
+
+model_resid |>
+  select(a002) |>
+  residuals() |>
+  ACF() |>
+  autoplot(var = .resid)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-PACFofResiduals-a002
+#| fig-cap: "PACF plot of the residuals from the $ARMA(0,2)$ model"
+
+model_resid |>
+  select(a002) |>
+  residuals() |>
+  PACF() |>
+  autoplot(var = .resid)
+```
+
+## ARMA(1,0) model
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+model_resid |>
+  tidy() |>
+  filter(.model == "a100") 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-ACFofResiduals-a100
+#| fig-cap: "ACF plot of the residuals from the $ARMA(1,0)$ model"
+
+model_resid |>
+  select(a100) |>
+  residuals() |>
+  ACF() |>
+  autoplot(var = .resid)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-PACFofResiduals-a100
+#| fig-cap: "PACF plot of the residuals from the $ARMA(1,0)$ model"
+
+model_resid |>
+  select(a100) |>
+  residuals() |>
+  PACF() |>
+  autoplot(var = .resid)
+```
+
+## ARMA(1,1) model
+
+
+
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
@@ -537,7 +778,7 @@ model_resid |>
 #| code-fold: true
 #| code-summary: "Show the code"
 #| warning: false
-#| label: fig-ACFofResiduals
+#| label: fig-ACFofResiduals-a101
 #| fig-cap: "ACF plot of the residuals from the $ARMA(1,1)$ model"
 
 model_resid |>
@@ -551,7 +792,7 @@ model_resid |>
 #| code-fold: true
 #| code-summary: "Show the code"
 #| warning: false
-#| label: fig-PACFofResiduals
+#| label: fig-PACFofResiduals-a101
 #| fig-cap: "PACF plot of the residuals from the $ARMA(1,1)$ model"
 
 model_resid |>
@@ -561,7 +802,175 @@ model_resid |>
   autoplot(var = .resid)
 ```
 
+## ARMA(1,2) model
 
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+model_resid |>
+  tidy() |>
+  filter(.model == "a102") 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-ACFofResiduals-a102
+#| fig-cap: "ACF plot of the residuals from the $ARMA(1,2)$ model"
+
+model_resid |>
+  select(a102) |>
+  residuals() |>
+  ACF() |>
+  autoplot(var = .resid)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-PACFofResiduals-a102
+#| fig-cap: "PACF plot of the residuals from the $ARMA(1,2)$ model"
+
+model_resid |>
+  select(a102) |>
+  residuals() |>
+  PACF() |>
+  autoplot(var = .resid)
+```
+
+## ARMA(2,0) model
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+model_resid |>
+  tidy() |>
+  filter(.model == "a200") 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-ACFofResiduals-a200
+#| fig-cap: "ACF plot of the residuals from the $ARMA(2,0)$ model"
+
+model_resid |>
+  select(a200) |>
+  residuals() |>
+  ACF() |>
+  autoplot(var = .resid)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-PACFofResiduals-a200
+#| fig-cap: "PACF plot of the residuals from the $ARMA(2,0)$ model"
+
+model_resid |>
+  select(a200) |>
+  residuals() |>
+  PACF() |>
+  autoplot(var = .resid)
+```
+
+## ARMA(2,1) model
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+model_resid |>
+  tidy() |>
+  filter(.model == "a201") 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-ACFofResiduals-a201
+#| fig-cap: "ACF plot of the residuals from the $ARMA(2,1)$ model"
+
+model_resid |>
+  select(a201) |>
+  residuals() |>
+  ACF() |>
+  autoplot(var = .resid)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-PACFofResiduals-a201
+#| fig-cap: "PACF plot of the residuals from the $ARMA(2,1)$ model"
+
+model_resid |>
+  select(a201) |>
+  residuals() |>
+  PACF() |>
+  autoplot(var = .resid)
+```
+
+## ARMA(2,2) model
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+model_resid |>
+  tidy() |>
+  filter(.model == "a202") 
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-ACFofResiduals-a202
+#| fig-cap: "ACF plot of the residuals from the $ARMA(2,2)$ model"
+
+model_resid |>
+  select(a202) |>
+  residuals() |>
+  ACF() |>
+  autoplot(var = .resid)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+#| label: fig-PACFofResiduals-a202
+#| fig-cap: "PACF plot of the residuals from the $ARMA(2,2)$ model"
+
+model_resid |>
+  select(a202) |>
+  residuals() |>
+  PACF() |>
+  autoplot(var = .resid)
+```
+
+:::
 
 
 
