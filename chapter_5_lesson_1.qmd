@@ -157,6 +157,7 @@ $$ where $\{ z_t \}$ is the $AR(1)$ process $z_t = 0.8 z_{t-1} + w_t$ and $\{ w_
 
 set.seed(1)
 
+# Generate data
 dat <- tibble(w = rnorm(100, sd = 20)) |>
     mutate(
         Time = 1:n(),
@@ -167,24 +168,31 @@ dat <- tibble(w = rnorm(100, sd = 20)) |>
           x = 50 + 3 * Time + z
             ) |>
     tsibble::as_tsibble(index = Time)
-dat |> autoplot(.var = x) +
-  theme_minimal()
+
+# Plot data
+dat |> autoplot(.var = x) + theme_minimal()
 ```
 
 The advantage of simulation is that when we fit a model to the data, we can asses the fit...we know exactly what was simulated.
 
 ### Model Fitted to the Simulated Data
 
-When applying ordinary least-squares multiple regression, it is common to fit the model by minimizing the sum of squared errors: $$
-  \sum r_i^2 = \sum \left( x_t - \left[ \alpha_0 + \alpha_1 u_{1,t} + \alpha_2 u_{2,t} + \ldots + \alpha_m u_{m,t} \right] \right)^2
-$$ In R, we accomplish this using the `lm` function.
+When applying ordinary least-squares multiple regression, it is common to fit the model by minimizing the sum of squared errors: 
 
-We assume that the simulated time series above follows the model $$
+$$
+  \sum r_i^2 = \sum \left( x_t - \left[ \alpha_0 + \alpha_1 u_{1,t} + \alpha_2 u_{2,t} + \ldots + \alpha_m u_{m,t} \right] \right)^2
+$$ 
+
+We assume that the simulated time series above follows the model 
+
+$$
   x_t = \alpha_0 + \alpha_1 t + z_t
 $$
 
+In R, we typically accomplish this using the `lm` function.
+
 ```{r}
-#| code-fold: true
+#| code-fold: false
 #| code-summary: "Show the code"
 
 dat_lm <- dat |>
