@@ -12,44 +12,6 @@ That assumption is **partially right but wrong in three important ways.** The de
 
 ---
 
-## Where the Assumption Breaks Down
-
-### 1. "New" does not always mean replacement
-
-The `NewSequence/` directory is not a drop-in replacement for the root-level lesson files. It represents a **different organizational scheme** — consolidated chapters (one file per chapter) vs. the existing lesson-by-lesson structure (chapter_2_lesson_1, chapter_2_lesson_2, etc.).
-
-`Chapter_2_New.qmd` covers topics that span at least `chapter_2_lesson_1.qmd` and `chapter_2_lesson_2.qmd` (and possibly lesson 3). The new file is not a renamed version of any single old file — it is a proposed reorganization. The old lesson files are still the **live course content**. Deleting them to "normalize naming" would break the live course.
-
-The `NewSequence/` stubs (Chapters 1, 3–7, A1) have no content yet — they are scaffolding for a restructuring that is **in progress, not complete**.
-
-**Bottom line:** `NewSequence/` and the root lesson files are two parallel tracks. One is live; one is a planned future state. Do not conflate them.
-
----
-
-### 2. Some "old" files have no replacement at all
-
-Two files named "old" have **no corresponding current version**:
-
-- `homework/homework_1_5_solution-old.qmd` — `homework_1_5_solution.qmd` does not exist. This is the only copy of the solution to an assignment that is still active (`homework_1_5.qmd` exists). Deleting this file deletes the solution with no recovery path.
-
-- `archive/chapter_5_lesson_3.qmd` — there is no `chapter_5_lesson_3.qmd` at the root. The archived file is the only copy of that lesson's content (aside from a copy in `Visuals_Plotly_Copy/`).
-
-The word "old" here is misleading — these files are the **only version**, not a superseded version.
-
----
-
-### 3. One "old" file contains content not carried forward to the "new" version
-
-`NewSequence/Chapter_2_New_old.qmd` (1,873 lines) is substantially longer than its replacement `Chapter_2_New.qmd` (1,173 lines). The old version contains:
-
-- A full section on random variables and stochastic processes with conceptual framing
-- A worked dice probability example
-- Extended explanations of parameters vs. statistics with mathematical derivations
-- Hidden solution sections with ACF analysis code and BYU-Idaho enrollment examples
-
-None of this appears in the new version. Whether this content was **deliberately cut** (the new version is intentionally leaner and more code-focused) or **accidentally dropped** (content was lost during a rewrite) is not determinable from the files alone. A human who made the edit needs to confirm intent.
-
----
 
 ## File-by-File Verdict
 

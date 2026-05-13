@@ -27,7 +27,6 @@ An appendix covers harmonic seasonal variables and ARCH/GARCH models.
 ├── chapter_X.qmd               # Chapter overview pages
 ├── chapter_X_lesson_Y.qmd      # Individual lesson files
 ├── homework/                   # Student homework assignments
-├── class_activities/           # In-class exercises
 ├── handouts/                   # Excel worksheets with answer keys
 ├── exams/                      # Exam materials
 ├── data/                       # Datasets (CSV, XLSX, Parquet)
@@ -47,7 +46,7 @@ An appendix covers harmonic seasonal variables and ARCH/GARCH models.
 
   | Category | Packages |
   |----------|----------|
-  | Time series | `fable`, `feasts`, `tsibble`, `tsibbledata` |
+  | Time series | `fable`, `feasts`, `tsibble`, `tsibbledata`, `ggtime` |
   | Data wrangling | `tidyverse`, `lubridate` |
   | Modeling | `nlme`, `tidymodels` |
   | Visualization | `plotly`, `patchwork`, `ggokabeito` |

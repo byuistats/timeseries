@@ -2,6 +2,10 @@
 
 _Audited: 2026-05-01_
 
+_Updated: 2026-05-12_
+
+**Dev note**: This report tends to overrepresent `common_functions.R` compared to lesson content in general. It seemed to identify issues by file name and investigate anything odd from there. Actions have since been taken to delete or archive irrelevant files and fix naming issues. Those fixed items have been removed from the report.
+
 ---
 
 ## Critical Issues (Potential Bugs)
@@ -24,26 +28,14 @@ Comment reads `# THIS IS NOT WORKING RIGHT>>>>`. The function remains in the fil
 
 | File / Directory | Reason |
 |---|---|
-| `probablyCanDelete/` | Name says it all; contains only `temp.csv` (524 KB) |
-| `_deleteme.qmd` | Explicitly marked for deletion |
 | `archive/chapter_5_lesson_3.qmd` | Old version archived in a directory with no other purpose |
 | `Visuals_Plotly_Copy/chapter_6_copy.qmd` | **Empty file — 0 bytes** |
-| `homework/homework_1_2old.qmd` | Superseded old version |
-| `homework/homework_1_5_solution-old.qmd` | Superseded old version |
-| `NewSequence/Chapter_2_New_old.qmd` | Explicitly named old version |
-| `docs/NewSequence/Chapter_2_New_old.qmd` | Duplicate of above in docs mirror |
+| `archive/homework_1_2old.qmd` | Superseded old version |
+| `archive/homework_1_5_solution-old.qmd` | Superseded old version |
 
 ---
 
 ## Naming Issues
-
-### Misspelled directory
-`ShinyApps/4_Simluation/` — should be `4_Simulation/`. The two adjacent directories (`5_Simulation/`, `6_Simulation/`) are spelled correctly, making this inconsistency easy to miss.
-
-### Inconsistent file/folder naming conventions
-- Main lessons use `snake_case`: `chapter_1_lesson_1.qmd`
-- `NewSequence/` uses `CamelCase`: `Chapter_2_New.qmd`
-- Generated HTML mixes patterns: `_chapter_6_lesson_2.html` vs `_ch6_lesson2_chocolate.html`
 
 ### Inconsistent R code style in `common_functions.R`
 - Modern native pipe (`|>`) used in lines 71–227
@@ -106,21 +98,6 @@ These should be confirmed unused and removed, or moved to a utilities file if ge
 
 ---
 
-## Very Large Files (Consider Splitting)
-
-| File | Lines |
-|---|---|
-| `chapter_5_lesson_2.qmd` | ~1,630 |
-| `chapter_4_lesson_4.qmd` | ~1,596 |
-| `chapter_4_lesson_2.qmd` | ~1,532 |
-| `chapter_6_lesson_2.qmd` | ~1,374 |
-| `_chapter_6_lesson_2.qmd` | ~1,237 |
-| `harmonics_part_2.qmd` | ~1,202 |
-| `NewSequence/Chapter_2_New.qmd` | ~1,173 |
-| `chapter_1_lesson_5.qmd` | ~1,144 |
-
----
-
 ## Near-Empty Placeholder Files
 
 The following appear to be stubs with no real content yet:
@@ -132,7 +109,6 @@ The following appear to be stubs with no real content yet:
 - `resources/rstudio/rstudio.qmd` (194 bytes)
 - `resources/timeseries/timeseries.qmd` (195 bytes)
 - `outcomes/` files (~218 bytes each — appear to be copy-paste templates)
-- Several `NewSequence/Chapter_*_New.qmd` files (243–760 bytes)
 
 If these are intentional placeholders, add a comment to that effect. If they are stale scaffolding, remove them.
 

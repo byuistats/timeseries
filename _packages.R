@@ -5,6 +5,7 @@ pacman::p_load(MASS, # for MVNorm - load before tidyverse
                tidyverse, kableExtra,
                tsibble, fable,
                feasts, tsibbledata,
+               ggtime, # tidyverts visualizations
                fable.prophet,
                patchwork,
                ggthemes,
@@ -16,5 +17,7 @@ pacman::p_load(MASS, # for MVNorm - load before tidyverse
                tidyquant,
                gt, # grammar of tables, for LaTeX in tables
                quarto, # For LaTeX mode results = 'asis'
-               plotly # For interactive figures
+               plotly, # For interactive figures
+               nanoparquet, # For parquet files
+               ggrepel # For visualization annotation
 )
