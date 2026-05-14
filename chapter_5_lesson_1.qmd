@@ -57,7 +57,9 @@ source("common_functions.R")
 ### Definition of Linear Models
 
 ::: {.callout-note icon="false" title="Linear Model for a Time Series"}
-A model for a time series $\{x_t : t = 1 \ldots n \}$ is **linear** if it can be written in the form $$
+A model for a time series $\{x_t : t = 1 \ldots n \}$ is **linear** if it can be written in the form 
+
+$$
 x_t = \alpha_0 + \alpha_1 u_{1,t} + \alpha_2 u_{2,t} + \alpha_3 u_{3,t} + \ldots + \alpha_m u_{m,t} + z_t
 $$
 
@@ -73,45 +75,55 @@ With a partner, practice determining which models are linear and which are non-l
 ::: {.callout-tip icon="false" title="Check Your Understanding"}
 -   Which of the following models are linear?
 
-    -   Model 1: $$
+    -   Model 1:
+        $$
           x_t = \alpha_0 + \alpha_1 \sin(t^2-1) + \alpha_2 e^{t} + z_t
         $$
 
-    -   Model 2: $$
+    -   Model 2:
+        $$
           x_t = \sqrt{ \alpha_0 + \alpha_1 t + z_t }
         $$
 
-    -   Model 3: $$
+    -   Model 3:
+        $$
           x_t = \alpha_0 + \alpha_1 t^2 + \alpha_2 ( t \cdot \sqrt{t-3} ) + z_t
         $$
 
-    -   Model 4: $$
+    -   Model 4:
+        $$
           x_t = \frac{ \alpha_0 + \alpha_1 t }{ 1 + \alpha_2 \sqrt{t+1} } + z_t
         $$
 
-    -   Model 5: $$
+    -   Model 5:
+        $$
           x_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2 + \alpha_3 t^3 + z_t
         $$
 
-    -   Model 6: $$
+    -   Model 6:
+        $$
           x_t = \alpha_0 + \alpha_1 t + \alpha_2 t^2 + \alpha_1 \alpha_2 t^3 + z_t
         $$
 
 -   Is there a way to transform the following non-linear models into a linear model? If so, apply the transformation.
 
-    -   Model 7: $$
+    -   Model 7:
+        $$
           x_t = \sqrt{ \alpha_0 + \alpha_1 t + z_t }
         $$
 
-    -   Model 8: $$
+    -   Model 8:
+        $$
           x_t = \sin( \alpha_1 + \alpha_2 t + z_t )
         $$
 
-    -   Model 9: $$
+    -   Model 9:
+        $$
           x_t = \alpha_0 \sin( \alpha_0 + \alpha_1 t + z_t )
         $$
 
-    -   Model 10: $$
+    -   Model 10:
+        $$
           x_t = \alpha_0 ~ e^{ \alpha_1 t + \alpha_2 t^2 + z_t }
         $$
 :::
@@ -145,9 +157,11 @@ In general, if there is an $m^{th}$ degree polynomial trend in a time series, we
 
 ### Simulation
 
-In Section 5.2.3, the textbook illustrates the time series $$
-  x_t = 50 + 3t + z_t
-$$ where $\{ z_t \}$ is the $AR(1)$ process $z_t = 0.8 z_{t-1} + w_t$ and $\{ w_t \}$ is a Gaussian white noise process with $\sigma = 20$. The code below simulates this time series and creates the resulting time plot.
+In Section 5.2.3, the textbook illustrates the time series 
+
+$$ x_t = 50 + 3t + z_t $$ 
+
+where $\{ z_t \}$ is the $AR(1)$ process $z_t = 0.8 z_{t-1} + w_t$ and $\{ w_t \}$ is a Gaussian white noise process with $\sigma = 20$. The code below simulates this time series and creates the resulting time plot.
 
 ```{r}
 #| code-fold: true
@@ -157,6 +171,7 @@ $$ where $\{ z_t \}$ is the $AR(1)$ process $z_t = 0.8 z_{t-1} + w_t$ and $\{ w_
 
 set.seed(1)
 
+# Generate data
 dat <- tibble(w = rnorm(100, sd = 20)) |>
     mutate(
         Time = 1:n(),
@@ -167,24 +182,31 @@ dat <- tibble(w = rnorm(100, sd = 20)) |>
           x = 50 + 3 * Time + z
             ) |>
     tsibble::as_tsibble(index = Time)
-dat |> autoplot(.var = x) +
-  theme_minimal()
+
+# Plot data
+dat |> autoplot(.var = x) + theme_minimal()
 ```
 
 The advantage of simulation is that when we fit a model to the data, we can asses the fit...we know exactly what was simulated.
 
 ### Model Fitted to the Simulated Data
 
-When applying ordinary least-squares multiple regression, it is common to fit the model by minimizing the sum of squared errors: $$
-  \sum r_i^2 = \sum \left( x_t - \left[ \alpha_0 + \alpha_1 u_{1,t} + \alpha_2 u_{2,t} + \ldots + \alpha_m u_{m,t} \right] \right)^2
-$$ In R, we accomplish this using the `lm` function.
+When applying ordinary least-squares multiple regression, it is common to fit the model by minimizing the sum of squared errors: 
 
-We assume that the simulated time series above follows the model $$
+$$
+  \sum r_i^2 = \sum \left( x_t - \left[ \alpha_0 + \alpha_1 u_{1,t} + \alpha_2 u_{2,t} + \ldots + \alpha_m u_{m,t} \right] \right)^2
+$$ 
+
+We assume that the simulated time series above follows the model 
+
+$$
   x_t = \alpha_0 + \alpha_1 t + z_t
 $$
 
+In R, we typically accomplish this using the `lm` function.
+
 ```{r}
-#| code-fold: true
+#| code-fold: false
 #| code-summary: "Show the code"
 
 dat_lm <- dat |>
@@ -193,7 +215,9 @@ params <- tidy(dat_lm) |> pull(estimate)
 stderr <- tidy(dat_lm) |> pull(std.error)
 ```
 
-This gives the fitted equation $$
+This gives the fitted equation 
+
+$$
   \hat x_t = `r params[1] |> round(3)` + `r params[2] |> round(3)` t  
 $$
 
@@ -238,6 +262,8 @@ The parameter estimates and their standard errors are summarized in the table be
 # 
 # parameter_est |> 
 #   rio::export("data/chapter_5_lesson_1_simulation.parquet")
+
+# This has a package dependency: nanoparquet
 
 parameter_est <- rio::import("https://byuistats.github.io/timeseries/data/chapter_5_lesson_1_simulation.parquet")
 
@@ -315,9 +341,11 @@ temps_ts |> autoplot(.vars = change) +
   geom_smooth(method='lm', formula= y~x)
 ```
 
-Visually, it is easy to spot a positive trend in these data. We model the data using $$
-  x_t = \alpha_0 + \alpha_1 t + z_t
-$$ The following table shows the results of using OLS.
+Visually, it is easy to spot a positive trend in these data. We model the data using 
+
+$$ x_t = \alpha_0 + \alpha_1 t + z_t $$ 
+
+The following table shows the results of using OLS.
 
 ```{r}
 #| code-fold: true
@@ -465,10 +493,12 @@ ar_params <- c(phi_1, phi_2)
 # Note: We are now specifying an AR(2) process with parameters
 # estimated from the OLS residuals' PACF.
 temp_spec <- linear_reg() |>
-  set_engine("gls", correlation = nlme::corARMA(p = 2, value = ar_params))
+  set_engine("gls", 
+    correlation = nlme::corARMA(p = 2, value = ar_params),
+    control = nlme::glsControl(msMaxIter = 100, tolerance = 1e-2, msVerbose = FALSE))
 
 temp_gls <- temp_spec |>
-  fit(x ~ stats_time, data = global_ts)
+  fit(x ~ stats_time, data = temp_tidy)
 
 tidy(temp_gls) |>
   mutate(
