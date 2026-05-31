@@ -5,10 +5,7 @@ format: html
 editor: source
 sidebar: false
 ---
-```{r}
-#| include: false
-source("common_functions.R")
-```
+
 
 ```{=html}
 <script type="text/javascript">
@@ -33,6 +30,63 @@ source("common_functions.R")
 </script>
 ```
 
+
+
+```{r}
+#| include: false
+source("_backend_functions.R")
+```
+
+## Learning Outcomes
+
+{{< include outcomes/_chapter_2_lesson_2_outcomes.qmd >}}
+
+
+## Preparation
+
+-   Read Sections 2.2.5
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+-   What would you add to your learning journal after reading your partner's?
+-   What would you recommend your partner add to their learning journal?
+-   Sign the Learning Journal review sheet for your peer
+
+## Packages
+
+```{r}
+#| include: false
+# Extra packages this lesson
+pacman::p_load(
+  see,  # color_scale_okabeito()
+  MASS  # mvrnorm()
+)
+```
+
+```{r}
+#| code-summary: "Common Packages"
+#| file: "_common_packages.R"
+```
+
+```{r}
+#| include: false
+#| code-summary: "If you have code issues"
+#| code-fold: true
+#| message: false
+#| warning: false
+#| eval: false
+
+# The MASS package creates conflicts with the select() function from the tidyverse package
+# This makes sure it defaults to the tidyverse version
+# Alternatively, loading MASS first, or using dplyr::select() resolves the issue
+pacman::p_load(conflicted)
+conflict_prefer("select", "dplyr")
+```
+
+<!-- Functions used throughout this lesson -->
+
 ```{r}
 #| include: false
 
@@ -51,7 +105,7 @@ get_data_for_cov_table <- function(offset = 1) {
   tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
   
   # simulate correlated normal random data
-  x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1) 
+  x1 <- round(MASS::mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1) 
   
   # build a data frame
   df <- data.frame(t = 1:length(x1),
@@ -170,26 +224,6 @@ compute_summaries <- function(df, digits = 4) {
 ```
 
 
-## Learning Outcomes
-
-{{< include outcomes/_chapter_2_lesson_2_outcomes.qmd >}}
-
-
-
-
-## Preparation
-
--   Read Sections 2.2.5
-
-
-## Learning Journal Exchange (10 min)
-
--   Review another student's journal
--   What would you add to your learning journal after reading your partner's?
--   What would you recommend your partner add to their learning journal?
--   Sign the Learning Journal review sheet for your peer
-
-
 ## Hands-on Exercise -- Exploring Sample Autocorrelation (40 min)
 
 <!-- Compute sample acvf and acf -->
@@ -222,7 +256,7 @@ ggplot(df, aes(x = time)) +
   geom_point(aes(y = Independent, color = "Independent")) + 
   geom_line(aes(y = Autocorrelated, color = "Autocorrelated")) + 
   geom_point(aes(y = Autocorrelated, color = "Autocorrelated")) +
-  scale_color_okabeito(
+  see::scale_color_okabeito(
     palette = "full",
     reverse = FALSE,
     order = c(2,4),
@@ -276,12 +310,6 @@ cat("x <- c(", paste(cov_df$x, collapse = ", "),")")
 ggplot(cov_df, aes(x = t, y = x)) +
   geom_line(color = "#0072B2") +
   geom_point(color = "#0072B2") +
-#   scale_color_okabeito(
-#   palette = "full",
-#   reverse = TRUE,
-#   order = c(1,7,8,5,6,3,4,2,9),
-#   aesthetics = "color"
-# ) +
   ylim(0,ceiling(max(cov_df$x))) +
   labs(title = "Sample Time Series",
        x = "Time",

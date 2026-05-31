@@ -33,7 +33,7 @@ An appendix covers harmonic seasonal variables and ARCH/GARCH models.
 ├── outcomes/                   # Per-lesson learning objectives
 ├── resources/                  # Package reference guides
 ├── ShinyApps/                  # Interactive Shiny visualizations
-├── common_functions.R          # Shared R utilities and helpers
+├── _backend_functions.R          # Shared R utilities and helpers
 ├── _quarto.yml                 # Quarto site configuration
 └── docs/                       # Rendered HTML output (GitHub Pages)
 ```
@@ -42,7 +42,7 @@ An appendix covers harmonic seasonal variables and ARCH/GARCH models.
 
 - [R](https://cran.r-project.org/) ≥ 4.2
 - [Quarto](https://quarto.org/) ≥ 1.3
-- R packages are managed via `_packages.R`; the main dependencies are:
+- R packages are managed via `_all_packages.R`; the main dependencies are:
 
   | Category | Packages |
   |----------|----------|
@@ -56,7 +56,7 @@ An appendix covers harmonic seasonal variables and ARCH/GARCH models.
 
 ```r
 # Install dependencies (run once)
-source("_packages.R")
+source("_all_packages.R")
 
 # Render the full site
 quarto::quarto_render()

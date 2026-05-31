@@ -4,22 +4,22 @@ _Audited: 2026-05-01_
 
 _Updated: 2026-05-12_
 
-**Dev note**: This report tends to overrepresent `common_functions.R` compared to lesson content in general. It seemed to identify issues by file name and investigate anything odd from there. Actions have since been taken to delete or archive irrelevant files and fix naming issues. Those fixed items have been removed from the report.
+**Dev note**: This report tends to overrepresent `_backend_functions.R` compared to lesson content in general. It seemed to identify issues by file name and investigate anything odd from there. Actions have since been taken to delete or archive irrelevant files and fix naming issues. Those fixed items have been removed from the report.
 
 ---
 
 ## Critical Issues (Potential Bugs)
 
-### 1. Syntax error in `common_functions.R` — lines 710, 712, 714
+### 1. Syntax error in `_backend_functions.R` — lines 710, 712, 714
 Variable names use hyphens (`last-actual_t`) instead of underscores (`last_actual_t`). In R, hyphens in variable names are interpreted as subtraction operators, so these lines will produce runtime errors.
 
-### 2. Two broken functions left in `common_functions.R`
+### 2. Two broken functions left in `_backend_functions.R`
 - `color_specific_row()` (~line 357) — marked `# -------- THIS ONE IS NOT WORKING ----------`
 - `color_last_row()` (~line 365) — same marker
 
 Neither function is removed or replaced. They should either be fixed or deleted.
 
-### 3. `autoround_df()` marked non-functional — `common_functions.R` line 78
+### 3. `autoround_df()` marked non-functional — `_backend_functions.R` line 78
 Comment reads `# THIS IS NOT WORKING RIGHT>>>>`. The function remains in the file with no resolution.
 
 ---
@@ -37,7 +37,7 @@ Comment reads `# THIS IS NOT WORKING RIGHT>>>>`. The function remains in the fil
 
 ## Naming Issues
 
-### Inconsistent R code style in `common_functions.R`
+### Inconsistent R code style in `_backend_functions.R`
 - Modern native pipe (`|>`) used in lines 71–227
 - Legacy `%>%` pipe still used in lines 268–277
 
@@ -62,7 +62,7 @@ The `docs/` directory holds rendered output (HTML, `_files/`, data mirrors). Thi
 
 ---
 
-## Dead / Commented-Out Code in `common_functions.R`
+## Dead / Commented-Out Code in `_backend_functions.R`
 
 | Lines | Description |
 |---|---|
@@ -74,7 +74,7 @@ The `docs/` directory holds rendered output (HTML, `_files/`, data mirrors). Thi
 
 ---
 
-## Fragile Package Load Order (`common_functions.R`)
+## Fragile Package Load Order (`_backend_functions.R`)
 
 Several packages must be loaded in a specific order to avoid namespace conflicts, and this is only enforced by comment:
 
@@ -86,7 +86,7 @@ These fragile orderings are undocumented in any README. If the load order ever s
 
 ---
 
-## Likely Unused Functions in `common_functions.R`
+## Likely Unused Functions in `_backend_functions.R`
 
 The following functions have no apparent call sites in the main codebase:
 
