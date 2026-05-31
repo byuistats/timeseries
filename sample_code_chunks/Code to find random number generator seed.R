@@ -41,7 +41,7 @@ for (seed_val in 1:max_reps) {
   tmp.r <- tmp.r^abs(row(tmp.r)-col(tmp.r))
 
   # simulate correlated normal random data
-  x1 <- round(mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1)
+  x1 <- round(MASS::mvrnorm(1, rep(mu,n), sigma^2 * tmp.r),1)
 
   # build a data frame
   df <- data.frame(#t = 1:length(x1),

@@ -5,8 +5,11 @@
 
 ## TODO
 
-[ ] Remove `common_functions.R` from the top of each file and refactor for efficiency's sake
-
+[ ] Un-goof 2.1, 4.2 (only slight goofs)
+[x] Localize package requirements with `_all_packages.R` and `_common_packages.R`
+[ ] Consider pre-running `_all_packages.R` for installation and loading `_common_packages.R` for each page, with additional packages listed below (much clearer for the student)
+    [ ] Consequently, add `package::function` for any packages that are loaded only for a single function (this will reduce conflicts if only one function is loaded rather than the whole package)
+[ ] Update README.md to have everything Brother Johnson needs to manage the repo
 
 ## Cleanup
 

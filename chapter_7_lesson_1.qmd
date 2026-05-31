@@ -25,12 +25,6 @@ warning: false
 
 
 
-
-```{r}
-#| include: false
-source("common_functions.R")
-```
-
 ```{=html}
 <script type="text/javascript">
  function showhide(id) {
@@ -54,12 +48,15 @@ source("common_functions.R")
 </script>
 ```
 
+```{r}
+#| include: false
+source("_backend_functions.R")
+```
+
 
 ## Learning Outcomes
 
 {{< include outcomes/_chapter_7_lesson_1_outcomes.qmd >}}
-
-
 
 
 ## Preparation
@@ -77,6 +74,21 @@ source("common_functions.R")
 -   What would you recommend the other student add to their learning journal?
 
 -   Sign the Learning Journal review sheet for your peer
+
+## Packages
+
+```{r}
+# Extra packages this lesson
+pacman::p_load(
+  nanoparquet, # loads parquet files faster
+  tidyquant    # tq_get
+)
+```
+
+```{r}
+#| code-summary: "Common Packages"
+#| file: "_common_packages.R"
+```
 
 
 ## Class Activity: Non-seasonal ARIMA Models (15 min)
@@ -148,9 +160,6 @@ If the difference of a time series demonstrates an increasing trend, taking the 
 #| code-summary: "Show the code"
 #| output: false
 
-pacman::p_load("tsibble", "fable", "feasts",
-    "tsibbledata", "fable.prophet",
-    "tidyverse", "patchwork")
 cbe <- read_table("https://byuistats.github.io/timeseries/data/cbe.dat") |>
   select(elec) |>
   mutate(
@@ -604,7 +613,7 @@ date_start <- "2020-01-01"
 date_end <- "2024-03-28"
 
 # Fetch stock prices
-df_stock <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
+df_stock <- tidyquant::tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
 
 # Transform data into tsibble
 stock_ts <- df_stock |>
@@ -646,7 +655,7 @@ Using the daily closing prices of Microsoft stock, do the following.
 #| eval: false
 
 # Generate time series plot using plot_ly
-plot_ly(stock_ts, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') |>
+plotly::plot_ly(stock_ts, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') |>
   layout(
     xaxis = list(title = "Date"),
     yaxis = list(title = "Value"),
