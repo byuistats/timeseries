@@ -9,7 +9,7 @@
 * [ ] ...and keys
 
 **2. GLS to ARIMA Migration** (Target: **Thursday, June 4**)
-* **Essential Files:** `5.1`, `5.2`, `6.2`, `5.1_homework`, `_chapter_5_lesson_1_outcomes.qmd`, `resource_blog`
+* **Essential Files:** ✅`5.1`, ✅`5.2`, ✅`5.1_homework`, `_chapter_5_lesson_1_outcomes.qmd`, `resource_blog`
 
 **3. Polyroot to gg_arma Migration** (Target: **Thursday, June 18**)
 * **Essential Files:** `4.3`, `4.4`, `6.1`, `4.3_homework` (x2), `4.4_homework` (x2)

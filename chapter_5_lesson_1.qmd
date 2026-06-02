@@ -57,6 +57,8 @@ source("_backend_functions.R")
 ```{r}
 #| code-summary: "Common Packages"
 #| file: "_common_packages.R"
+
+source("_common_packages.R")
 ```
 
 ## Small Group Activity: Linear Models (5 min)
@@ -477,71 +479,46 @@ p2 <- resids |>
 p1 + p2
 ```
 
-<!-- REPLACE WITH ARIMA -->
-### Applying Generalized Least Squares, GLS
 
-The autocorrelation in the data make ordinary least squares estimation inappropriate. What caped superhero comes to our rescue? None other than Captain GLS -- the indomitable Generalized Least Squares algorithm!
+### Adding AR to Model
 
-This fitting procedure handles the autocorrelation by maximizing the likelihood of the data, taking into account the autocorrelation in the residuals.
-This leads to much more appropriate standard errors for the parameter estimates. We will pass the value of the pacf for the first two lags into the regression function.
+The autocorrelation in the data show that OLS is insufficient on its own. To fix it, we can add an AR(p) process to the residuals.
 
+$$ y_t = \beta_0 + \beta_1 x_t + \eta_t$$
+where where $\eta_t$ is an $AR(2)$ error. Note that $\eta_t$ can represent more than just $AR$ processes, but we have specified it here as an $AR(2)$.
 
+We can easily add an AR process to the residuals with the following code.
 
 ```{r}
 #| output: false
-#| eval: false
 
-# Get OLS residuals to calculate PACF
-ols_resids <- residuals(temp_lm)
+lm_ar <- temp_tidy |> 
+  model(AR(x ~ stats_time + order(2))) # AR(2) fit to residuals of LM
 
-# Calculate PACF values
-pacf_vals <- ols_resids |>
-  feasts::PACF(var = .resid) |>
-  as_tibble()
-
-# Extract PACF at lag 1 and 2 to use as AR(2) parameters
-phi_1 <- pacf_vals |> filter(lag == 1) |> pull(pacf)
-phi_2 <- pacf_vals |> filter(lag == 2) |> pull(pacf)
-
-ar_params <- c(phi_1, phi_2)
-
-# Note: We are now specifying an AR(2) process with parameters
-# estimated from the OLS residuals' PACF.
-temp_spec <- linear_reg() |>
-  set_engine("gls", 
-    correlation = nlme::corARMA(p = 2, value = ar_params),
-    control = nlme::glsControl(msMaxIter = 100, tolerance = 1e-2, msVerbose = FALSE))
-
-temp_gls <- temp_spec |>
-  fit(x ~ stats_time, data = temp_tidy)
-
-tidy(temp_gls) |>
-  mutate(
-    lower = estimate + qnorm(0.025) * std.error,
-    upper = estimate + qnorm(0.975) * std.error
-  )
+tidy(lm_ar)
 ```
 
 ```{r}
 #| echo: false
 #| label: tbl-globalTempsGLS
 #| tbl-cap: "Parameter estimates for the Generalized Least Squares estimates of the fit for the global temperature time series."
-#| eval: false
 
-tidy(temp_gls) |>
+tidy(lm_ar) |>
+  select(!.model) |> 
   mutate(
     # Relabel terms to use LaTeX
     term = case_when(
-      term == "(Intercept)" ~ "$\\alpha_0$",
+      term == "constant" ~ "$\\alpha_0$",
       term == "stats_time" ~ "$\\alpha_1$",
       TRUE ~ term
-    ),
-    lower = estimate + qnorm(0.025) * std.error,
-    upper = estimate + qnorm(0.975) * std.error
+    )#,
+    # lower = estimate + qnorm(0.025) * std.error,
+    # upper = estimate + qnorm(0.975) * std.error
   ) |>
   display_table()
 ```
 
+This Model is a much better fit and gives more accurate errors and confidence levels.
 
 ## Class Activity: Linear Models with Seasonal Variables (10 min)
 
