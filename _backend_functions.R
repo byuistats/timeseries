@@ -1,6 +1,6 @@
 # Load packages ----
 # source("_all_packages.R")
-pacman::p_load(kableExtra, quarto) # rendering aids
+pacman::p_load(kableExtra) # rendering aids
 
 # Palette ----
 palette("okabeito")
