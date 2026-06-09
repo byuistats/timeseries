@@ -1,5 +1,5 @@
 ---
-title: "Linear Models, GLS, and Seasonal Indicator Variables"
+title: "Linear Models, Autoregression Errors, and Seasonal Indicator Variables"
 subtitle: "Chapter 5: Lesson 1"
 format: html
 editor: source
@@ -237,16 +237,9 @@ $$
   \hat x_t = `r params[1] |> round(3)` + `r params[2] |> round(3)` t  
 $$
 
-```{r}
-#| label: sets the number of values in the simulation
-#| echo: false
+The standard errors of these estimated parameters tend to be underestimated by the ordinary least squares method. To illustrate this, a simulation of n = 1000 realizations of the time series above was conducted.
 
-n <- 1000
-```
-
-The standard errors of these estimated parameters tend to be underestimated by the ordinary least squares method. To illustrate this, a simulation of n =`r n` realizations of the time series above was conducted.
-
-The parameter estimates and their standard errors are summarized in the table below. The "Computed SE" is the standard error reported by the `lm` function in R. The "Simulated SE" is the standard deviation of the parameter estimated obtained in the `r n` simulated realizations of this time series.
+The parameter estimates and their standard errors are summarized in the table below. The "Computed SE" is the standard error reported by the `lm` function in R. The "Simulated SE" is the standard deviation of the parameter estimated obtained in the 1000 simulated realizations of this time series.
 
 ```{r}
 #| label: Simulation...
@@ -254,6 +247,7 @@ The parameter estimates and their standard errors are summarized in the table be
 #| code-summary: "Show the code"
 
 # This code simulates the data for this example
+# n <- 1000
 #
 # parameter_est <- data.frame(alpha0 = numeric(), alpha1 = numeric())
 # for(count in 1:n) {
@@ -322,6 +316,48 @@ acf_plot | pacf_plot
 ```
 
 <a id="FittingRegModelWithPACF">Recall</a> that in our simulation, the residuals were modeled by an $AR(1)$ process. So, it is not surprising that the residuals are correlated and that the partial autocorrelation function is only significant for the first lag.
+
+### Adding AR to the Model
+
+The autocorrelation in the data shows that OLS is insufficient on its own. To fix it, we can add an AR(p) process to the residuals.
+
+$$ y_t = \beta_0 + \beta_1 x_t + \eta_t $$
+
+where $\eta_t$ is an $AR(p)$ error. Note that $\eta_t$ can represent more than just $AR$ processes, but we have specified it here as an $AR(p)$.
+
+Our above analysis identified an $AR(1)$ process as appropriate. We also know this because the data was simulated. We can easily add that to the residuals with the following code.
+
+```{r}
+#| output: false
+lm_ar <- dat |>
+  model(AR(x ~ Time + order(1))) # AR(1) fit to residuals of LM
+
+tidy(lm_ar)
+```
+
+<!-- NOTE: `output: false` above so `tidy(lm_ar)` is shown to the student, but the table below is what renders (for styling consistency) -->
+
+```{r}
+#| echo: false
+#| label: tbl-simulatedAR
+#| tbl-cap: "Parameter estimates for the Generalized Least Squares estimates of the fit for the global temperature time series."
+
+tidy(lm_ar) |>
+  select(!.model) |> 
+  mutate(
+    # Relabel terms to use LaTeX
+    term = case_when(
+      term == "constant" ~ "$\\alpha_0$",
+      term == "stats_time" ~ "$\\alpha_1$",
+      TRUE ~ term
+    )#,
+    # lower = estimate + qnorm(0.025) * std.error,
+    # upper = estimate + qnorm(0.975) * std.error
+  ) |>
+  display_table()
+```
+
+This model is a much better fit and gives more accurate errors and confidence levels.
 
 ### Fitting a Regression Model to the Global Temperature Time Series
 
@@ -479,15 +515,7 @@ p2 <- resids |>
 p1 + p2
 ```
 
-
-### Adding AR to Model
-
-The autocorrelation in the data show that OLS is insufficient on its own. To fix it, we can add an AR(p) process to the residuals.
-
-$$ y_t = \beta_0 + \beta_1 x_t + \eta_t$$
-where where $\eta_t$ is an $AR(2)$ error. Note that $\eta_t$ can represent more than just $AR$ processes, but we have specified it here as an $AR(2)$.
-
-We can easily add an AR process to the residuals with the following code.
+The PACF above shows 2 significant lags, so we will refit the linear model with an AR(2) process for the residuals.
 
 ```{r}
 #| output: false
@@ -498,9 +526,11 @@ lm_ar <- temp_tidy |>
 tidy(lm_ar)
 ```
 
+<!-- NOTE: `output: false` above so `tidy(lm_ar)` is shown to the student, but the table below is what renders (for styling consistency) -->
+
 ```{r}
 #| echo: false
-#| label: tbl-globalTempsGLS
+#| label: tbl-globalTempsAR
 #| tbl-cap: "Parameter estimates for the Generalized Least Squares estimates of the fit for the global temperature time series."
 
 tidy(lm_ar) |>
@@ -518,7 +548,7 @@ tidy(lm_ar) |>
   display_table()
 ```
 
-This Model is a much better fit and gives more accurate errors and confidence levels.
+This model is a much better fit and gives more accurate errors and confidence levels.
 
 ## Class Activity: Linear Models with Seasonal Variables (10 min)
 

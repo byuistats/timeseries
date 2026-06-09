@@ -42,6 +42,8 @@ Beneath the *Learning Journal Exchange*:
 
 For packages that have conflict potential, students may accidentally loading them after tidyverse, creating issues. For those packages, the following block with package and conflict variation is included below "Common Packages".
 
+> Note: the ___ package causes conflicts with tidyverse. Click below if you have code issues.
+>
 > ```{r}
 > #| code-summary: "If you have code issues"
 > #| code-fold: true

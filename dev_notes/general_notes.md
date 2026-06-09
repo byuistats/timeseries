@@ -11,6 +11,10 @@
     [ ] Consequently, add `package::function` for any packages that are loaded only for a single function (this will reduce conflicts if only one function is loaded rather than the whole package)
 [ ] Update README.md to have everything Brother Johnson needs to manage the repo
 
+## Style Guide Indecisions
+
+[ ] `ARIMA(.resid + pdq(...))` or `ARIMA(formula + pdq(...))`
+
 ## Cleanup
 
 Largely following the files in the research folder for direction on what to clean.
