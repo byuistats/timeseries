@@ -450,21 +450,38 @@ pacf(linear_ts$.resid, plot=TRUE, lag.max = 25)
 Only the first partial autocorrelation is statistically significant. The partial autocorrelation plot indicates that an $AR(1)$ model could adequately model the random component of the logarithm of the time series.
 
 ```{r}
-#| code-fold: true
+#| output: false
 #| code-summary: "Show the code"
 
 log_ar <- sim_ts |> 
   model(AR(log(x_t) ~ std_t + season(12) + order(1)))
 
+tidy(log_ar) |> select(!.model)
+```
+
+```{r}
+#| code-summary: "Show the code"
+#| code-fold: true
+
+# Cleaned up version
 tidy(log_ar) |>
   select(!.model) |> 
   mutate(
+    term = if_else(                  # Pretty the month labels with regex
+      str_detect(term, "season"), 
+      month.abb[as.integer(str_extract(term, "12(\\d+)$", 1))],
+      term
+    ),
     lower = estimate + qnorm(0.025) * std.error,
     upper = estimate + qnorm(0.975) * std.error
   ) 
 ```
 
+::: {.callout-important title="Warning: Interpreting season(12)"}
+`season(12)` is an identical substitute for the mutated `month` column used previously with **ONE EXCEPTION**. Because it treats the first row in the tsibble as the omitted month, the labels don't tell you what month it is. It tells you the number month relative to the first month.
 
+If the first month is *February*, `season(12).season_122` represents *March* and `season(12).season_1212` represents *January*.
+:::
 
 
 @fig-finalFittedPlot illustrates the original time series (in black) and the fitted model (in blue). 
@@ -1408,15 +1425,25 @@ Recall that in [Chapter 5, Lesson 1](https://byuistats.github.io/timeseries/chap
 Here we will add 
 
 ```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
+#| output: false
 
 log_cube_ar <- retail_ts |> 
   model(AR(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) + season(12) + order(2)))
 
+tidy(log_cube_ar) |> select(!.model)
+```
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
 tidy(log_cube_ar) |>
   select(!.model) |> 
   mutate(
+    term = if_else(                  # Pretty the month labels with regex
+      str_detect(term, "season"), 
+      month.abb[as.integer(str_extract(term, "12(\\d+)$", 1))],
+      term
+    ),
     lower = estimate + qnorm(0.025) * std.error,
     upper = estimate + qnorm(0.975) * std.error
   ) 
