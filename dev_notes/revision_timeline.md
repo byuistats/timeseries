@@ -13,6 +13,7 @@
 
 **3. Polyroot to gg_arma Migration** (Target: **Thursday, June 18**)
 * **Essential Files:** `4.3`, `4.4`, `6.1`, `4.3_homework` (x2), `4.4_homework` (x2)
+- SNAG: See [notes](general_notes.md)
 
 **4. Code Style Standardization & Rollout** (Hard Deadline: **Wednesday, July 15**)
 * **Audit** (Target: **Saturday, June 27**): Skim student submissions to identify common anti-patterns.
