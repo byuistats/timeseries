@@ -15,6 +15,16 @@
 
 [ ] `ARIMA(.resid + pdq(...))` or `ARIMA(formula + pdq(...))`
 
+## Snag - Plot Unit Circles
+
+Turns out, this takes more work than I thought
+1. `gg_arma` should support `AR` but does not
+2. I don't understand what it is checking to a T
+3. There is actually a lot of other information that could be included that would help the student
+    - See [conversation](https://gemini.google.com/share/b16fe4b80df4)
+    - Invertibility/Stationarity relationship
+4. It would be great to add polyroot calculation and plot to the Shiny simulation (lot's of work publishing)
+
 ## Cleanup
 
 Largely following the files in the research folder for direction on what to clean.
