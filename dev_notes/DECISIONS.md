@@ -38,10 +38,15 @@ Beneath the *Learning Journal Exchange*:
 > ```{r}
 > #| code-summary: "Common Packages"
 > #| file: "_common_packages.R"
+> source("_common_packages.R")
 > ```
+
+Note the double inclusion of `_common_packages.R`; `file:` displays and runs the code during render and ignores the `source`, but when run locally as an R chunk, `file:` is ignored as a comment while `source` is run. This is an elegant solution to support the needs of both the frontend and backend users.
 
 For packages that have conflict potential, students may accidentally loading them after tidyverse, creating issues. For those packages, the following block with package and conflict variation is included below "Common Packages".
 
+> Note: the ___ package causes conflicts with tidyverse. Click below if you have code issues.
+>
 > ```{r}
 > #| code-summary: "If you have code issues"
 > #| code-fold: true

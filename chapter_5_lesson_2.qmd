@@ -40,7 +40,7 @@ source("_backend_functions.R")
 
 ## Learning Outcomes
 
-{{< include outcomes/_chapter_5_lesson_2_outcomes.qmd >}}
+{{< include outcomes/_chapter_5_lesson_4_outcomes.qmd >}}
 
 
 ## Preparation
@@ -68,16 +68,7 @@ pacman::p_load(PerformanceAnalytics) # skewness()
 ```{r}
 #| code-summary: "Common Packages"
 #| file: "_common_packages.R"
-```
-
-<!-- Also in the code below, point for REVISION -->
-
-```{r}
-#| message: false
-#| warning: false
-#| output: false
-pacman::p_load(tidymodels, multilevelmod,
-  nlme, broom.mixed)
+source("_common_packages.R")
 ```
 
 ## Class Activity: Simulate an Exponential Trend with a Seasonal Component (15 min)
@@ -113,6 +104,7 @@ dates_seq <- seq(
   by = "-1 month"
 ) |>
   floor_date(unit = "month") |>
+  ymd() |> 
   sort() |>
   head(n_months)
 
@@ -144,13 +136,14 @@ random_ar <- arima.sim(model = list(ar = c(0.5, 0.2)),
 sim_ts <- tibble(
   t       = t,
   dates   = dates_seq,
+  yearmonth = yearmonth(dates),
   month   = month_factor,
   random  = random_ar,
   seasonal = seasonal_term,
   x_t     = exp(2 + 0.015 * t + seasonal + random)
 ) |>
   mutate(std_t = (t - mean(t)) / sd(t)) |>
-  as_tsibble(index = dates)
+  as_tsibble(index = yearmonth)
 
 # (Optional) create explicit 0/1 indicator columns for each month
 sim_ts <- sim_ts |>
@@ -422,7 +415,7 @@ combined_models |>
 
 #### Investigating Autocorrelation of the Random Component
 
-Recall that if there is autocorrelation in the random component, the standard error of the parameter estimates tends to be underestimated. We can account for this autocorrelation using Generalized Least Squares, GLS, if needed.
+Recall that if there is autocorrelation in the random component, the standard error of the parameter estimates tends to be underestimated. We can account for this autocorrelation using an AR process, if needed.
 
 ##### Linear Trend
 
@@ -455,63 +448,44 @@ pacf(linear_ts$.resid, plot=TRUE, lag.max = 25)
 ```
 
 Only the first partial autocorrelation is statistically significant. The partial autocorrelation plot indicates that an $AR(1)$ model could adequately model the random component of the logarithm of the time series.
-Recall that in [Chapter 5, Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html#FittingRegModelWithPACF), we fitted a linear regression model using the value of the partial autocorrelation function for $k=1$. This helps account for the autocorrelation in the residuals.
-
-The first few partial autocorrelation values are:
 
 ```{r}
-#| code-fold: true
+#| output: false
 #| code-summary: "Show the code"
 
-pacf(linear_ts$.resid, plot=FALSE, lag.max = 10)
+log_ar <- sim_ts |> 
+  model(AR(log(x_t) ~ std_t + season(12) + order(1)))
+
+tidy(log_ar) |> select(!.model)
 ```
 
-
-
 ```{r}
-#| echo: false
-
-alphas_quad <- pacf(linear_ts$.resid, plot=FALSE, lag.max = 25) 
-```
-
-The partial autocorrelation when $k=1$ is approximately `r alphas_quad$acf[1] |> round(3)`. We will use this value as we recompute the regression coefficients.
-
-```{r}
-#| code-fold: true
 #| code-summary: "Show the code"
-#| eval: false
+#| code-fold: true
 
-
-linear_pacf <- pacf(linear_ts$.resid, plot=FALSE, lag.max = 25)
-lag_1 <- linear_pacf$acf[1]
-
-# Load additional packages
-pacman::p_load(tidymodels, multilevelmod,
-  nlme, broom.mixed)
-
-temp_spec <- linear_reg() |>
-  set_engine("gls", correlation = nlme::corAR1(lag_1))
-
-temp_gls <- temp_spec |>
-  fit(log(x_t) ~ std_t +month, data = sim_ts)
-
-tidy(temp_gls) |>
+# Cleaned up version
+tidy(log_ar) |>
+  select(!.model) |> 
   mutate(
+    term = if_else(                  # Pretty the month labels with regex
+      str_detect(term, "season"), 
+      month.abb[as.integer(str_extract(term, "12(\\d+)$", 1))],
+      term
+    ),
     lower = estimate + qnorm(0.025) * std.error,
     upper = estimate + qnorm(0.975) * std.error
   ) 
 ```
 
+::: {.callout-important title="Warning: Interpreting season(12)"}
+`season(12)` is an identical substitute for the mutated `month` column used previously with **ONE EXCEPTION**. Because it treats the first row in the tsibble as the omitted month, the labels don't tell you what month it is. It tells you the number month relative to the first month.
 
+If the first month is *February*, `season(12).season_122` represents *March* and `season(12).season_1212` represents *January*.
+:::
 
 
 @fig-finalFittedPlot illustrates the original time series (in black) and the fitted model (in blue). 
 For reference, a dotted line illustrating the simple least squares line is plotted on this figure for reference. It helps highlight the exponential shape of the trend.
-
-```{r}
-
-```
-
 
 ```{r}
 #| label: fig-finalFittedPlot
@@ -519,7 +493,7 @@ For reference, a dotted line illustrating the simple least squares line is plott
 #| code-fold: true
 #| code-summary: "Show the code"
 
-forecast_df <- linear_lm |> 
+forecast_df <- log_ar |> 
   forecast(sim_ts) |>
   as_tibble() |> 
   dplyr::select(std_t, .mean) |> 
@@ -587,7 +561,7 @@ Use @fig-RetailSalesGeneralMerch to explain the following questions to a partner
 -   Fit appropriate  models utilizing the indicator terms for seasonal components.
 -   Determine the "best" model for these data. Justify your decision.
 -   Check for autocorrelation in the random terms.
--   Use GLS to fit the model, if there is evidence of autocorrelation in the random component.
+-   Use AR to fit the model, if there is evidence of autocorrelation in the random component.
 -   Plot the fitted values and the time series on the same figure.
 
 
@@ -1412,7 +1386,7 @@ The model with the lowest AIC, AICc, and BIC values is the full cubic model.
 
 ::: {.callout-caution icon=false title="Autocorrelation of the Random Component" collapse="false"}
 
-We check for autocorrelation in the random component to determine if using GLS is warranted.
+We check for autocorrelation in the random component to determine if using additional fitting is warranted.
 
 @fig-FullQuadACF illustrates the ACF of the full model with a quadratic trend.
 
@@ -1444,40 +1418,32 @@ pacf(cubic_ts$.resid, plot=TRUE, lag.max = 25)
 <!-- Autocorrelation of the random component -->
 
 
-::: {.callout-caution icon=false title="Applying Genearlized Least Squares, GLS" collapse="false"}
+::: {.callout-caution icon=false title="Applying Autoregression, AR" collapse="false"}
 
-Recall that in [Chapter 5, Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html#FittingRegModelWithPACF), we fitted a linear regression model using the value of the partial autocorrelation function for $k=1$. This helps account for the autocorrelation in the residuals.
+Recall that in [Chapter 5, Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html#FittingRegModelWithPACF), we fitted a linear regression model using the value of the partial autocorrelation function for $k=2$. This helps account for the autocorrelation in the residuals.
 
-We will use the PACF when $k=1$ to apply the GLS algorithm.
-The first few partial autocorrelation values are:
+Here we will add 
 
 ```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
+#| output: false
 
-pacf(cubic_ts$.resid, plot=FALSE, lag.max = 10)
+log_cube_ar <- retail_ts |> 
+  model(AR(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) + season(12) + order(2)))
+
+tidy(log_cube_ar) |> select(!.model)
 ```
 
-The partial autocorrelation when $k=1$ is approximately `r alphas_quad$acf[1] |> round(3)`. We will use this value as we recompute the regression coefficients.
-
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
-
-# Load additional packages
-pacman::p_load(tidymodels, multilevelmod,
-  nlme, broom.mixed)
-
-lag_1 <- pacf(cubic_ts$.resid, plot=FALSE, lag.max = 10)$acf[1]
-
-temp_spec <- linear_reg() |>
-  set_engine("gls", correlation = nlme::corAR1(lag_1))
-
-temp_gls <- temp_spec |>
-  fit(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) + month, data = retail_ts)
-
-tidy(temp_gls) |>
+tidy(log_cube_ar) |>
+  select(!.model) |> 
   mutate(
+    term = if_else(                  # Pretty the month labels with regex
+      str_detect(term, "season"), 
+      month.abb[as.integer(str_extract(term, "12(\\d+)$", 1))],
+      term
+    ),
     lower = estimate + qnorm(0.025) * std.error,
     upper = estimate + qnorm(0.975) * std.error
   ) 
@@ -1493,7 +1459,7 @@ For reference, a dotted line illustrating the simple least squares line is plott
 #| code-fold: true
 #| code-summary: "Show the code"
 
-forecast_df <- cubic_lm |> 
+forecast_df <- log_cube_ar |> 
   forecast(retail_ts) |>  # computes the anti-log of the predicted values and returns them as .mean
   as_tibble() |> 
   dplyr::select(std_t, .mean) |> 
