@@ -23,7 +23,7 @@ pacman::p_load(MASS, # MVNorm, loaded before tidyverse so it doesn't overwrite d
 
 
 # Read in existing data from previous downloads
-usd1_exchange_prior <- rio::import("C:/Users/craigaj/Documents/BYUI-Timeseries-Drafts/data/exchange_rates.parquet")
+usd1_exchange_prior <- rio::import("data/exchange_rates.parquet")
 
 
 jpy <- getSymbols('USD/JPY', src='oanda', from=Sys.Date()-180,
