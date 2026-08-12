@@ -1,0 +1,181 @@
+---
+title: "Time Series Homework: Chapter 1 Lesson 3 Key"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+editor: source
+---
+
+<!-- Revised Summer 2026 -->
+
+```{r}
+pacman::p_load(
+  tidyverse,  # ggplot, mutate(), cleaning...
+  tsibble,    # as_tsibble()
+  fable,      # model(...), forecast(), tidy(), glance()...
+  feasts,     # ACF(), PACF()
+  ggtime,     # autoplot() for tsibbles
+  rio,        # import()
+  pander,     # pander() markdown tables
+  patchwork   # + and / for ggplots
+)
+```
+
+## Data
+
+```{r}
+# Macroeconomic Data: unemployment rate
+unemp_rate <- rio::import("https://byuistats.github.io/timeseries/data/unemp_rate.csv")
+
+```
+
+## Questions
+
+### Question 1 - Estimating the Trend: Centered Moving Average (10 points)
+
+Please plot the US Unemployment time series and superimpose the centered moving average series $\hat{m}_{t}$ in the same graph. Don't use an R command; rather, do it by coding $\hat{m}_{t}$ like in Chapter 1: Lesson 3. Use the appropriate axis labels, units, and captions.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+#| warning: false
+
+unemp_rate <- unemp_rate |>
+  mutate(centered_moving_ave = (
+    (
+      0.5 * lag(value, 6) +
+      lag(value, 5) +
+      lag(value, 4) +
+      lag(value, 3) +
+      lag(value, 2) +
+      lag(value, 1) +
+      value +
+      lead(value, 1) +
+      lead(value, 2) +
+      lead(value, 3) +
+      lead(value, 4) +
+      lead(value, 5) +
+      0.5 * lead(value, 6)
+    )
+    / 12
+  ))
+
+ggplot(unemp_rate, aes(date, value)) +
+  geom_line(color = "#777") +
+  geom_line(
+    aes(y = centered_moving_ave),
+    color = "red",
+    linewidth = 0.6
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  labs(
+    x = "",
+    y = "Unemployment Rate (%)",
+    title = "US Unemployment Rate",
+    subtitle = "With centered moving average",
+    caption = "Blue Line: Centered Moving Average
+               Black Line: Monthly Unemployment Rate
+               Source: Bureau of Labor Statistics"
+  ) +
+  theme_minimal()
+```
+
+<!-- Delete this and put your written answer here. The three colons mark the end of your answer. -->
+:::
+
+### Question 2 - Seasonal Averages: Side-by-Side Box Plots by Month (10 points)
+
+Please create a box plot to illustrate the monthly averages in the US Unemployment time series. Use the appropriate axis labels, units, and captions.
+
+::: {.callout-note title="Answer" icon="false"}
+::: {.panel-tabset .nav-pills}
+
+## GGPlot
+
+```{r}
+unemp_rate <- unemp_rate |> 
+  mutate(
+    month = factor(month(date, label = TRUE), levels = month.abb)
+  )
+
+ggplot(unemp_rate, aes(month, value)) +
+  geom_boxplot(fill = "skyblue", color = "darkblue") +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  labs(
+    title = "US Unemployment Rate Monthly Distribution",
+    x = "",
+    y = "Unemployment Rate (%)",
+    caption = "Source: Bureau of Labor Statistics"
+  ) +
+  theme_minimal()
+```
+
+## Plotly
+
+```{r}
+#| warning: false
+pacman::p_load(plotly)
+
+mydata2 <- unemp_rate |>
+  mutate(month = factor(month)) |>
+  group_by(month) |>
+  mutate(
+    iqr_val = IQR(value, na.rm = TRUE),
+    lower_bound = quantile(value, 1 / 3, na.rm = TRUE) - 1.5 * iqr_val,
+    upper_bound = quantile(value, 2 / 3, na.rm = TRUE) + 1.5 * iqr_val,
+    is_outlier = value < lower_bound | value > upper_bound
+  ) |>
+  ungroup()
+
+# Reverted to filtering the base plot data to prevent Plotly from drawing default outliers
+p <- ggplot(filter(mydata2, !is_outlier), aes(x = month, y = value)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_point(
+    data = filter(mydata2, is_outlier),
+    aes(text = paste("Year:", year(date), "<br>Rate:", value)),
+    color = "#E69F00",
+    size = 1
+  ) +
+  labs(x = "Month", y = "Unemployment Rate (%)", title = "Monthly Unemployment Rate Distribution") +
+  scale_x_discrete(labels = month.abb) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  theme_bw() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+ggplotly(p, tooltip = "text") |> config(displayModeBar = FALSE)
+```
+
+
+:::
+:::
+
+### Question 3 - Seasonal Averages: Analysis (20 points)
+
+##### a) Describe the seasonality of the US unemployment time series. Comment on the series' periods of highest and lowest unemployment. Are there any notable outliers?
+
+::: {.callout-note title="Answer" icon="false"}
+Here in the box plot we can see that the highest median unemployment rates are typically around the beginning of the year from January to Februrary, then later in the year, June and July have higher unemployment rates once again. The periods with the lowest unemployment range from April and May, as well as September and October. The unemployment values here can be due to seasonal employment patterns. One noticiable outlier here is found in the month of April. In April 2020, the highest unemployment rate was ever recorded due to the COVID pandemic. However, there doesn’t seem to be a month that has a significantly higher unemployment rate than the other.
+:::
+
+##### b) Please explain the patterns you found. Include information from your prior research on the series.
+
+::: {.callout-note title="Answer" icon="false"}
+Perhaps one reason as to why there are increases in unemployment rates at the beginning of the year industries experience significant employment fluctuations due to lay offs holiday season demand in retail for workers. 
+
+Another clear example is a wave of new job seekers enters the market around this time as recent high school and college graduates begin looking for work. Since it can take some time for these individuals to secure employment, it temporarily drives up unemployment rates. Additionally, there is rise in unemployment before switching to summer months, largely due to shifts in industries like agriculture and tourism, where jobs often peak or wind down, leading to employment changes.
+:::
+
+### Rubric
+
+|                                         |                                                                                                                                                                                                                                                                                                 |                                                                                                                                                                                                                                                                                                     |
+|--------------|-----------------------------|-----------------------------|
+| **Criteria**                            | **Mastery (20)**                                                                                                                                                                                                                                                                                | **Incomplete (0)**                                                                                                                                                                                                                                                                                  |
+| **Question 1: Centered Moving Average** | The student correctly employs the centering procedure to seasonally adjust the US unemployment series.                                                                                                                                                                                          | The student does not employ the centering procedure to seasonally adjust the US unemployment series.                                                                                                                                                                                                |
+|                                         | **Mastery (10)**                                                                                                                                                                                                                                                                                | **Incomplete (0)**                                                                                                                                                                                                                                                                                  |
+| **Question 2: Box Plot**                | Creates a clear and well-constructed box plot that effectively illustrates seasonality in the US Unemployment time series. Labels both the x and y-axes, including appropriate units. Ensures clarity and accuracy in axis labeling, contributing to the overall understanding of the box plot. | There are mistakes in the plot. Fails to include any axis labels or units, resulting in an incomplete representation that lacks essential context.                                                                                                                                                  |
+|                                         | **Mastery (10)**                                                                                                                                                                                                                                                                                | **Incomplete (0)**                                                                                                                                                                                                                                                                                  |
+| **Question 3a: Description**            | Provides an accurate description of the seasonality in the US Unemployment time series, capturing key patterns and trends effectively. Shows a good understanding of the recurring cycles.                                                                                                      | Attempts to identify peaks and troughs but with significant inaccuracies or lack of clarity in the commentary. Shows a limited understanding of the variations. Fails to identify or comment on notable outliers, providing no insight into unusual data points in the US Unemployment time series. |
+|                                         | **Mastery (10)**                                                                                                                                                                                                                                                                                | **Incomplete (0)**                                                                                                                                                                                                                                                                                  |
+| **Question 3b: Patterns**               | Shows understanding of the data to infer meaning in the seasonal averages. It's clear the student did background research on the unemployment time series                                                                                                                                       | Shows a lack of effort. It's not clear the student understands the meaning of the data.                                                                                                                                                                                                             |
+| **Total Points**                        | **50**                                                                                                                                                                                                                                                                                          |                                                                                                                                                                                                                                                                                                     |

@@ -1,0 +1,344 @@
+---
+title: "Time Series Homework: Chapter 6 Lesson 2"
+subtitle: "Please_put_your_name_here"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+execute:
+  warning: false
+  message: false
+---
+
+<!-- Revised Summer 2026 -->
+
+```{r, message=FALSE, warning=FALSE}
+pacman::p_load(
+  tidyverse,  # ggplot, mutate(), cleaning...
+  tsibble,    # as_tsibble()
+  fable,      # model(...), forecast(), tidy(), glance()...
+  feasts,     # ACF(), PACF()
+  ggtime,     # autoplot() for tsibbles
+  rio,        # import()
+  pander,     # pander() markdown tables
+  patchwork   # + and / for ggplots
+)
+```
+
+## Data
+
+```{r, message=FALSE}
+
+gdp_ts <- rio::import("https://byuistats.github.io/timeseries/data/gdp_fred.csv")
+
+gdp_ts <- gdp_ts |>
+  mutate(
+    year_over_year = gdp_millions / lag(gdp_millions, 4)-1,
+    quarter = yearquarter(mdy(quarter))
+  ) |>
+  filter(quarter >= yearquarter(my("Jan 1990")) & quarter < yearquarter(my("Jan 2025"))) |>
+  na.omit() |>
+  mutate(t = 1:n()) |>
+  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  as_tsibble(index = quarter)
+
+```
+
+## Questions
+
+### Question 1 - Stationary Model Comparison (20 points)
+
+We have worked with AR(p), MA(q), ARMA(p,q) stochastic processes. The theoretical ACF and PACF functions of each model can help us identify which of the three models would be a good fit for a particular time series. From the Time Series Notebook:
+
+::: {.callout-note icon="false" title="ACF and PACF of an $AR(p)$ Process"}
+|      | AR(p)                  | MA(q)                  | ARMA(p,q) |
+|------|------------------------|------------------------|-----------|
+| ACF  | Tails off              | Cuts off after lag $q$ | Tails off |
+| PACF | Cuts off after lag $p$ | Tails off              | Tails off |
+:::
+
+In the pprevious assignment, you worked with a simulation of a AR(3) process and a MA(3) process. In this assignment you will be comparing your findings from that assignment to an ARMA(3,3) process.
+
+#### ARMA(3,3) Simulation
+
+```{r}
+n <- 10000  # Number of observations
+ar_coeffs <- c(0.5, 0.3, 0.1)   # AR coefficients
+ma_coeffs <- c(-0.7, -0.5, 0.2)  # MA coefficients
+
+# Simulate the ARMA(3, 3) process
+set.seed(123)  # For reproducibility
+arma33_process <- arima.sim(n = n, model = list(ar = ar_coeffs, ma = ma_coeffs), sd = 1)
+
+# Convert the simulated ARMA(3, 3) process to a tsibble
+arma_33 <- as_tsibble(tibble(Time = 1:n, value = arma33_process), index = Time)
+```
+
+##### a) Plot the ACF for the ARMA(3,3) simulation.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+acf(arma_33)
+```
+:::
+
+##### b) Plot the PACF for the ARMA(3,3) simulation.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+pacf(arma_33)
+```
+:::
+
+
+### Question 2 - ARMA(p,q): GDP Business Cycles (50 points)
+
+Business cycles are the fluctuations in economic activity that an economy experiences over time, marked by phases of expansion, peak, contraction (or recession), and trough. During expansion, economic indicators such as GDP rise, reaching a peak where the economy operates at maximum capacity. Following the peak, the economy contracts, leading to a recession characterized by falling GDP, until it hits a trough, the lowest point, signaling the end of contraction and the start of recovery. The yearly percentage change in real GDP effectively captures the fluctuations of business cycles by quantifying the rate at which an economy's total output of goods and services grows or shrinks from one year to the next. The yearly percentage change in real US GDP in decimals is the `year_over_year` variable in the `gdp_ts` tsibble.
+
+##### a) Plot the yearly percentage change in US Real GDP
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+autoplot(gdp_ts, year_over_year) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") + # zero line
+  labs(
+    title = "Yearly Percentage Change in US Real GDP",
+    y = "Real GDP Growth Rate (Decimal)",
+    x = "Year"
+  ) +
+  theme_bw()
+```
+:::
+
+##### b) Plot the ACF and PACF of the series
+
+::: {.callout-note title="Answer" icon="false"}
+
+::: {.panel-tabset}
+
+## Lag 21 (Default)
+
+```{r}
+par(mfrow = c(1, 2))
+
+acf(gdp_ts$year_over_year, main = NA)
+
+pacf(gdp_ts$year_over_year, main = NA)
+
+# shared title                     top           lower      bigger
+mtext("Yearly % Change in US GDP", outer = TRUE, line = -1, cex = 1.2)
+```
+
+## Lag 40
+
+```{r}
+par(mfrow = c(1,2))
+
+acf(gdp_ts$year_over_year, main = NA, lag = 40)
+
+pacf(gdp_ts$year_over_year, main = NA, lag = 40)
+
+# shared title                     top           lower      bigger
+mtext("Yearly % Change in US GDP", outer = TRUE, line = -1, cex = 1.2)
+```
+
+:::
+
+:::
+
+##### c) Based on the ACF and PACF, please speculate which stationary model will best fit the data.
+
+::: {.callout-note title="Answer" icon="false"}
+Both ACF and PACF have strong patterns across their lags. While the two look very different, they both "tail off" or get gradually smaller over greater lags, rather than a strict cutoff followed by random noise. That is a clear sign of an ARMA process.
+:::
+
+##### d) Please fit an AR(p) model to the yearly percentage change in US Real GDP.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+gdp_ar <- gdp_ts |> 
+  model(ar = ARIMA(year_over_year ~ 1 + pdq(4,0,0) + PDQ(0,0,0)))
+
+gdp_ar |> tidy() |> select(!.model) |> pander()
+
+l <- gdp_ar |>
+  residuals() |>
+  ACF() |>
+  autoplot() +
+  labs(title = "AR(4) ACF")
+
+r <- gdp_ar |>
+  residuals() |>
+  PACF() |>
+  autoplot() +
+  labs(title = "AR(4) PACF")
+
+l + r
+```
+
+<!-- James -->
+Despite lag 4 being significant in the acf plot, lags 2-4 are not significant in the model and don’t seem to change the residual plots. For simplicity, a lag 1 model seems best. However, there are still noticeable issues with the residuals, which is where an MA model may help.
+:::
+
+##### e) Please fit an MA(q) model to the yearly percentage change in US Real GDP.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+gdp_ma <- gdp_ts |>
+  model(ma = ARIMA(year_over_year ~ 1 + pdq(0,0,4) + PDQ(0, 0, 0)))
+
+gdp_ma |> tidy() |> select(!.model) |> pander()
+
+l <- gdp_ma |>
+  residuals() |>
+  ACF() |>
+  autoplot() +
+  labs(title = "MA(4) ACF")
+
+r <- gdp_ma |>
+  residuals() |>
+  PACF() |>
+  autoplot() +
+  labs(title = "MA(4) PACF")
+
+l + r
+```
+
+<!-- James -->
+The 4 lags are significant for an MA model, but there is still a noticeable lag 1 in the autocorrelation plots. This is where an ARMA model could be useful.
+:::
+
+##### f) Please fit an ARMA(p,q) model to the yearly percentage change in US Real GDP.
+
+::: {.callout-note title="Answer" icon="false"}
+
+## ARMA(4,4)
+
+```{r}
+gdp_arma <- gdp_ts |>
+  model(arma = ARIMA(year_over_year ~ 1 + pdq(4,0,4) + PDQ(0,0,0)))
+
+gdp_arma |> tidy() |> select(!.model) |> pander()
+
+l <- gdp_arma |>
+  residuals() |>
+  ACF() |>
+  autoplot() +
+  labs(title = "ARMA(4,4) ACF")
+
+r <- gdp_arma |>
+  residuals() |>
+  PACF() |>
+  autoplot() +
+  labs(title = "ARMA(4,4) PACF")
+
+l + r
+```
+
+The ARMA model seems to be a far better fit than the previous two, accounting for all significance found in the lags. However, it still has a suspicious shape that does not feel random.
+
+## Seasonal ARMA
+
+```{r}
+gdp_season <- gdp_ts |> 
+  model(ARIMA(year_over_year ~ 1 + pdq(1,0,0) + PDQ(0,0,1)))
+
+gdp_season |> tidy() |> select(!.model) |> pander()
+
+l <- gdp_season |>
+  residuals() |>
+  ACF() |>
+  autoplot()
+
+r <- gdp_season |>
+  residuals() |>
+  PACF() |>
+  autoplot()
+
+l + r
+```
+
+While an MA component was useful, the seasonal MA component is a high contender. This is evident from the earlier AR model's PACF having a significant lag 4 for data that has a seasonality of 4 periods. The ACF and PACF plots here both seem to produce more random output than the ARMA(4,4) model.
+
+:::
+
+##### g) In a table, please compare the fit of each model. Which do you think is the best model for the series?
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+all_models <- gdp_ts |>
+  model(
+    ar = ARIMA(year_over_year ~ 1 + pdq(4,0,0) + PDQ(0,0,0)),
+    ma = ARIMA(year_over_year ~ 1 + pdq(0,0,4) + PDQ(0,0,0)),
+    arma = ARIMA(year_over_year ~ 1 + pdq(4,0,4) + PDQ(0,0,0)),
+    arma_s = ARIMA(year_over_year ~ 1 + pdq(1,0,0) + PDQ(0,0,1))
+  )
+
+glance(all_models) |> 
+  select(!c(ar_roots, ma_roots)) |> 
+  pander()
+```
+
+While the AR and MA models both provide reasonable fits, the ARMA model delivers the best overall performance. The ARMA model has the highest log-likelihood and the smallest error variance ($\sigma^2$) among the three, suggesting that it captures structure in the data that neither AR nor MA can explain on its own.
+
+Adding the seasonal ARMA model brings an interesting contender with higher errors and lower log-likelihood, but lower AIC, AICc, and BIC. Seeing the diagnostic plots also shows the data in ways that are not apparent by individual statistics.
+
+Comparing multiple models tells an interesting story about the data that we may not see when deciding a single model.
+:::
+
+### Rubric
+
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Criteria**                                         |                                                                                                                                                                                                                                                                                                                                                                                                                                                        |                                                                                                                                                                                                                                                                                                                                                                                                   |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                      | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                        | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Question 1a: ACF Plots**                           | Students produce clear and well-labeled plots of the autocorrelation functions (ACFs) for the AR(2), MA(2), and ARMA(2,2) simulations.                                                                                                                                                                                                                                                                                                                 | Submissions have low-quality visualizations or unclear labeling.                                                                                                                                                                                                                                                                                                                                  |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                      | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                        | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Question 1b: PACF**                                | Students produce clear and well-labeled plots of the partial autocorrelation functions (PACFs) for the AR(2), MA(2), and ARMA(2,2) simulations.                                                                                                                                                                                                                                                                                                        | Submissions have low-quality visualizations or unclear labeling.                                                                                                                                                                                                                                                                                                                                  |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                      | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                       | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Question 1c: Evaluation of Theoretical functions** | Students contrast the theoretical description provided in the question prompt and compare it with the plots they created from multiple simulations with different seeds. They accurately identify and explain any discrepancies or agreements between the theoretical description and the observed patterns in the plots. Their analysis demonstrates a clear understanding of sampling distributions and their representations on ACF and PACF plots. | Students contrast doesn't provide sufficient evidence of understanding of simulation procedures or the theoretical understanding of ACF and PACF. There is not enough content to evaluation whether students understand the sampling process and estimation of ACF and PACF.                                                                                                                      |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                      | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                        | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Question 2a: Plot**                                | Students plot the yearly percentage change in US Real GDP, ensuring that the plot is clear, properly labeled, and accurately represents the data. They provide appropriate axis labels, a title, and a legend if necessary to enhance interpretability.                                                                                                                                                                                                | Submissions have low-quality visualizations or unclear labeling.                                                                                                                                                                                                                                                                                                                                  |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                      | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                        | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Question 2b: ACF and PACF**                        | Students produce clear and well-labeled plots of the ACF and PACF                                                                                                                                                                                                                                                                                                                                                                                      | Submissions have low-quality visualizations or unclear labeling.                                                                                                                                                                                                                                                                                                                                  |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                      | **Mastery (15)**                                                                                                                                                                                                                                                                                                                                                                                                                                       | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Question 2c: Best fit speculation**                | Students analyze the ACF and PACF plots to speculate on the best stationary model for the data. They provide clear reasoning supported by observations from the plots, identifying any significant autocorrelation or partial autocorrelation patterns that suggest a particular model. Their speculation demonstrates a solid understanding of time series analysis concepts and the relationship between ACF, PACF, and model selection.             | Students attempt to speculate on the best stationary model based on the ACF and PACF plots but may struggle to provide clear reasoning or insights. Their analysis lacks coherence or depth, with limited discussion of relevant autocorrelation or partial autocorrelation patterns. They may overlook significant features in the plots or misinterpret their implications for model selection. |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                      | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                        | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Question 2d: AR(p) fitted**                        | Students proficiently fit an AR(p) model to the yearly percentage change in US Real GDP. They correctly select an appropriate lag order p based on the ACF and PACF analysis or other model selection criteria, estimate the model parameters using appropriate methods, and interpret the results effectively.                                                                                                                                        | They may have difficulty selecting an appropriate lag order\                                                                                                                                                                                                                                                                                                                                      |
+|                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                        | p, estimating the model parameters accurately, or interpreting the results effectively. Their interpretation may lack depth or clarity, indicating a limited understanding of the modeling process                                                                                                                                                                                                |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                      | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                        | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Question 2e: MA(q) fitted**                        | Students proficiently fit an MA(q) model to the yearly percentage change in US Real GDP. They correctly select an appropriate lag order p based on the ACF and PACF analysis or other model selection criteria, estimate the model parameters using appropriate methods, and interpret the results effectively.                                                                                                                                        | They may have difficulty selecting an appropriate lag order p, estimating the model parameters accurately, or interpreting the results effectively. Their interpretation may lack depth or clarity, indicating a limited understanding of the modeling process                                                                                                                                    |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                      | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                        | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Question 2f: ARMA(p,q) fitted**                    | Students proficiently fit an ARMA(p,q) model to the yearly percentage change in US Real GDP. They appropriately select the orders p and q based on the ACF and PACF analysis or other model selection criteria, estimate the model parameters using appropriate methods, and interpret the results effectively. Their interpretation demonstrates a clear understanding of the the underlying dynamics of the data.                                    | They may have difficulty selecting an appropriate lag order p and q estimating the model parameters accurately, or interpreting the results effectively. Their interpretation may lack depth or clarity, indicating a limited understanding of the modeling process\                                                                                                                              |
+|                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                        | \                                                                                                                                                                                                                                                                                                                                                                                                 |
+|                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                        | \                                                                                                                                                                                                                                                                                                                                                                                                 |
+|                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                        | \                                                                                                                                                                                                                                                                                                                                                                                                 |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|                                                      | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                       | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Question 2g: Model selection**                     | Students effectively use AIC, AICc, and BIC to compare and evaluate models, presenting results in a clear table format similar to the one found in the Model Comparison section of the Time Series Notebook Ch5 Lesson 3. Their discussions on the nuance model selection evidences they understand the importance of considering the context and data generating process that is part of model specification.                                         | Students struggle to effectively use AIC, AICc, and BIC to compare and evaluate models, resulting in unclear or incomplete presentation of results or failure to address the dangers of relying solely on algorithms for model selection.\                                                                                                                                                        |
+|                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                        | \                                                                                                                                                                                                                                                                                                                                                                                                 |
+|                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                        | \                                                                                                                                                                                                                                                                                                                                                                                                 |
+|                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                        | \                                                                                                                                                                                                                                                                                                                                                                                                 |
+|                                                      |                                                                                                                                                                                                                                                                                                                                                                                                                                                        | \                                                                                                                                                                                                                                                                                                                                                                                                 |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Total Points**                                     | **70**                                                                                                                                                                                                                                                                                                                                                                                                                                                 |                                                                                                                                                                                                                                                                                                                                                                                                   |
++------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+

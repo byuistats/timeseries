@@ -1,0 +1,521 @@
+---
+title: "Time Series Homework: Chapter 3 Lesson 2 Key"
+subtitle: "Please_put_your_name_here"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+---
+
+<!-- Revised Summer 2026 -->
+
+```{r, message=FALSE, warning=FALSE}
+pacman::p_load(
+  tidyverse,  # ggplot, mutate(), cleaning...
+  tsibble,    # as_tsibble()
+  fable,      # model(...), forecast(), tidy(), glance()...
+  feasts,     # ACF(), PACF()
+  ggtime,     # autoplot() for tsibbles
+  rio,        # import()
+  pander,     # pander() markdown tables
+  patchwork   # + and / for ggplots
+)
+
+pacman::p_load(
+  pander,
+  kableExtra
+)
+```
+
+## Data
+
+```{r, message=FALSE}
+
+mortality <- rio::import("https://byuistats.github.io/timeseries/data/mortality_us.xlsx")
+
+```
+
+## Questions
+
+### Question 1 - Context and Measurement (10 points)
+
+The first part of any time series analysis is context. You cannot properly analyze data without knowing what the data is measuring. Without context, the most simple features of data can be obscure and inscrutable. This homework assignment will center around the series below.
+
+Please research the time series. In the spaces below, give the data collection process, unit of analysis, and meaning of each observation for the series.
+
+#### **US Mortality**
+
+<https://wonder.cdc.gov/wonder/help/cmf.html#>
+
+Note: The data is self-explanatory, don't get lost in the documentation page.
+
+::: {.callout-note title="Answer" icon="false"}
+**Data Collection Process:**
+
+The CDC collects data on the number of deaths in the US from the Compressed Mortality File which is a data base updated annually.
+
+**Unit of Analysis:**
+
+Deaths per 100,000 people in the United States
+
+**Meaning:**
+
+Each observation is the population, number of deaths and the mortality rate per 100,000 people on an annual level.
+:::
+
+### Question 2 - US Mortality Rate: Visualization (30 points)
+
+##### a) Please plot the US Mortality Rate series (mortality per 100,000).
+
+::: {.callout-note title="Answer" icon="false"}
+
+::: {.panel-tabset}
+
+## Example 1
+
+```{r, warning=FALSE}
+# Clean
+mortality <- mortality |> 
+  rename(mortality_rate = `mort_rate_per_100,000`) |> 
+  as_tsibble(index = year)
+
+# Visual
+ggplot(mortality, aes(x = year, y = mortality_rate)) +
+  geom_line(color = "steelblue", size = 1) +
+  labs(
+    title = "U.S. Mortality Rate per 100,000 (1968-2021)",
+    x = "Year",
+    y = "Mortality Rate per 100,000",
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"),
+    plot.caption = element_text(hjust = 0.5, face = "italic", color = "gray40")
+  ) +
+  ylim(750, max(mortality$mortality_rate))  # Set y-axis starting from 800
+```
+
+## Example 2
+
+```{r, warning=FALSE, message=FALSE}
+# Calculate everything upfront
+ewma_models <- mortality |>
+  model(
+    SS1PE = ETS(mortality_rate, opt_crit = "amse"), # Defaults to ANN
+    pt2   = ETS(mortality_rate ~ trend("N", alpha = 0.2)),
+    one_n = ETS(mortality_rate ~ 
+      trend("N", alpha = 1 / nrow(mortality), beta = 0)
+    )
+  )
+
+# Make the models plot-able
+#   by turning it into a dable (basically a tibble with specific columns)
+models_dable <- ewma_models |> augment()
+
+# save the plot for later
+pl <- ggplot(mortality, aes(year, mortality_rate)) +
+  geom_line() +
+  labs(
+    x = "",
+    y = "Mortality Rate per 100,000 People",
+    title = "US Mortality Rate (CDC)",
+    color = "Alpha"
+  ) +
+  theme_bw() +
+  scale_color_manual(values = c(
+    "Optimized" = "orange",
+    "0.2" = "red",
+    "1/n" = "purple"
+  ))
+
+# show the plot
+pl
+```
+
+
+:::
+:::
+
+##### b) Use the exponential smoothing method to model the US Mortality Rate series. Use the smoothing parameter that R calculates by minimizing the SS1PE. Add it to the plot in 2a
+
+::: {.callout-note title="Answer" icon="false"}
+
+::: {.panel-tabset}
+
+## Example 1
+
+```{r}
+# Model
+model_ss1pe <- mortality |>
+  model(Additive = ETS(
+    mortality_rate ~
+      error("A") +
+      trend("N") +
+      season("N"),     # No trend or seasonality, pure EWMA
+    opt_crit = "amse"  # Minimize SS1PE using AMSE
+  ))
+
+fitted_values <- fitted(model_ss1pe)
+
+# Add the fitted values to the plot and include a legend
+ggplot() +
+  geom_line(
+    data = mortality,
+    aes(x = year, y = mortality_rate, color = "Original Data"),
+    size = 1.3
+  ) +
+  geom_line(
+    data = fitted_values,
+    aes(x = year, y = .fitted, color = "Fitted (Minimized SS1PE)"),
+    size = 1
+  ) +
+  scale_color_manual(
+    name = "Legend",
+    values = c(
+      "Original Data" = "steelblue",
+      "Fitted (Minimized SS1PE)" = "darkred"
+    )
+  ) +
+  labs(
+    title = "U.S. Mortality Rate per 100,000 Population (1968-2021)",
+    x = "Year",
+    y = "Mortality Rate per 100,000",
+    caption = "Fitted Exponential Smoothing Model Added (Minimized SS1PE)"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.caption = element_text(hjust = 0.5),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold")
+  )
+
+```
+
+## Example 2
+
+```{r}
+#| code-fold: false
+
+# add new line to plot
+pl <- pl + 
+  geom_line(
+    data = models_dable |> filter(.model == "SS1PE"), 
+    aes(year, .fitted, col = "Optimized")
+  )
+
+# show the plot
+pl
+```
+
+:::
+
+:::
+
+##### c) Please repeat the modeling above but instead choose a smoothing parameter value $\alpha=0.2$. Add it to the plot in 2a
+
+::: {.callout-note title="Answer" icon="false"}
+
+::: {.panel-tabset}
+
+## Example 1
+
+```{r}
+model_pt2 <- mortality |>
+  model(Additive = ETS(
+    mortality_rate ~
+      error("A") +
+      trend("N", alpha = 0.2, beta = 0) +
+      season("N"),
+    opt_crit = "amse"
+  ))
+
+fitted_values_pt2 <- fitted(model_pt2)
+
+# Add the fitted values to the plot and include a legend
+ggplot() +
+  geom_line(
+    data = mortality,
+    aes(x = year, y = mortality_rate, color = "Original Data"),
+    size = 1.3
+  ) +
+  geom_line(
+    data = fitted_values,
+    aes(x = year, y = .fitted, color = "Fitted (Minimized SS1PE)"),
+    size = 0.75,
+    linetype = "dotdash"
+  ) +
+  geom_line(
+    data = fitted_values_pt2,
+    aes(x = year, y = .fitted, color = "Fitted (Alpha = 0.2)"),
+    size = 0.75
+  ) +
+  scale_color_manual(
+    name = "Legend",
+    values = c(
+      "Original Data" = "steelblue",
+      "Fitted (Minimized SS1PE)" = "darkred",
+      "Fitted (α = 0.2)" = "darkgreen"
+    )
+  ) +
+  labs(
+    title = "U.S. Mortality Rate per 100,000 Population (1968-2021)",
+    x = "Year",
+    y = "Mortality Rate per 100,000",
+    caption = "Fitted Exponential Smoothing Model Added (Alpha = 0.2)"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5),
+    plot.caption = element_text(hjust = 0.5),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold")
+  )
+
+```
+
+## Example 2
+
+```{r}
+#| code-fold: false
+
+# add new line to plot
+pl <- pl + 
+  geom_line(
+    data = models_dable |> filter(.model == "pt2"), 
+    aes(year, .fitted, col = "0.2")
+  )
+
+# show plot
+pl
+```
+
+:::
+
+:::
+
+##### d) Please repeat the modeling above but instead choose a smoothing parameter value $\alpha=\frac{1}{n}$.Add it to the plot in 2a
+
+::: {.callout-note title="Answer" icon="false"}
+
+::: {.panel-tabset}
+
+## Example 1
+
+```{r}
+n <- nrow(mortality) # To calculate 1 / n
+
+model_1n <- mortality |>
+  model(
+    Additive = ETS(
+      mortality_rate ~
+        error("A") + 
+        trend("A" , alpha = 1 / n, beta = 0) + 
+        season("N"),
+      opt_crit = "amse"
+    )  # Minimize SS1PE using AMSE
+  )
+
+fitted_values_1n <- fitted(model_1n)
+
+# Add the fitted values to the plot and include a legend
+ggplot() +
+  geom_line(
+    data = mortality,
+    aes(x = year, y = mortality_rate, color = "Original Data"),
+    size = 1
+  ) +
+  geom_line(
+    data = fitted_values,
+    aes(x = year, y = .fitted, color = "SS1PE"),
+    size = 0.75,
+    linetype = "dotdash"
+  ) +
+  geom_line(
+    data = fitted_values_pt2,
+    aes(x = year, y = .fitted, color = "α = 0.2"),
+    size = 0.75,
+    linetype = "dotdash"
+  ) +
+  geom_line(
+    data = fitted_values_1n,
+    aes(x = year, y = .fitted, color = "α = 1/n"),
+    size = 0.75
+  ) +
+  scale_color_manual(
+    name = "Legend",
+    values = c(
+      "Original Data" = "steelblue",
+      "SS1PE" = "darkred",
+      "α = 0.2" = "darkgreen",
+      "α = 1/n" = "purple"
+    )
+  ) +
+  labs(
+    title = "U.S. Mortality Rate per 100,000 Population (1968-2021)",
+    x = "Year",
+    y = "Mortality Rate per 100,000",
+    caption = "Fitted Exponential Smoothing Model with Alpha = 1/n"
+  ) +
+  theme_minimal(base_size = 15) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5),
+    plot.caption = element_text(hjust = 0.5),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold")
+  )
+
+```
+
+## Example 2
+
+```{r}
+#| code-fold: false
+
+# add new line to plot
+pl <- pl + 
+  geom_line(
+    data = models_dable |> filter(.model == "one_n"), 
+    aes(year, .fitted, col = "1/n")
+  )
+
+# show plot
+pl
+```
+
+:::
+
+:::
+
+##### d) Which of the smoothing parameter values you tried before work best for the series? Justify your answer.
+
+::: {.callout-note title="Answer" icon="false"}
+Each of these different parameters has different strengths and weaknesses. The SSP1E choice of parameter puts its focus on recent observations rather than historical observation. This parameter would be useful for trying to forecast the number of deaths in 2022 due to Covid. The smoothing parameter of 0.2 balances responsiveness and stability when forecasting mortality rates. This value allows the model to capture recent changes without overreacting to random fluctuations, providing a smoother, more reliable forecast. The smoothing parameter of 1/n places the most emphasis on historical data, which allows longer term trends to be visible. Remember, choosing the optimal smoothing parameter often involves considering the specific characteristics of the data, the purpose of the analysis and potential external influences.
+:::
+
+### Question 3 - US Mortality Rate: Excess Mortality (30 points)
+
+The jump at the last two years of the US Mortality Rate series is clearly the effect that Covid-19 had on mortality across the US.
+
+##### a) Please calculate the excess mortality rate during 2020 and 2021 using the smoothing parameter values you employed in the previous question. Your results should be displayed in a table that is professionally formatted.
+
+::: {.callout-note title="Answer" icon="false"}
+
+::: {.panel-tabset}
+
+## Example 1
+
+```{r}
+# Compute excess values for each alpha
+mortality_table <- mortality |> 
+  rename(Year = year) |> 
+  mutate(
+    `Mortality Rate`           = mortality_rate,
+    `Fit SS1PE`                = mortality_rate - fitted_values$.fitted,
+    `$\\alpha$ = 0.2`          = mortality_rate - fitted_values_pt2$.fitted,
+    `$\\alpha = \\frac{1}{n}$` = mortality_rate - fitted_values_1n$.fitted
+  ) |> 
+  filter(Year %in% c(2020, 2021))
+
+# Create the table
+mortality_table |> 
+  select(Year, `Mortality Rate`, `Fit SS1PE`, `$\\alpha$ = 0.2`, `$\\alpha = \\frac{1}{n}$`) |> 
+  pander(caption = "Excess Mortality Rates per 100,000 Population for 2020-2021, Calculated by Three Exponentially Weighted Moving Average Models")
+```
+
+## Example 2
+
+```{r}
+# Filter values
+sp1ss_2020 <- models_dable |> filter(.model == "SS1PE", year == 2020)
+sp1ss_2021 <- models_dable |> filter(.model == "SS1PE", year == 2021)
+pt2_2020   <- models_dable |> filter(.model == "pt2",   year == 2020)
+pt2_2021   <- models_dable |> filter(.model == "pt2",   year == 2021)
+one_n_2020 <- models_dable |> filter(.model == "one_n", year == 2020)
+one_n_2021 <- models_dable |> filter(.model == "one_n", year == 2021)
+
+# Display in table
+pander(tribble(
+  ~"Smoothing Factor (alpha $\\alpha$)", ~"Excess Mortality 2020", ~"Excess Mortality 2021",
+  "0.715 (Fit SS1PE)",  sp1ss_2020$.resid,  sp1ss_2021$.resid,
+  "0.2",                pt2_2020$.resid,    pt2_2021$.resid,
+  "1/n",                one_n_2020$.resid,  one_n_2021$.resid,
+))
+```
+
+## Example 3
+
+```{r}
+excess_table <- mortality |>
+  rename(Year = year) |> 
+  transmute(
+    `Actual Mortality Rate` = round(mortality_rate, 1),
+    `Expected (Auto α)` = round(fitted_values$.fitted, 1),
+    `Expected (α = 0.2)` = round(fitted_values_pt2$.fitted, 1),
+    `Expected (α = 1/n)` = round(fitted_values_1n$.fitted, 1),
+    `Excess (Auto α)` = round(mortality_rate - fitted_values$.fitted, 1),
+    `Excess (α = 0.2)` = round(mortality_rate - fitted_values_pt2$.fitted, 1),
+    `Excess (α = 1/n)` = round(mortality_rate - fitted_values_1n$.fitted, 1)
+  ) |>
+  filter(Year %in% c(2020, 2021))
+
+# Display table (uses kableExtra package)
+excess_table |>
+  kbl(
+    caption = "Excess U.S. Mortality Rates (per 100,000 Population) During 2020–2021",
+    align = "c",
+    format = "html",
+    booktabs = TRUE
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    full_width = FALSE,
+    position = "center",
+    font_size = 14
+  )
+```
+
+:::
+
+:::
+
+##### b) What is the meaning of excess mortality as you calculated it? Please explain it to a general audience, as if you were being interviewed in a national news show.
+
+::: {.callout-note title="Answer" icon="false"}
+Excess mortality refers to the number of deaths beyond what is typically expected in a specific period, based on historical data. It serves as an indicator of unusual circumstances, like pandemics, natural disasters, or severe flu seasons, showing if more people are dying than usual. This metric captures both direct effects, such as deaths from the primary cause (e.g., a virus), and indirect impacts, like deaths resulting from overwhelmed healthcare systems. By comparing observed deaths to expected baselines, experts can assess the overall impact of such events on public health.
+:::
+
+##### c) Which excess mortality rate estimate do you think is correct? Some commentators would suggest you are choosing the parameters to defend your political goals, not to conduct a scientific analysis. Please comment on the difficulty of choosing parameter values to estimate the death toll of Covid-19.
+
+::: {.callout-note title="Answer" icon="false"}
+Based off the data and the alpha of 0.2 there is a good balance between the previous data having an effect where the expected value is prevalent, without having too much of an impact. Selecting parameter values in time series analysis, such as the smoothing parameter α in exponential smoothing, is challenging due to the need to balance modeling assumptions, data characteristics, and methodological choices. Different assumptions such as what weight to place on historical data can very much vary by opinion and knowledge of the series. It is very important to understand the big picture of the situation. Furthermore, for this reason it is important to be transparent with the parameters chosen and how one arrived to choose them in order to gain credibility that the purposes are meant to conduct a scientific analysis. The alpha of 0.2 could be considered to be more correct as it looks mostly to what we have seen historically while still taking into account more recent changes in mortality rates. This shows that there is a large discrepancy between what we were expecting based on past years and that Covid did have a large effect on mortality rates.
+:::
+
+### Rubric
+
+|                                                               |                                                                                                                                                                                                                                                                                                                                                                                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+|---------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Criteria**                                                  | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                    | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Question 1: Context and Measurement**                       | The student thoroughly researches the data collection process, unit of analysis, and meaning of each observation for both the requested time series. Clear and comprehensive explanations are provided.                                                                                                                                                                             | The student does not adequately research or provide information on the data collection process, unit of analysis, and meaning of each observation for the specified series.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+|                                                               | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                     | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Question 2a: Mortality Plot**                               | The student accurately plots the US Mortality Rate series in R, ensuring clear labeling and a descriptive title for easy interpretation. The visualization effectively presents the data with distinguishable points or lines and appropriate formatting. Additionally, the R code is well-commented, providing clear explanations of each step and maintaining readability.        | The student encounters challenges in plotting the US Mortality Rate series in R. The plot may lack essential labels or a descriptive title, making it difficult to interpret. Additionally, the visualization might be unclear or cluttered, and the R code may lack sufficient comments, hindering understanding of the process. Overall, improvement is needed in effectively plotting time series data in R.                                                                                                                                                                                                                                                          |
+|                                                               | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                     | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Question 2b: Smoothing SS1PE**                              | Students use R to compute exponential smoothing for modeling the US Mortality Rate series. Their R code is well-commented, providing clear explanations for each step of the process, ensuring transparency in the computational process.                                                                                                                                           | Students may encounter challenges in implementing exponential smoothing in R, resulting in incomplete or ineffective computations. Their R code might lack sufficient comments, hindering clarity in understanding the computational process.                                                                                                                                                                                                                                                                                                                                                                                                                            |
+|                                                               | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                     | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Question 2c: Smoothing a=0.2**                              | Students employ R to repeat the modeling of the US Mortality Rate series using a specified smoothing parameter value of alpha=0.2. Their R code is well-commented, providing clear explanations for each step of the process, ensuring transparency in the computational process.                                                                                                   | Students may encounter challenges in implementing exponential smoothing in R, resulting in incomplete or ineffective computations. Their R code might lack sufficient comments, hindering clarity in understanding the computational process.                                                                                                                                                                                                                                                                                                                                                                                                                            |
+|                                                               | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                     | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Question 2d: Smoothing a=1/n**                              | Students employ R to repeat the modeling of the US Mortality Rate series using a specified smoothing parameter value of alpha=1/n. Their R code is well-commented, providing clear explanations for each step of the process, ensuring transparency in the computational process.                                                                                                   | Students may encounter challenges in implementing exponential smoothing in R, resulting in incomplete or ineffective computations. Their R code might lack sufficient comments, hindering clarity in understanding the computational process.                                                                                                                                                                                                                                                                                                                                                                                                                            |
+|                                                               | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                    | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Question 2d: Evaluation of Parameter Choice**               | Students justify their choice of parameter in the context of the underlying factors affecting US Mortality Rates evident in the data. The students evidence their understanding of the implications of the values in the smoothing parameter. Students show they have done some background research into the data to answer the question.                                           | Students fail to adequately justify their choice of parameter in relation to the underlying factors affecting US Mortality Rates evident in the data. They may lack evidence of understanding the implications of the values in the smoothing parameter or fail to demonstrate how these implications relate to the context of the data. Additionally, they may show limited evidence of background research into the data to support their justification, indicating a lack of depth in their analysis.                                                                                                                                                                 |
+|                                                               | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                    | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Question 3a: Excess MortalityTable**                        | Students accurately calculate the excess mortality rate during 2020 and 2021 using the smoothing parameter values employed in the previous question. They present their results in table, clearly displaying the excess mortality rate for each year alongside the corresponding smoothing parameter values. The table is well-labeled and easy to interpret.                       | Students demonstrate inaccuracies in calculating the excess mortality rate during 2020 and 2021. Their presentation of the results in a table may lack clarity and professionalism, with issues such as unclear labeling, inconsistent formatting, or difficulty in interpreting the information provided. Additionally, they may overlook important details or fail to include all necessary information in the table, making it challenging for readers to understand the table.                                                                                                                                                                                       |
+|                                                               | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                    | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Question 3b: Excess Mortality**                             | Explanations effectively convey the meaning of excess mortality to a general audience, avoiding technical terms and providing a clear, accessible description. They define excess mortality as the number of deaths observed during a specific period compared to what would be expected based on historical data.                                                                  | Responses may struggle to explain excess mortality clearly to a general audience, potentially using technical language or lacking coherence. They may fail to provide relatable examples or context, making it difficult for the audience to understand the concept and its significance.                                                                                                                                                                                                                                                                                                                                                                                |
+|                                                               | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                    | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| **Question 3c: Evaluation of assumptions used for inference** | Responses address the challenge of selecting parameter values to make inference in time series. They provide a comprehensive analysis, considering factors like modeling assumptions, and methodological variations that influence parameter selection. Explanations highlight the need of transparent reporting to ensure robust and reliable estimates in professional discourse. | Below expectations, responses may lack depth or clarity in addressing the challenge of selecting parameter values for making inference in time series. They may overlook key factors influencing parameter selection, such as data quality or specific characteristics of the time series data. Additionally, they may not effectively consider the impact of modeling assumptions or methodological variations on parameter selection. Furthermore, they may fail to emphasize the importance of transparent reporting in ensuring the reliability and validity of estimates, potentially resulting in a lack of confidence in the conclusions drawn from the analysis. |
+| **Total Points**                                              | **70**                                                                                                                                                                                                                                                                                                                                                                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
