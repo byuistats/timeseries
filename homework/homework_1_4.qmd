@@ -17,8 +17,9 @@ pacman::p_load(
   fable,      # model(...), forecast(), tidy(), glance()...
   feasts,     # ACF(), PACF()
   ggtime,     # autoplot() for tsibbles
-  patchwork,  # + and / for ggplots
-  rio         # import()
+  rio,        # import()
+  pander,     # pander() markdown tables
+  patchwork   # + and / for ggplots
 )
 ```
 
@@ -67,16 +68,16 @@ This exercise will guide you through all the steps to conduct an **additive deco
 
 ```{r}
 # Weather data for Rexburg
-monthly_tsibble <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") |> 
-  mutate(date2 = ymd(dates)) |>
-  mutate(year_month = yearmonth(date2)) |>
-  # as_tibble() |>
+monthly <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv")
+
+monthly_tsibble <- monthly |>
+  mutate(year_month = yearmonth(dates)) |>
   group_by(year_month) |>
   summarize(average_daily_high_temp = mean(rexburg_airport_high)) |>
-  ungroup() |> 
+  ungroup() |>
   as_tsibble(index = year_month)
 
-view(monthly_tsibble) 
+view(monthly_tsibble)
 ```
 
 #### b) Please calculate the centered moving average of the Rexburg Monthly Temperature Series. Plot the series.
@@ -121,19 +122,23 @@ view(monthly_tsibble)
 
 ```{r}
 # Weather data for Rexburg
-daily_tsibble <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") |>
+daily <- rio::import("https://byuistats.github.io/timeseries/data/rexburg_weather.csv") 
+
+daily_tsibble <- daily |>
   mutate(year_month_day = ymd(dates)) |>
   select(-imputed, -dates) |>
-  # as_tibble() |>
   as_tsibble(index = year_month_day)
 
-daily_tsibble %>% head
+daily_tsibble |> head() |> pander()
 
-daily_decompose <- daily_tsibble  |>
-  model(feasts::classical_decomposition(rexburg_airport_high ~ season(365.25),
-                                        type = "add"))  |>
+daily_decompose <- daily_tsibble |>
+  model(
+    feasts::classical_decomposition(
+      rexburg_airport_high ~ season(365.25),
+      type = "add"
+    )
+  ) |>
   components()
-
 
 daily_decompose |> autoplot(.vars = random)
 ```
