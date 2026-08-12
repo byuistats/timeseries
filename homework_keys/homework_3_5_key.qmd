@@ -1,0 +1,313 @@
+---
+title: "Time Series Homework: Chapter 3 Lesson 5"
+subtitle: "Please_put_your_name_here"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+execute:
+  warning: false
+  message: false
+---
+
+<!-- Revised Summer 2026 -->
+
+```{r, message=FALSE, warning=FALSE}
+pacman::p_load(
+  tidyverse,  # ggplot, mutate(), cleaning...
+  tsibble,    # as_tsibble()
+  fable,      # model(...), forecast(), tidy(), glance()...
+  feasts,     # ACF(), PACF()
+  ggtime,     # autoplot() for tsibbles
+  rio,        # import()
+  pander,     # pander() markdown tables
+  patchwork   # + and / for ggplots
+)
+```
+
+## Data
+
+```{r, message=FALSE}
+
+ngdp <- rio::import("https://byuistats.github.io/timeseries/data/gdp_fred.csv")
+rgdp <- rio::import("https://byuistats.github.io/timeseries/data/GDPC1.csv")
+
+```
+
+
+## Questions
+
+### Question 1 - Context and Measurement (10 points)
+
+The first part of any time series analysis is context. You cannot properly analyze data without knowing what the data is measuring. Without context, the most simple features of data can be obscure and inscrutable. This homework assignment will center around the series below.
+
+#### a) Please research the time series. In the spaces below, give the data collection process, unit of analysis, and meaning of each observation for the series.
+
+**Nominal Gross Domestic Product - United States**
+
+<https://fred.stlouisfed.org/series/NA000334Q>
+
+::: {.callout-note title="Answer" icon="false"}
+**Data Collection Process:** This series is published by the Bureau of Economic Analysis (BEA) of the U.S. Department of Commerce.The data originate from the National Income and Product Accounts (NIPA) which capture the market value of the goods and services produced by labor and property located in the United States.
+
+**Unit of Analysis:** Each observation is measured in millions of U.S. dollars, and contains the total value of output for the U.S. economy in a given quarter.
+
+**Meaning of Each Observation:** Each data point represents the total dollar value (in millions) of all final goods and services produced in the U.S. economy during a given quarter. Because the series is not seasonally adjusted, it reflects raw production values without adjustments for typical seasonal patterns. It gives a snapshot of the economy’s nominal scale of output for each quarter, allowing people to observe growth in output over time, and compare quarters directly.
+:::
+
+**Real Gross Domestic Product - United States**
+
+<https://fred.stlouisfed.org/series/GDPC1>
+
+::: {.callout-note title="Answer" icon="false"}
+**Data Collection Process:** Also produced by the Bureau of Economic Analysis (BEA), the series reports the inflation-adjusted value of goods and services produced by labor and property located in the United States.The “Real” designation means that the series has been adjusted for inflation. An important detail to note compared to the other series is that this one as been seasonally adjusted.
+
+**Unit of Analysis:** Each observation is measured in billions using 2017 U.S. dollars as the base year, seasonally adjusted and expressed at an annual rate.
+
+**Meaning of Each Observation:** Each data point shows the total inflation-adjusted output (final goods and services) that the U.S. economy would have produced over a year (annual rate) given the production in that quarter, adjusted to reflect constant-2017-dollar value and seasonal effects. Practically, it allows comparison of output across time without distortion from price changes or seasonal fluctuations, capturing the “real” volume of production.
+:::
+
+#### b) Plot the data together on the same plot
+
+::: {.callout-note title="Answer" icon="false"}
+
+:::{.panel-tabset}
+
+## Example 1
+
+```{r}
+#| code-summary: Cleaning
+# Nominal GDP
+ngdp_ts <- ngdp |>
+  mutate(
+    quarter = yearquarter(quarter),
+    gdp_billions = gdp_millions / 1000,
+    .keep = "none"
+  ) |>
+  as_tsibble(index = quarter)
+
+# Real GDP
+rgdp_ts <- rgdp |>
+  mutate(
+    quarter = yearquarter(DATE),
+    gdp_billions = GDPC1,
+    .keep = "none"
+  ) |>
+  as_tsibble(index = quarter)
+```
+
+```{r}
+#| code-summary: Plotting
+ggplot(ngdp_ts, aes(x = quarter, y = gdp_billions)) +
+  geom_line(aes(color = "Nominal GDP")) +
+  geom_line(data = rgdp_ts, aes(color = "Real GDP")) +
+  labs(
+    title = "U.S. Nominal vs. Real GDP Over Time",
+    x = NULL,
+    y = "GDP (billions of dollars)",
+    color = NULL
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "top")
+```
+
+## Example 2
+
+```{r}
+# Real Plot
+rplot <- autoplot(rgdp_ts, color = "steelblue") + 
+  labs(
+    title = "Real GDP",
+    y = "GDP (Billions of $)",
+    x = NULL
+  ) +
+  theme_minimal()
+
+# Nominal Plot
+nplot <- autoplot(ngdp_ts, color = "firebrick") + 
+  labs(
+    title = "Nominal GDP",
+    y = "GDP (Billions of $)",
+    x = NULL
+  ) +
+  theme_minimal()
+
+# All together
+rplot / nplot
+```
+
+:::
+
+:::
+
+### Question 2 - US Nominal GDP (25 points)
+
+#### a) Please use the Holt-Winters smoothing method on the US Nominal GDP series. Show the result.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+
+ngdp_hw <- ngdp_ts |>
+  model(ETS(gdp_billions ~
+              trend("A", alpha = 0.15, beta = 0.01) +
+              error("A") +
+              season("A", gamma = 0.05),
+            opt_crit = "amse",
+            nmse = 1
+            )
+        )
+
+autoplot(components(ngdp_hw))
+```
+
+:::{.panel-tabset}
+
+## Clean
+
+```{r}
+# Display model parameters
+tidy(ngdp_hw) |> select(!.model) |> head(3) |> pander()
+
+# Display fit statistics
+glance(ngdp_hw) |> select(!.model) |> pander()
+```
+
+## Decent
+
+```{r}
+report(ngdp_hw)
+```
+
+:::
+
+:::
+
+#### b) What parameters values did you choose for $\alpha$, $\beta$, and $\gamma$. Justify your choice.
+
+::: {.callout-note title="Answer" icon="false"}
+The smoothing parameter for the level ($\alpha$) was set to **0.15**, reflecting the idea that the nominal GDP level responds relatively quickly to recent economic conditions and short-term fluctuations. In contrast, the trend ($\beta$) and seasonal ($\gamma$) smoothing parameters were set to **0.01** and **0.05** respectively, since the underlying growth rate and seasonal patterns of nominal GDP tend to evolve more gradually and are better captured by historical trends rather than immediate changes.
+:::
+
+#### c) Please plot the Holt-Winters forecast of the series for the next 12 months superimposed against the original series. Please see [Figure 7](https://byuistats.github.io/timeseries/chapter_3_lesson_3.html#fig-crime-hw-forecast) in Chapter 3: Lesson 3.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+
+ngdp_fable <- forecast(ngdp_hw, h = "1 year")
+
+ngdp_fit <- augment(ngdp_hw)
+
+autoplot(ngdp_fable, level = 95) + # blue line & band
+  geom_line(data = ngdp_ts, aes(y = gdp_billions, color = "Original")) + # black
+  geom_line(data = ngdp_fit, aes(y = .fitted, color = "Fitted")) + # orange
+  scale_color_discrete(name = "") +
+  scale_x_yearquarter(limits = c(as.Date("2019-01-01"), NA)) +
+  labs(
+    x = NULL,
+    y = "GDP (Billions $)",
+    color = "",
+    title = "Original Series with Forecast") +
+  theme_bw()
+
+```
+:::
+
+#### d) How confident are you in your forecast? Please explain.
+
+::: {.callout-note title="Answer" icon="false"}
+Caution should be exercised when interpreting this forecast, as nominal GDP is susceptible to abrupt changes in economic conditions. Unexpected slowdowns or structural shifts in the economy could significantly alter both the level and trajectory of the series, limiting the model’s predictive reliability.
+:::
+
+### Question 3 - US Real GDP (25 points)
+
+Nominal GDP measures the market value of US output. Because market prices change over time, inflation affects the series. Real GDP is an output measure that keeps prices constant at a point in time, which eliminates the effect of inflation.
+
+In homework 2.1 you learned about the output gap, which is a measure of business cycles. In order to estimate the output gap we need some measure of potential GDP, that is, a series that smoothes-out the cycles in the real GDP series. We can do that by choosing the smoothing parameters of the H-W algorithm to capture only the long run path of the economy. The US Congressional Budget Office calculates a series for [US Real Potential GDP](https://fred.stlouisfed.org/series/GDPPOT), please refer to it for the questions that follow.
+
+#### a) Please use H-W to smooth the US Real GDP series to obtain an estimate of US Potential GDP.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+# Fit Holt-Winters
+rgdp_hw <- rgdp_ts |>
+  model(ETS(gdp_billions ~ 
+              trend("A", alpha = 0.2, beta = 0.05) +
+              error("A") +
+              season("A", gamma = 0.05),
+            opt_crit = "amse",
+            nmse = 1
+            )
+        )
+
+autoplot(components(rgdp_hw))
+
+# Create a forecast "fable" 
+#   (a tsibble for forecasts, with extra stuff like confidence intervals)
+rgdp_fable <- forecast(rgdp_hw, h = "12 months")
+
+# Create a tsibble with fitted values (.fitted) from holt winters model
+rgdp_fit <- augment(rgdp_hw)
+
+# Plot   blue line,  black line, blue band
+autoplot(rgdp_fable, rgdp_ts,    level = 95) +
+  geom_line(
+    data = rgdp_fit, 
+    aes(y = .fitted, color = "Fitted") # orange line
+  ) +
+  scale_x_yearquarter(limits = c(as.Date("2019-01-01"), NA)) + # 2019 to end
+  labs(
+    x = NULL,
+    y = "GDP (Billions $)",
+    color = "",
+    title = "Original Series with Forecast"
+  ) +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+:::{.panel-tabset}
+
+## Clean
+
+```{r}
+# Display model parameters
+tidy(rgdp_hw) |> select(!.model) |> head(3) |> pander()
+
+# Display fit statistics
+glance(rgdp_hw) |> select(!.model) |> pander()
+```
+
+## Decent
+
+```{r}
+report(rgdp_hw)
+```
+
+:::
+
+:::
+
+#### b) What parameters values did you choose for $\alpha$, $\beta$, and $\gamma$. Justify your choice.
+
+::: {.callout-note title="Answer" icon="false"}
+Similar to the nominal GDP model, the smoothing parameters for real GDP were selected to balance responsiveness to recent changes with stability over time. The level parameter, $\alpha = 0.2$, was set slightly higher to give greater weight to recent observations, reflecting that real GDP tends to respond somewhat more directly to current economic conditions when adjusted for inflation. The trend parameter, $\beta = 0.05$, allows the model to moderately adjust the slope based on recent data while still maintaining a strong influence from historical growth patterns. The seasonal parameter, $\gamma = 0.05$, was kept consistent with the nominal GDP model, as the underlying seasonal patterns in real GDP are expected to remain relatively stable over time.
+:::
+
+### Rubric
+
+|  |  |  |
+|----|----|----|
+| **Criteria** | **Mastery (10)** | **Incomplete (0)** |
+| **Question 1: Context and Measurement** | The student thoroughly researches the data collection process, unit of analysis, and meaning of each observation for both the requested time series. Clear and comprehensive explanations are provided. | The student does not adequately research or provide information on the data collection process, unit of analysis, and meaning of each observation for the specified series. |
+|  | **Mastery (5)** | **Incomplete (0)** |
+| **Question 2a: HW Smoothing** | Demonstrate the implementation of the Holt-Winters smoothing method in R, providing well-commented code that clearly explains each step of the algorithm. They correctly specify the necessary parameters, including trend and seasonality components. | Students encounter difficulties in accurately implementing the Holt-Winters smoothing method in R. Their code may lack sufficient comments or clarity, making it challenging to understand the implementation process. Additionally, they may overlook important parameters or make errors in the application of the method, leading to inaccuracies in the results. |
+|  | **Mastery (10)** | **Incomplete (0)** |
+| **Question 2b: Parameter Choice** | Responses not only specify the chosen parameter values for \$\\alpha\$, \$\\beta\$, and \$\\gamma\$ in the context of the Holt-Winters smoothing method but also correctly identify the purpose of each parameter in their explanation. They provide a thorough justification for each parameter choice, considering factors such as the data characteristics, seasonality patterns, and the desired level of smoothing | Student struggles to clearly specify the chosen parameter values for \$\\alpha\$, \$\\beta\$, and \$\\gamma\$. It's no clear that they understand the purpose of each parameter in their explanation. They may provide limited or vague justification for each parameter choice, lacking consideration of important factors such as data characteristics or seasonality patterns. |
+|  | **Mastery (5)** | **Incomplete (0)** |
+| **Question 2c: Forecast Plot** | Responses effectively create a plot of the Holt-Winters forecast for the next 24 months superimposed against the original series in R. The forecasted values align with the original series and display relevant trends and seasonality patterns. Additionally, they appropriately label the axes, title the plot, and provide a clear legend to distinguish between the original series and the forecast. The plot closely resembles Figure 7 in the Time Series Notebook | Student encounter challenges in creating a plot of the Holt-Winters forecast. They may struggle with accurately implementing the plotting code, resulting in inaccuracies or inconsistencies in the plotted forecast. Additionally, their plot may lack proper labeling of the axes, a title, or a legend, making it difficult to interpret the information presented. Furthermore, their plot may deviate significantly from Figure 7 in the Time Series Notebook. |
+|  | **Mastery (10)** | **Incomplete (0)** |
+| **Question 3a: HW Smoothing** | Demonstrate the implementation of the Holt-Winters smoothing method in R, providing well-commented code that clearly explains each step of the algorithm. They correctly specify the necessary parameters, including trend and seasonality components. | Students encounter difficulties in accurately implementing the Holt-Winters smoothing method in R. The students chose the incorrect model. Additionally, they may overlook important parameters or make errors in the application of the method, leading to inaccuracies in the results. |
+|  | **Mastery (10)** | **Incomplete (0)** |
+| **Question 3b: Parameter Choice** | Responses not only specify the chosen parameter values for \$\\alpha\$, \$\\beta\$, and \$\\gamma\$ in the context of the Holt-Winters smoothing method but also correctly identify the purpose of each parameter in their explanation. It's clear the student compared the US Real Potential GDP series to their estimate and chose the parameters to match the characteristics of the example | Student struggles to clearly specify the chosen parameter values for \$\\alpha\$, \$\\beta\$, and \$\\gamma\$. It's no clear that they understand the purpose of each parameter in their explanation. They may provide limited or vague justification for each parameter choice, lacking consideration of important factors such as matching the example time series, data characteristics or seasonality patterns. |
+| **Total Points** | **55** |  |

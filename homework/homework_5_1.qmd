@@ -7,10 +7,11 @@ format:
     toc: true
 ---
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, message=FALSE, warning=FALSE}
 
 # Loading R packages
 pacman::p_load(
+  plotly,     # plot_ly interactive plot
   tidyquant,  # tq_get(), stock data
   tidyverse,  # ggplot, mutate(), cleaning...
   tsibble,    # as_tsibble()
@@ -25,7 +26,6 @@ pacman::p_load(
 ## Data
 
 ```{r, message=FALSE, warning=FALSE}
-
 ## Selected Walmart Stock Price
 
 # Set symbol and date range
@@ -38,39 +38,41 @@ date_end <- "2020-01-01"
 stock_df <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
 
 # Transform data into tsibble
-stock_ts <- stock_df %>%
+stock_ts <- stock_df |>
   mutate(
     dates = date, 
     value = adjusted
-  ) %>%
-  dplyr::select(dates, value) %>%
-  as_tibble() %>% 
+  ) |>
+  dplyr::select(dates, value) |>
+  as_tibble() |> 
   arrange(dates) |>
   mutate(diff = value - lag(value)) |>
   as_tsibble(index = dates, key = NULL)
 
 # Visualization
-
-plot_ly(stock_ts, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') %>%
+plot_ly(stock_ts, x = ~dates, y = ~value, type = 'scatter', mode = 'lines') |>
   layout(
     xaxis = list(title = paste0("Dates (", format(ymd(date_start), "%d/%m/%Y"), " to ", format(ymd(date_end), "%d/%m/%Y"), ")" ) ),
     yaxis = list(title = "Closing Price (US$)"),
     title = paste0("Time Plot of ", symbol, " Daily Closing Price")
   )
+```
 
-
+```{r, message=FALSE, warning=FALSE}
 ## Women's Clothing Retail Sales
 
-retail_ts <- rio::import("https://raw.githubusercontent.com/byuistats/timeseries/refs/heads/master/data/retail_by_business_type.csv") |>
+retail <- rio::import("https://raw.githubusercontent.com/byuistats/timeseries/refs/heads/master/data/retail_by_business_type.csv") |>
+  
+retail_ts <- retail |> 
   filter(naics == 44812) |>
-  mutate(month_seq = 1:n()) |>
-  mutate(month = ym(month),
-         year = year(month)) |>
-  mutate(month_num = month(month)) |>
-  filter(month >= ym("2004 Jan") & month <= ym("2006 Dec"))|>
+  mutate(
+    month_seq = 1:n(),
+    month = ym(month),
+    year = year(month),
+    month_num = month(month)
+  ) |>
+  filter(month >= ym("2004 Jan") & month <= ym("2006 Dec")) |>
   as_tsibble(index = month)
-
-
 ```
 
 ## Questions

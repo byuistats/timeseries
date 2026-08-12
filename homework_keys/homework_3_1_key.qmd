@@ -1,0 +1,233 @@
+---
+title: "Time Series Homework: Chapter 3 Lesson 1"
+subtitle: "Please_put_your_name_here"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+    warning: false
+    message: false
+---
+
+<!-- Revised Summer 2026 -->
+
+```{r, message=FALSE, warning=FALSE}
+pacman::p_load(
+  tidyverse,  # ggplot, mutate(), cleaning...
+  tsibble,    # as_tsibble()
+  fable,      # model(...), forecast(), tidy(), glance()...
+  feasts,     # ACF(), PACF()
+  ggtime,     # autoplot() for tsibbles
+  rio,        # import()
+  pander,     # pander() markdown tables
+  patchwork   # + and / for ggplots
+)
+```
+
+## Data
+
+```{r, message=FALSE}
+manu <- rio::import("https://byuistats.github.io/timeseries/data/constructionequip_manu_orders_shipments.csv")
+```
+
+```{r}
+# Convert character date to 'real' date type column
+manu <- manu |> 
+  mutate(date = yearmonth(date)) |> 
+  as_tsibble()
+```
+
+
+## Questions
+
+### Question 1 - Context and Measurement (10 points)
+
+The first step of any time series analysis is gathering context. You cannot properly analyze data without knowing what the data is measuring. Without context, the most simple features of data can be obscure and inscrutable. This homework assignment will center around the series below.
+
+Please research the time series. In the spaces below, give the data collection process, unit of analysis, and meaning of each observation for the series.
+
+##### a) **Construction Equipment Manufacturing Orders and Shipments**
+
+<https://fred.stlouisfed.org/graph/?g=1f4dN>
+
+::: {.callout-note title="Answer" icon="false"}
+**Data Collection Process:** 
+
+The data in both series is sourced from the U.S. Census Bureau via the Manufacturer’s Shipments, Inventories, and Orders (M3) Survey. This survey is conducted on a *monthly* basis and involves distributing questionnaires to a representative sample of construction machinery manufacturers across the *United States*. Respondents provide information regarding their new orders, shipments, and other information, which are then aggregated, processed, and seasonally adjusted to account for regular fluctuations. The finalized data is published on FRED (Federal Reserve Economic Data), making it accessible for public use.
+
+**Unit of Analysis:** The unit of analysis for both series is the total value in millions of US dollars in either shipments or orders during a given month. It is seasonally adjusted.
+
+**Meaning of Each Observation:**
+
+### Orders
+
+Each observation in the orders time series represents the total value of new orders received by construction machinery manufacturers during a specific month. High new orders indicate increased demand and potential growth in the construction machinery sector, while declining orders may signal reduced economic activity or investment in this industry.
+
+### Shipments
+
+Each observation in the shipments time series shows the total value of shipments made by construction machinery manufacturers within a given month. The shipment values provide insights into the sales performance and overall economic health of the construction machinery manufacturing sector. An increase in shipment values suggests strong sales and strong market demand, whereas a decrease may indicate weakening sales or reduced demand. ##### add the context of this is the lagged series for orders
+
+```{r}
+# Display
+ggplot(manu, aes(date)) +
+  geom_line(aes(y = constructionequip_ord/1000, color = "Orders")) +
+  geom_line(aes(y = constructionequip_ship/1000, color = "Shipments")) +
+  theme_bw() +
+  labs(
+    title = "Construction Equipment Orders & Shipments",
+    y = "Billions of $",
+    x = "",
+    color = ""
+  )
+```
+
+:::
+
+### Question 2 - Construction Equipment Manufacturing: Graphical Analysis (15 points)
+
+##### a) Please plot a correlogram of the random components of the New Orders and Value of Shipments for the Construction Equipment Manufacturing data. Include both plots in the same illustration as exemplified in the Figure 5 of Chapter 3 Lesson 1.
+
+::: {.callout-note title="Answer" icon="false"}
+
+```{r}
+# Get the random components
+order <- manu |> 
+  model(classical_decomposition(constructionequip_ord, type = "mult")) |> 
+  components()
+
+ship <- manu |> 
+  model(classical_decomposition(constructionequip_ship, type = "mult")) |> 
+  components()
+
+# Combine in one tsibble
+random <- tsibble(
+  date = manu$date,         # Date from original dataset
+  Orders = order$random,
+  Shipments = ship$random
+)
+
+# Orders plot
+acf_orders <- random |> 
+  ACF(y = Orders) |> 
+  autoplot() +
+    labs(
+      title = "Orders", 
+      subtitle = "ACF of Random Component of Construction Equipment Orders"
+    ) +
+    theme_bw()
+
+# Shipments plot
+acf_ships <- random |> 
+  ACF(y = Shipments) |> 
+  autoplot() +
+    labs(
+      title = "Shipments",
+      subtitle = "ACF of Random Component of Construction Equipment Shipments") +
+    theme_bw()
+
+# Show the plots together
+acf_orders / acf_ships
+```
+
+```{r}
+# Plot random components overlayed
+ggplot(random, aes(x = date)) +
+  geom_line(aes(y = Shipments), color = "blue") +
+  geom_line(aes(y = Orders), color = "azure4") +
+  labs(
+    x = NULL,
+    y = "Random Components",
+    title = "Random Component",
+    subtitle = "Construction Equipment Orders and Shipments Multiplicative Classical Decomposition"
+  ) +
+  annotate("text", 
+           x = as.Date("1999-01-01"), 
+           y = 1.62,
+           label = "Legend      ", 
+           color = "black", 
+           fontface = "bold") +
+  annotate("text", 
+           x = as.Date("1999-01-01"), 
+           y = 1.57,
+           label = "Random Component of Orders ---", 
+           color = "azure4") +
+  annotate("text", 
+           x = as.Date("1999-01-01"), 
+           y = 1.52,
+           label = "Random Component of Shipments ---", 
+           color = "blue") +
+  theme_bw() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+:::
+
+b)  Interpret and analyze the correlogram of the New Orders and Value of Shipments series.
+
+::: {.callout-note title="Answer" icon="false"}
+The upper plot of the correlogram of the new orders, shows fewer significant autocorrelation values. This means that the number of construction orders is likely random in nature. We do see higher significance levels clustered at 6 lag (month) intervals, lags 5,7 (sandwiching 6),11 (next to 12), & 18. This would suggest that some seasonal variation may still remain within our random component. So while these values are statistically significant there is no logical explanation or interpretation (apart from lingering seasonality) so they are *not* practically significant.
+  
+The lower plot, the correlogram of shipments exhibits very clear significance at lags 1 & 2. The remainder of the correlogram displays clear lingering seasonality, as such the remaining lags while statistically significant lack practical significance and application. Lags 1 & 2 however can be practically interpreted, the correlations at lags 1 & 2 inform us that the value of our shipments one month ago can tell us a significant amount about the expected values in the current month, and that the value of shipments 2 months ago can also tell us a significant amount about the expected values in the current month even after we have incorporated the additional information from lag(1) into our estimates.
+In both cases the lags are positively correlated so a large value in shipments last month leads us to expect a large value in shipments this month (and vice-versa).
+
+
+############ business process business cylces lingering seasonality
+:::
+
+### Question 3 - Construction Equipment Manufacturing: Cross-correlation (30 points)
+
+##### a) Please plot a cross-correlogram of the New Orders and Value of Shipments series.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+random |> 
+  CCF(y = Shipments, x = Orders) |>
+  autoplot() +
+    scale_y_continuous(breaks = seq(-1, 1, 0.1)) + # Adjust y-axis for better readability
+    scale_x_continuous(breaks = seq(-24, 24, 4)) + # Adjust x-axis for more details on lags
+    labs(
+      title = "CCF for Random Component of Construction Equipment Orders (x) and Shipments (y)",
+      x = "Lag (Months)",
+      y = "Correlation Coefficient",
+      caption = "Negative lags: past values of 'x' relate to current values of 'y'
+                Positive lags: past values of 'y' relate to current values of 'x'"
+    ) +
+    theme_minimal() +  # Use a clean, minimal theme
+    theme(
+      plot.title = element_text(hjust = 0.5, size = 10, face = "bold"), # Make title more prominent
+      plot.subtitle = element_text(hjust = 0.5, size = 14), # Style subtitle consistently
+      axis.title = element_text(size = 14), # Increase axis label size for readability
+      axis.text = element_text(size = 12), # Increase axis text size
+      plot.caption = element_text(hjust = 0, size = 10, face = "italic") # Add a descriptive caption for context
+    )
+```
+:::
+
+##### b) Please interpret the cross-correlogram of the New Orders and Value of Shipments series. Include descriptions of the statistical and practical significance of the results.
+
+::: {.callout-note title="Answer" icon="false"}
+
+Focusing first on negative lags, we can distinguish between the lags that are statistically and practically significant vs those that are only statistically significant. We see that lags -1,-2, & -3 all sit beyond the line of signifance at 0.1. With -3 being so close to the line its reasonable to focus primarily on -1 and -2. These values are both positively correlated at a negative lag and as such the interpretation in context for our series' would be that; high values of orders in the previous two months will lead to high values of shipments in the current month. Apart from these lags the remainder of the left side is random in nature or can be 
+
+:::
+
+
+### Rubric
+
+|                                              |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|----------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Criteria**                                 | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Question 1: Context and Measurement**      | The student thoroughly researches the data collection process, unit of analysis, and meaning of each observation for both the requested time series. Clear and comprehensive explanations are provided.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | The student does not adequately research or provide information on the data collection process, unit of analysis, and meaning of each observation for the specified series.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+|                                              | **Mastery (5)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Question 2a: Correlograms**                | The student plots a correlogram of the random components of the New Orders and Value of Shipments for the Construction Equipment Manufacturing data using R. The correlogram includes both plots in the same illustration, similar to Figure 5 of Chapter 3 Lesson 1, allowing for easy comparison between the two series. The student correctly uses labels. The R code is well-commented, providing clear explanations of each step in the plotting process, and adheres to best practices for visualization in time series analysis.                                                                                                                                                                                                   | The correlogram may be missing one or both plots, or the plots may not be correctly aligned for comparison. There may be errors in identifying or labeling the autocorrelation values, making it challenging to interpret the results accurately. The R code may lack sufficient commenting or follow best practices for visualization, hindering comprehension of the plotting process.                                                                                                                                                                                                                                                                                                                         |
+|                                              | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Question 2b: Interpretation and Analysis** | They accurately identify and discuss significant autocorrelation values at various lags, indicating the presence of temporal dependencies within each series. Additionally, the student compares and contrasts the correlograms of the two series, highlighting similarities and differences in their autocorrelation patterns. The analysis includes insights into the potential underlying factors driving the observed autocorrelation patterns, demonstrating a deep understanding of time series analysis concepts and their practical implications.                                                                                                                                                                                 | The student attempts to interpret and analyze the correlogram for the New Orders and Value of Shipments series but encounters issues with accuracy, clarity, or completeness. Their discussion may lack depth or coherence, with unclear or erroneous interpretations of significant autocorrelation values. Additionally, the comparison between the correlograms of the two series may be vague or missing key points, indicating a limited understanding of time series analysis concepts. Overall, the student's analysis may lack sufficient detail or insight, suggesting areas for improvement in their understanding of autocorrelation analysis and its practical implications in time series analysis. |
+|                                              | **Mastery (10)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Question 3a: Cross-correlogram**           | The student accurately plots a cross-correlogram of the New Orders and Value of Shipments series using R. The plot includes clear labels and titles allowing for easy interpretation of the results. The R code is well-commented, providing clear explanations of each step in the cross-correlation analysis and plot generation process.                                                                                                                                                                                                                                                                                                                                                                                               | The student attempts to plot a cross-correlogram of the New Orders and Value of Shipments series in R but encounters issues with accuracy, clarity, or completeness. The plot may lack clear labels and titles, making it challenging to interpret the results accurately. Additionally, the R code may lack sufficient commenting or clarity, hindering comprehension of the analysis process. Overall, the student's performance falls short of expectations, indicating a need for improvement in plotting cross-correlograms, labeling plots effectively, and providing clear explanations in R code.                                                                                                        |
+|                                              | **Mastery (20)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | **Incomplete (0)**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Question 3b: Interpretation and Analysis** | They accurately identify and discuss significant cross-correlation values at various lags, indicating the strength and direction of the relationship between the two series. Additionally, the student includes a thoughtful discussion of the statistical significance of the results, highlighting how cross-correlation coefficients measure the linear relationship between the series and whether the observed correlations are statistically significant. Furthermore, the student discusses the practical significance of the results, addressing the real-world relevance or impact of the observed relationships, and how they may inform decision-making or forecasting in the context of construction equipment manufacturing. | The student attempts to interpret the cross-correlogram for the New Orders and Value of Shipments series but encounters issues with accuracy, clarity, or completeness. Their discussion may lack depth or coherence, with unclear or erroneous interpretations of significant cross-correlation values. Additionally, the discussion of statistical and practical significance may be vague or missing key points, indicating a limited understanding of these concepts. Overall, the student's analysis may lack sufficient detail or insight, suggesting areas for improvement in their understanding of cross-correlation analysis and its practical implications in time series analysis.                   |
+| **Total Points**                             | **55**                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |

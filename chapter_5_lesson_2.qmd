@@ -456,18 +456,49 @@ tidy(log_ar) |> select(!.model)
 ```
 
 ```{r}
-#| code-summary: "Show the code"
+#| code-summary: "Show the code: Improved month labels simple"
 #| code-fold: true
+#| output: false
 
 # Cleaned up version
 tidy(log_ar) |>
   select(!.model) |> 
   mutate(
-    term = if_else(                  # Pretty the month labels with regex
+    term = if_else( # Find season label, replace with month abb using regex
       str_detect(term, "season"), 
       month.abb[as.integer(str_extract(term, "12(\\d+)$", 1))],
       term
     ),
+    lower = estimate + qnorm(0.025) * std.error,
+    upper = estimate + qnorm(0.975) * std.error
+  ) 
+```
+
+```{r}
+#| code-summary: "Show the code: Improved month labels readable"
+#| code-fold: true
+
+# Helper function to pretty the labels from season(12)
+# `term` is a string that looks like: "season(12).season_122"
+convert_season_label_to_month <- function(term) {
+  # Pull out the end number using regex (ie 2, 3, ..., 12)
+  month_num <- as.integer(str_extract(term, "12(\\d+)$", 1))
+  
+  # Return the month name for that number (ie "Feb" for 2)
+  month.abb[month_num]
+}
+
+# Cleaned up table
+tidy(log_ar) |>
+  select(!.model) |> 
+  mutate(
+    # Pretty the month labels with regex and month.abb
+    term = if_else(               
+      str_detect(term, "season"),          # IF the term label has "season" in it
+      convert_season_label_to_month(term), # Make the label readable (function above)
+      term                                 # ELSE keep the label as is
+    ),
+    # Get confidence intervals
     lower = estimate + qnorm(0.025) * std.error,
     upper = estimate + qnorm(0.975) * std.error
   ) 
@@ -1435,10 +1466,11 @@ tidy(log_cube_ar) |> select(!.model)
 tidy(log_cube_ar) |>
   select(!.model) |> 
   mutate(
-    term = if_else(                  # Pretty the month labels with regex
-      str_detect(term, "season"), 
-      month.abb[as.integer(str_extract(term, "12(\\d+)$", 1))],
-      term
+    # Pretty the month labels with regex and month.abb
+    term = if_else(               
+      str_detect(term, "season"),          # IF the term label has "season" in it
+      convert_season_label_to_month(term), # Make the label readable (function above)
+      term                                 # ELSE keep the label as is
     ),
     lower = estimate + qnorm(0.025) * std.error,
     upper = estimate + qnorm(0.975) * std.error
