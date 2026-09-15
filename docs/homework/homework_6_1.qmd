@@ -7,7 +7,7 @@ format:
     toc: true
 ---
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, message=FALSE, warning=FALSE}
 
 # Loading R packages
 pacman::p_load(
@@ -26,13 +26,19 @@ pacman::p_load(
 
 ```{r, message=FALSE}
 
-gdp_ts <- rio::import("https://byuistats.github.io/timeseries/data/gdp_fred.csv") |>
-  mutate(year_over_year = gdp_millions / lag(gdp_millions, 4)-1) |>
-  mutate(quarter = yearquarter(mdy(quarter))) |>
+gdp <- rio::import("https://byuistats.github.io/timeseries/data/gdp_fred.csv")
+
+gdp_ts <- gdp |>
+  mutate(
+    year_over_year = gdp_millions / lag(gdp_millions, 4) - 1,
+    quarter = yearquarter(mdy(quarter))
+  ) |>
   filter(quarter >= yearquarter(my("Jan 1990")) & quarter < yearquarter(my("Jan 2025"))) |>
   na.omit() |>
-  mutate(t = 1:n()) |>
-  mutate(std_t = (t - mean(t)) / sd(t)) |>
+  mutate(
+    t = 1:n(),
+    std_t = (t - mean(t)) / sd(t)
+  ) |>
   as_tsibble(index = quarter)
 
 ```
@@ -64,7 +70,7 @@ p <- c(0.5, 0.3, 0.1)  # AR coefficients
 # Simulate the AR(3) process
 set.seed(123)  # Setting seed for reproducibility
 ar3_process <- arima.sim(n = n, model = list(ar = p), sd = 1)
-ar3_df <- tibble(time = 1:n, value = ar3_process)# Convert the df to a tibble
+ar3_df <- tibble(time = 1:n, value = ar3_process) # Convert the df to a tibble
 ar_3 <- as_tsibble(ar3_df, index = time) # Convert the tibble to a tsibble
 ```
 
