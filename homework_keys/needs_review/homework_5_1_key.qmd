@@ -23,8 +23,8 @@ pacman::p_load(
   feasts,     # ACF(), PACF()
   ggtime,     # autoplot() for tsibbles
   patchwork,  # + and / for ggplots
-  rio,         # import()
-  pander
+  rio,        # import()
+  pander      # pander()
 )
 ```
 
@@ -229,47 +229,46 @@ The interpretation of the intercept would be the same as the coefficient for Jul
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r}
-num_years_to_forecast <- 5
-df <- data.frame(
-  month_ = factor(1:12), 
-  estimate = tidy(dat_lm) |> slice(2:13) |> pull(estimate)  
-  
-)
-num_years_to_forecast <- 5
-num_months_to_forecast <- num_years_to_forecast * 12
-
-
-last_time <- max(retail_ts$stats_time)
-last_month <- retail_ts$month_num[which.max(retail_ts$stats_time)]
-
-
-new_dat <- tibble(
-  stats_time = seq(from = last_time + 1/12, by = 1/12, length.out = num_months_to_forecast),
-  
-    alpha = tidy(dat_lm) |> slice(1) |> pull(estimate),
-  month_num = rep(1:12, times = num_years_to_forecast)
-) |>
-  mutate(month_ = factor(month_num, levels = levels(retail_ts$month_))) |>
-  left_join(df, by = "month_")
-
-
-retail_forecast <- dat_lm |>
-  forecast(new_data = as_tsibble(new_dat, index = stats_time))
-
-
-retail_forecast |>
-  autoplot(retail_ts, level = 95) +
-  labs(
-    title = "Retail Sales Forecast",
-    subtitle = "5-Year",
-    y = "Sales ($ Millions)",
-    x = "Time (Numeric)"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    plot.subtitle = element_text(hjust = 0.5)
-  )
+# num_years_to_forecast <- 5
+# df <- data.frame(
+#   month_ = factor(1:12), 
+#   estimate = tidy(dat_lm) |> slice(2:13) |> pull(estimate)
+# )
+# num_years_to_forecast <- 5
+# num_months_to_forecast <- num_years_to_forecast * 12
+# 
+# 
+# last_time <- max(retail_ts$stats_time)
+# last_month <- retail_ts$month_num[which.max(retail_ts$stats_time)]
+# 
+# 
+# new_dat <- tibble(
+#   stats_time = seq(from = last_time + 1/12, by = 1/12, length.out = num_months_to_forecast),
+#   
+#     alpha = tidy(dat_lm) |> slice(1) |> pull(estimate),
+#   month_num = rep(1:12, times = num_years_to_forecast)
+# ) |>
+#   mutate(month_ = factor(month_num, levels = levels(retail_ts$month_))) |>
+#   left_join(df, by = "month_")
+# 
+# 
+# retail_forecast <- dat_lm |>
+#   forecast(new_data = as_tsibble(new_dat, index = stats_time))
+# 
+# 
+# retail_forecast |>
+#   autoplot(retail_ts, level = 95) +
+#   labs(
+#     title = "Retail Sales Forecast",
+#     subtitle = "5-Year",
+#     y = "Sales ($ Millions)",
+#     x = "Time (Numeric)"
+#   ) +
+#   theme_minimal() +
+#   theme(
+#     plot.title = element_text(hjust = 0.5),
+#     plot.subtitle = element_text(hjust = 0.5)
+#   )
 ```
 :::
 
