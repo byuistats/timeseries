@@ -251,8 +251,8 @@ To emphasize the computation of the centered moving average, the observed data v
 #| echo: false
 
 # Constants defining the number of rows included in the sample tables
-num_blank_rows <- 14
-num_addl_rows <- 2
+num_sample_rows <- 12
+num_addl_rows <- 3
 
 
 deaths_shat_ts <- deaths_ts |>
@@ -266,7 +266,7 @@ deaths_shat_ts |>
     s_hat = as.character(s_hat),
   ) |> 
   mutate(
-    s_hat = ifelse(row_number() <= num_blank_rows, "______", s_hat),
+    s_hat = ifelse(row_number() > num_sample_rows, "______", s_hat),
     deaths = as.character(deaths)
   ) |>
   dplyr::select(-month) |>
@@ -361,6 +361,13 @@ wider_df2 |>
   mutate(Dec = ifelse(row_number() == 1, "______", Dec)) |>
   mutate(Jan = ifelse(row_number() == 2, "______", Jan)) |>
   mutate(Feb = ifelse(row_number() == 2, "______", Feb)) |>
+  mutate(Apr = ifelse(row_number() == n(), "______", Apr)) |>
+  mutate(May = ifelse(row_number() == n(), "______", May)) |>
+  mutate(Jun = ifelse(row_number() == n(), "______", Jun)) |>
+  mutate(Jul = ifelse(row_number() == n(), "______", Jul)) |>
+  mutate(Aug = ifelse(row_number() == n(), "______", Aug)) |>
+  mutate(Sep = ifelse(row_number() == n(), "______", Sep)) |>
+  mutate(Oct = ifelse(row_number() == n(), "______", Oct)) |>
   mutate(Nov = ifelse(row_number() == n(), "______", Nov)) |>
   mutate(Dec = ifelse(row_number() == n(), "______", Dec)) |>
   rename(Year = year) |>
@@ -413,7 +420,6 @@ Fill in the missing values in the corresponding table in the Excel file <a href=
 ```{r}
 #| echo: false
 
-# THIS CODE IS DUPLICATED BELOW, BUT IT IS NEEDED HERE TO GET THE adjusted_ts
 # Compute s_hat
 deaths_ts2 <- deaths_ts |>
   mutate(s_hat = deaths - m_hat)
@@ -434,22 +440,15 @@ adjusted_ts <- deaths_ts2 |>
   mutate(seasonally_adjusted_x = deaths - s_bar) |>
   dplyr::select(-s_bar_bar)
 
-additional_rows_from_adjusted_ts <- head(adjusted_ts, num_blank_rows + num_addl_rows) |> 
-  tail(num_addl_rows) |> 
-  convert_df_to_char(1)
-
 adjusted_ts |>
-  data.frame() |>
-  round_df(1) |>
-  filter(row_number() <= num_blank_rows) |>
+  head(num_sample_rows + num_addl_rows) |> 
+  convert_df_to_char(1) |>
   mutate(
-    s_hat = cell_spec(s_hat, color = ""),
-    s_bar = "______",
-    random = "______",
-    seasonally_adjusted_x = "______"
+    s_hat = if_else(row_number() > num_sample_rows, "______", s_hat),
+    s_bar = if_else(row_number() > 1, "______", s_bar),
+    random = if_else(row_number() > 7, "______", random),
+    seasonally_adjusted_x = if_else(row_number() > 1, "______", seasonally_adjusted_x)
   ) |>
-  convert_df_to_char() |>
-  bind_rows(additional_rows_from_adjusted_ts) |>
   dplyr::select(-dates, -year, -month) |>
   rename(
     Month = index,
@@ -460,7 +459,7 @@ adjusted_ts |>
     Random = random,
     "Seasonally Adjusted Series" = seasonally_adjusted_x
   ) |>
-  display_partial_table(num_blank_rows + num_addl_rows, 0)
+  display_partial_table(num_sample_rows + num_addl_rows, 0)
 ```
 
 
@@ -576,100 +575,10 @@ style="font-size:.8em;">Solutions</a>
 
 ::: {#Solutions style="display:none;"}
 
-<a href="handouts/chapter_1_4_handout_key.xlsx" download="chapter_1_4_handout_key.xlsx"> Tables-Handout-Excel-key </a>
 
 ### Team Activity: Computational Practice
 
-Solutions for the computations from this lesson
-
-#### Table 3: (Solutions)
-
-```{r}
-#| echo: false
-
-# THIS IS THE HARD WAY. JUST USE THE DECOMPOSITION FUNCTION ABOVE...
-
-# Compute s_hat
-deaths_ts2 <- deaths_ts |>
-  mutate(s_hat = deaths - m_hat)
-
-# Compute the unadjusted_s_bar and s_bar
-s_bar_df <- deaths_ts2 |>
-  data.frame() |>
-  group_by(month) |>
-  summarize(unadjusted_s_bar = mean(s_hat, na.rm = TRUE)) |>
-  mutate(s_bar_bar = mean(unadjusted_s_bar)) |>
-  mutate(s_bar = unadjusted_s_bar - s_bar_bar) |>
-  dplyr::select(month, s_bar, s_bar_bar)
-
-# Get seasonally adjusted time series
-adjusted_ts <- deaths_ts2 |>
-  left_join(s_bar_df, by = join_by(month)) |>
-  mutate(random = deaths - m_hat - s_bar) |>
-  mutate(seasonally_adjusted_x = deaths - s_bar) |>
-  dplyr::select(-s_bar_bar)
-
-adjusted_ts |> 
-  round_df(1) |>
-  filter(row_number() <= num_blank_rows) |>
-  mutate(
-    s_hat = cell_spec(s_hat, color = "#E69F00"),
-    s_bar = cell_spec(s_bar, color = "#009E73"),
-    random = cell_spec(random, color = "#009E73"),
-    seasonally_adjusted_x = cell_spec(seasonally_adjusted_x, color = "#009E73")
-  ) |>
-  convert_df_to_char() |>
-  bind_rows(additional_rows_from_adjusted_ts) |>
-  select(-dates, -year, -month) |>
-  rename(
-    Month = index, 
-    "Deaths $$x_t$$" = deaths,
-    "$$ \\hat m_t $$" = m_hat, 
-    "$$ \\hat s_t $$" = s_hat, 
-    "$$ \\bar s_t $$" = s_bar,
-    Random = random,
-    "Seasonally Adjusted $$x_t$$" = seasonally_adjusted_x
-  ) |>
-  display_partial_table(num_blank_rows + num_addl_rows, 0)
-```
-
-#### Table 2: (Solutions)
-
-```{r}
-#| echo: false
-
-s_bar_bar_value <- s_bar_df %>% 
-  summarize(s_bar_bar = round(mean(s_bar_bar), 1)) |>
-  dplyr::select(s_bar_bar) |>
-  pull()
-
-wider_df3 <- wider_df2 |>
-  bind_rows(
-    wider_df2 |> tail(1)
-  ) 
-
-# Subtract the mean of \bar s_t to make the mean of the adjusted values be zero.
-for (j in 2:ncol(wider_df3)) {
-  wider_df3[nrow(wider_df3), j] = 
-    as.character(
-      as.numeric(wider_df3[nrow(wider_df3), j]) - s_bar_bar_value
-    )
-}
-
-wider_df3 |> 
-  mutate(year = ifelse(row_number() == n(), "$$ \\bar s_t $$", year)) |>
-  rename(Year = year) |>
-  color_specific_cell(1, 8, "#0072B2") |>
-  color_specific_cell(1, 9, "#0072B2") |>
-  color_specific_cell(1, 10, "#0072B2") |>
-  color_specific_cell(1, 11, "#0072B2") |>
-  color_specific_cell(1, 12, "#0072B2") |>
-  color_specific_cell(1, 13, "#0072B2") |>
-  color_specific_cell(2, 2, "#0072B2") |>
-  color_specific_cell(2, 3, "#0072B2") |>
-  color_last_row2("#0072B2") |>
-  color_2nd_to_last_row2("#0072B2") |>
-  display_table()
-```
+Solutions for the computations from this lesson:
+<a href="handouts/chapter_1_4_handout_key.xlsx" download="chapter_1_4_handout_key.xlsx"> chapter_1_4_handout_key.xlsx </a>
 
 :::
