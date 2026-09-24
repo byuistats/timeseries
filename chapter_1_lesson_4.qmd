@@ -74,35 +74,34 @@ source("_common_packages.R")
 
 ## Converting from a Data File to a Tsibble (5 min)
 
-This is a demonstration of two ways to convert an Excel 
+This is a demonstration of how to convert an Excel 
 or csv data file to a tsibble.
 
 ```{r}
 
-
 deaths_df <- rio::import("https://byuistats.github.io/timeseries/data/traffic_deaths.xlsx")
 
-# Method 1: Create date from scratch based on pattern of rows
-# This only works if the data are in ascending order with no missing values
-# Note: This file is not in the right order, so this code gives the wrong tsibble
-# unless you sort the Excel file before proceeding.
-
+# Use the date features in the data frame to construct a date-time object.
+# Note: This file is not in the right order, but that doesn't matter because
+# the months and years are given for each row.
+# We first create a tibble, and then convert this to a tsibble.
+# There are a lot of ways to accomplish the task of creating a tsibble.
+# You can do whatever works best for you.
 
 deaths_tibble <- deaths_df |>
   mutate(
-    date_str = paste("1", Month, Year),
-    dates = dmy(date_str),
-    year = lubridate::year(dates),
-    month = lubridate::month(dates),
-    value = Deaths
+    date_str = paste("1", Month, Year),  # Create a string of the form "1 mmm yyyy"
+    dates = dmy(date_str),               # Convert the string to date-time object
+    year = lubridate::year(dates),       # Extract the year (numeric)
+    month = lubridate::month(dates),     # Extract the month (numeric)
+    value = Deaths                       # Create a column of the observed data
   ) |>
   dplyr::select(dates, year, month, value)  |> 
   tibble()
 
-
 # Create the index variable and convert to a tsibble
 deaths_ts <- deaths_tibble |>
-  mutate(index = tsibble::yearmonth(dates)) |>
+  mutate(index = tsibble::yearmonth(dates)) |>      # Define the index variable
   as_tsibble(index = index) |>
   dplyr::select(index, dates, year, month, value) |>
   rename(deaths = value) # rename value to emphasize data context
