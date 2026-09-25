@@ -72,37 +72,36 @@ source("_common_packages.R")
 <!-- ::: -->
 
 
-## Converting from a Data File to a Tsibble (5 min)
+## Converting from a Data File to a Tsibble (10 min)
 
-This is a demonstration of two ways to convert an Excel 
+This is a demonstration of how to convert an Excel 
 or csv data file to a tsibble.
 
 ```{r}
 
-
 deaths_df <- rio::import("https://byuistats.github.io/timeseries/data/traffic_deaths.xlsx")
 
-# Method 1: Create date from scratch based on pattern of rows
-# This only works if the data are in ascending order with no missing values
-# Note: This file is not in the right order, so this code gives the wrong tsibble
-# unless you sort the Excel file before proceeding.
-
+# Use the date features in the data frame to construct a date-time object.
+# Note: This file is not in the right order, but that doesn't matter because
+# the months and years are given for each row.
+# We first create a tibble, and then convert this to a tsibble.
+# There are a lot of ways to accomplish the task of creating a tsibble.
+# You can do whatever works best for you.
 
 deaths_tibble <- deaths_df |>
   mutate(
-    date_str = paste("1", Month, Year),
-    dates = dmy(date_str),
-    year = lubridate::year(dates),
-    month = lubridate::month(dates),
-    value = Deaths
+    date_str = paste("1", Month, Year),  # Create a string of the form "1 mmm yyyy"
+    dates = dmy(date_str),               # Convert the string to date-time object
+    year = lubridate::year(dates),       # Extract the year (numeric)
+    month = lubridate::month(dates),     # Extract the month (numeric)
+    value = Deaths                       # Create a column of the observed data
   ) |>
   dplyr::select(dates, year, month, value)  |> 
   tibble()
 
-
 # Create the index variable and convert to a tsibble
 deaths_ts <- deaths_tibble |>
-  mutate(index = tsibble::yearmonth(dates)) |>
+  mutate(index = tsibble::yearmonth(dates)) |>      # Define the index variable
   as_tsibble(index = index) |>
   dplyr::select(index, dates, year, month, value) |>
   rename(deaths = value) # rename value to emphasize data context
@@ -116,7 +115,7 @@ deaths_ts |>
   head()
 ```
 
-## Data Visualizations (5 min)
+## Data Visualizations (10 min)
 
 The following time plot illustrates the data in this time series.
 
@@ -198,13 +197,17 @@ ggplot(deaths_ts, aes(x = factor(month), y = deaths)) +
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   How do the positions of the box plots correspond to the times of the year where you noted more (or less) deaths occurring?
+-   How do the positions of the box plots correspond to the times of the year where you noted more (or fewer) deaths occurring?
+-   What could explain this observation?
+-   Does this surprise you? Explain your reasoning.
 
 :::
 
-## Computing the Seasonally Adjusted Series (25 min)
+## Computing the Seasonally Adjusted Series (40 min)
 
-Our objective is to find an estimate for the time series that does not fluctuate with the seasons. This is called the seasonally adjusted series.
+Our objective is to find an estimate for the time series that does not fluctuate with the seasons. This is called the seasonally adjusted series. Download the Excel file 
+<a href="handouts/chapter_1_4_handout.xlsx" download="chapter_1_4_handout.xlsx"> chapter_1_4_handout.xlsx </a>
+and use it to organize your work.
 
 ### Centered Moving Average
 
@@ -232,7 +235,6 @@ deaths_ts <- deaths_ts |>
   )
 ```
 
-To emphasize the computation of the centered moving average, the observed data values that were used to find $\hat m_t$ for December 2017 are shown in <span style="color:#009E73;">green</span> in the table below. 
 
 ### Estimated Monthly Additive Effect
 
@@ -241,6 +243,7 @@ The centered moving average, $\hat m_t$, is then used to compute the monthly add
 $$
   \hat s_t = x_t - \hat m_t
 $$
+To emphasize the computation of the centered moving average, the observed data values that were used to find $\hat m_t$ for December 2017 are shown in <span style="color:#fd7e14;">orange</span> in the table below. 
 
 #### Table 1: Computation of the Centered Moving Average, $\hat m_t$, and the Estimated Monthly Additive Effect, $\hat s_t$
 
@@ -273,27 +276,28 @@ deaths_shat_ts |>
     "$$ \\hat m $$" = m_hat,
     "$$ \\hat s $$" = s_hat
   ) |>
-  color_specific_cell(row_num = 12, col_num = 3, color = "#009E73") |>
-  color_specific_cell(row_num = 6, col_num = 2, color = "#009E73") |>
-  color_specific_cell(row_num = 7, col_num = 2, color = "#009E73") |>
-  color_specific_cell(row_num = 8, col_num = 2, color = "#009E73") |>
-  color_specific_cell(row_num = 9, col_num = 2, color = "#009E73") |>
-  color_specific_cell(row_num = 10, col_num = 2, color = "#009E73") |>
-  color_specific_cell(row_num = 11, col_num = 2, color = "#009E73") |>
-  color_specific_cell(row_num = 12, col_num = 2, color = "#009E73") |>
-  color_specific_cell(row_num = 13, col_num = 2, color = "#009E73") |>
-  color_specific_cell(row_num = 14, col_num = 2, color = "#009E73") |>
-  color_specific_cell(row_num = 15, col_num = 2, color = "#009E73") |>
-  color_specific_cell(row_num = 16, col_num = 2, color = "#009E73") |>
-  color_specific_cell(row_num = 17, col_num = 2, color = "#009E73") |>
-  color_specific_cell(row_num = 18, col_num = 2, color = "#009E73") |>
+  color_specific_cell(row_num = 12, col_num = 3, color = "#fd7e14") |>
+  color_specific_cell(row_num = 6, col_num = 2, color = "#fd7e14") |>
+  color_specific_cell(row_num = 7, col_num = 2, color = "#fd7e14") |>
+  color_specific_cell(row_num = 8, col_num = 2, color = "#fd7e14") |>
+  color_specific_cell(row_num = 9, col_num = 2, color = "#fd7e14") |>
+  color_specific_cell(row_num = 10, col_num = 2, color = "#fd7e14") |>
+  color_specific_cell(row_num = 11, col_num = 2, color = "#fd7e14") |>
+  color_specific_cell(row_num = 12, col_num = 2, color = "#fd7e14") |>
+  color_specific_cell(row_num = 13, col_num = 2, color = "#fd7e14") |>
+  color_specific_cell(row_num = 14, col_num = 2, color = "#fd7e14") |>
+  color_specific_cell(row_num = 15, col_num = 2, color = "#fd7e14") |>
+  color_specific_cell(row_num = 16, col_num = 2, color = "#fd7e14") |>
+  color_specific_cell(row_num = 17, col_num = 2, color = "#fd7e14") |>
+  color_specific_cell(row_num = 18, col_num = 2, color = "#fd7e14") |>
   display_table()
 ```
 
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   Working with your assigned partner, fill in the missing values of $\hat s_t$ in the table above. 
+-   Working with your assigned partner, fill in the missing values of $\hat s_t$ in the corresponding table in the handout 
+<a href="handouts/chapter_1_4_handout.xlsx" download="chapter_1_4_handout.xlsx"> chapter_1_4_handout.xlsx </a>. 
 
 :::
 
@@ -376,14 +380,14 @@ wider_df2 |>
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
--   The table above gives the values of $\hat s_t$. Fill in the missing values in the first two rows of the table above. (Note you already computed these.)
+-   The table above gives the values of $\hat s_t$. Fill in the missing values in the first two rows of the corresponding table in the Excel file <a href="handouts/chapter_1_4_handout.xlsx" download="chapter_1_4_handout.xlsx"> chapter_1_4_handout.xlsx </a>. (Note you already computed these.)
 -   The second-to-last row (labeled "Mean") gives the values of $\bar s_t$. Fill in the two missing numbers. We will call these 12 means $\bar {\hat s_t}$.
--   Compute the mean of the $\bar {\hat s_t}$ values. Call this value $\bar {\bar {\hat s_t}}$ (This number should be relatively close to 0.)
+-   Compute the mean of the $\bar {\hat s_t}$ values. Call this value $\bar {\bar {\hat s_t}}$ (This number should equal 0, except for any rounding.)
 -   Subtract the grand mean $\bar {\bar {\hat s_t}}$ from the column means $\bar {\hat s_t}$ to get $\bar s_t$, the seasonally adjusted mean for month $t$.  (Note that the mean of the $\bar s_t$ values is 0.)
 
 $$ \bar s_t = \bar {\hat s_t} - \bar {\bar {\hat s_t}} $$
 
-$\bar s_t$ is the seasonally adjusted mean for month $t$. 
+Finally, $\bar s_t$ is the seasonally adjusted mean for month $t$. 
 
 :::
 
@@ -402,7 +406,7 @@ $$
   \text{seasonally adjusted series} = x_t - \bar s_t
 $$
 
-Compute the values missing from the table below.
+Fill in the missing values in the corresponding table in the Excel file <a href="handouts/chapter_1_4_handout.xlsx" download="chapter_1_4_handout.xlsx"> chapter_1_4_handout.xlsx </a>.
 
 #### Table 3: Computation of $\bar s$, the Random Component, and the Seasonally Adjusted Time Series
 
@@ -454,14 +458,14 @@ adjusted_ts |>
     "$$ \\hat s $$" = s_hat,
     "$$ \\bar s $$" = s_bar,
     Random = random,
-    "Seasonally Adjusted $$x_t$$" = seasonally_adjusted_x
+    "Seasonally Adjusted Series" = seasonally_adjusted_x
   ) |>
   display_partial_table(num_blank_rows + num_addl_rows, 0)
 ```
 
 
 
-## Class Activity: Computing the Additive Decomposition in R (10 min)
+## Class Activity: Computing the Additive Decomposition in R (15 min)
 
 <!-- ### Visualizing the Seasonally Adjusted Series -->
 
