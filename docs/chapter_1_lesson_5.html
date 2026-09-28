@@ -1295,6 +1295,7 @@ Decompose time series into trends, seasonal variation, and residuals
 </tr>
 </tbody>
 </table>
+<p>Is an additive or multiplicative model more appropriate? Why?</p>
 </div>
 </div>
 <!-- ## POSSIBLY: DEMONSTRATE THAT TWO UNRELATED TIME SERIES WILL BE CORRELATED IF THEY BOTH CONTAIN A TREND---------- -->
@@ -1303,42 +1304,148 @@ Decompose time series into trends, seasonal variation, and residuals
 </section>
 <section id="small-group-activity-apples-quarterly-revenue-30-min" class="level2">
 <h2 class="anchored" data-anchor-id="small-group-activity-apples-quarterly-revenue-30-min">Small Group Activity: Apple’s Quarterly Revenue (30 min)</h2>
-<p>The code below imports and plots the quarterly revenue for Apple Inc.&nbsp;(in billions of U.S. dollars).</p>
+<p>Please download this file <a href="handouts/chapter_1_5_handout.xlsx" download="chapter_1_5_handout.xlsx"> chapter_1_5_handout.xlsx </a> for this activity.</p>
+<p>The code below imports and shows a few rows of the quarterly revenues for Apple Inc.&nbsp;(in billions of U.S. dollars).</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>apple_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/apple_revenue.csv"</span>) <span class="sc">|&gt;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>apple_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">"https://byuistats.github.io/timeseries/data/apple_revenue_2026.xlsx"</span>) <span class="sc">|&gt;</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> <span class="fu">mdy</span>(date),</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">dates =</span> <span class="fu">as.Date</span>(date),      <span class="co"># &lt;-- just coerce/assign directly, no mdy()</span></span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> lubridate<span class="sc">::</span><span class="fu">year</span>(dates),</span>
 <span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">quarter =</span> lubridate<span class="sc">::</span><span class="fu">quarter</span>(dates),</span>
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">value =</span> revenue_billions</span>
 <span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(dates, year, quarter, value)  <span class="sc">|&gt;</span> </span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(dates, year, quarter, period_covered, value)  <span class="sc">|&gt;</span> </span>
 <span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(dates) <span class="sc">|&gt;</span></span>
 <span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">index =</span> tsibble<span class="sc">::</span><span class="fu">yearquarter</span>(dates)) <span class="sc">|&gt;</span></span>
 <span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> index) <span class="sc">|&gt;</span></span>
-<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(index, dates, year, quarter, value) <span class="sc">|&gt;</span></span>
-<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">revenue =</span> value) <span class="co"># rename value to emphasize data context</span></span>
-<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>apple_ts <span class="sc">|&gt;</span></span>
-<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> revenue) <span class="sc">+</span></span>
-<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Quarter"</span>,</span>
-<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Apple Revenue, Billions $US"</span>,</span>
-<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Apple's Quarterly Revenue, Billions of U.S. Dollars"</span></span>
-<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">revenue =</span> value)</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>apple_ts <span class="sc">|&gt;</span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(index, period_covered, revenue) <span class="sc">|&gt;</span></span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_partial_table</span>(<span class="dv">6</span>,<span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-striped caption-top table-sm small">
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">index</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">period_covered</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">revenue</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">2005 Q1</td>
+<td style="text-align: center; min-width: 0in;">Oct-Dec 2004</td>
+<td style="text-align: center; min-width: 0in;">3.49</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2005 Q2</td>
+<td style="text-align: center; min-width: 0in;">Jan-Mar 2005</td>
+<td style="text-align: center; min-width: 0in;">3.243</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">2005 Q3</td>
+<td style="text-align: center; min-width: 0in;">Apr-Jun 2005</td>
+<td style="text-align: center; min-width: 0in;">3.52</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2005 Q4</td>
+<td style="text-align: center; min-width: 0in;">Jul-Sep 2005</td>
+<td style="text-align: center; min-width: 0in;">3.678</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">2006 Q1</td>
+<td style="text-align: center; min-width: 0in;">Oct-Dec 2005</td>
+<td style="text-align: center; min-width: 0in;">5.749</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2006 Q2</td>
+<td style="text-align: center; min-width: 0in;">Jan-Mar 2006</td>
+<td style="text-align: center; min-width: 0in;">4.359</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+<td style="text-align: center; min-width: 0in;">⋮</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2026 Q1</td>
+<td style="text-align: center; min-width: 0in;">Oct-Dec 2025</td>
+<td style="text-align: center; min-width: 0in;">143.756</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">2026 Q2</td>
+<td style="text-align: center; min-width: 0in;">Jan-Mar 2026</td>
+<td style="text-align: center; min-width: 0in;">111.184</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2026 Q3</td>
+<td style="text-align: center; min-width: 0in;">Apr-Jun 2026</td>
+<td style="text-align: center; min-width: 0in;">109.417</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>Here are some time plots of the Apple revenue data.</p>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-3-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-1" role="tab" aria-controls="tabset-3-1" aria-selected="true" href="">Since 2005</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-2" role="tab" aria-controls="tabset-3-2" aria-selected="false" href="">Recent Years</a></li></ul>
+<div class="tab-content">
+<div id="tabset-3-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-3-1-tab">
+<p>This time plot displays Apple’s quarterly revenue data from 2005 to 2026.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>apple_ts <span class="sc">|&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> revenue) <span class="sc">+</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Quarter"</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Apple Revenue, Billions $US"</span>,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Apple's Quarterly Revenue, Billions of U.S. Dollars"</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>
 <figure class="figure">
-<p><img src="chapter_1_lesson_5_files/figure-html/unnamed-chunk-16-1.png" class="img-fluid figure-img" width="672"></p>
+<p><img src="chapter_1_lesson_5_files/figure-html/unnamed-chunk-17-1.png" class="img-fluid figure-img" width="672"></p>
 </figure>
 </div>
 </div>
 </div>
+</div>
+<div id="tabset-3-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-3-2-tab">
+<p>Here is a plot illustrating the last few years’ of the Apple revenue data:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>apple_ts <span class="sc">|&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">&gt;=</span> <span class="fu">max</span>(year) <span class="sc">-</span> <span class="dv">4</span>) <span class="sc">|&gt;</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> revenue) <span class="sc">+</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Quarter"</span>,</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Apple Revenue, Billions $US"</span>,</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Apple's Quarterly Revenue, Billions of U.S. Dollars"</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="chapter_1_lesson_5_files/figure-html/unnamed-chunk-18-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- End of panel-tabset -->
 <div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -1379,21 +1486,20 @@ Decompose time series into trends, seasonal variation, and residuals
 <li>Write a mutate statement that will compute the 4-quarter moving average for the variable “revenue” in the tsibble apple_ts. You can use the mutate statement from <a href="https://byuistats.github.io/timeseries/chapter_1_lesson_4.html#centered-moving-average">Chapter 1 Lesson 4</a> as a starting point.</li>
 </ul>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># computes the 4-quarter centered moving average (m_hat)</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>apple_ts <span class="ot">&lt;-</span> apple_ts <span class="sc">|&gt;</span> </span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">m_hat =</span> </span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Your code goes here</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># computes the 4-quarter centered moving average (m_hat)</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>apple_ts <span class="ot">&lt;-</span> apple_ts <span class="sc">|&gt;</span> </span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">m_hat =</span> </span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>      <span class="co"># Your code goes here</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </div>
 </div>
-<p>To emphasize the computation of the centered moving average, the observed data values that were used to find <span class="math inline">\(\hat m_t\)</span> for the first quarter of 2007 are shown in <span style="color:#009E73;">green</span> in the table below.</p>
+<p>To emphasize the computation of the centered moving average, the observed data values that were used to find <span class="math inline">\(\hat m_t\)</span> for the fourth quarter of 2005 are shown in <span style="color:#009E73;">green</span> in the table below.</p>
 </section>
 <section id="estimated-quarterly-multiplicative-effect" class="level3">
 <h3 class="anchored" data-anchor-id="estimated-quarterly-multiplicative-effect">Estimated Quarterly Multiplicative Effect</h3>
-<p><a href="handouts/chapter_1_5_handout.xlsx" download="chapter_1_5_handout.xlsx"> Tables-Handout-Excel </a></p>
-<p>The centered moving average, <span class="math inline">\(\hat m_t\)</span>, is then used to compute the quarterly multiplictive effect, <span class="math inline">\(\hat s_t\)</span>:</p>
+<p>Next, the centered moving average, <span class="math inline">\(\hat m_t\)</span>, is used to compute the quarterly multiplictive effect, <span class="math inline">\(\hat s_t\)</span>:</p>
 <p><span class="math display">\[
   \hat s_t = \dfrac{ x_t }{ \hat m_t }
 \]</span></p>
@@ -1413,87 +1519,87 @@ Decompose time series into trends, seasonal variation, and residuals
 <tbody>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2005 Q1</td>
-<td style="text-align: center; min-width: 0in;">1.24</td>
+<td style="text-align: center; min-width: 0in;">3.49</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2005 Q2</td>
-<td style="text-align: center; min-width: 0in;">0.48</td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3.243</span></td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2005 Q3</td>
-<td style="text-align: center; min-width: 0in;">1.24</td>
-<td style="text-align: center; min-width: 0in;">1.315</td>
-<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3.52</span></td>
+<td style="text-align: center; min-width: 0in;">3.765</td>
+<td style="text-align: center; min-width: 0in;">0.935</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2005 Q4</td>
-<td style="text-align: center; min-width: 0in;">1.71</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3.678</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">4.187</span></td>
+<td style="text-align: center; min-width: 0in;">0.878</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2006 Q1</td>
-<td style="text-align: center; min-width: 0in;">2.42</td>
-<td style="text-align: center; min-width: 0in;">1.829</td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">5.749</span></td>
+<td style="text-align: center; min-width: 0in;">______</td>
 <td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2006 Q2</td>
-<td style="text-align: center; min-width: 0in;">1.71</td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">4.359</span></td>
 <td style="text-align: center; min-width: 0in;">______</td>
 <td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2006 Q3</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">1.71</span></td>
-<td style="text-align: center; min-width: 0in;">2.251</td>
+<td style="text-align: center; min-width: 0in;">4.37</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 <td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2006 Q4</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">2.19</span></td>
+<td style="text-align: center; min-width: 0in;">4.837</td>
 <td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">0.808</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2007 Q1</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">4.37</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3.136</span></td>
-<td style="text-align: center; min-width: 0in;">1.393</td>
+<td style="text-align: center; min-width: 0in;">7.123</td>
+<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2007 Q2</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3.42</span></td>
-<td style="text-align: center; min-width: 0in;">3.469</td>
-<td style="text-align: center; min-width: 0in;">0.986</td>
+<td style="text-align: center; min-width: 0in;">5.286</td>
+<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2007 Q3</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">3.42</span></td>
-<td style="text-align: center; min-width: 0in;">3.956</td>
-<td style="text-align: center; min-width: 0in;">0.864</td>
+<td style="text-align: center; min-width: 0in;">5.563</td>
+<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2007 Q4</td>
-<td style="text-align: center; min-width: 0in;">3.14</td>
-<td style="text-align: center; min-width: 0in;">4.474</td>
-<td style="text-align: center; min-width: 0in;">0.702</td>
+<td style="text-align: center; min-width: 0in;">6.606</td>
+<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2008 Q1</td>
-<td style="text-align: center; min-width: 0in;">7.32</td>
-<td style="text-align: center; min-width: 0in;">4.801</td>
-<td style="text-align: center; min-width: 0in;">1.525</td>
+<td style="text-align: center; min-width: 0in;">10.43</td>
+<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2008 Q2</td>
-<td style="text-align: center; min-width: 0in;">4.61</td>
-<td style="text-align: center; min-width: 0in;">5.87</td>
-<td style="text-align: center; min-width: 0in;">0.785</td>
+<td style="text-align: center; min-width: 0in;">7.98</td>
+<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">⋮</td>
@@ -1502,34 +1608,34 @@ Decompose time series into trends, seasonal variation, and residuals
 <td style="text-align: center; min-width: 0in;">⋮</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;">2022 Q4</td>
-<td style="text-align: center; min-width: 0in;">90.146</td>
-<td style="text-align: center; min-width: 0in;">96.579</td>
-<td style="text-align: center; min-width: 0in;">0.933</td>
+<td style="text-align: center; min-width: 0in;">2025 Q3</td>
+<td style="text-align: center; min-width: 0in;">94.036</td>
+<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;">2023 Q1</td>
-<td style="text-align: center; min-width: 0in;">117.154</td>
-<td style="text-align: center; min-width: 0in;">96.128</td>
-<td style="text-align: center; min-width: 0in;">1.219</td>
+<td style="text-align: center; min-width: 0in;">2025 Q4</td>
+<td style="text-align: center; min-width: 0in;">102.466</td>
+<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;">2023 Q2</td>
-<td style="text-align: center; min-width: 0in;">94.836</td>
-<td style="text-align: center; min-width: 0in;">95.902</td>
-<td style="text-align: center; min-width: 0in;">0.989</td>
+<td style="text-align: center; min-width: 0in;">2026 Q1</td>
+<td style="text-align: center; min-width: 0in;">143.756</td>
+<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;">2023 Q3</td>
-<td style="text-align: center; min-width: 0in;">81.797</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">2026 Q2</td>
+<td style="text-align: center; min-width: 0in;">111.184</td>
+<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;">2023 Q4</td>
-<td style="text-align: center; min-width: 0in;">89.498</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">2026 Q3</td>
+<td style="text-align: center; min-width: 0in;">109.417</td>
+<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">______</td>
 </tr>
 </tbody>
 </table>
@@ -1576,62 +1682,62 @@ Decompose time series into trends, seasonal variation, and residuals
 <td style="text-align: center; min-width: 0in;">2005</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;">0.935</td>
+<td style="text-align: center; min-width: 0in;">0.878</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2006</td>
 <td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 <td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 <td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
-<td style="text-align: center; min-width: 0in;">0.808</td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2007</td>
-<td style="text-align: center; min-width: 0in;">1.393</td>
-<td style="text-align: center; min-width: 0in;">0.986</td>
-<td style="text-align: center; min-width: 0in;">0.864</td>
-<td style="text-align: center; min-width: 0in;">0.702</td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2008</td>
-<td style="text-align: center; min-width: 0in;">1.525</td>
-<td style="text-align: center; min-width: 0in;">0.785</td>
-<td style="text-align: center; min-width: 0in;">0.683</td>
-<td style="text-align: center; min-width: 0in;">1.325</td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2009</td>
-<td style="text-align: center; min-width: 0in;">1.182</td>
-<td style="text-align: center; min-width: 0in;">0.781</td>
-<td style="text-align: center; min-width: 0in;">0.834</td>
-<td style="text-align: center; min-width: 0in;">1.005</td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2010</td>
-<td style="text-align: center; min-width: 0in;">1.193</td>
-<td style="text-align: center; min-width: 0in;">0.912</td>
-<td style="text-align: center; min-width: 0in;">0.849</td>
-<td style="text-align: center; min-width: 0in;">0.963</td>
+<td style="text-align: center; min-width: 0in;">1.159</td>
+<td style="text-align: center; min-width: 0in;">0.883</td>
+<td style="text-align: center; min-width: 0in;">0.888</td>
+<td style="text-align: center; min-width: 0in;">0.994</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2011</td>
-<td style="text-align: center; min-width: 0in;">1.106</td>
-<td style="text-align: center; min-width: 0in;">0.961</td>
-<td style="text-align: center; min-width: 0in;">0.999</td>
-<td style="text-align: center; min-width: 0in;">0.734</td>
+<td style="text-align: center; min-width: 0in;">1.139</td>
+<td style="text-align: center; min-width: 0in;">0.946</td>
+<td style="text-align: center; min-width: 0in;">0.968</td>
+<td style="text-align: center; min-width: 0in;">0.837</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2012</td>
-<td style="text-align: center; min-width: 0in;">1.328</td>
-<td style="text-align: center; min-width: 0in;">1.141</td>
-<td style="text-align: center; min-width: 0in;">0.865</td>
-<td style="text-align: center; min-width: 0in;">0.828</td>
+<td style="text-align: center; min-width: 0in;">1.273</td>
+<td style="text-align: center; min-width: 0in;">1.027</td>
+<td style="text-align: center; min-width: 0in;">0.872</td>
+<td style="text-align: center; min-width: 0in;">0.862</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2013</td>
-<td style="text-align: center; min-width: 0in;">1.249</td>
-<td style="text-align: center; min-width: 0in;">1.019</td>
+<td style="text-align: center; min-width: 0in;">1.288</td>
+<td style="text-align: center; min-width: 0in;">1.025</td>
 <td style="text-align: center; min-width: 0in;">0.819</td>
 <td style="text-align: center; min-width: 0in;">0.856</td>
 </tr>
@@ -1702,17 +1808,38 @@ Decompose time series into trends, seasonal variation, and residuals
 <td style="text-align: center; min-width: 0in;">2023</td>
 <td style="text-align: center; min-width: 0in;">1.219</td>
 <td style="text-align: center; min-width: 0in;">0.989</td>
+<td style="text-align: center; min-width: 0in;">0.851</td>
+<td style="text-align: center; min-width: 0in;">0.933</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2024</td>
+<td style="text-align: center; min-width: 0in;">1.247</td>
+<td style="text-align: center; min-width: 0in;">0.935</td>
+<td style="text-align: center; min-width: 0in;">0.872</td>
+<td style="text-align: center; min-width: 0in;">0.954</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">2025</td>
+<td style="text-align: center; min-width: 0in;">1.229</td>
+<td style="text-align: center; min-width: 0in;">0.925</td>
+<td style="text-align: center; min-width: 0in;">0.883</td>
+<td style="text-align: center; min-width: 0in;">0.924</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2026</td>
+<td style="text-align: center; min-width: 0in;">1.252</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">Mean</span></td>
 <td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 <td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 <td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 <td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">______</span></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$ \bar s_t $$</span></td>
 <td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
 <td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$~$$ ______</span></td>
@@ -1734,35 +1861,9 @@ Decompose time series into trends, seasonal variation, and residuals
 </div>
 <div class="callout-body-container callout-body">
 <ul>
-<li>The table above gives the values of <span class="math inline">\(\hat s_t\)</span>. Fill in the missing values in the first two rows of the table above. (Note you already computed these.)</li>
-<li>The second-to-last row (labeled “Mean”) gives the values of <span class="math inline">\(\bar s_t\)</span>. Find the mean of the <span class="math inline">\(\hat s_t\)</span> values for each quarter. Call these means <span class="math inline">\(\bar {\hat s_t}\)</span>. To simplify your computations, the sum of the values visible in the table above is summarized here:</li>
-</ul>
-<div class="cell">
-<div class="cell-output-display">
-<table class="table table-striped caption-top table-sm small">
-<thead>
-<tr class="header">
-<th style="text-align: center;" data-quarto-table-cell-role="th">Quarter</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">Q1</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">Q2</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">Q3</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">Q4</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">Partial Sum</td>
-<td style="text-align: center; min-width: 0in;">22.302</td>
-<td style="text-align: center; min-width: 0in;">16.146</td>
-<td style="text-align: center; min-width: 0in;">13.288</td>
-<td style="text-align: center; min-width: 0in;">15.213</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<ul>
-<li>Compute the mean of the <span class="math inline">\(\bar {\hat s_t}\)</span> values. Call this number <span class="math inline">\(\bar {\bar {\hat s_t}}\)</span> (This number should be relatively close to 1.)</li>
+<li>The table above gives the values of <span class="math inline">\(\hat s_t\)</span>. Fill in the missing values. (Note you already computed these.)</li>
+<li>The second-to-last row (labeled “Mean”) gives the values of <span class="math inline">\(\bar s_t\)</span>. Find the mean of the <span class="math inline">\(\hat s_t\)</span> values for each quarter. Call these means <span class="math inline">\(\bar {\hat s_t}\)</span>.</li>
+<li>Compute the mean of the <span class="math inline">\(\bar {\hat s_t}\)</span> values. Call this number <span class="math inline">\(\bar {\bar {\hat s_t}}\)</span> (This number should generally be relatively close to 1.)</li>
 <li>Divide each of the <span class="math inline">\(\bar {\hat s_t}\)</span> values by <span class="math inline">\(\bar {\bar {\hat s_t}}\)</span> to get <span class="math inline">\(\bar s_t\)</span>, the seasonally adjusted factor for quarter <span class="math inline">\(t\)</span>. (Note that the mean of the <span class="math inline">\(\bar s_t\)</span> values will be 1.)</li>
 </ul>
 <p><span class="math display">\[ \bar s_t = \frac{ \left( \bar {\hat s_t} \right) }{ \left( \bar {\bar {\hat s_t}} \right) } \]</span></p>
@@ -1800,93 +1901,93 @@ Decompose time series into trends, seasonal variation, and residuals
 <tbody>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2005 Q1</td>
-<td style="text-align: center; min-width: 0in;">1.24</td>
+<td style="text-align: center; min-width: 0in;">3.49</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">1.286</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">2.713</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2005 Q2</td>
-<td style="text-align: center; min-width: 0in;">0.48</td>
+<td style="text-align: center; min-width: 0in;">3.243</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">0.946</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">3.428</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2005 Q3</td>
-<td style="text-align: center; min-width: 0in;">1.24</td>
-<td style="text-align: center; min-width: 0in;">1.315</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">3.52</td>
+<td style="text-align: center; min-width: 0in;">3.765</td>
+<td style="text-align: center; min-width: 0in;">0.935</td>
+<td style="text-align: center; min-width: 0in;">0.851</td>
+<td style="text-align: center; min-width: 0in;">1.098</td>
+<td style="text-align: center; min-width: 0in;">4.136</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2005 Q4</td>
-<td style="text-align: center; min-width: 0in;">1.71</td>
-<td style="text-align: center; min-width: 0in;">1.616</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">3.678</td>
+<td style="text-align: center; min-width: 0in;">4.187</td>
+<td style="text-align: center; min-width: 0in;">0.878</td>
+<td style="text-align: center; min-width: 0in;">0.917</td>
+<td style="text-align: center; min-width: 0in;">0.958</td>
+<td style="text-align: center; min-width: 0in;">4.013</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2006 Q1</td>
-<td style="text-align: center; min-width: 0in;">2.42</td>
-<td style="text-align: center; min-width: 0in;">1.829</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">5.749</td>
+<td style="text-align: center; min-width: 0in;">4.433</td>
+<td style="text-align: center; min-width: 0in;">1.297</td>
+<td style="text-align: center; min-width: 0in;">1.286</td>
+<td style="text-align: center; min-width: 0in;">1.008</td>
+<td style="text-align: center; min-width: 0in;">4.469</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2006 Q2</td>
-<td style="text-align: center; min-width: 0in;">1.71</td>
-<td style="text-align: center; min-width: 0in;">1.947</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">4.359</td>
+<td style="text-align: center; min-width: 0in;">4.684</td>
+<td style="text-align: center; min-width: 0in;">0.931</td>
+<td style="text-align: center; min-width: 0in;">0.946</td>
+<td style="text-align: center; min-width: 0in;">0.984</td>
+<td style="text-align: center; min-width: 0in;">4.608</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2006 Q3</td>
-<td style="text-align: center; min-width: 0in;">1.71</td>
-<td style="text-align: center; min-width: 0in;">2.251</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
-<td style="text-align: center; min-width: 0in;">______</td>
+<td style="text-align: center; min-width: 0in;">4.37</td>
+<td style="text-align: center; min-width: 0in;">5</td>
+<td style="text-align: center; min-width: 0in;">0.874</td>
+<td style="text-align: center; min-width: 0in;">0.851</td>
+<td style="text-align: center; min-width: 0in;">1.027</td>
+<td style="text-align: center; min-width: 0in;">5.134</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2006 Q4</td>
-<td style="text-align: center; min-width: 0in;">2.19</td>
-<td style="text-align: center; min-width: 0in;">2.709</td>
-<td style="text-align: center; min-width: 0in;">0.808</td>
-<td style="text-align: center; min-width: 0in;">0.905</td>
-<td style="text-align: center; min-width: 0in;">0.893</td>
-<td style="text-align: center; min-width: 0in;">2.42</td>
+<td style="text-align: center; min-width: 0in;">4.837</td>
+<td style="text-align: center; min-width: 0in;">5.288</td>
+<td style="text-align: center; min-width: 0in;">0.915</td>
+<td style="text-align: center; min-width: 0in;">0.917</td>
+<td style="text-align: center; min-width: 0in;">0.998</td>
+<td style="text-align: center; min-width: 0in;">5.278</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2007 Q1</td>
-<td style="text-align: center; min-width: 0in;">4.37</td>
-<td style="text-align: center; min-width: 0in;">3.136</td>
-<td style="text-align: center; min-width: 0in;">1.393</td>
-<td style="text-align: center; min-width: 0in;">1.314</td>
-<td style="text-align: center; min-width: 0in;">1.06</td>
-<td style="text-align: center; min-width: 0in;">3.325</td>
+<td style="text-align: center; min-width: 0in;">7.123</td>
+<td style="text-align: center; min-width: 0in;">5.553</td>
+<td style="text-align: center; min-width: 0in;">1.283</td>
+<td style="text-align: center; min-width: 0in;">1.286</td>
+<td style="text-align: center; min-width: 0in;">0.997</td>
+<td style="text-align: center; min-width: 0in;">5.537</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2007 Q2</td>
-<td style="text-align: center; min-width: 0in;">3.42</td>
-<td style="text-align: center; min-width: 0in;">3.469</td>
-<td style="text-align: center; min-width: 0in;">0.986</td>
-<td style="text-align: center; min-width: 0in;">0.947</td>
-<td style="text-align: center; min-width: 0in;">1.041</td>
-<td style="text-align: center; min-width: 0in;">3.612</td>
+<td style="text-align: center; min-width: 0in;">5.286</td>
+<td style="text-align: center; min-width: 0in;">5.923</td>
+<td style="text-align: center; min-width: 0in;">0.892</td>
+<td style="text-align: center; min-width: 0in;">0.946</td>
+<td style="text-align: center; min-width: 0in;">0.943</td>
+<td style="text-align: center; min-width: 0in;">5.588</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">⋮</td>
@@ -1896,6 +1997,42 @@ Decompose time series into trends, seasonal variation, and residuals
 <td style="text-align: center; min-width: 0in;">⋮</td>
 <td style="text-align: center; min-width: 0in;">⋮</td>
 <td style="text-align: center; min-width: 0in;">⋮</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2025 Q4</td>
+<td style="text-align: center; min-width: 0in;">102.466</td>
+<td style="text-align: center; min-width: 0in;">110.882</td>
+<td style="text-align: center; min-width: 0in;">0.924</td>
+<td style="text-align: center; min-width: 0in;">0.917</td>
+<td style="text-align: center; min-width: 0in;">1.008</td>
+<td style="text-align: center; min-width: 0in;">111.8</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">2026 Q1</td>
+<td style="text-align: center; min-width: 0in;">143.756</td>
+<td style="text-align: center; min-width: 0in;">114.783</td>
+<td style="text-align: center; min-width: 0in;">1.252</td>
+<td style="text-align: center; min-width: 0in;">1.286</td>
+<td style="text-align: center; min-width: 0in;">0.974</td>
+<td style="text-align: center; min-width: 0in;">111.753</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2026 Q2</td>
+<td style="text-align: center; min-width: 0in;">111.184</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">0.946</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">117.534</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">2026 Q3</td>
+<td style="text-align: center; min-width: 0in;">109.417</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">0.851</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">128.553</td>
 </tr>
 </tbody>
 </table>
@@ -1912,14 +2049,14 @@ Decompose time series into trends, seasonal variation, and residuals
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>apple_decompose <span class="ot">&lt;-</span> apple_ts <span class="sc">|&gt;</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(revenue,</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">type =</span> <span class="st">"mult"</span>))  <span class="sc">|&gt;</span></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>()</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>apple_decompose <span class="sc">|&gt;</span></span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">8</span>) <span class="sc">|&gt;</span></span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>apple_decompose <span class="ot">&lt;-</span> apple_ts <span class="sc">|&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(revenue,</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">type =</span> <span class="st">"mult"</span>))  <span class="sc">|&gt;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>()</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>apple_decompose <span class="sc">|&gt;</span></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">head</span>(<span class="dv">8</span>) <span class="sc">|&gt;</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <table class="table table-striped caption-top table-sm small">
@@ -1938,107 +2075,109 @@ Decompose time series into trends, seasonal variation, and residuals
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(revenue, type = "mult")</td>
 <td style="text-align: center; min-width: 0in;">2005 Q1</td>
-<td style="text-align: center; min-width: 0in;">1.24</td>
+<td style="text-align: center; min-width: 0in;">3.490</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;">1.3141184</td>
+<td style="text-align: center; min-width: 0in;">1.2863724</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;">0.9435984</td>
+<td style="text-align: center; min-width: 0in;">2.713056</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(revenue, type = "mult")</td>
 <td style="text-align: center; min-width: 0in;">2005 Q2</td>
-<td style="text-align: center; min-width: 0in;">0.48</td>
+<td style="text-align: center; min-width: 0in;">3.243</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;">0.9469622</td>
+<td style="text-align: center; min-width: 0in;">0.9459724</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;">0.5068840</td>
+<td style="text-align: center; min-width: 0in;">3.428218</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(revenue, type = "mult")</td>
 <td style="text-align: center; min-width: 0in;">2005 Q3</td>
-<td style="text-align: center; min-width: 0in;">1.24</td>
-<td style="text-align: center; min-width: 0in;">1.31500</td>
-<td style="text-align: center; min-width: 0in;">0.8337749</td>
-<td style="text-align: center; min-width: 0in;">1.1309596</td>
-<td style="text-align: center; min-width: 0in;">1.4872119</td>
+<td style="text-align: center; min-width: 0in;">3.520</td>
+<td style="text-align: center; min-width: 0in;">3.765125</td>
+<td style="text-align: center; min-width: 0in;">0.8511409</td>
+<td style="text-align: center; min-width: 0in;">1.0984033</td>
+<td style="text-align: center; min-width: 0in;">4.135626</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(revenue, type = "mult")</td>
 <td style="text-align: center; min-width: 0in;">2005 Q4</td>
-<td style="text-align: center; min-width: 0in;">1.71</td>
-<td style="text-align: center; min-width: 0in;">1.61625</td>
-<td style="text-align: center; min-width: 0in;">0.9051445</td>
-<td style="text-align: center; min-width: 0in;">1.1688792</td>
-<td style="text-align: center; min-width: 0in;">1.8892010</td>
+<td style="text-align: center; min-width: 0in;">3.678</td>
+<td style="text-align: center; min-width: 0in;">4.187000</td>
+<td style="text-align: center; min-width: 0in;">0.9165143</td>
+<td style="text-align: center; min-width: 0in;">0.9584501</td>
+<td style="text-align: center; min-width: 0in;">4.013031</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(revenue, type = "mult")</td>
 <td style="text-align: center; min-width: 0in;">2006 Q1</td>
-<td style="text-align: center; min-width: 0in;">2.42</td>
-<td style="text-align: center; min-width: 0in;">1.82875</td>
-<td style="text-align: center; min-width: 0in;">1.3141184</td>
-<td style="text-align: center; min-width: 0in;">1.0069932</td>
-<td style="text-align: center; min-width: 0in;">1.8415388</td>
+<td style="text-align: center; min-width: 0in;">5.749</td>
+<td style="text-align: center; min-width: 0in;">4.432750</td>
+<td style="text-align: center; min-width: 0in;">1.2863724</td>
+<td style="text-align: center; min-width: 0in;">1.0082131</td>
+<td style="text-align: center; min-width: 0in;">4.469157</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(revenue, type = "mult")</td>
 <td style="text-align: center; min-width: 0in;">2006 Q2</td>
-<td style="text-align: center; min-width: 0in;">1.71</td>
-<td style="text-align: center; min-width: 0in;">1.94750</td>
-<td style="text-align: center; min-width: 0in;">0.9469622</td>
-<td style="text-align: center; min-width: 0in;">0.9272269</td>
-<td style="text-align: center; min-width: 0in;">1.8057743</td>
+<td style="text-align: center; min-width: 0in;">4.359</td>
+<td style="text-align: center; min-width: 0in;">4.683875</td>
+<td style="text-align: center; min-width: 0in;">0.9459724</td>
+<td style="text-align: center; min-width: 0in;">0.9837916</td>
+<td style="text-align: center; min-width: 0in;">4.607957</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(revenue, type = "mult")</td>
 <td style="text-align: center; min-width: 0in;">2006 Q3</td>
-<td style="text-align: center; min-width: 0in;">1.71</td>
-<td style="text-align: center; min-width: 0in;">2.25125</td>
-<td style="text-align: center; min-width: 0in;">0.8337749</td>
-<td style="text-align: center; min-width: 0in;">0.9110109</td>
-<td style="text-align: center; min-width: 0in;">2.0509132</td>
+<td style="text-align: center; min-width: 0in;">4.370</td>
+<td style="text-align: center; min-width: 0in;">5.000500</td>
+<td style="text-align: center; min-width: 0in;">0.8511409</td>
+<td style="text-align: center; min-width: 0in;">1.0267544</td>
+<td style="text-align: center; min-width: 0in;">5.134285</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">feasts::classical_decomposition(revenue, type = "mult")</td>
 <td style="text-align: center; min-width: 0in;">2006 Q4</td>
-<td style="text-align: center; min-width: 0in;">2.19</td>
-<td style="text-align: center; min-width: 0in;">2.70875</td>
-<td style="text-align: center; min-width: 0in;">0.9051445</td>
-<td style="text-align: center; min-width: 0in;">0.8932176</td>
-<td style="text-align: center; min-width: 0in;">2.4195031</td>
+<td style="text-align: center; min-width: 0in;">4.837</td>
+<td style="text-align: center; min-width: 0in;">5.288125</td>
+<td style="text-align: center; min-width: 0in;">0.9165143</td>
+<td style="text-align: center; min-width: 0in;">0.9980105</td>
+<td style="text-align: center; min-width: 0in;">5.277604</td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
-<div class="cell">
-<details class="code-fold">
-<summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(apple_decompose)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
-</details>
-<div class="cell-output-display">
-<div>
-<figure class="figure">
-<p><img src="chapter_1_lesson_5_files/figure-html/unnamed-chunk-25-1.png" class="img-fluid figure-img" width="672"></p>
-</figure>
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
 </div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>How do our results compare with the R output?</li>
+</ul>
 </div>
 </div>
 <p>The figure below illustrates the original time series (in black), the centered moving average <span class="math inline">\(\hat m_t\)</span> (in blue), and the seasonally adjusted series (in red).</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>apple_decompose <span class="sc">|&gt;</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>() <span class="sc">+</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> apple_decompose, <span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> revenue), <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> apple_decompose, <span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> season_adjust), <span class="at">color =</span> <span class="st">"#D55E00"</span>) <span class="sc">+</span></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> apple_decompose, <span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> trend), <span class="at">color =</span> <span class="st">"#0072B2"</span>) <span class="sc">+</span></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Quarter"</span>,</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Quarterly Revenue, Billions"</span>,</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Apple Inc. Quarterly Revenue (in Billions of U.S. Dollars)"</span></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>apple_decompose <span class="sc">|&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>() <span class="sc">+</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> apple_decompose, <span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> revenue), <span class="at">color =</span> <span class="st">"black"</span>) <span class="sc">+</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> apple_decompose, <span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> season_adjust), <span class="at">color =</span> <span class="st">"#D55E00"</span>) <span class="sc">+</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">data =</span> apple_decompose, <span class="fu">aes</span>(<span class="at">x =</span> index, <span class="at">y =</span> trend), <span class="at">color =</span> <span class="st">"#0072B2"</span>) <span class="sc">+</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"Quarter"</span>,</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"Quarterly Revenue, Billions"</span>,</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"Apple Inc. Quarterly Revenue (in Billions of U.S. Dollars)"</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -2059,14 +2198,65 @@ Decompose time series into trends, seasonal variation, and residuals
 </div>
 <div class="callout-body-container callout-body">
 <ul>
-<li>Do you observe a trend in the time series?
+<li>How would you interpet the seasonally-adjusted series?</li>
+</ul>
+</div>
+</div>
+<p>The following figures compare the decomposition obtained for the Apple revenue data based on the multiplicative and additive models.</p>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-4-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-1" role="tab" aria-controls="tabset-4-1" aria-selected="true" href="">Multiplicative Model</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-2" role="tab" aria-controls="tabset-4-2" aria-selected="false" href="">Additive Model</a></li></ul>
+<div class="tab-content">
+<div id="tabset-4-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-4-1-tab">
+<p>Decomposition based on a multiplicative model:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">autoplot</span>(apple_decompose)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="chapter_1_lesson_5_files/figure-html/unnamed-chunk-27-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+<div id="tabset-4-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-4-2-tab">
+<p>Decomposition based on an additive model:</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>apple_ts <span class="sc">|&gt;</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(feasts<span class="sc">::</span><span class="fu">classical_decomposition</span>(revenue,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">type =</span> <span class="st">"add"</span>))  <span class="sc">|&gt;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>() <span class="sc">|&gt;</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="chapter_1_lesson_5_files/figure-html/unnamed-chunk-28-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- End of panel-tabset -->
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
 <ul>
-<li>What does this trend suggest?</li>
-</ul></li>
-<li>In what quarter does Apple tend to have the greatest revenue?
-<ul>
-<li>What would explain this phenomenon?</li>
-</ul></li>
+<li>Is the multiplicative model appropriate for these data?</li>
 </ul>
 </div>
 </div>
@@ -2099,17 +2289,17 @@ Decompose time series into trends, seasonal variation, and residuals
 <div id="Solutions1" style="display:none;">
 <p>This code can be used to compute the four-quarter centered moving average.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># computes the 4-quarter centered moving average (m_hat)</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>apple_ts <span class="ot">&lt;-</span> apple_ts <span class="sc">|&gt;</span> </span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">m_hat =</span> (</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>          (<span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">lag</span>(revenue, <span class="dv">2</span>)</span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lag</span>(revenue, <span class="dv">1</span>)</span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> revenue</span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lead</span>(revenue, <span class="dv">1</span>)</span>
-<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> (<span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">lead</span>(revenue, <span class="dv">2</span>)</span>
-<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>        ) <span class="sc">/</span> <span class="dv">4</span></span>
-<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># computes the 4-quarter centered moving average (m_hat)</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>apple_ts <span class="ot">&lt;-</span> apple_ts <span class="sc">|&gt;</span> </span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">m_hat =</span> (</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>          (<span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">lag</span>(revenue, <span class="dv">2</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lag</span>(revenue, <span class="dv">1</span>)</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> revenue</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> <span class="fu">lead</span>(revenue, <span class="dv">1</span>)</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>          <span class="sc">+</span> (<span class="dv">1</span><span class="sc">/</span><span class="dv">2</span>) <span class="sc">*</span> <span class="fu">lead</span>(revenue, <span class="dv">2</span>)</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>        ) <span class="sc">/</span> <span class="dv">4</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </div>
 <p><a href="javascript:showhide('Solutions2')" style="font-size:.8em;">Handout + Tables 4 and 5</a></p>
@@ -2118,115 +2308,6 @@ Decompose time series into trends, seasonal variation, and residuals
 <p>Solutions for the computations from this lesson</p>
 <section id="table-5-solutions" class="level4">
 <h4 class="anchored" data-anchor-id="table-5-solutions">Table 5: (Solutions)</h4>
-<div class="cell">
-<div class="cell-output-display">
-<table class="table table-striped caption-top table-sm small">
-<thead>
-<tr class="header">
-<th style="text-align: center;" data-quarto-table-cell-role="th">Quarter</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">Revenue $$x_t$$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$ \hat m_t $$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$ \hat s_t $$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">$$ \bar s_t $$</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">Random</th>
-<th style="text-align: center;" data-quarto-table-cell-role="th">Seasonally Adjusted $$x_t$$</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">2005 Q1</td>
-<td style="text-align: center; min-width: 0in;">1.24</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">1.314</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">0.944</span></td>
-</tr>
-<tr class="even">
-<td style="text-align: center; min-width: 0in;">2005 Q2</td>
-<td style="text-align: center; min-width: 0in;">0.48</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">0.947</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">NA</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">0.507</span></td>
-</tr>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">2005 Q3</td>
-<td style="text-align: center; min-width: 0in;">1.24</td>
-<td style="text-align: center; min-width: 0in;">1.315</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">0.943</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">0.834</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">1.131</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">1.487</span></td>
-</tr>
-<tr class="even">
-<td style="text-align: center; min-width: 0in;">2005 Q4</td>
-<td style="text-align: center; min-width: 0in;">1.71</td>
-<td style="text-align: center; min-width: 0in;">1.616</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">1.058</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">0.905</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">1.169</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">1.889</span></td>
-</tr>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">2006 Q1</td>
-<td style="text-align: center; min-width: 0in;">2.42</td>
-<td style="text-align: center; min-width: 0in;">1.829</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">1.323</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">1.314</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">1.007</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">1.842</span></td>
-</tr>
-<tr class="even">
-<td style="text-align: center; min-width: 0in;">2006 Q2</td>
-<td style="text-align: center; min-width: 0in;">1.71</td>
-<td style="text-align: center; min-width: 0in;">1.947</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">0.878</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">0.947</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">0.927</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">1.806</span></td>
-</tr>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">2006 Q3</td>
-<td style="text-align: center; min-width: 0in;">1.71</td>
-<td style="text-align: center; min-width: 0in;">2.251</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(230, 159, 0, 255) !important;">0.76</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">0.834</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">0.911</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 158, 115, 255) !important;">2.051</span></td>
-</tr>
-<tr class="even">
-<td style="text-align: center; min-width: 0in;">2006 Q4</td>
-<td style="text-align: center; min-width: 0in;">2.19</td>
-<td style="text-align: center; min-width: 0in;">2.709</td>
-<td style="text-align: center; min-width: 0in;">0.808</td>
-<td style="text-align: center; min-width: 0in;">0.905</td>
-<td style="text-align: center; min-width: 0in;">0.893</td>
-<td style="text-align: center; min-width: 0in;">2.42</td>
-</tr>
-<tr class="odd">
-<td style="text-align: center; min-width: 0in;">2007 Q1</td>
-<td style="text-align: center; min-width: 0in;">4.37</td>
-<td style="text-align: center; min-width: 0in;">3.136</td>
-<td style="text-align: center; min-width: 0in;">1.393</td>
-<td style="text-align: center; min-width: 0in;">1.314</td>
-<td style="text-align: center; min-width: 0in;">1.06</td>
-<td style="text-align: center; min-width: 0in;">3.325</td>
-</tr>
-<tr class="even">
-<td style="text-align: center; min-width: 0in;">2007 Q2</td>
-<td style="text-align: center; min-width: 0in;">3.42</td>
-<td style="text-align: center; min-width: 0in;">3.469</td>
-<td style="text-align: center; min-width: 0in;">0.986</td>
-<td style="text-align: center; min-width: 0in;">0.947</td>
-<td style="text-align: center; min-width: 0in;">1.041</td>
-<td style="text-align: center; min-width: 0in;">3.612</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
 </section>
 <section id="table-4-solutions" class="level4">
 <h4 class="anchored" data-anchor-id="table-4-solutions">Table 4: (Solutions)</h4>
@@ -2247,62 +2328,62 @@ Decompose time series into trends, seasonal variation, and residuals
 <td style="text-align: center; min-width: 0in;">2005</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
 <td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.943</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">1.058</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.935</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.878</span></td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2006</td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">1.323</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.878</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.76</span></td>
-<td style="text-align: center; min-width: 0in;">0.808</td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">1.297</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.931</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.874</span></td>
+<td style="text-align: center; min-width: 0in;">0.915</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2007</td>
-<td style="text-align: center; min-width: 0in;">1.393</td>
-<td style="text-align: center; min-width: 0in;">0.986</td>
-<td style="text-align: center; min-width: 0in;">0.864</td>
-<td style="text-align: center; min-width: 0in;">0.702</td>
+<td style="text-align: center; min-width: 0in;">1.283</td>
+<td style="text-align: center; min-width: 0in;">0.892</td>
+<td style="text-align: center; min-width: 0in;">0.848</td>
+<td style="text-align: center; min-width: 0in;">0.904</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2008</td>
-<td style="text-align: center; min-width: 0in;">1.525</td>
-<td style="text-align: center; min-width: 0in;">0.785</td>
-<td style="text-align: center; min-width: 0in;">0.683</td>
-<td style="text-align: center; min-width: 0in;">1.325</td>
+<td style="text-align: center; min-width: 0in;">1.321</td>
+<td style="text-align: center; min-width: 0in;">0.911</td>
+<td style="text-align: center; min-width: 0in;">0.791</td>
+<td style="text-align: center; min-width: 0in;">1.167</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2009</td>
-<td style="text-align: center; min-width: 0in;">1.182</td>
-<td style="text-align: center; min-width: 0in;">0.781</td>
-<td style="text-align: center; min-width: 0in;">0.834</td>
-<td style="text-align: center; min-width: 0in;">1.005</td>
+<td style="text-align: center; min-width: 0in;">1.155</td>
+<td style="text-align: center; min-width: 0in;">0.854</td>
+<td style="text-align: center; min-width: 0in;">0.869</td>
+<td style="text-align: center; min-width: 0in;">0.998</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2010</td>
-<td style="text-align: center; min-width: 0in;">1.193</td>
-<td style="text-align: center; min-width: 0in;">0.912</td>
-<td style="text-align: center; min-width: 0in;">0.849</td>
-<td style="text-align: center; min-width: 0in;">0.963</td>
+<td style="text-align: center; min-width: 0in;">1.159</td>
+<td style="text-align: center; min-width: 0in;">0.883</td>
+<td style="text-align: center; min-width: 0in;">0.888</td>
+<td style="text-align: center; min-width: 0in;">0.994</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2011</td>
-<td style="text-align: center; min-width: 0in;">1.106</td>
-<td style="text-align: center; min-width: 0in;">0.961</td>
-<td style="text-align: center; min-width: 0in;">0.999</td>
-<td style="text-align: center; min-width: 0in;">0.734</td>
+<td style="text-align: center; min-width: 0in;">1.139</td>
+<td style="text-align: center; min-width: 0in;">0.946</td>
+<td style="text-align: center; min-width: 0in;">0.968</td>
+<td style="text-align: center; min-width: 0in;">0.837</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">2012</td>
-<td style="text-align: center; min-width: 0in;">1.328</td>
-<td style="text-align: center; min-width: 0in;">1.141</td>
-<td style="text-align: center; min-width: 0in;">0.865</td>
-<td style="text-align: center; min-width: 0in;">0.828</td>
+<td style="text-align: center; min-width: 0in;">1.273</td>
+<td style="text-align: center; min-width: 0in;">1.027</td>
+<td style="text-align: center; min-width: 0in;">0.872</td>
+<td style="text-align: center; min-width: 0in;">0.862</td>
 </tr>
 <tr class="odd">
 <td style="text-align: center; min-width: 0in;">2013</td>
-<td style="text-align: center; min-width: 0in;">1.249</td>
-<td style="text-align: center; min-width: 0in;">1.019</td>
+<td style="text-align: center; min-width: 0in;">1.288</td>
+<td style="text-align: center; min-width: 0in;">1.025</td>
 <td style="text-align: center; min-width: 0in;">0.819</td>
 <td style="text-align: center; min-width: 0in;">0.856</td>
 </tr>
@@ -2373,22 +2454,43 @@ Decompose time series into trends, seasonal variation, and residuals
 <td style="text-align: center; min-width: 0in;">2023</td>
 <td style="text-align: center; min-width: 0in;">1.219</td>
 <td style="text-align: center; min-width: 0in;">0.989</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
-<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">0.851</td>
+<td style="text-align: center; min-width: 0in;">0.933</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">Mean</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">1.312</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.946</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.833</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.904</span></td>
+<td style="text-align: center; min-width: 0in;">2024</td>
+<td style="text-align: center; min-width: 0in;">1.247</td>
+<td style="text-align: center; min-width: 0in;">0.935</td>
+<td style="text-align: center; min-width: 0in;">0.872</td>
+<td style="text-align: center; min-width: 0in;">0.954</td>
 </tr>
 <tr class="odd">
+<td style="text-align: center; min-width: 0in;">2025</td>
+<td style="text-align: center; min-width: 0in;">1.229</td>
+<td style="text-align: center; min-width: 0in;">0.925</td>
+<td style="text-align: center; min-width: 0in;">0.883</td>
+<td style="text-align: center; min-width: 0in;">0.924</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">2026</td>
+<td style="text-align: center; min-width: 0in;">1.252</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">Mean</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">1.284</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.945</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.85</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.915</span></td>
+</tr>
+<tr class="even">
 <td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">$$ \bar s_t $$</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">1.314</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.947</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.834</span></td>
-<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.905</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">1.286</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.946</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.851</span></td>
+<td style="text-align: center; min-width: 0in;"><span style="     color: rgba(0, 114, 178, 255) !important;">0.916</span></td>
 </tr>
 </tbody>
 </table>
