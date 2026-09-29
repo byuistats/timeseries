@@ -63,7 +63,7 @@ pacman::p_load(data.table) # for transpose
 source("_common_packages.R")
 ```
 
-## Class Activity: Comparing Models in the Textbook Versus R (2 min)
+## Class Activity: Comparing Models in the Textbook Versus R (5 min)
 
 Both the textbook and R use the same model in the additive case:
 
@@ -75,11 +75,12 @@ However, there is a discrepancy in the definitions for the mulitplicative models
 
 $$
   x_t = m_t \cdot s_t + z_t
-$$ but R defines the multiplicative model as
-
+$$ 
+but R defines the multiplicative model as
 $$
   x_t = m_t \cdot s_t \cdot z_t
-$$ You can investigate R's definition by executing this command in RStudio.
+$$
+You can investigate R's definition by executing this command in RStudio.
 
 ```{r}
 #| eval: false
@@ -89,7 +90,7 @@ $$ You can investigate R's definition by executing this command in RStudio.
 
 
 
-## Class Activity: Exploring Simulated Time Series Data (10 min)
+## Class Activity: Exploring Simulated Time Series Data (15 min)
 
 So far, you have learned how to estimate a trend using aggregated data (i.e., an annual average) or a moving average. We will compute the seasonal effect and use this to get the random component. 
 
@@ -577,7 +578,7 @@ Is an additive or multiplicative model more appropriate? Why?
 <!-- Compare Rexburg weather and Basel, Switzerland Weather. (Better yet, Melbourne, Austrailia) -->
 
 
-## Small Group Activity: Apple's Quarterly Revenue (30 min)
+## Small Group Activity: Apple's Quarterly Revenue (45 min)
 
 Please download this file 
 <a href="handouts/chapter_1_5_handout.xlsx" download="chapter_1_5_handout.xlsx"> chapter_1_5_handout.xlsx </a>
@@ -604,7 +605,7 @@ apple_ts <- rio::import("https://byuistats.github.io/timeseries/data/apple_reven
 
 apple_ts |>
   select(index, period_covered, revenue) |>
-  display_partial_table(6,3)
+  display_partial_table(6,4)
 ```
 
 Here are some time plots of the Apple revenue data.
@@ -618,15 +619,35 @@ This time plot displays Apple's quarterly revenue data from `r apple_ts$year |> 
 #| code-fold: true
 #| code-summary: "Show the code"
 
+# apple_ts |>
+#   autoplot(.vars = revenue) +
+#   expand_limits(y = 0) +
+#   labs(
+#     x = "Quarter",
+#     y = "Apple Revenue, Billions $US",
+#     title = "Apple's Quarterly Revenue, Billions of U.S. Dollars"
+#   ) +
+#   theme(plot.title = element_text(hjust = 0.5))
+
 apple_ts |>
   autoplot(.vars = revenue) +
+  aes(color = "Revenue (Billions $US)") +
+  scale_color_manual(
+    name = NULL,
+    values = c("Revenue (Billions $US)" = "black")
+  ) +
+  expand_limits(y = 0) +
   labs(
     x = "Quarter",
     y = "Apple Revenue, Billions $US",
     title = "Apple's Quarterly Revenue, Billions of U.S. Dollars"
   ) +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = c(0.02, 0.98),
+    legend.justification = c(0, 1),
+    legend.background = element_rect(fill = "white", color = "grey70")
+  )
 ```
 
 #### Recent Years
@@ -637,16 +658,37 @@ Here is a plot illustrating the last few years' of the Apple revenue data:
 #| code-fold: true
 #| code-summary: "Show the code"
 
+# apple_ts |>
+#   filter(year >= max(year) - 4) |>
+#   autoplot(.vars = revenue) +
+#   expand_limits(y = 0) +
+#   labs(
+#     x = "Quarter",
+#     y = "Apple Revenue, Billions $US",
+#     title = "Apple's Quarterly Revenue, Billions of U.S. Dollars"
+#   ) +
+#   theme(plot.title = element_text(hjust = 0.5))
+
 apple_ts |>
   filter(year >= max(year) - 4) |>
   autoplot(.vars = revenue) +
+  aes(color = "Revenue (Billions $US)") +
+  scale_color_manual(
+    name = NULL,
+    values = c("Revenue (Billions $US)" = "black")
+  ) +
+  expand_limits(y = 0) +
   labs(
     x = "Quarter",
     y = "Apple Revenue, Billions $US",
     title = "Apple's Quarterly Revenue, Billions of U.S. Dollars"
   ) +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = c(0.02, 0.98),
+    legend.justification = c(0, 1),
+    legend.background = element_rect(fill = "white", color = "grey70")
+  )
 ```
 
 :::  
@@ -859,9 +901,9 @@ wider_df3 |>
   # color_specific_cell(5, 3, "#0072B2") |>
   # color_specific_cell(5, 4, "#0072B2") |>
   # color_specific_cell(5, 5, "#0072B2") |>
-  rbind(c("Mean", rep("______",4))) |>
+  rbind(c("Mean", "1.284", rep("______",3))) |>
   # color_last_row2("#0072B2") |>
-  rbind(c("$$ \\bar s_t $$", rep("$$~$$ ______",4))) |>
+  rbind(c("$$ \\bar s_t $$", "1.286", rep("$$~$$ ______",3))) |>
   # color_last_row2("#0072B2") |>
   display_table()
 ```
@@ -871,7 +913,7 @@ wider_df3 |>
 
 -   The table above gives the values of $\hat s_t$. Fill in the missing values. (Note you already computed these.)
 -   The second-to-last row (labeled "Mean") gives the values of $\bar s_t$. Find the mean of the $\hat s_t$ values for each quarter. Call these means $\bar {\hat s_t}$.
--   Compute the mean of the $\bar {\hat s_t}$ values. Call this number $\bar {\bar {\hat s_t}}$ (This number should generally be relatively close to 1.)
+-   Compute the mean of the $\bar {\hat s_t}$ values. Call this number $\bar {\bar {\hat s_t}}$ (This number should be somewhat close to 1.)
 -   Divide each of the $\bar {\hat s_t}$ values by $\bar {\bar {\hat s_t}}$ to get $\bar s_t$, the seasonally adjusted factor for quarter $t$. (Note that the mean of the $\bar s_t$ values will be 1.)
 
 $$ \bar s_t = \frac{ \left( \bar {\hat s_t} \right) }{ \left( \bar {\bar {\hat s_t}} \right) } $$
@@ -880,7 +922,11 @@ $$ \bar s_t = \frac{ \left( \bar {\hat s_t} \right) }{ \left( \bar {\bar {\hat s
 
 ### Random Component and the Seasonally Adjusted Time Series
 
-Using R's definition of the multiplicative model, we calculate the random component by dividing the values in the time series by the product of the trend and the seasonally adjusted factor:
+Using R's definition of the multiplicative model, 
+$$
+  x_t = m_t \cdot s_t \cdot z_t
+$$
+we calculate the random component by dividing the values in the time series by the product of the trend and the seasonally adjusted factor:
 
 $$
   \text{random component} = \dfrac{ x_t }{ \hat m_t \cdot \bar s_t }
@@ -926,11 +972,15 @@ adjusted_ts <- apple_ts2 |>
   dplyr::select(index, revenue, m_hat, s_hat, s_bar, random, seasonally_adjusted_x) 
 
 adjusted_ts |>
-  # mutate(
-  #   s_hat = ifelse(year %in% c(2006, 2007, 2008, 2009), "______", s_hat)
-  # ) |> 
   convert_df_to_char(3) |>
   dplyr::select(index, revenue, m_hat, s_hat, s_bar, random, seasonally_adjusted_x) |>
+  mutate(
+    m_hat = ifelse(row_number() > 4, "______", m_hat),
+    s_hat = ifelse(row_number() > 4, "______", s_hat),
+    s_bar = ifelse(row_number() > 1, "______", s_bar),
+    random = ifelse(row_number() > 4, "______", random),
+    seasonally_adjusted_x = ifelse(row_number() > 4, "______", seasonally_adjusted_x)
+  ) |>
   rename(
     Quarter = index, 
     "Revenue $$x_t$$" = revenue,
@@ -948,7 +998,7 @@ adjusted_ts |>
 
 
 
-## Class Activity: Computing the Multiplicative Decomposition in R (3 min)
+## Class Activity: Computing the Multiplicative Decomposition in R (5 min)
 
 The R code below calculates the decomposition, including the seasonally adjusted time series, beginning with the tsibble `apple_ts`.
 
@@ -979,23 +1029,81 @@ apple_decompose |>
 
 The figure below illustrates the original time series (in black), the centered moving average $\hat m_t$ (in blue), and the seasonally adjusted series (in red).
 
+::: panel-tabset
+#### Since 2005
+
+From `r apple_ts$year |> min()` to `r apple_ts$year |> max()`:
+
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 #| warning: false
 
 apple_decompose |>
-  ggplot() +
-  geom_line(data = apple_decompose, aes(x = index, y = revenue), color = "black") +
-  geom_line(data = apple_decompose, aes(x = index, y = season_adjust), color = "#D55E00") +
-  geom_line(data = apple_decompose, aes(x = index, y = trend), color = "#0072B2") +
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = revenue, color = "Revenue")) +
+  geom_line(aes(y = season_adjust, color = "Seasonally Adjusted")) +
+  geom_line(aes(y = trend, color = "Trend")) +
+  scale_color_manual(
+    name = NULL,
+    values = c(
+      "Revenue" = "black",
+      "Seasonally Adjusted" = "#D55E00",
+      "Trend" = "#0072B2"
+    )
+  ) +
   labs(
     x = "Quarter",
     y = "Quarterly Revenue, Billions",
     title = "Apple Inc. Quarterly Revenue (in Billions of U.S. Dollars)"
   ) +
-  theme(plot.title = element_text(hjust = 0.5))
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = c(0.02, 0.98),
+    legend.justification = c(0, 1),
+    legend.background = element_rect(fill = "white", color = "grey70")
+  )
 ```
+
+#### Recent Years
+
+From `r max(year(apple_decompose$index)) - 4` to `r max(year(apple_decompose$index))`:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+apple_decompose |>
+  filter(year(index) >= max(year(index)) - 4) |>
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = revenue, color = "Revenue")) +
+  geom_line(aes(y = season_adjust, color = "Seasonally Adjusted")) +
+  geom_line(aes(y = trend, color = "Trend")) +
+  scale_color_manual(
+    name = NULL,
+    values = c(
+      "Revenue" = "black",
+      "Seasonally Adjusted" = "#D55E00",
+      "Trend" = "#0072B2"
+    )
+  ) +
+  labs(
+    x = "Quarter",
+    y = "Quarterly Revenue, Billions",
+    title = "Apple Inc. Quarterly Revenue (in Billions of U.S. Dollars)"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = c(0.02, 0.98),
+    legend.justification = c(0, 1),
+    legend.background = element_rect(fill = "white", color = "grey70")
+  )
+```
+:::  
+<!-- End of panel-tabset -->
+
+
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
@@ -1080,8 +1188,7 @@ apple_ts |>
 
 
 
-
-
+## Solutions {.unlisted}
 
 <a href="javascript:showhide('Solutions1')"
 style="font-size:.8em;">Moving Average</a>
@@ -1109,100 +1216,13 @@ apple_ts <- apple_ts |>
 :::
 
 
-
-
-
 <a href="javascript:showhide('Solutions2')"
-style="font-size:.8em;">Handout + Tables 4 and 5</a>
+style="font-size:.8em;">Handout</a>
 
 ::: {#Solutions2 style="display:none;"}
 
-<a href="handouts/chapter_1_5_handout_key.xlsx" download="chapter_1_5_handout_key.xlsx"> Tables-Handout-Excel-key </a>
+<a href="handouts/chapter_1_5_handout_key.xlsx" download="chapter_1_5_handout_key.xlsx"> chapter_1_5_handout_key.xlsx </a>
 
-Solutions for the computations from this lesson
-
-#### Table 5: (Solutions)
-
-```{r}
-#| echo: false
-
-# adjusted_ts |> 
-#   round_df(3) |>
-#   filter(row_number() <= num_blank_rows) |>
-#   mutate(
-#     s_hat = cell_spec(s_hat, color = "#E69F00"),
-#     s_bar = cell_spec(s_bar, color = "#009E73"),
-#     random = cell_spec(random, color = "#009E73"),
-#     seasonally_adjusted_x = cell_spec(seasonally_adjusted_x, color = "#009E73")
-#   ) |>
-#   convert_df_to_char() |>
-#   rename(
-#     Quarter = index, 
-#     "Revenue $$x_t$$" = revenue,
-#     "$$ \\hat m_t $$" = m_hat, 
-#     "$$ \\hat s_t $$" = s_hat, 
-#     "$$ \\bar s_t $$" = s_bar,
-#     Random = random,
-#     "Seasonally Adjusted $$x_t$$" = seasonally_adjusted_x
-#   ) |>
-#   display_table()
-```
-
-#### Table 4: (Solutions)
-
-```{r}
-#| echo: false
-#| warning: false
-
-# Compute s_hat
-apple_shat_ts2 <- apple_shat_ts |>
-  data.frame() |>
-  mutate(quarter = paste0("Q",quarter)) |>
-  round_df(3) # Round df to make the computations simpler
-
-wider_df <- apple_shat_ts2 |>
-  dplyr::select(year, quarter, s_hat) |>
-  pivot_wider(values_from = "s_hat", names_from = "quarter")
-
-wider_df2 <- wider_df %>%
-  round_df(3)
-
-wider_df3 <- wider_df2 |>
-  rename(Year = year)
-
-column_sum <- wider_df3 |>
-  pivot_longer(cols = c("Q1", "Q2", "Q3", "Q4"), values_to = "revenue", names_to = "quarter") |>
-  mutate(revenue = as.numeric(revenue)) |>
-  group_by(quarter) |>
-  summarise(mean = mean(revenue, na.rm = TRUE)) |>
-  group_by() |> 
-  mutate(
-    grand_mean = mean(mean),
-    adjusted = mean / grand_mean
-  ) |>
-  dplyr::select(-grand_mean) |> 
-  # mutate(Year = "Mean") |>
-  # pivot_wider(names_from = quarter, values_from = c("mean", "adjusted")) |>
-  convert_df_to_char(3) |>
-  dplyr::select(-quarter) |>
-  data.table::transpose() |>
-  rename(Q1 = V1, Q2 = V2, Q3 = V3, Q4 = V4) |>
-  mutate(Year = c("Mean","$$ \\bar s_t $$")) |>
-  dplyr::select(Year, Q1:Q4)
-
-wider_df3 |>
-  convert_df_to_char() |>
-  color_specific_cell(1, 4, "#0072B2") |>
-  color_specific_cell(1, 5, "#0072B2") |>
-  color_specific_cell(2, 2, "#0072B2") |>
-  color_specific_cell(2, 3, "#0072B2") |>
-  color_specific_cell(2, 4, "#0072B2") |>
-  rbind(column_sum |> head(1)) |>
-  color_last_row2("#0072B2") |>
-  rbind(column_sum |> tail(1)) |>
-  color_last_row2("#0072B2") |>
-  display_table()
-```
 :::
 
 
