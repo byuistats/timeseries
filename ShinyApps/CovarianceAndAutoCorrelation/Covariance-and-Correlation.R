@@ -229,7 +229,7 @@ server <- function(input, output, session) {
   output$formula0 <- renderUI({
     req(sim_data())
     tagList(
-      "The simulated values are plotted below, with vertical lines drawn at $x = \\bar x$ and $y = \\bar y$.",
+      "The simulated values are plotted below, with vertical lines drawn at $x = \\bar x$ and $y = \\bar y$. The first point in the simulated data set has been circled.",
       tags$script('renderMathInElement(document.getElementById("formula0"), {delimiters: [{left: "$", right: "$", display: false}]});')
     )
   })
