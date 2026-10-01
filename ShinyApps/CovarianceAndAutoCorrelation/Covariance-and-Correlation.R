@@ -1,6 +1,10 @@
 # Install required packages if not already installed
 if (!require("shiny")) install.packages("shiny")
-if (!require("MASS")) install.packages("MASS")
+# if (!require("MASS")) install.packages("MASS")# Was needed for MASS::mvrnorm(),
+                                                # which was replaced with a
+                                                # custom base R function because
+                                                # the Shiny server did not have
+                                                # an updated version of MASS.
 
 # Load required libraries
 library(shiny)
@@ -49,6 +53,21 @@ row_of_vdots <- function(df) {
   } # for
 
   return(temp_df)
+}
+
+# Base-R replacement for MASS::mvrnorm()
+mvrnorm <- function(n = 1, mu, Sigma) {
+  p <- length(mu)
+  if (!all(dim(Sigma) == c(p, p))) stop("incompatible arguments")
+
+  eS <- eigen(Sigma, symmetric = TRUE)
+  ev <- eS$values
+  if (!all(ev >= -1e-6 * abs(ev[1L]))) stop("'Sigma' is not positive definite")
+
+  X <- matrix(rnorm(p * n), n)
+  X <- drop(mu) + eS$vectors %*% diag(sqrt(pmax(ev, 0)), p) %*% t(X)
+
+  if (n == 1) drop(X) else t(X)
 }
 
 # Define the UI
@@ -125,7 +144,8 @@ server <- function(input, output, session) {
       nrow = 2)
 
     # Simulate bivariate normal data
-    mvn_data <- MASS::mvrnorm(n, mu, sigma) %>%
+    # mvn_data <- MASS::mvrnorm(n, mu, sigma) %>%
+    mvn_data <- mvrnorm(n, mu, sigma) %>%
       data.frame() %>%
       rename(x = X1, y = X2)
 
@@ -258,7 +278,7 @@ server <- function(input, output, session) {
   output$formula1.5<- renderUI({
     req(sim_data())
     tagList(
-      "The table illustrates the calculation of sample covariance step by step. The color coding of the two rightmost columns matches the one used in the plot above. Notice the relative number of blue points compared to the orange points. The last row calculates the numerator of the sample covariance statistic. Since the denominator is always a positive number, the sign on the numerator determines the sign of the sample covariance. The sign and magnitude of the numbers in the rightmost column will determine the sign and magnitude of the sample covariance.",
+      "The table facilitates the calculation of the sample covariance step by step. The color coding of the two rightmost columns matches the one used in the plot above. Notice the relative number of blue points compared to the orange points. The last row calculates the numerator of the sample covariance statistic. Since the denominator is always a positive number, the sign on the numerator determines the sign of the sample covariance. The sign and magnitude of the numbers in the rightmost column will determine the sign and magnitude of the sample covariance.",
       tags$script('renderMathInElement(document.getElementById("formula1.5"), {delimiters: [{left: "$", right: "$", display: false}]});')
     )
   })
