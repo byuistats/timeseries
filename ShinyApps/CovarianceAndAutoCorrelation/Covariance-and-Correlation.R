@@ -303,7 +303,7 @@ server <- function(input, output, session) {
   output$formula4 <- renderUI({
     cov_dat_summary <- sim_data()[[1]]
     cov_dat <- sim_data()[[2]]
-    withMathJax(paste0("The sample correlation coefficient is: $$r = \\frac{\\sum\\limits_{t=1}^n (x - \\bar x)(y - \\bar y)}{\\sqrt{\\frac{\\sum\\limits_{t=1}^n (x - \\bar x)^2}{n-1}} \\sqrt{\\frac{\\sum\\limits_{t=1}^n (y - \\bar y)^2}{n-1}}} =\\frac{", sum((cov_dat$x - mean(cov_dat$x))*(cov_dat$y - mean(cov_dat$y))) |> round(3),"}{\\sqrt{\\frac{", sum((cov_dat$x - mean(cov_dat$x))^2) |> round(3),"}{",input$n-1,"}} \\sqrt{\\frac{", sum((cov_dat$y - mean(cov_dat$y))^2) |> round(3),"}{",input$n-1,"}} }=", cor(cov_dat$x, cov_dat$y) |> round(3),"$$"))
+    withMathJax(paste0("The sample correlation coefficient is: $$r = \\frac{cov(x,y)}{s_x \\cdot s_y} = \\frac{\\frac{1}{n-1} \\sum\\limits_{t=1}^n (x - \\bar x)(y - \\bar y)}{\\sqrt{\\frac{\\sum\\limits_{t=1}^n (x - \\bar x)^2}{n-1}} \\sqrt{\\frac{\\sum\\limits_{t=1}^n (y - \\bar y)^2}{n-1}}} = \\frac{ \\frac{", sum((cov_dat$x - mean(cov_dat$x))*(cov_dat$y - mean(cov_dat$y))) |> round(3),"}{",input$n-1,"} }{\\sqrt{\\frac{", sum((cov_dat$x - mean(cov_dat$x))^2) |> round(3),"}{",input$n-1,"}} \\sqrt{\\frac{", sum((cov_dat$y - mean(cov_dat$y))^2) |> round(3),"}{",input$n-1,"}} }=", cor(cov_dat$x, cov_dat$y) |> round(3),"$$"))
   })
 
 
