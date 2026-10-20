@@ -1,0 +1,425 @@
+---
+title: "Time Series Homework: Chapter 3 Lesson 4"
+subtitle: "Please_put_your_name_here"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+execute: 
+  warning: false
+  message: false
+---
+
+<!-- Needs revisions summer 2026 -->
+
+```{r, message=FALSE, warning=FALSE}
+pacman::p_load(
+  tidyverse,  # ggplot, mutate(), cleaning...
+  tsibble,    # as_tsibble()
+  fable,      # model(...), forecast(), tidy(), glance()...
+  feasts,     # ACF(), PACF()
+  ggtime,     # autoplot() for tsibbles
+  rio,        # import()
+  pander,     # pander() markdown tables
+  patchwork   # + and / for ggplots
+)
+```
+
+## Data
+
+```{r, message=FALSE}
+
+kw <- rio::import("https://byuistats.github.io/timeseries/data/USENERGYPRICE2.csv")
+
+```
+
+## Questions
+
+### Question 1 - Context and Measurement (10 points)
+
+The first part of any time series analysis is context. You cannot properly analyze data without knowing what the data is measuring. Without context, the most simple features of data can be obscure and inscrutable. This homework assignment will center around the series below.
+
+Please research the time series. In the spaces below, give the data collection process, unit of analysis, and meaning of each observation for the series.
+
+**Average Price of Electricity per Kilowatt-Hour in U.S.: City Average**
+
+<https://fred.stlouisfed.org/series/APU000072610>
+
+::: {.callout-note title="Answer" icon="false"}
+#### Data Collection Process
+
+The data is sourced from the U.S. Bureau of Labor Statistics (BLS) under the release “Average Price: Electricity per Kilowatt-Hour in U.S. City Average. The prices are collected monthly from 75 urban areas across the United States using mail questionnaires managed by the Department of Energy. All reported prices include Federal, State, and local taxes, as well as fuel and purchased gas adjustments for natural gas and electricity.
+
+#### Unit of Analysis
+
+The primary unit is the U.S. City Average electricity price (\$) per kilowatt-hour (kWh) across the 75 urban areas. Prices are measured in U.S. Dollars (USD) and are not seasonally adjusted, reflecting actual monthly prices without adjustments for seasonal variations.
+
+#### Meaning of Each Observation
+
+Each data point represents the average electricity price per kilowatt-hour for a specific month in a U.S. city.
+:::
+
+### Question 2 - US Average Price of Electricity: Additive Holt-Winters Forecasting (25 points)
+
+#### a) Please fit the Holt-Winters smoothing method to the series. Plot its components.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+kw_ts <- kw |> 
+  mutate(date = yearmonth(observation_date)) |> 
+  as_tsibble()
+
+kw_hw <- kw_ts |>
+  model(Additive = ETS(
+    usenergyprice ~
+      trend("A", alpha = 0.4, beta = 0.01) +
+      error("A") +
+      season("A", gamma = 0.5)
+  ))
+
+autoplot(components(kw_hw))
+
+report(kw_hw)
+```
+
+:::
+
+#### b) Please plot an autocorrelation plot on the remainder component.
+
+::: {.callout-note title="Answer" icon="false"}
+
+```{r}
+acf(components(kw_hw)$remainder |> na.omit())
+```
+
+:::
+
+#### c) Please plot the Holt-Winters forecast of the series for the next 36 months superimposed against the original series. Please see [Figure 7](https://byuistats.github.io/timeseries/chapter_3_lesson_4.html#fig-crime-hw-forecast) in Chapter 3: Lesson 4
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+
+kw_forecast <- kw_hw |>
+  forecast(h = "3 years") 
+
+autoplot(kw_forecast, kw_ts, level = 95) +
+  geom_line(data = augment(kw_hw), aes(y = .fitted, color = "Fitted")) +
+  scale_color_discrete(name = "")
+
+```
+
+:::
+
+
+
+#### d) What parameters values did you choose for $\alpha$, $\beta$, and $\gamma$. Justify your choice.
+
+Make sure to iterate through the process above before justifying the best fitted model.
+
+::: {.callout-note title="Answer" icon="false"}
+
+### Trend $\alpha = 0.4$
+
+I set $\alpha$ to a moderate-to-lower value ($0.4$) because electricity prices do not fluctuate wildly month-to-month. They shift gradually due to regulatory policies, fuel input costs, and infrastructure investments. A moderate trend parameter avoids overreacting to short-term noise or being overly static and slow to respond. 
+
+### Slope $\beta = 0.01$
+
+I set $\beta$ to a very low value ($0.01$) because electricity prices in the US exhibit a fairly consistent upward trend. Since the slope changes slowly over a long period, a very small beta helps to estimate the trend. This aligns with the economic reality, as the growth trajectory of electricity prices is persistent but not volatile. 
+
+### Season $\gamma = 0.5$
+
+Seasonal variation in this data is evident but shifting. Over the period examined, peak consumption periods have shifted due to changing climate conditions, variations in industrial usage, and increased residential cooling demand. Because seasonal dynamics have not remained static, a moderate $\gamma$ of $0.5$ ensures that the estimated seasonal component remains responsive to more recent patterns rather than being anchored too strongly to historical averages.
+
+:::
+
+#### e) Is the trend in the US Average Price of Electricity series deterministic or stochastic? What is the basis of your evaluation?
+
+::: {.callout-note title="Answer" icon="false"}
+
+::: {.panel-tabset}
+
+## Short Answer
+
+The trend is more stochastic than deterministic. The series has a strong upward drift, but a deterministic trend would have a fixed slope or a fixed functional form, and this series does not. Its growth rate changes several times, and each change is permanent. The level never returns to an earlier line.
+
+## Long Answer
+
+##### Trend
+
+The grey line is the monthly series and the black line is a 12-month centered moving average, which removes the seasonality. The dashed lines mark the shifts discussed below.
+
+```{r}
+ma12 <- as.numeric(stats::filter(kw_ts$usenergyprice, c(0.5, rep(1, 11), 0.5) / 12))
+events <- tibble(when = as.Date(c("1986-01-01", "1997-06-01", "2005-01-01", "2009-01-01", "2021-01-01")))
+
+kw_ts |>
+  mutate(ma12 = ma12, day = as.Date(date)) |>
+  ggplot(aes(x = day)) +
+  geom_line(aes(y = usenergyprice), color = "gray65") +
+  geom_line(aes(y = ma12), linewidth = 1) +
+  geom_vline(data = events, aes(xintercept = when), linetype = "dashed", color = "firebrick") +
+  labs(title = "US Average Electricity Price, with 12-Month Moving Average",
+       x = "Date", y = "Price per kWh (USD)")
+```
+
+The series runs from November 1978 to January 2025. The average annual growth rate of the price changes sharply across eras:
+
+| Era | Average growth per year |
+|:---------------|-------------:|
+| 1979-1982 | 14.8% |
+| 1983-1997 | 1.3% |
+| 1998-2004 | 1.4% |
+| 2005-2009 | 6.2% |
+| 2010-2020 | 0.6% |
+| 2021-2024 | 7.7% |
+
+A single straight line (or a log-linear one) cannot describe this. Nor does the price revert to a trend after a shock: the drops in 1986 and 1998 and the rise in 2005-2008 each reset the level, and the series kept going from there.
+
+Much of the rise in the nominal series is inflation, as the Question 3 series shows. Even after dividing out the PCE price index, however, the real price is not flat. Taking 1979 as 100, the real price peaked at about 120 in 1982, fell to about 81 by 2004, climbed back to about 99 by 2009, drifted down to about 89 by 2020, and rose again to about 97 by 2023. A wandering real level like this is further evidence of a stochastic trend. Real prices also should not be attributed to "technology" or "renewables" alone: fuel costs, regulation, and delivery costs (transmission and distribution) all matter, and this data cannot separate them.
+
+##### Seasonality
+
+The seasonality has a fixed period of 12 months: the price is highest in June-September and lowest in the rest of the year. The timing is regular, but its **size is not constant**. The gap between the highest and lowest month, as a share of the annual average price, was about 20% in 1980, 8-9% through most of the 1990s, 13% in 2008, and only about 3% in 2020 and 2024. So the seasonal pattern is stable in timing but has a changing amplitude, which is a reason to let the seasonal component adapt (a moderate-to-high $\gamma$) rather than treat it as fixed.
+
+The reason for the seasonal pattern also needs a correction. This series is a *price per kWh*, not a quantity, so it does not rise simply because "everyone turns on the A/C". Many utilities charge higher rates in summer months (seasonal rate schedules, and a higher marginal cost of peak generation), and the June step up in the data lines up with those tariff changes.
+
+##### Cycles & 'Random' Shocks/Events
+
+Several level shifts stand out: 1986, 1997-98, 2005-2008, and 2021-2022. There is a lot that could be at play, so I asked an AI assistant for context, then checked its claims against the data and public sources (FRED, EIA). The prompt was:
+
+*"I have this data on the average price of energy in the usa from 1980-2020. Im specifically interested in the context and reason that I can observe cycles/level shocks around these time periods: 1987, 1998, 2008-2009, 2014. Can you tell me about world event, political events, policy changes, technological advancements that happened around these timeframes that would be the explanation for these occurrences?"*
+
+Checking the response showed that its dates were off for three of the four events, and that most of its explanations (stock market crash, Russian default, oil price drop, oil export ban) are not plausibly linked to *retail electricity* prices. Very little electricity is generated from oil, and regulated retail rates respond to fuel costs slowly and with a lag, not to financial-market events. The corrected account follows. The causes below are plausible explanations supported by the timing, not proven causes.
+
+::: {.panel-tabset .nav-pills}
+
+## 1986
+
+**What the data show:** The drop is in **1986**, not 1987. The 12-month average falls from about \$0.0815 in mid-1985 to about \$0.076 in the second half of 1986, and the annual average falls 6.0% in 1986 (the only year of decline in the 1980s) and then rises 3.2% in 1987. In real terms the price falls from about 117 (1984) to 102 (1987) on the 1979 = 100 scale.
+
+**Likely explanation:** The collapse in crude oil prices in early 1986 (WTI fell from about \$23 in January to about \$12-15 within a few months). Utilities in the Northeast and Florida burned a lot of residual fuel oil, and fuel-adjustment clauses passed lower fuel costs through to customers. General inflation was also far lower than in 1979-1982.
+
+**What does not fit:** Black Monday (October 19, 1987) happened *after* the drop had already occurred, and equity prices have no direct mechanism to move regulated electricity rates. Natural gas wellhead deregulation was a gradual process (1978 to 1989) and gas was a minor fuel for power plants at the time, so it is a weak explanation for a one-year drop.
+
+## 1997-1998
+
+**What the data show:** The drop begins in **mid-1997**, not 1998. The 12-month average slides from about \$0.0944 (June 1997) to about \$0.0861 (January 1999), and the annual average falls 8.0% in 1998. In real terms it falls from about 91 to 83. After the drop, the price stays nearly flat through 2004.
+
+**Likely explanation:** State electricity restructuring. In 1998, several states legislated mandatory rate cuts for customers as part of the move to competition. For example, California's AB 1890 required a 10% residential rate reduction beginning in January 1998, and Massachusetts's 1997 restructuring law required a 10% reduction in March 1998. Federal wholesale competition rules (FERC Order 888 in 1996) also set the stage. Low natural gas prices (Henry Hub averaged about \$2.1 in 1998) and falling oil prices helped too. The state-law details should be double-checked against primary sources before citing them.
+
+**What does not fit:** The Russian default happened in August 1998, and the decline had already been underway for over a year. The Asian Financial Crisis started in mid-1997, which coincides with the start of the decline, but there is no strong direct link from foreign financial markets to US retail electricity rates. The FERC natural gas restructuring (Order 636) was issued in 1992.
+
+## 2005-2009
+
+**What the data show:** Prices did not rise *because of* the 2008-2009 recession. The rise is a ramp that begins in **2005**: the 12-month average climbs from about \$0.096 (January 2005) to about \$0.127 (January 2009), a 32% increase in four years, with annual growth of 6.0% in 2005 and 12.3% in 2006. After January 2009 the price **stops rising** and sits at about \$0.127 for the whole year, and then stays nearly flat until 2020. The recession is therefore the *end* of the surge, not the cause.
+
+**Likely explanation:** A fuel cost shock, mainly natural gas. Henry Hub gas averaged \$5.90 in 2004, then jumped to \$8.81 in 2005 after Hurricanes Katrina and Rita damaged Gulf production and pipelines, and stayed high (\$6.7-\$8.9) through 2008. Coal prices also rose, and crude peaked in mid-2008. Retail rates adjust with a lag through fuel-adjustment clauses and rate cases, so the higher costs show up in rates over the following months to years.
+
+**Checking the lag hypothesis:** I compared the year-over-year change in a 12-month moving average of the Henry Hub gas price with the same for electricity (1998 onward). The two are most correlated (r about 0.5) when gas leads electricity by roughly **8 months**, which supports the "gas first, electricity later" idea. The cross-correlation is only moderate, though, so gas is one of several drivers, not the whole story. A similar pattern appears around 2001: the gas spike in winter 2000-01 (California energy crisis) is followed by a 5.8% rise in the annual electricity price in 2001.
+
+**Why did prices not fall during the recession?** Gas prices fell sharply in 2009 (to about \$3.95), but retail rates are regulated and sticky. They are set to recover utilities' costs, including investment in transmission and distribution and environmental compliance, and deferred fuel costs are recovered after the fact. So falling demand and falling fuel costs flattened the price rather than reducing it.
+
+**What does not fit:** The 2005 Energy Policy Act and LNG terminal permitting are too indirect to explain a level jump of this size. The 2009 stimulus act (ARRA) does not explain the earlier increase.
+
+## 2009-2020 (the 2014 "shock")
+
+**What the data show:** There is no 2014 spike. The June-August 2014 values (\$0.143) look high, but they are the normal summer peak: the June 2015 value is the same \$0.143. The annual average rises 3.7% in 2014, then 0.7% in 2015, and falls 2.1% in 2016. What *is* visible is that the long period of growth ends: the 12-month average is essentially flat from late 2014 onward, and in real terms the price declines from about 99 in 2014 to about 89 in 2020.
+
+**Likely explanation:** The shale gas boom, which began around 2007-2009, not 2014. It pushed natural gas from about \$8.9 (2008) to \$2-4 for most of 2009-2020 (Henry Hub averaged about \$2.0 in 2020), displaced coal, and held fuel costs down. Flat electricity demand (efficiency gains) and low-cost wind and solar also contributed. The effect is a *decade-long plateau*, not a one-time 2014 shock.
+
+**What does not fit:** The 2014 drop in oil prices and the 2015 lifting of the crude export ban concern petroleum, which generates less than 1% of US electricity. They are not meaningful explanations here.
+
+## 2021-2024
+
+**What the data show:** The earlier response stopped at 2020, but the data run to January 2025, and the largest shock in the last 40 years is in this stretch. The annual average rises 4.0% in 2021, **12.6% in 2022**, 6.1% in 2023, and 4.5% in 2024, and the real price climbs from about 89 to 97 (through 2023).
+
+**Likely explanation:** Post-pandemic inflation, plus a natural gas price spike in 2022 (Henry Hub averaged about \$6.4) tied to the war in Ukraine and global LNG demand. Gas then fell back to about \$2.5 in 2023, yet electricity prices kept rising, which is consistent with the lag and stickiness described above, and with growing delivery costs.
+
+:::
+
+##### Conclusion
+
+The seasonal cycle is regular in timing but not in size, and the trend is stochastic: it has persistent changes in slope that follow fuel costs and regulatory changes, with a lag. A Holt-Winters model with an adaptive level and slope (and a seasonal component that can change over time) is therefore an appropriate choice.
+
+:::
+
+:::
+
+### Question 3 - Real US Average Price of Electricity: Additive Holt-Winters Forecasting (25 points)
+
+The upward trend of the series is mostly due to inflation, the generalized increase in prices throughout the economy. One way to quantify inflation is to use a price index, like the Personal Consumption Expenditures Deflator (PCE).The series [HERE](https://fred.stlouisfed.org/series/PCEPILFE) shows that prices in the US have climbed steadily over the last 60 years.Because energy is an important part of the economy, it's likely that energy prices have followed a similar pattern. Adjusting a series with nominal prices, like the price of electricity, to real prices that account for inflation is simple, divide the original series by the price index. The data set imported below is the real price of electricity, which is the US Average Price of Electricity divided by the PCE index excluding food and energy prices (PCEPILFE). 
+
+Repeat steps a) to d) for the updated series.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r, message=FALSE}
+
+real_kw <- rio::import("https://byuistats.github.io/timeseries/data/USENERGYPRICE_Real.csv")
+
+# Plot the raw inflation-adjusted electricity price time series
+ggplot(real_kw, aes(x = mdy(date), y = realprices)) +
+  geom_line(color = "black") +
+  labs(
+    title = "Real U.S. Electricity Price per kWh",
+    subtitle = "Inflation-adjusted values (1978–Present)",
+    x = "Quarterly Periods",
+    y = "Real Price (USD per kWh)"
+  ) +
+  theme_minimal(base_size = 14)
+
+```
+:::
+
+#### a) Please fit the Holt-Winters smoothing method to the series. Plot the components.
+
+::: {.callout-note title="Answer" icon="false"}
+
+::: {.callout-tip}
+Did you catch that this data is in quarters, not months? Use `yearquarter()` instead of `yearmonth()`.
+:::
+
+```{r}
+real_ts <- real_kw |> 
+  mutate(date = yearquarter(date)) |> 
+  as_tsibble()
+
+real_hw <- real_ts |>
+  model(Additive = ETS(
+    realprices ~
+      trend("A", alpha = 0.3, beta = 0.2) +
+      error("A") +
+      season("A", gamma = 0.3)
+  ))
+
+autoplot(components(real_hw))
+
+report(real_hw)
+```
+
+:::
+
+#### b) Please plot an autocorrelation plot on the remainder component.
+
+::: {.callout-note title="Answer" icon="false"}
+
+```{r}
+acf(components(real_hw)$remainder |> na.omit())
+```
+
+:::
+
+#### c) Please plot the Holt-Winters forecast of the series for the next 12 months superimposed against the original series. Please see [Figure 7](https://byuistats.github.io/timeseries/chapter_3_lesson_3.html#fig-crime-hw-forecast) in Chapter 3: Lesson 3
+
+::: {.callout-note title="Answer" icon="false"}
+
+```{r}
+# ============================================================
+# 5. Forecasting Next 12 Months
+# ============================================================
+
+# Generate a 12-month (1-year) forecast from the fitted ETS model of real prices
+real_fc <- real_hw |>
+  forecast(h = "12 months")    # h specifies the forecast horizon length
+
+# ============================================================
+# Plot Forecast + Original + Fitted + Confidence Intervals
+# ============================================================
+
+autoplot(real_fc, real_ts, level = 95) +   # Plot forecast and original data with 95% CI shading
+  # Add fitted (smoothed historical) values for comparison
+  geom_line(
+    data = augment(real_hw),             # augment() retrieves fitted values from the model
+    aes(x = date, y = .fitted, color = "Fitted"),
+    linewidth = 0.6
+  ) +
+  # Customize color scheme: observed, fitted, and forecast series
+  scale_color_manual(
+    name = "",                                   # Remove legend title
+    values = c(
+      "Observed" = "black",     # Actual historical values
+      "Fitted"   = "#2ECC71",   # Model-smoothed historical values
+      "Forecast" = "#E74C3C"    # Predicted future values
+    ),
+    breaks = c("Observed", "Fitted", "Forecast") # Ensure consistent legend ordering
+  ) +
+  # Customize shading color for the forecast confidence interval region
+  scale_fill_manual(
+    name = "Confidence Interval",
+    values = c("95%" = "lightcoral"),
+    labels = c("95% Confidence Interval")
+  ) +
+  # Add titles and axis labels for clarity
+  labs(
+    title = "12-Month Forecast of Real U.S. Electricity Price per kWh",
+    subtitle = "Observed, fitted, and forecasted series with 95% confidence interval",
+    x = "Year",
+    y = "Real Price (USD per kWh)"
+  ) +
+  # Apply clean minimal theme for presentation-ready visuals
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold"),     # Bold main title for emphasis
+    plot.subtitle = element_text(color = "gray40"),
+    legend.position = "bottom",                   # Place legend under the plot
+    panel.grid.minor = element_blank()
+  )
+```
+
+:::
+
+#### d) What parameters values did you choose for $\alpha$, $\beta$, and $\gamma$. Justify your choice.
+
+::: {.callout-note title="Answer" icon="false"}
+
+For such a stochastic series, it is not hard to find combinations of parameters that are sort of fitting, but not satisfactorily. Finding effective parameters, then, comes down to the priority of the model. These parameter values prioritize forecasting prediction while minimizing trends in the random component.
+
+## Slope
+
+Tuning the slope parameter ($\beta$) can create extremes in either direction for forecasting, either too high a slope or too low. These can each be plausible from a "whole model" perspective, but the most recent data recently experienced a large shift in slope. I chose a $\beta$ of $0.2$ because it seemed to best match my visual intuition for where the data is headed.
+
+## Seasonality
+
+The seasonal parameter ($\gamma$) is moderately reactive to changes, but more consistent than not. The seasonality seems to stay similar over time, but diminish in more recent years. The value $\gamma = 0.3$ gave a happy medium that seemed reasonable while minimizing seasonality in the correlogram. 
+
+:::
+
+#### e) Is the trend in the US Average Real Price of Electricity series deterministic or stochastic? What is the basis of your evaluation?
+
+::: {.callout-note title="Answer" icon="false"}
+
+While the data is more stochastic when removing the affects of dollar value, there are still identifiable patterns.
+
+#### Trend
+
+The trend varies stochastically, but it seems to stay fairly level around $0.15. The slope echos that idea that while it varies randomly, it remains fairly level around 0 slope.
+
+#### Seasonality
+
+Seasonality is still very present in the data, but it does seem to change in degree more over time. It seems to diminish over time, which could be due to changes in technology or prediction that allow price to remain more constant throughout the year.
+
+:::
+
+### Rubric
+
+|  |  |  |
+|-----------------|----------------------------|---------------------------|
+| **Criteria** | **Mastery (10)** | **Incomplete (0)** |
+| **Question 1: Context and Measurement** | The student thoroughly researches the data collection process, unit of analysis, and meaning of each observation for both the requested time series. Clear and comprehensive explanations are provided. | The student does not adequately research or provide information on the data collection process, unit of analysis, and meaning of each observation for the specified series. |
+|  | **Mastery (5)** | **Incomplete (0)** |
+| **Question 3a: HW Smoothing** | Demonstrate the implementation of the Holt-Winters smoothing method in R, providing well-commented code that clearly explains each step of the algorithm. They correctly specify the necessary parameters, including trend and seasonality components. | Students encounter difficulties in accurately implementing the Holt-Winters smoothing method in R. Their code may lack sufficient comments or clarity, making it challenging to understand the implementation process. Additionally, they may overlook important parameters or make errors in the application of the method, leading to inaccuracies in the results. |
+|  | **Mastery (10)** | **Incomplete (0)** |
+| **Question 3b: Parameter Choice** | Responses not only specify the chosen parameter values for \$\\alpha\$, \$\\beta\$, and \$\\gamma\$ in the context of the Holt-Winters smoothing method but also correctly identify the purpose of each parameter in their explanation. They provide a thorough justification for each parameter choice, considering factors such as the data characteristics, seasonality patterns, and the desired level of smoothing | Student struggles to clearly specify the chosen parameter values for \$\\alpha\$, \$\\beta\$, and \$\\gamma\$. It's no clear that they understand the purpose of each parameter in their explanation. They may provide limited or vague justification for each parameter choice, lacking consideration of important factors such as data characteristics or seasonality patterns. |
+|  | **Mastery (5)** | **Incomplete (0)** |
+| **Question 3c: Forecast Plot** | Responses effectively create a plot of the Holt-Winters forecast for the next 24 months superimposed against the original series in R. The forecasted values align with the original series and display relevant trends and seasonality patterns. Additionally, they appropriately label the axes, title the plot, and provide a clear legend to distinguish between the original series and the forecast. The plot closely resembles Figure 7 in the Time Series Notebook | Student encounter challenges in creating a plot of the Holt-Winters forecast. They may struggle with accurately implementing the plotting code, resulting in inaccuracies or inconsistencies in the plotted forecast. Additionally, their plot may lack proper labeling of the axes, a title, or a legend, making it difficult to interpret the information presented. Furthermore, their plot may deviate significantly from Figure 7 in the Time Series Notebook. |
+|  | **Mastery (5)** | **Incomplete (0)** |
+| **Question 3d: Trend Evaluation** | The submission demonstrate a clear understanding of the distinction between deterministic and stochastic trends and provide a reasoned argument for their assessment based on the observed data properties. They provide anevaluation of the data characteristics, considering factors such as the presence of consistent patterns or irregular fluctuations over time. Analyses involve visual inspections to identify any discernible patterns or randomness in the trend. | Student offers limited insights into the data characteristics, lacking consideration of relevant factors such as patterns or fluctuations over time. Additionally, their evaluation may lack depth or coherence. No plots drawn to evaluate the trend. |
+|  | **Mastery (5)** | **Incomplete (0)** |
+| **Question 3a: HW Smoothing** | Demonstrate the implementation of the Holt-Winters smoothing method in R, providing well-commented code that clearly explains each step of the algorithm. They correctly specify the necessary parameters, including trend and seasonality components. | Students encounter difficulties in accurately implementing the Holt-Winters smoothing method in R. Their code may lack sufficient comments or clarity, making it challenging to understand the implementation process. Additionally, they may overlook important parameters or make errors in the application of the method, leading to inaccuracies in the results. |
+|  | **Mastery (10)** | **Incomplete (0)** |
+| **Question 3b: Parameter Choice** | Responses not only specify the chosen parameter values for \$\\alpha\$, \$\\beta\$, and \$\\gamma\$ in the context of the Holt-Winters smoothing method but also correctly identify the purpose of each parameter in their explanation. They provide a thorough justification for each parameter choice, considering factors such as the data characteristics, seasonality patterns, and the desired level of smoothing | Student struggles to clearly specify the chosen parameter values for \$\\alpha\$, \$\\beta\$, and \$\\gamma\$. It's no clear that they understand the purpose of each parameter in their explanation. They may provide limited or vague justification for each parameter choice, lacking consideration of important factors such as data characteristics or seasonality patterns. |
+|  | **Mastery (5)** | **Incomplete (0)** |
+| **Question 3c: Forecast Plot** | Responses effectively create a plot of the Holt-Winters forecast for the next 24 months superimposed against the original series in R. The forecasted values align with the original series and display relevant trends and seasonality patterns. Additionally, they appropriately label the axes, title the plot, and provide a clear legend to distinguish between the original series and the forecast. The plot closely resembles Figure 7 in the Time Series Notebook | Student encounter challenges in creating a plot of the Holt-Winters forecast. They may struggle with accurately implementing the plotting code, resulting in inaccuracies or inconsistencies in the plotted forecast. Additionally, their plot may lack proper labeling of the axes, a title, or a legend, making it difficult to interpret the information presented. Furthermore, their plot may deviate significantly from Figure 7 in the Time Series Notebook. |
+|  | **Mastery (5)** | **Incomplete (0)** |
+| **Question 3d: Trend Evaluation** | The submission demonstrate a clear understanding of the distinction between deterministic and stochastic trends and provide a reasoned argument for their assessment based on the observed data properties. They provide anevaluation of the data characteristics, considering factors such as the presence of consistent patterns or irregular fluctuations over time. Analyses involve visual inspections to identify any discernible patterns or randomness in the trend. | Student offers limited insights into the data characteristics, lacking consideration of relevant factors such as patterns or fluctuations over time. Additionally, their evaluation may lack depth or coherence. No plots drawn to evaluate the trend. |
+| **Total Points** | **60** |  |
