@@ -1,0 +1,893 @@
+---
+title: "Holt-Winters Method (Additive Models) - Part 2"
+subtitle: "Chapter 3: Lesson 4"
+format: html
+editor: source
+sidebar: false
+---
+
+```{r}
+#| include: false
+source("_backend_functions.R")
+```
+
+```{=html}
+<script type="text/javascript">
+ function showhide(id) {
+    var e = document.getElementById(id);
+    e.style.display = (e.style.display == 'block') ? 'none' : 'block';
+ }
+ 
+ function openTab(evt, tabName) {
+    var i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tabcontent");
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+    tablinks = document.getElementsByClassName("tablinks");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+ }    
+</script>
+```
+
+
+
+## Learning Outcomes
+
+<details>
+
+<summary>Implement the Holt-Winter method to forecast time series</summary>
+
+-   Compute the Holt-Winters estimate by hand
+-   Use HoltWinters() to forecast additive model time series
+-   Plot the Holt-Winters decomposition of a time series (see Fig 3.10)
+-   Plot the Holt-Winters fitted values versus the original time series (see Fig 3.11)
+-   Superimpose plots of the Holt-Winters predictions with the time series realizations (see Fig 3.13)
+
+</details>
+
+
+
+
+
+## Preparation
+
+-   Review Section 3.4.2 (Page 59 - top of page 60 only)
+
+
+## Learning Journal Exchange (10 min)
+
+-   Review another student's journal
+
+-   What would you add to your learning journal after reading another student's?
+
+-   What would you recommend the other student add to their learning journal?
+
+-   Sign the Learning Journal review sheet for your peer
+
+## Packages
+
+```{r}
+# Extra packages this lesson
+pacman::p_load(nanoparquet) # parquet files load faster
+# rio will use this automatically if it's installed
+```
+
+```{r}
+#| code-summary: "Common Packages"
+#| file: "_common_packages.R"
+source("_common_packages.R")
+```
+
+## Small Group Activity: Holt-Winters Model for Residential Natural Gas Consumption (35 min)
+
+```{r}
+#| echo: false
+#| warning: false
+
+nat_gas_raw <- rio::import("https://byuistats.github.io/timeseries/data/natural_gas_res.csv") |>
+  mutate(date = my(month)) |>
+  filter(date >= my("Jan 2017"))
+nat_gas <- nat_gas_raw |>
+  mutate(quarter = yearquarter(date)) |>
+  group_by(quarter) |> 
+  summarize(
+    gas_use_mmcf = sum(residential_nat_gas_consumption),
+    n = n()
+  ) |>
+  filter(n == 3) |>  # Eliminate partial quarter(s)
+  dplyr::select(-n) |>
+  mutate(gas_billion_cf = round(gas_use_mmcf / 10^3))
+```
+
+The United States Energy Information Administration (EIA) [publishes data](https://www.eia.gov/dnav/ng/ng_cons_sum_dcu_nus_m.htm) on the total residential natural gas consumption in the country. This government agency publishes monthly data beginning in January 1973. For the purpose of this example, we will only consider quarterly values beginning in 2017. The data are given in MMcf (thousand-thousand cubic feet, or millions of cubic feet). We convert the data to billions of cubic feet (Bcf) and round to the nearest integer to make the numbers a little more manageable.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| eval: false
+
+nat_gas <- rio::import("https://byuistats.github.io/timeseries/data/natural_gas_res.csv") |>
+  mutate(date = my(month)) |>
+  filter(date >= my("Jan 2017")) |>
+  mutate(quarter = yearquarter(date)) |>
+  group_by(quarter) |> 
+  summarize(
+    gas_use_mmcf = sum(residential_nat_gas_consumption),
+    n = n()
+  ) |>
+  filter(n == 3) |>  # Eliminate partial quarter(s)
+  dplyr::select(-n) |>
+  mutate(gas_billion_cf = round(gas_use_mmcf / 10^3))
+```
+
+```{r}
+#| echo: false
+nat_gas |>
+  display_partial_table(6,6)
+```
+
+The quarters are defined as:
+
+-   **Quarter 1:** Jan, Feb, Mar
+-   **Quarter 2:** Apr, May, Jun
+-   **Quarter 3:** Jul, Aug, Sep
+-   **Quarter 4:** Oct, Nov, Dec
+
+The weather is colder in the first and fourth quarters, so the demand for natural gas will be higher then. As illustrated in @fig-naturalgas-tsplot, the difference in the consumption in the lowest and highest quarters of a year tends to be about 2000 Bcf. 
+
+```{r}
+#| label: fig-naturalgas-tsplot
+#| fig-cap: "Quarterly U.S. natural gas consumption (Bcf)"
+#| echo: false
+#| warning: false
+
+# This is a variation on the function hw_additive_slope_additive_seasonal(), but it rounds the data to the nearest one unit at each step
+hw_additive_slope_additive_seasonal_gas <- function(df, date_var, value_var, p = 12, predict_periods = 18, alpha = 0.2, beta = 0.2, gamma = 0.2, s_initial = rep(0,p)) {
+  
+  # Get expanded data frame
+  df <- df |> expand_holt_winters_df_old(date_var, value_var, p, predict_periods)
+  
+  # Fill in prior belief about s_t
+  for (t in 1:p) {
+    df$s_t[t] <- s_initial[t]
+  }
+  
+  # Fill in first row of values
+  offset <- p # number of header rows to skip
+  df$a_t[1 + offset] <- round( df$x_t[1 + offset] )
+  df$b_t[1 + offset] <- round( (1 / p) * mean(df$x_t[(p + 1 + offset):(2 * p + offset)] - df$x_t[(1 + offset):(p + offset)]) )
+  df$s_t[1 + offset] <- round( (1 - gamma) * df$s_t[1] )
+  df$xhat_t[1 + offset] <- round( df$x_t[1 + offset] )
+
+  # Fill in remaining rows of body of df with values
+  for (t in (2 + offset):(nrow(df) - predict_periods) ) {
+    df$a_t[t] = round( alpha * (df$x_t[t] - df$s_t[t-p]) + (1 - alpha) * (df$a_t[t-1] + df$b_t[t-1]) )
+    df$b_t[t] = round( beta * (df$a_t[t] - df$a_t[t-1]) + (1 - beta) * df$b_t[t-1] )
+    df$s_t[t] = round( gamma * (df$x_t[t] - df$a_t[t]) + (1 - gamma) * df$s_t[t-p] )
+    df$xhat_t[t] = round( (df$a_t[t] + df$s_t[t]) )
+  }
+  
+  df <- df |>
+    mutate(k = ifelse(row_number() >= nrow(df) - predict_periods, row_number() - (nrow(df) - predict_periods), NA))
+  
+  # Fill in forecasted values
+  offset <- nrow(df) - predict_periods
+  for (t in offset:nrow(df)) {
+    df$s_t[t] = round( df$s_t[t - p] )
+    df$xhat_t[t] = round( df$a_t[offset] + df$k[t] * df$b_t[offset] + df$s_t[t - p] )
+  }
+  
+  # Delete temporary variable k
+  df <- df |> select(-k)
+  
+  return(df)
+}
+
+nat_gas_ts <- nat_gas |>
+  hw_additive_slope_additive_seasonal_gas("quarter", "gas_billion_cf", p = 4, predict_periods = 9, s_initial = c(1000, -1000, -1000, 1000)) |>
+  as_tsibble(index = date) %>%  
+  dplyr::select(date, t, x_t, a_t, b_t, s_t, xhat_t)
+
+nat_gas_ts |>
+  filter(t > 0) |>
+  filter(!is.na(x_t)) |> ###### Comment out to get the solution
+  ggplot(aes(x = date)) +
+    geom_line(aes(y = x_t), color = "black", size = 1) +
+    ################### Uncomment these lines to show the solution ############################
+    # geom_line(aes(y = a_t + s_t, color = "Combined", alpha=0.5), size = 1) +
+    # geom_line(aes(y = xhat_t, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
+    coord_cartesian(ylim = c(0,2500)) +
+    labs(
+      x = "Date",
+      y = "Natural Gas Use (Billions of Cubic Feet)",
+      title = "U.S. Residential Natural Gas Consumption, by Quarter",
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+We will use this information to create an initial estimate of the seasonality of the time series. We will assume that in Quarters 1 and 4, natural gas use is 1000 Bcf above the level of the time series and in Quarters 2 and 3, it is 1000 Bcf below the level of the time series. This is not accurate, but it gives us a reasonable starting point.
+
+The portion of the time series we are using begins in the first quarter of 2017. So we will choose the initial values of $s_t$ as:
+$$
+  s_{Q1} = 1000, ~~~ s_{Q2} = -1000, ~~~ s_{Q3} = -1000, ~~~ s_{Q4} = 1000
+$$
+
+With $p=4$ quarters in a year, we implement initial seasonality estimates in the Holt-Winters model as 
+$$
+  s_{1-p} = s_{(-3)} = 1000
+$$ 
+$$
+  s_{2-p} = s_{(-2)} = -1000,
+$$
+$$
+  s_{3-p} = s_{(-1)} = -1000
+$$
+$$
+  s_{4-p} = s_{0} = 1000
+$$
+
+<a href="handouts/chapter_3_4_handout.xlsx" download="chapter_3_4_handout.xlsx"> chapter_3_4_handout.xlsx </a>
+
+*for parameter values reference the "check your understanding" section below this table*
+
+```{r}
+#| label: tbl-natural-gas-worksheet-blank
+#| tbl-cap: "Holt-Winters filter for the quarterly natural gas consumption in the U.S. in billions of cubic feet"
+#| echo: false
+#| warning: false
+
+nat_gas_ts |>
+  # Hide values from students
+  mutate(
+    xhat_t = 
+      case_when(
+        t %in% c(1:4, 26:36) ~ NA,
+        t %in% c(7:25) ~ a_t + s_t,
+        TRUE ~ xhat_t
+      ),
+    a_t = ifelse(t %in% c(1:4), NA, a_t),
+    b_t = ifelse(t %in% c(1:4), NA, b_t),
+    s_t = ifelse(t %in% c(1:4, 28:36), NA, s_t),
+    xhat_t = ifelse(t %in% c(24:27), NA, xhat_t)
+  ) |>
+  replace_na_with_char() |>
+  # Add emdashes to make it clear where students should not put values
+  mutate(
+    x_t = ifelse(t %in% c(-3:0, 28:36), emdash, x_t),
+    a_t = ifelse(t %in% c(-3:0, 28:36), emdash, a_t),
+    b_t = ifelse(t %in% c(-3:0, 28:36), emdash, b_t),
+    xhat_t = ifelse(t %in% c(-3:0), emdash, xhat_t)
+  ) |>
+  rename(
+    "$$Quarter$$" = date,
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$b_t$$" = b_t,
+    "$$s_t$$" = s_t,
+    "$$\\hat x_t$$" = xhat_t,
+  ) |>
+  display_table("0.75in")
+```
+
+
+::: {.callout-note title="Holt-Winters Update Equations (Additive Model)"}
+
+Recall the three Holt-Winters update equations for an additive model are:
+
+\begin{align*}
+  a_t &= \alpha \left( x_t - s_{t-p} \right) + (1-\alpha) \left( a_{t-1} + b_{t-1} \right) && \text{Level} \\
+  b_t &= \beta \left( a_t - a_{t-1} \right) + (1-\beta) b_{t-1} && \text{Slope} \\
+  s_t &= \gamma \left( x_t - a_t \right) + (1-\gamma) s_{t-p} && \text{Seasonal}
+\end{align*}
+
+where $\{x_t\}$ is a time series from $t=1$ to $t=n$ that has seasonality with a period of $p$ time units; at time $t$, $a_t$ is the estimated level of the time series, $b_t$ is the estimated slope, and $s_t$ is the estimated seasonal component; and $\alpha$, $\beta$, and $\gamma$ are parameters (all between 0 and 1).
+
+The forecasting equation is:
+$$
+  \hat x_{n+k|n} = a_n + k b_n + s_{n+k-p}
+$$
+
+The details of these computations are given in [Chapter 3 Lesson 3](https://byuistats.github.io/timeseries/chapter_3_lesson_3.html).
+
+*Note*
+
+For $k = 0$ :
+$$
+  \hat x_{n} = a_n + 0 b_n + s_{n+-p}
+$$
+
+$$
+ = a_n +  s_{n+k-p}
+$$
+
+:::
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+Apply Holt-Winters filtering to these data. Use $\alpha = \beta = \gamma = 0.2$.
+
+-   Find $a_1$
+-   Find $b_1$
+-   Compute the missing values of $a_t$, $b_t$, and $s_t$ for all quarters from Q1 of 2017 to the end of the data set.
+-   Find $\hat x_t$ for all rows where $t \ge 1$. Note that the expression to compute $\hat x_t$ is different for the rows with data versus the rows where forecasting is required.
+-   Superimpose a sketch of your Holt-Winters filter and the associated forecast on @fig-naturalgas-tsplot.
+
+:::
+
+
+
+
+## Small Group Activity: Application of Holt-Winters in R using the Baltimore Crime Data (20 min)
+
+### Background 
+
+The City of Baltimore publishes crime data, which can be accessed through a query. 
+This dataset is sourced from the City of Baltimore Open Data. 
+You can explore the data on [data.world](https://data.world/data-society/city-of-baltimore-crime-data).
+
+Use the following code to import the data:
+
+
+<!-- **Packages** -->
+<!-- ```{r, warning=FALSE} -->
+<!-- # library(dplyr) -->
+<!-- # library(tidyr) -->
+<!-- # library(ggplot2) -->
+<!-- # library(tidyverse) -->
+<!-- # library(dygraphs) -->
+<!-- # library(tidyquant) -->
+<!-- # library(forecast) -->
+<!-- ``` -->
+
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_df <- rio::import("https://byuistats.github.io/timeseries/data/baltimore_crime.parquet")
+
+```
+
+
+
+The data set consists of `r nrow(crime_df)` rows and `r ncol(crime_df)` columns. 
+There are a few key variables:
+
+- **Date and Time:** Records the date and time of each incident.
+- **Location:** Detailed coordinates of each incident.
+- **Crime Type:** Description of the type of crime.
+
+When exploring a new time series, it is crucial to carefully examine the data. Here are a few rows of the original data set. Note that the data are not sorted in time order.
+
+```{r}
+#| echo: false
+
+# View data
+crime_df |> 
+  display_partial_table(6,3)
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Using the command `crime_df |> summary()`, we learn that the `Total.Incidents` always equals 1. What does each row in the data frame represent?
+
+:::
+
+We now summarize the data into a daily tsibble.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Data Summary and Aggregation
+# Group by dates column and summarize from Total.Incidents column
+daily_summary_df <- crime_df |>
+  rename(dates = CrimeDate) |>
+  group_by(dates) |>
+  summarise(incidents = sum(Total.Incidents))
+
+# Data Transformation and Formatting
+# Select relevant columns, format dates, and arrange the data
+crime_data <- daily_summary_df |>
+  mutate(dates = mdy(dates)) |>
+  mutate(
+    month = month(dates),
+    day = day(dates),
+    year = year(dates)
+  ) |>
+  arrange(dates) |>
+  dplyr::select(dates, month, day, year, incidents)
+  
+# Convert formatted data to a tsibble with dates as the index
+crime_tsibble <- as_tsibble(crime_data, index = dates) 
+```
+
+Here are a few rows of the data after summing the crime incidents each day.
+
+```{r}
+#| echo: false
+
+# View data
+crime_tsibble |>
+  display_partial_table(6,3) 
+```
+
+Here is a time plot of the number of crimes reported in Baltimore daily.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+# Time series plot of total incidents over time
+crime_plot <- autoplot(crime_tsibble, .vars = incidents) +
+  labs(
+    x = "Time",
+    y = "Total Crime Incidents",
+    title = "Total Crime Incidents Over Time"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Display the plot
+crime_plot
+```
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you notice about this time plot?
+    - Describe the trend
+    - Is there evidence of seasonality?
+    - Is the additive or multiplicative model appropriate?
+    - Which date has the highest number of recorded crimes? Can you determine a reason for this spike?
+
+:::
+
+
+The following table summarizes the number of days in each month for which crime data were reported.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_data |>
+  mutate(month_char = format(as.Date(dates), '%b') ) |>
+  group_by(month, month_char, year) |>
+  summarise(n = n(), .groups = "keep") |>
+  group_by() |>
+  arrange(year, month) |>
+  dplyr::select(-month) |>
+  rename(Year = year) |>
+  pivot_wider(names_from = month_char, values_from = n) |>
+  display_table()
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What do you observe about the data?
+-   What are some problems that could arise from incomplete data?
+-   How do you recommend we address the missing data?
+
+:::
+
+
+### Monthly Summary
+
+We could analyze the data at the daily level, but for simplicity we will model the monthly totals.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_monthly_ts <- crime_tsibble |>
+  as_tibble() |>
+  mutate(months = yearmonth(dates)) |>
+  group_by(months) |>
+  summarize(value = sum(incidents)) |>
+  as_tsibble(index = months) 
+
+# Plot mean annual total incidents using autoplot
+autoplot(crime_monthly_ts, .vars = value) +
+  labs(
+    x = "Year",
+    y = "Total Monthly Crime Incidents",
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+There is incomplete data for `r temp <- crime_tsibble |> arrange(dates) |> as.data.frame() |> tail(1); temp |> dplyr::select(year) |> pull()`, as data were not provided after `r last_date <- temp |> dplyr::select(dates) |> pull(); paste0(month(last_date), "/", day(last_date), "/", year(last_date))`. 
+<!-- This is hard-coded.. -->
+We will omit any data after October 2016.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_monthly_ts1 <- crime_monthly_ts |>
+  filter(months < yearmonth(mdy("11/1/2016")))
+```
+
+We apply Holt-Winters filtering on the monthly Baltimore crimes data with an additive model:
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+crime_hw <- crime_monthly_ts1 |>
+  tsibble::fill_gaps() |>
+  model(Additive = ETS(value ~
+        trend("A") +
+        error("A") +
+        season("A"),
+        opt_crit = "amse", nmse = 1))
+report(crime_hw)
+```
+
+We can compute some values to assess the fit of the model:
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| eval: false
+
+# SS of random terms
+sum(components(crime_hw)$remainder^2, na.rm = T)
+
+# RMSE
+forecast::accuracy(crime_hw)$RMSE
+
+# Standard devation of number of incidents each month
+sd(crime_monthly_ts1$value)
+```
+
+-   The sum of the square of the random terms is: `r sum(components(crime_hw)$remainder^2, na.rm = T)`.
+-   The root mean square error (RMSE) is: `r forecast::accuracy(crime_hw)$RMSE`.
+-   The standard deviation of the number of incidents each month is `r sd(daily_summary_df$incidents)`.
+
+@fig-crime-decomp illustrates the Holt-Winters decomposition of the Baltimore crime data.
+
+```{r}
+#| label: fig-crime-decomp
+#| fig-cap: "Monthly Total Number of Crime Reported in Baltimore"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+autoplot(components(crime_hw))
+```
+
+In @fig-crime-hw, we can observe the relationship between the Holt-Winters filter and the time series of the number of crimes each month.
+
+```{r}
+#| label: fig-crime-hw
+#| fig-cap: "Superimposed plots of the number of crimes each month and the Holt-Winters filter"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+augment(crime_hw) |>
+  ggplot(aes(x = months, y = value)) +
+    coord_cartesian(ylim = c(0,5500)) +
+    geom_line() +
+    geom_line(aes(y = .fitted, color = "Fitted")) +
+    labs(color = "")
+```
+
+@fig-crime-hw-forecast contains the information from @fig-crime-hw, with the addition of an additional four years of forecasted values. The light blue bands give the 95% prediction bands for the forecast.
+
+```{r}
+#| label: fig-crime-hw-forecast
+#| fig-cap: "Superimposed plots of the number of crimes each month and the Holt-Winters filter, with four additional years forecasted"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+crime_forecast <- crime_hw |>
+  forecast(h = "4 years") 
+crime_forecast |>
+  autoplot(crime_monthly_ts1, level = 95) +
+  coord_cartesian(ylim = c(0,5500)) +
+  geom_line(aes(y = .fitted, color = "Fitted"),
+    data = augment(crime_hw)) +
+  scale_color_discrete(name = "")
+```
+
+### Rethinking Baltimore
+
+The monthly crime data shows a distinct pattern arcing through the annual cycle. 
+Consider the data for 2011.
+```{r}
+#| label: tbl-monthly-crimes-2011
+#| tbl-cap: "Total count of crimes reported in Baltimore in 2011 by month"
+#| echo: false
+
+crime_monthly_ts1 |>
+  as_tibble() |>
+  filter(year(months) == 2011) |>
+  mutate(months = month(months, label = TRUE)) |>
+  pivot_wider(names_from = "months", values_from = "value") |>
+  display_table()
+```
+
+
+<!-- Check Your Understanding -->
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Starting with January, determine whether the number of crimes goes up or down as you move from one month to the next.
+-   What might explain this pattern?
+-   Use the function `days_in_month()` to adjust the time series and re-run the analysis. What do you notice?
+
+:::
+
+
+
+
+
+
+
+
+
+
+
+## Homework Preview (5 min)
+
+-   Review upcoming homework assignment
+-   Clarify questions
+
+
+::: {.callout-note icon=false}
+
+## Download Homework 
+
+<a href="https://byuistats.github.io/timeseries/homework/homework_3_4.qmd" download="homework_3_4.qmd"> homework_3_4.qmd </a>
+
+:::
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- <a href="javascript:showhide('Solutions1')" -->
+<!-- style="font-size:.8em;">BYU-Idaho Enrollment</a> -->
+
+<!-- ::: {#Solutions1 style="display:none;"} -->
+
+
+<!-- @fig-enrollment-ts: -->
+
+<!-- ```{r} -->
+<!-- #| warning: false -->
+<!-- #| echo: false -->
+
+<!-- enrollment_ts |> -->
+<!--   bind_rows(extra_terms) |> -->
+<!--   autoplot(.vars = enrollment) + -->
+<!--     labs( -->
+<!--       x = "Time", -->
+<!--       y = "Enrollment", -->
+<!--       title = paste0("BYU-Idaho On-Campus Enrollment Counts") -->
+<!--     ) + -->
+<!--     theme( -->
+<!--       plot.title = element_text(hjust = 0.5) -->
+<!--     ) -->
+<!-- ``` -->
+
+
+<!-- @tbl-enrollment-table: -->
+
+<!-- ```{r} -->
+<!-- #| warning: false -->
+<!-- #| echo: false -->
+
+<!-- enroll |> -->
+<!--   bind_rows(enroll_extension) |> -->
+<!--   mutate( -->
+<!--     est = case_when( -->
+<!--       row_number() == 1 ~ x_t, -->
+<!--       row_number() <= nrow(enroll) ~ a_t + s_t, -->
+<!--       TRUE ~ est -->
+<!--     ) -->
+<!--   ) |> -->
+<!--   rename( -->
+<!--     "$$Semester$$" = semester, -->
+<!--     "$$t$$" = t, -->
+<!--     "$$x_t$$" = x_t, -->
+<!--     "$$a_t$$" = a_t, -->
+<!--     "$$b_t$$" = b_t, -->
+<!--     "$$s_t$$" = s_t, -->
+<!--     "$$\\hat x_t$$" = est -->
+<!--   ) |> -->
+<!--   convert_df_to_char(0) |> -->
+<!--   mutate( -->
+<!--     across(everything(), ~replace_na(.x, "")) -->
+<!--   ) |> -->
+<!--   display_table("0.75in") -->
+<!-- ``` -->
+
+<!-- ::: -->
+
+
+
+<a href="javascript:showhide('Solutions1')"
+style="font-size:.8em;">Natural Gas Holt-Winters Filter</a>
+
+<a href="handouts/chapter_3_4_handout_key.xlsx" download="chapter_3_4_handout_key.xlsx" style="font-size:.8em;"> chapter_3_4_handout_key.xlsx </a>
+
+::: {#Solutions1 style="display:none;"}
+
+```{r}
+#| echo: false
+#| warning: false
+#| fig-cap: "Quarterly U.S. natural gas consumption (Bcf)"
+
+nat_gas_ts |>
+  filter(t > 0) |>
+  # filter(!is.na(x_t)) |> ###### Comment out to get the solution
+  ggplot(aes(x = date)) +
+    geom_line(aes(y = x_t), color = "black", size = 1) +
+    ################### Uncomment these lines to show the solution ############################
+    geom_line(aes(y = a_t + s_t, color = "Combined", alpha=0.5), size = 1) +
+    geom_line(aes(y = xhat_t, color = "Combined", alpha=0.5), linetype = "dashed", size = 1) +
+    coord_cartesian(ylim = c(0,2500)) +
+    labs(
+      x = "Date",
+      y = "Natural Gas Use (Billions of Cubic Feet)",
+      title = "U.S. Residential Natural Gas Consumption, by Quarter",
+      color = "Components"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none") +
+    theme(
+      plot.title = element_text(hjust = 0.5)
+    )
+```
+
+```{r}
+#| tbl-cap: "Holt-Winters filter for the quarterly natural gas consumption in the U.S. in billions of cubic feet"
+#| echo: false
+#| warning: false
+
+nat_gas_ts |>
+  replace_na_with_char(emdash) |>
+  rename(
+    "$$Quarter$$" = date,
+    "$$t$$" = t,
+    "$$x_t$$" = x_t,
+    "$$a_t$$" = a_t,
+    "$$b_t$$" = b_t,
+    "$$s_t$$" = s_t,
+    "$$\\hat x_t$$" = xhat_t,
+  ) |>
+  display_table("0.75in")
+```
+
+
+:::
+
+
+
+
+<a href="javascript:showhide('Solutions2')"
+style="font-size:.8em;">Balitmore Crime Spike</a>
+
+::: {#Solutions2 style="display:none;"}
+
+```{r}
+# Dates with high criminal activity
+crime_data |> arrange(desc(incidents)) |> head()
+```
+
+On April 27, 2015, 419 crimes were recorded. These are associated with protests over arrest of Freddie Gray.
+
+
+:::
+
+
+
+
+<a href="javascript:showhide('Solutions3')"
+style="font-size:.8em;">Balitmore (Mean Crimes Per Day)</a>
+
+::: {#Solutions3 style="display:none;"}
+
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+crime_monthly_ts2 <- crime_monthly_ts1 |> 
+  mutate(avg_value = value / days_in_month(ym(months))) |>
+  dplyr::select(-value)
+
+crime_hw2 <- crime_monthly_ts2 |>
+  tsibble::fill_gaps() |>
+  model(Additive = ETS(avg_value ~
+        trend("A") +
+        error("A") +
+        season("A"),
+        opt_crit = "amse", nmse = 1))
+report(crime_hw)
+```
+
+```{r}
+#| label: fig-2-crime-decomp
+#| fig-cap: "Monthly Total Number of Crime Reported in Baltimore"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+autoplot(components(crime_hw2))
+```
+
+
+```{r}
+#| label: fig-2-crime-hw
+#| fig-cap: "Superimposed plots of the number of crimes each month and the Holt-Winters filter"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+augment(crime_hw2) |>
+  ggplot(aes(x = months, y = avg_value)) +
+    coord_cartesian(ylim = c(0,200)) +
+    geom_line() +
+    geom_line(aes(y = .fitted, color = "Fitted")) +
+    labs(color = "")
+```
+
+@fig-crime-hw-forecast contains the information from @fig-crime-hw, with the addition of an additional four years of forecasted values. The light blue bands give the 95% prediction bands for the forecast.
+
+```{r}
+#| label: fig-2-crime-hw-forecast
+#| fig-cap: "Superimposed plots of the number of crimes each month and the Holt-Winters filter, with four additional years forecasted"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+crime_forecast <- crime_hw2 |>
+  forecast(h = "4 years") 
+crime_forecast |>
+  autoplot(crime_monthly_ts2, level = 95) +
+  coord_cartesian(ylim = c(0,200)) +
+  geom_line(aes(y = .fitted, color = "Fitted"),
+    data = augment(crime_hw2)) +
+  scale_color_discrete(name = "")
+```
+
+
+:::
+
+
+
+
+
+
+## References
+
+-   C. C. Holt (1957) Forecasting seasonals and trends by exponentially weighted moving averages, ONR Research Memorandum, Carnegie Institute of Technology 52. (Reprint at [https://doi.org/10.1016/j.ijforecast.2003.09.015](https://doi.org/10.1016/j.ijforecast.2003.09.015)).
+-   P. R. Winters (1960). Forecasting sales by exponentially weighted moving averages. Management Science, 6, 324--342. (Reprint at [https://doi.org/10.1287/mnsc.6.3.324](https://doi.org/10.1287/mnsc.6.3.324).)
