@@ -39,20 +39,15 @@ sigma_squared <- 2
 n <- 50
 
 # Generate white noise data
-data <- rnorm(n, mean = mu, sd = sqrt(sigma_squared))
+white_noise <- rnorm(n, mean = mu, sd = sqrt(sigma_squared))
 
-# 2. Create a Time Series Object with Weekly Seasonality (frequency = 7)
-# Assuming the data is daily, a frequency of 7 captures weekly patterns
-ts_data <- ts(data, frequency = 7)
-
-# 3. Convert the ts Object to a tsibble
-# The 'as_tsibble()' function automatically handles the frequency
-tsibble_data <- as_tsibble(ts_data)
+# Quick way to turn the white noise vector into a tsibble
+#   frequency of 7 is 7 days, or a week
+white_noise_ts <- ts(white_noise, frequency = 7) |> as_tsibble()
 
 # Plot the Gaussian White Noise
-ggplot(tsibble_data, aes(x = index, y = value)) +
-  geom_line(color = "blue") +
-  geom_point(color = "darkgreen") +
+autoplot(white_noise_ts) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
   labs(
     title = "Simulated Gaussian White Noise Without Gaps",
     x = "Month",
@@ -63,45 +58,60 @@ ggplot(tsibble_data, aes(x = index, y = value)) +
 ```
 :::
 
-#### b) Estimate the mean and variance. Why don't they match exactly with the parameters values you used to create it?
+#### b) Estimate the second order properties of the sample. Why don't they match exactly with the parameters values you used to create it?
 
 ::: {.callout-note title="Answer" icon="false"}
+
+::: {.panel-tabset}
+
+## Table
+
+```{r}
+m <- mean(white_noise)
+co <- cov(white_noise, lag(white_noise))
+t <- n
+v <- var(white_noise)
+
+# Print results in a table
+matrix(
+  c("",         "Mean",      "Covariance", 
+    "Expected", 0,           round(t*v, 2),
+    "Actual",   round(m, 2), round(co, 2)), 
+  nrow = 3
+) |> 
+  pander()
+```
+
+## Simple
+
 ```{r}
 
-sample_mean <- mean(tsibble_data$value)
+sample_mean <- mean(white_noise_ts$value)
 print(paste("Sample Mean:", round(sample_mean, 4)))
 
 
-sample_variance <- var(tsibble_data$value)
+sample_variance <- var(white_noise_ts$value)
 print(paste("Sample Variance:", round(sample_variance, 4)))
 
 ```
 
-The reason the mean, variance, and covariance don’t match exactly with the parameters we used, is because this is data taken from a population. Because it is a sample it won’t catch 100% exactly what is going on because there wasn’t a high enough number of observations taken as a sample and there is a random component of variability within the sample.
 :::
 
-#### c) Demonstrate this process second order stationary. Apply a statistical test to assess if the mean is zero. Use correlograms to show the covariance and correlation functions for lags up to 10. Explain your findings.
-
-::: {.callout-note title="Answer" icon="false"}
-```{r}
-acf(tsibble_data$value, plot=TRUE, type = "covariance", lag = 10)
-```
-
-
+Random processes can be predicted as a whole, but not individually. 50 points is a fairly small sample, leaving room for random variations to skew results. 
 :::
 
-#### d) Use the classical decomposition on your simulated series, plot the results.
+#### c) Use the classical decomposition on your simulated series, plot the results.
 
 ::: {.callout-note title="Answer" icon="false"}
+
 ```{r, warning=FALSE, message=FALSE}
-decomp <- tsibble_data |>
+decomp <- white_noise_ts |>
   model(
     classical_decomposition(type = "additive")
-  ) |>
-  components()
+  )
 
 # 5. Plot the Decomposed Components
-autoplot(decomp) +
+autoplot(components(decomp)) +
   labs(
     title = "Additive Decomposition of Gaussian White Noise Series",
     y = "Value"
@@ -112,7 +122,7 @@ autoplot(decomp) +
 ```
 :::
 
-#### d) Please evaluate practical signifficance of the estimates of the trend and seasonal component.
+#### d) Please evaluate the practical significance of the estimates of the trend and seasonal component.
 
 ::: {.callout-note title="Answer" icon="false"}
 Given this is a Gaussian white noise simulated data frame, the data is stochastic. The mean is 0 so there is no trend. The theoretical autocorrelation is 0 so there is no seasonality. The algorithm will estimate something ... We know that even though there is a trend component, it’s average should focus around 0 since that is the distribution it came from. The decomposition algorithm assumes some underlying trend in the data even though none exists. Random noise gets misinterpreted as small-scale trends due to the smooth process used to estimate the trend.
@@ -122,9 +132,7 @@ While Gaussian white noise ought to have no periodic or seasonal patterns, the a
 Because this data is random, the random component should resemble the original data, as all randomness here is captured after substracting the trend and seasonal component, however, we see here the random component looks quite different because the algorithm creating a seasonal and trend component.
 :::
 
-## Extra Credit
-
-### Question 3 - Random Walks (55 points)
+### Question 2 - Random Walks (55 points)
 
 #### a) Simulate a realization of a white noise process using the Exponential distribution. If $s_t$ is the realization from an exponentially distributed random variable, use the white noise $w_t=s_t-\lambda$ for your simulation. The length of the series is 500 points and $\lambda=1$. Please plot your simulation.
 
@@ -134,64 +142,24 @@ Because this data is random, the random component should resemble the original d
 lambda <- 1
 n <- 500
 
-
 s_t <- rexp(n, rate = lambda)  # exponential random variable with rate lambda
-w_t <- s_t - lambda  # white noise process
+w_t <- s_t - lambda            # white noise process
 
-# Plot the white noise series
-plot(w_t, type = "l", main = "Simulated White Noise Process", ylab = "w_t", xlab = "Time")
+# Convert to tsibble
+random_walk_ts <- ts(w_t, frequency = 12) |> as_tsibble()
 
-
-```
-:::
-
-#### b) Superimpose a histogram of the Gaussian White noise simulation from Question 2 versus the Exponential White Noise. Please compare and contrast the two distributions. Your chart should look close to Figure 1 below. *Hint: research exponential random variables and their right-tail properties.*
-
-```         
-![Figure 1](https://github.com/byuistats/timeseries/raw/master/images/Overlayed_Histograms_HW4_1.png)
-```
-
-::: {.callout-note title="Answer" icon="false"}
-```{r, warning=FALSE, message=FALSE}
-# Exponential White Noise Parameters
-lambda <- 1
-n_exp <- 500
-s_t <- rexp(n_exp, rate = lambda)
-w_t_exp <- s_t - lambda  # Centered Exponential White Noise
-
-# Gaussian White Noise Parameters
-n_gauss <- 500
-sigma2 <- 2
-sigma <- sqrt(sigma2)
-
-w_t_gauss <- rnorm(n_gauss, mean = 0, sd = sigma)
-
-
-
-
-df <- data.frame(
-  value = c(w_t_exp, w_t_gauss),
-  dist = factor(rep(c("Exponential", "Gaussian"), 
-                    times = c(length(w_t_exp), length(w_t_gauss))))
-)
-
-ggplot(df, aes(x = value, fill = dist, color = dist)) +
-  geom_histogram(aes(y = ..density..), position = "identity", bins = 15, alpha = 0.3) +
-  scale_fill_manual(values = c("Exponential" = rgb(1, 0, 0, 0.3), 
-                               "Gaussian" = rgb(0, 0, 1, 0.3))) +
-  scale_color_manual(values = c("Exponential" = "darkred", 
-                                "Gaussian" = "blue")) +
-  labs(title = "Overlayed Histograms: Gaussian vs Exponential Distribution",
-       x = "Value", y = "Density",
-       fill = "Distribution", color = "Distribution") +
-  xlim(c(-3, 4)) + ylim(c(0, 0.7)) +
-  theme_minimal() 
-
+# Plot the random walk series
+autoplot(random_walk_ts) +
+  labs(
+    title = "Exponential White Noise: n = 500, λ = 1",
+    x = "Time",
+    y = expression(w[t] == s[t] - lambda)
+  )
 
 ```
 :::
 
-#### c) Create a random walk series using the Exponential DWN simulations. Please plot the series.
+#### b) Create a random walk series using the Exponential DWN simulations. Please plot the series.
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r}
@@ -204,7 +172,7 @@ plot(random_walk, type = "l", main = "Random Walk Series", ylab = "Random Walk",
 
 :::
 
-#### d) Use the Holt-Winters decomposition method to estimate the trend, seasonal, and random components of the series.
+#### c) Use the Holt-Winters decomposition method to estimate the trend, seasonal, and random components of the series.
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r, warning=FALSE}
@@ -232,13 +200,34 @@ autoplot(components(hw_model))
 
 :::
 
-#### e) Please evaluate practical significance of the estimates for the parameters of the model using the default algorithm settings (minimize the SS1PE).
+#### d) Please evaluate practical significance of the estimates for the parameters of the model using the default algorithm settings (minimize the SS1PE).
 
 ::: {.callout-note title="Answer" icon="false"}
 
 The estimated Holt-Winters parameters, with $\alpha$ at 0.95, $\beta$ at 0.0001, and $\gamma$
  at 0.03, are highly sensible for a random walk series generated from exponential discrete white noise. The high $\alpha$ value indicates that the model heavily weights the most recent observation to update the level, which is characteristic of a random walk where the best forecast for the next period is closely tied to the current value. The extremely low $\beta$ and $\gamma$ values, both near zero, correctly reflect the inherent nature of a random walk: it lacks a persistent, deterministic trend (even if there's drift, it's captured by the level) and exhibits no seasonality. Essentially, these parameters show the Holt-Winters model adapting appropriately by simplifying itself. It has effectively recognized the absence of strong trend and seasonal patterns, leading to a model that behaves very much like a highly adaptive simple exponential smoothing. You may see different values as you estimate, expect values between the following: $\alpha$ between 0.94 and 0.99, $\beta$ at between 0.03 and 0.0001, and $\gamma$ between 0.03 and 0.0001. 
 
+:::
+
+#### **BONUS:** Superimpose a histogram of the Gaussian White noise simulation from Question 1 versus the Exponential White Noise. Please compare and contrast the two distributions.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r, warning=FALSE, message=FALSE}
+gauss_df <- data.frame(method = "Gaussian WN", w = white_noise)
+exp_df <- data.frame(method = "Exponential WN", w = random_walk)
+df_all <- bind_rows(gauss_df, exp_df)
+
+
+ggplot(df_all, aes(x = w, fill = method, colour = method)) +
+  geom_histogram(aes(y = ..density..), bins = 60, alpha = 0.2, position = "identity") +
+  geom_density(alpha = 0.4) +
+  theme_minimal() +
+  labs(title = "Histogram: Gaussian WN vs Exponential centred WN",
+       x = "w_t value",
+       y = "Density") 
+
+
+```
 :::
 
 ### Rubric
