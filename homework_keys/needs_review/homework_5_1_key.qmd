@@ -22,9 +22,9 @@ pacman::p_load(
   fable,      # model(...), forecast(), tidy(), glance()...
   feasts,     # ACF(), PACF()
   ggtime,     # autoplot() for tsibbles
-  patchwork,  # + and / for ggplots
   rio,        # import()
-  pander      # pander()
+  pander,     # pander() markdown tables
+  patchwork   # + and / for ggplots
 )
 ```
 
@@ -42,16 +42,15 @@ date_end <- "2020-01-01"
 # Fetch stock prices (can be used to get new data)
 stock_df <- tq_get(symbol, from = date_start, to = date_end, get = "stock.prices")
 
-# Transform data into tsibble
+# Transform data into a weekly tsibble
 stock_ts <- stock_df |>
-  # mutate(
-  #   diff = adjusted - lag(adjusted)
-  # ) |>
   select(date, adjusted) |> 
-  as_tsibble(index = date)
+  as_tsibble(index = date) |> 
+  index_by(week = yearweek(date)) |>     # Group by calendar week
+  summarise(adjusted = last(adjusted))   # Take the last available price (end of week close)
 
 # Visualization
-plot_ly(stock_ts, x = ~date, y = ~adjusted, type = 'scatter', mode = 'lines') |>
+plot_ly(stock_ts, x = ~week, y = ~adjusted, type = 'scatter', mode = 'lines') |>
   layout(
     xaxis = list(title = paste0("date (", format(ymd(date_start), "%d/%m/%Y"), " to ", format(ymd(date_end), "%d/%m/%Y"), ")" ) ),
     yaxis = list(title = "Closing Price (US$)"),
@@ -84,35 +83,20 @@ Answer the prompt to the learning outcome below. Include any mathematical expres
 
 The first data set you imported contains the historical Walmart stock prices. The date were "carefully" selected for this exercise, so the estimates you obtain might not be particularly useful in general. That said, we will use them to show the AR estimation procedure to correct for autocorrelation bias in OLS standard errors.
 
-##### a) Use OLS to estimate a linear model with a linear time trend for the Walmart stock price time series. Plot your model and report your estimates.
+##### a) Use OLS to estimate a linear model with a linear time trend for the Walmart stock price time series. Please report your estimates and a 95% confidence interval in a professionally formatted table.
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r}
 
-stock_lm <- stock_ts |> model(TSLM(adjusted ~ date))
+stock_lm <- model(stock_ts, lm = TSLM(adjusted ~ week))
 
-tidy(stock_lm)
-
-report(stock_lm)
-
-stock_fitted <- augment(stock_lm)
-
-ggplot(stock_fitted, aes(x = date)) +
-  geom_line(aes(y = adjusted)) +
-  geom_line(aes(y = .fitted, color = "Fitted")) +
-  scale_y_continuous(labels = scales::dollar_format()) +
-  theme_bw()
-
-```
-
-```{r}
-tidy(temp_lm) |>
+tidy(stock_lm) |>
   select(-.model) |> # Remove the .model column
   mutate(
     # Relabel terms to use LaTeX
     term = case_when(
       term == "(Intercept)" ~ "$\\alpha_0$",
-      term == "dates" ~ "$\\alpha_1$",
+      term == "week" ~ "$\\alpha_1$",
       TRUE ~ term
     ),
     lower = estimate + qnorm(0.025) * std.error,
@@ -125,10 +109,13 @@ tidy(temp_lm) |>
 
 Now, please analyze the model residuals to determine whether there is autocorrelation. If there is autocorrelation, fit the residuals to an AR(p) random process.
 
-##### b) Please plot an correlogram and partial correlogram of the model residual.
+##### b) Please plot a correlogram and partial correlogram of the model residual.
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r}
+stock_fitted <- augment(stock_lm)
+
+par(mfrow=c(1,2))
 acf(stock_fitted$.resid)
 pacf(stock_fitted$.resid)
 ```
@@ -136,78 +123,95 @@ pacf(stock_fitted$.resid)
 There is a lot of autocorrelation, but only at 1 lag
 :::
 
-##### c) Fit the residuals using an AR(p) process. How did you choose the order p?
+##### c) Fit another linear regression model using an AR(p) process for the residuals. How did you choose the order p?
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r}
-stock_lmar <- stock_ts |> model(AR(adjusted ~ date + order(1)))
+stock_lm_ar <- stock_ts |>
+  model(AR(adjusted ~ trend() + order(1)))
 
-stock_fitted <- augment(stock_lmar)
+stock_fitted <- augment(stock_lm_ar)
 
-
-
-
+tidy(stock_lm_ar) |> select(!.model) |> pander()
 ```
 
-<!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
+In the Partial Autocorrelation plot, there was clearly one (and only one) significant lag, which was the first. An AR(1) process is most appropriate for this data.
 :::
 
-Please compare the standard errors found OLS and OLS + AR. What is the size of the autocorrelation bias? What are it's implications for forecasting?
-
-##### d) Estimate a linear model with a linear time trend for the Walmart stock price time series. Please report your estimates and a 95% confidence below the estimates from Part a in a professionally formatted table.
+##### d) Please compare the standard errors from OLS against OLS + AR in a professionally formatted table. What is the size of the autocorrelation bias? What are it's implications for forecasting?
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r}
 
+stock_models <- stock_ts |>
+  model(
+    tslm = TSLM(adjusted ~ week),
+    ar   = AR(adjusted ~ trend() + order(1))
+  )
 
-
+tidy(stock_models) |>
+  mutate(
+    # Relabel terms to use LaTeX
+    term = case_when(
+      term == "(Intercept)" ~ "$\\alpha_0$",
+      term == "week" ~ "$\\alpha_1$",
+      term == "constant" ~ "$\\alpha_0$",
+      term == "trend()" ~ "$\\alpha_1$",
+      TRUE ~ term
+    ),
+    lower = estimate + qnorm(0.025) * std.error,
+    upper = estimate + qnorm(0.975) * std.error
+  ) |>
+  pander()
 ```
 :::
 
-##### e) How large is the autocorrelation bias? As a professional who might conduct forecast in the future, how important is it to model and account for autocorrelation in the error terms of our time series models?
+<!-- ##### e) How large is the autocorrelation bias? As a professional who might conduct forecast in the future, how important is it to model and account for autocorrelation in the error terms of our time series models? -->
 
-::: {.callout-note title="Answer" icon="false"}
-<!-- Delete this and put your answer here. The three colons mark the end of your answer. -->
-:::
+<!-- ::: {.callout-note title="Answer" icon="false"} -->
+<!-- <!-- Delete this and put your answer here. The three colons mark the end of your answer. --> -->
+<!-- ::: -->
 
 ### Question 3 - Linear model with additive seasonal indicator variables (40 points)
 
-##### a) Use OLS to estimate a linear model with a linear trend, an intercept of 0 and additive seasonal indicator variables of the Women's Clothing Retail Sales data set. Please report the estimates for the monthly seasonal indicator variables in a professionally formatted table. (See an example [HERE](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html#tbl-chocolateParameterEstIndicator))
+::: {.callout-tip title="Note"}
+The data for this question has a highly selective time range that is not representative of the series as a whole. It is purely to get a clean mapping to a linear model with seasonal indicators.
+:::
 
 ```{r}
 
 retail <- rio::import("https://raw.githubusercontent.com/byuistats/timeseries/refs/heads/master/data/retail_by_business_type.csv")
 
+retail_ts <- retail |> 
+  mutate(date = yearmonth(month)) |> 
+  filter(
+    naics == 44812, # women's clothing sales code
+    date >= yearmonth("2004 Jan"),
+    date <= yearmonth("2006 Dec")
+  ) |>
+  select(date, sales_millions) |>
+  as_tsibble(index = date)
+
 ```
+
+##### a) Use OLS to estimate a linear model with a linear trend, an intercept of 0 and additive seasonal indicator variables of the Women's Clothing Retail Sales data set. Please report the estimates for the monthly seasonal indicator variables in a professionally formatted table. (See an example [HERE](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html#tbl-chocolateParameterEstIndicator))
+
+
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r}
-retail_ts <- retail |> 
-  filter(naics == 44812) |>       # women's clothing sales code
-  select(!c(naics, business)) |>  # remove, redundant after filter
-  mutate(
-    # index = 1:n(),
-    date = yearmonth(month) + month(1),
-    month = month(date),
-    stats_time = year(date) + (month(date) - 1) / 12
-  ) |>
-  filter(date >= ym("2004 Jan"), date <= ym("2006 Dec")) |>
-  as_tsibble(index = date)
+retail_lm <- retail_ts |>
+  model(lm = TSLM(sales_millions ~ 0 + trend() + season()))
 
-dat_lm <- retail_ts |>
-  model(lm = TSLM(sales_millions ~ 0 + date + season()))
-
-tidy(dat_lm) |> 
+tidy(retail_lm) |> 
+  select(!.model) |> 
   mutate(
     term = if_else(
       str_detect(term, "season"), 
-      month.abb[as.numeric(str_remove_all(term, "\\D"))],
+      month.abb[as.numeric(str_remove_all(term, "\\D"))], 
       term
     )
   )
-
-fruits <- c("one apple", "two pears", "three bananas")
-str_remove_all(fruits, "[aeiou]")
 ```
 :::
 
@@ -229,46 +233,17 @@ The interpretation of the intercept would be the same as the coefficient for Jul
 
 ::: {.callout-note title="Answer" icon="false"}
 ```{r}
-# num_years_to_forecast <- 5
-# df <- data.frame(
-#   month_ = factor(1:12), 
-#   estimate = tidy(dat_lm) |> slice(2:13) |> pull(estimate)
-# )
-# num_years_to_forecast <- 5
-# num_months_to_forecast <- num_years_to_forecast * 12
-# 
-# 
-# last_time <- max(retail_ts$stats_time)
-# last_month <- retail_ts$month_num[which.max(retail_ts$stats_time)]
-# 
-# 
-# new_dat <- tibble(
-#   stats_time = seq(from = last_time + 1/12, by = 1/12, length.out = num_months_to_forecast),
-#   
-#     alpha = tidy(dat_lm) |> slice(1) |> pull(estimate),
-#   month_num = rep(1:12, times = num_years_to_forecast)
-# ) |>
-#   mutate(month_ = factor(month_num, levels = levels(retail_ts$month_))) |>
-#   left_join(df, by = "month_")
-# 
-# 
-# retail_forecast <- dat_lm |>
-#   forecast(new_data = as_tsibble(new_dat, index = stats_time))
-# 
-# 
-# retail_forecast |>
-#   autoplot(retail_ts, level = 95) +
-#   labs(
-#     title = "Retail Sales Forecast",
-#     subtitle = "5-Year",
-#     y = "Sales ($ Millions)",
-#     x = "Time (Numeric)"
-#   ) +
-#   theme_minimal() +
-#   theme(
-#     plot.title = element_text(hjust = 0.5),
-#     plot.subtitle = element_text(hjust = 0.5)
-#   )
+autoplot(forecast(retail_lm, h = "5 years"), retail_ts, level = 95) +
+  labs(
+    title = "Retail Sales Forecast",
+    subtitle = "5-Year",
+    y = "Sales ($ Millions)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
 ```
 :::
 
