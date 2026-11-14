@@ -511,7 +511,7 @@ window.Quarto = {
         <li class="dropdown-header">Lesson 2</li>
         <li>
     <a class="dropdown-item" href="./chapter_5_lesson_2.html">
- <span class="dropdown-text">Transformations, Forecasting and Bias Correction</span></a>
+ <span class="dropdown-text">Log Transformations, Model Selection, and Bias Correction</span></a>
   </li>  
     </ul>
   </li>
@@ -731,9 +731,10 @@ Simulate time series
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  fable,      <span class="co"># model(...), forecast(), tidy(), glance()...</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  feasts,     <span class="co"># ACF(), PACF()</span></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  ggtime,     <span class="co"># autoplot() for tsibbles</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  patchwork,  <span class="co"># + and / for ggplots</span></span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  rio         <span class="co"># import()</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  rio,        <span class="co"># import()</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  pander,     <span class="co"># pander() markdown tables</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  patchwork   <span class="co"># + and / for ggplots</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </section>
 <section id="small-group-activity-linear-models-5-min" class="level2">
@@ -1042,13 +1043,26 @@ Figure&nbsp;2: Autocorrelation function and partial autorcorrelation function of
 </section>
 <section id="adding-ar-to-the-model" class="level3">
 <h3 class="anchored" data-anchor-id="adding-ar-to-the-model">Adding AR to the Model</h3>
-<p>The autocorrelation in the data shows that OLS is insufficient on its own. To fix it, we can add an AR(p) process to the residuals.</p>
+<p>The autocorrelation in the data shows that OLS is insufficient on its own. To fix it, we fit a single model in which the errors follow an AR(p) process.</p>
 <p><span class="math display">\[ y_t = \beta_0 + \beta_1 x_t + \eta_t \]</span></p>
 <p>where <span class="math inline">\(\eta_t\)</span> is an <span class="math inline">\(AR(p)\)</span> error. Note that <span class="math inline">\(\eta_t\)</span> can represent more than just <span class="math inline">\(AR\)</span> processes, but we have specified it here as an <span class="math inline">\(AR(p)\)</span>.</p>
-<p>Our above analysis identified an <span class="math inline">\(AR(1)\)</span> process as appropriate. We also know this because the data was simulated. We can easily add that to the residuals with the following code.</p>
+<p>Our above analysis identified an <span class="math inline">\(AR(1)\)</span> process as appropriate. We also know this because the data was simulated. In fable, we fit a regression with <span class="math inline">\(AR(p)\)</span> errors using the <code>ARIMA()</code> function. The term <code>pdq(1, 0, 0)</code> asks for <span class="math inline">\(AR(1)\)</span> errors, and <code>PDQ(0, 0, 0)</code> turns off the seasonal parts of the model. You will learn the rest of what <code>ARIMA()</code> can do in Chapter 7.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Why not `AR()`?">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Why not <code>AR()</code>?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>fable also has an <code>AR()</code> function, but <code>AR(x ~ Time + order(1))</code> fits a different model. It adds the lagged <em>response</em>, <span class="math inline">\(x_{t-1}\)</span>, as a predictor, rather than modeling the <em>errors</em> as an <span class="math inline">\(AR(1)\)</span> process. With a lagged response in the model, the trend coefficients no longer mean the same thing as in the OLS model. <code>AR()</code> also does not accept factor variables, which we will need for seasonal indicators.</p>
+</div>
+</div>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>lm_ar <span class="ot">&lt;-</span> dat <span class="sc">|&gt;</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">AR</span>(x <span class="sc">~</span> Time <span class="sc">+</span> <span class="fu">order</span>(<span class="dv">1</span>))) <span class="co"># AR(1) fit to residuals of LM</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">ARIMA</span>(x <span class="sc">~</span> Time <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>))) <span class="co"># regression with AR(1) errors</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(lm_ar)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -1073,25 +1087,25 @@ Table&nbsp;2: Parameter estimates for the Generalized Least Squares estimates of
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;">$\alpha_0$</td>
-<td style="text-align: center; min-width: 0in;">22.1229022</td>
-<td style="text-align: center; min-width: 0in;">5.4649024</td>
-<td style="text-align: center; min-width: 0in;">4.048179</td>
-<td style="text-align: center; min-width: 0in;">0.0001039</td>
+<td style="text-align: center; min-width: 0in;">ar1</td>
+<td style="text-align: center; min-width: 0in;">0.6798276</td>
+<td style="text-align: center; min-width: 0in;">0.0737768</td>
+<td style="text-align: center; min-width: 0in;">9.214654</td>
+<td style="text-align: center; min-width: 0in;">0e+00</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;">Time</td>
-<td style="text-align: center; min-width: 0in;">0.9458886</td>
-<td style="text-align: center; min-width: 0in;">0.2384769</td>
-<td style="text-align: center; min-width: 0in;">3.966375</td>
-<td style="text-align: center; min-width: 0in;">0.0001398</td>
+<td style="text-align: center; min-width: 0in;">$\alpha_1$</td>
+<td style="text-align: center; min-width: 0in;">3.0452993</td>
+<td style="text-align: center; min-width: 0in;">0.1796822</td>
+<td style="text-align: center; min-width: 0in;">16.948248</td>
+<td style="text-align: center; min-width: 0in;">0e+00</td>
 </tr>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;">ar1</td>
-<td style="text-align: center; min-width: 0in;">0.6819469</td>
-<td style="text-align: center; min-width: 0in;">0.0746126</td>
-<td style="text-align: center; min-width: 0in;">9.139831</td>
-<td style="text-align: center; min-width: 0in;">0.0000000</td>
+<td style="text-align: center; min-width: 0in;">$\alpha_0$</td>
+<td style="text-align: center; min-width: 0in;">58.2883312</td>
+<td style="text-align: center; min-width: 0in;">10.5579328</td>
+<td style="text-align: center; min-width: 0in;">5.520809</td>
+<td style="text-align: center; min-width: 0in;">3e-07</td>
 </tr>
 </tbody>
 </table>
@@ -1295,10 +1309,10 @@ Figure&nbsp;4: Correlogram (ACF) and Partial Correlogram (PACF) of the OLS resid
 </div>
 </div>
 </div>
-<p>The PACF above shows 2 significant lags, so we will refit the linear model with an AR(2) process for the residuals.</p>
+<p>The PACF above shows 2 significant lags, so we will refit the linear model with AR(2) errors.</p>
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>lm_ar <span class="ot">&lt;-</span> temp_tidy <span class="sc">|&gt;</span> </span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">AR</span>(x <span class="sc">~</span> stats_time <span class="sc">+</span> <span class="fu">order</span>(<span class="dv">2</span>))) <span class="co"># AR(2) fit to residuals of LM</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">ARIMA</span>(x <span class="sc">~</span> stats_time <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">2</span>, <span class="dv">0</span>, <span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>))) <span class="co"># regression with AR(2) errors</span></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(lm_ar)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
@@ -1323,32 +1337,32 @@ Table&nbsp;5: Parameter estimates for the Generalized Least Squares estimates of
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;">$\alpha_0$</td>
-<td style="text-align: center; min-width: 0in;">-7.6791790</td>
-<td style="text-align: center; min-width: 0in;">1.4613752</td>
-<td style="text-align: center; min-width: 0in;">-5.254762</td>
-<td style="text-align: center; min-width: 0in;">2e-07</td>
-</tr>
-<tr class="even">
-<td style="text-align: center; min-width: 0in;">$\alpha_1$</td>
-<td style="text-align: center; min-width: 0in;">0.0038818</td>
-<td style="text-align: center; min-width: 0in;">0.0007377</td>
-<td style="text-align: center; min-width: 0in;">5.262208</td>
-<td style="text-align: center; min-width: 0in;">2e-07</td>
-</tr>
-<tr class="odd">
 <td style="text-align: center; min-width: 0in;">ar1</td>
-<td style="text-align: center; min-width: 0in;">0.5000352</td>
-<td style="text-align: center; min-width: 0in;">0.0462568</td>
-<td style="text-align: center; min-width: 0in;">10.809982</td>
-<td style="text-align: center; min-width: 0in;">0e+00</td>
+<td style="text-align: center; min-width: 0in;">0.5083969</td>
+<td style="text-align: center; min-width: 0in;">0.0461976</td>
+<td style="text-align: center; min-width: 0in;">11.004830</td>
+<td style="text-align: center; min-width: 0in;">0</td>
 </tr>
 <tr class="even">
 <td style="text-align: center; min-width: 0in;">ar2</td>
-<td style="text-align: center; min-width: 0in;">0.2860945</td>
-<td style="text-align: center; min-width: 0in;">0.0461051</td>
-<td style="text-align: center; min-width: 0in;">6.205274</td>
-<td style="text-align: center; min-width: 0in;">0e+00</td>
+<td style="text-align: center; min-width: 0in;">0.2891068</td>
+<td style="text-align: center; min-width: 0in;">0.0465440</td>
+<td style="text-align: center; min-width: 0in;">6.211471</td>
+<td style="text-align: center; min-width: 0in;">0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">$\alpha_1$</td>
+<td style="text-align: center; min-width: 0in;">0.0168982</td>
+<td style="text-align: center; min-width: 0in;">0.0018846</td>
+<td style="text-align: center; min-width: 0in;">8.966290</td>
+<td style="text-align: center; min-width: 0in;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">$\alpha_0$</td>
+<td style="text-align: center; min-width: 0in;">-33.4168432</td>
+<td style="text-align: center; min-width: 0in;">3.7457034</td>
+<td style="text-align: center; min-width: 0in;">-8.921380</td>
+<td style="text-align: center; min-width: 0in;">0</td>
 </tr>
 </tbody>
 </table>
@@ -1719,7 +1733,7 @@ Table&nbsp;7: Select forecasted values of the relative count of Google searches 
 <span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a><span class="fu">model</span>(<span class="fu">TSLM</span>(chocolate <span class="sc">~</span> month_seq <span class="sc">+</span> month))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
-<p>The estimated value of the trend <span class="math inline">\(\alpha_1\)</span> (term month_seq) is 0.094, equal to the previous model specification.</p>
+<p>The estimated value of the trend <span class="math inline">\(\alpha_1\)</span> (term month_seq) is 0.094, equal to the previous model specification. Because <code>month_seq</code> counts months, <span class="math inline">\(\alpha_1\)</span> is the change in searches per month.</p>
 <p>The estimated value of the overall intercept <span class="math inline">\(\alpha_0\)</span> (term (Intercept)) is 39.805. This represents the intercept for January (the reference month), equal to <span class="math inline">\(\beta_1\)</span> in the previous model specification.</p>
 <p>The table below shows the estimates for the <span class="math inline">\(\Delta\beta_i\)</span> parameters (differences relative to January) as well as the final calculated intercept for each month, <span class="math inline">\(\beta_i=\alpha_0 + \Delta\beta_i\)</span>. For example, the value for Feb (February) is 8.606. This means the estimate value for February is about 8.606 units higher than the value for January.</p>
 <div class="cell">
@@ -2247,8 +2261,8 @@ Table&nbsp;8: Estimated monthly parameters and calculated intercepts for the fit
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./chapter_5_lesson_2.html" class="pagination-link" aria-label="Transformations, Forecasting and Bias Correction">
-        <span class="nav-page-text">Transformations, Forecasting and Bias Correction</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./chapter_5_lesson_2.html" class="pagination-link" aria-label="Log Transformations, Model Selection, and Bias Correction">
+        <span class="nav-page-text">Log Transformations, Model Selection, and Bias Correction</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

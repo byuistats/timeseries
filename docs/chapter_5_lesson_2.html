@@ -4864,6 +4864,7 @@ window.Quarto = {
   <li><a href="#comparing-the-candidates" id="toc-comparing-the-candidates" class="nav-link" data-scroll-target="#comparing-the-candidates">Comparing the Candidates</a></li>
   <li><a href="#reading-information-criteria-carefully" id="toc-reading-information-criteria-carefully" class="nav-link" data-scroll-target="#reading-information-criteria-carefully">Reading Information Criteria Carefully</a></li>
   <li><a href="#our-decision" id="toc-our-decision" class="nav-link" data-scroll-target="#our-decision">Our Decision</a></li>
+  <li><a href="#interpreting-the-coefficients" id="toc-interpreting-the-coefficients" class="nav-link" data-scroll-target="#interpreting-the-coefficients">Interpreting the Coefficients</a></li>
   </ul></li>
   <li><a href="#class-activity-modeling-the-autocorrelated-errors-15-min" id="toc-class-activity-modeling-the-autocorrelated-errors-15-min" class="nav-link" data-scroll-target="#class-activity-modeling-the-autocorrelated-errors-15-min">Class Activity: Modeling the Autocorrelated Errors (15 min)</a>
   <ul class="collapse">
@@ -5021,9 +5022,9 @@ Forecast from a log-transformed model
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>air_ts <span class="ot">&lt;-</span> <span class="fu">as_tsibble</span>(AirPassengers) <span class="sc">|&gt;</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">date =</span> index, <span class="at">passengers =</span> value) <span class="sc">|&gt;</span></span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">t     =</span> <span class="fu">row_number</span>(),                                <span class="co"># t = 1 is January 1949</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">years =</span> t <span class="sc">/</span> <span class="dv">12</span>,                                      <span class="co"># time measured in years</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> <span class="fu">factor</span>(month.abb[<span class="fu">month</span>(date)], <span class="at">levels =</span> month.abb)  <span class="co"># January is the reference month</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">t             =</span> <span class="fu">row_number</span>(),                                <span class="co"># t = 1 is January 1949</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">years_elapsed =</span> t <span class="sc">/</span> <span class="dv">12</span>,                                      <span class="co"># years since Dec 1948 (not the calendar year)</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">month         =</span> <span class="fu">factor</span>(month.abb[<span class="fu">month</span>(date)], <span class="at">levels =</span> month.abb)  <span class="co"># January is the reference month</span></span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
@@ -5115,7 +5116,7 @@ Figure 1: Monthly international airline passengers (left) and the natural logar
       \Delta\beta_{12}, &amp; t = 12, 24, 36, \ldots ~~~~ (December)
     \end{cases}
 \]</span></p>
-<p>The candidates differ only in the trend, <span class="math inline">\(m_t\)</span>. For the trend, we measure time in years, <span class="math inline">\(u_t = t/12\)</span>, rather than in months. Measured in months, <span class="math inline">\(t^3\)</span> would reach about 3,000,000 by the end of the series. Numbers that large can cause numerical problems when fitting some models, including the one we fit later in this lesson. Measuring in years keeps the values small, and each trend coefficient describes change per year.</p>
+<p>The candidates differ only in the trend, <span class="math inline">\(m_t\)</span>. Here <span class="math inline">\(u_t\)</span> is the time elapsed in years since December 1948, stored in <code>air_ts</code> as <code>years_elapsed</code>. We look more closely at this choice, and at what the coefficients mean, after we choose a model.</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 44%">
@@ -5149,9 +5150,9 @@ Figure 1: Monthly international airline passengers (left) and the natural logar
 <div class="cell">
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>air_models <span class="ot">&lt;-</span> air_ts <span class="sc">|&gt;</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">linear    =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> years <span class="sc">+</span> month),</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">quadratic =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> years <span class="sc">+</span> <span class="fu">I</span>(years<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month),</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">cubic     =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> years <span class="sc">+</span> <span class="fu">I</span>(years<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">I</span>(years<span class="sc">^</span><span class="dv">3</span>) <span class="sc">+</span> month)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">linear    =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> years_elapsed <span class="sc">+</span> month),</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">quadratic =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> years_elapsed <span class="sc">+</span> <span class="fu">I</span>(years_elapsed<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month),</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">cubic     =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> years_elapsed <span class="sc">+</span> <span class="fu">I</span>(years_elapsed<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">I</span>(years_elapsed<span class="sc">^</span><span class="dv">3</span>) <span class="sc">+</span> month)</span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <p>The tabs below give the estimated trend parameters for each candidate. The 11 monthly terms are left out to save space. Delete the <code>filter()</code> line to see them.</p>
@@ -5170,10 +5171,10 @@ Figure 1: Monthly international airline passengers (left) and the natural logar
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 2 × 7
-  .model term        estimate std.error statistic   p.value sig  
-  &lt;chr&gt;  &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 linear (Intercept)    4.73    0.0189      250.  1.97e-177 TRUE 
-2 linear years          0.121   0.00143      84.4 4.56e-116 TRUE </code></pre>
+  .model term          estimate std.error statistic   p.value sig  
+  &lt;chr&gt;  &lt;chr&gt;            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+1 linear (Intercept)      4.73    0.0189      250.  1.97e-177 TRUE 
+2 linear years_elapsed    0.121   0.00143      84.4 4.56e-116 TRUE </code></pre>
 </div>
 </div>
 </div>
@@ -5189,11 +5190,11 @@ Figure 1: Monthly international airline passengers (left) and the natural logar
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 3 × 7
-  .model    term        estimate std.error statistic   p.value sig  
-  &lt;chr&gt;     &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 quadratic (Intercept)  4.65     0.0179      260.   1.45e-178 TRUE 
-2 quadratic years        0.158    0.00467      33.9  2.27e- 66 TRUE 
-3 quadratic I(years^2)  -0.00309  0.000374     -8.26 1.41e- 13 TRUE </code></pre>
+  .model    term               estimate std.error statistic   p.value sig  
+  &lt;chr&gt;     &lt;chr&gt;                 &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+1 quadratic (Intercept)         4.65     0.0179      260.   1.45e-178 TRUE 
+2 quadratic years_elapsed       0.158    0.00467      33.9  2.27e- 66 TRUE 
+3 quadratic I(years_elapsed^2) -0.00309  0.000374     -8.26 1.41e- 13 TRUE </code></pre>
 </div>
 </div>
 <p>The quadratic term is statistically significant, and its estimate is negative. On the log scale, the trend bends slightly downward. In other words, the growth rate of passengers slows a little over time.</p>
@@ -5210,12 +5211,12 @@ Figure 1: Monthly international airline passengers (left) and the natural logar
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 4 × 7
-  .model term          estimate std.error statistic   p.value sig  
-  &lt;chr&gt;  &lt;chr&gt;            &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
-1 cubic  (Intercept)  4.66       0.0207     225.    3.15e-169 TRUE 
-2 cubic  years        0.150      0.0119      12.6   2.84e- 24 TRUE 
-3 cubic  I(years^2)  -0.00142    0.00228     -0.621 5.35e-  1 FALSE
-4 cubic  I(years^3)  -0.0000924  0.000124    -0.744 4.58e-  1 FALSE</code></pre>
+  .model term                 estimate std.error statistic   p.value sig  
+  &lt;chr&gt;  &lt;chr&gt;                   &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt; &lt;lgl&gt;
+1 cubic  (Intercept)         4.66       0.0207     225.    3.15e-169 TRUE 
+2 cubic  years_elapsed       0.150      0.0119      12.6   2.84e- 24 TRUE 
+3 cubic  I(years_elapsed^2) -0.00142    0.00228     -0.621 5.35e-  1 FALSE
+4 cubic  I(years_elapsed^3) -0.0000924  0.000124    -0.744 4.58e-  1 FALSE</code></pre>
 </div>
 </div>
 <p>The cubic term is not statistically significant. Notice that the quadratic term is not significant in this model either, even though it was in the quadratic model. The terms <span class="math inline">\(u_t\)</span>, <span class="math inline">\(u_t^2\)</span>, and <span class="math inline">\(u_t^3\)</span> rise together and are highly correlated, so the model struggles to separate their individual effects. This is one reason we compare whole models in the next section rather than relying only on individual p-values.</p>
@@ -5247,7 +5248,6 @@ Figure 1: Monthly international airline passengers (left) and the natural logar
 <div class="callout-body-container callout-body">
 <ul>
 <li>Based on the plots and the p-values, which trend do you think is most appropriate? Why?</li>
-<li>The quadratic term is negative. What does that mean for the growth of airline passengers?</li>
 </ul>
 </div>
 </div>
@@ -5387,8 +5387,8 @@ Table 1: Fit statistics for the candidate models fitted to the logarithm of the
 <span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>air_scale_ic <span class="ot">&lt;-</span> air_ts <span class="sc">|&gt;</span></span>
 <span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">original =</span> <span class="fu">TSLM</span>(passengers <span class="sc">~</span> years <span class="sc">+</span> <span class="fu">I</span>(years<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month),</span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">log      =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> years <span class="sc">+</span> <span class="fu">I</span>(years<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month)</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">original =</span> <span class="fu">TSLM</span>(passengers <span class="sc">~</span> years_elapsed <span class="sc">+</span> <span class="fu">I</span>(years_elapsed<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month),</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">log      =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> years_elapsed <span class="sc">+</span> <span class="fu">I</span>(years_elapsed<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month)</span>
 <span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
 <span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">glance</span>()</span>
 <span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a></span>
@@ -5469,6 +5469,325 @@ Table 1: Fit statistics for the candidate models fitted to the logarithm of the
 </div>
 </div>
 </section>
+<section id="interpreting-the-coefficients" class="level3">
+<h3 class="anchored" data-anchor-id="interpreting-the-coefficients">Interpreting the Coefficients</h3>
+<p>Now that we have chosen the quadratic model, what do its coefficients tell us about airline travel?</p>
+<section id="measuring-time" class="level4">
+<h4 class="anchored" data-anchor-id="measuring-time">Measuring Time</h4>
+<p>The answer depends on how we measured time. A trend needs a variable that measures time. When we created <code>air_ts</code>, we made two:</p>
+<ul>
+<li><code>t</code> counts months. <span class="math inline">\(t = 1\)</span> is January 1949, <span class="math inline">\(t = 2\)</span> is February 1949, and so on.</li>
+<li><code>years_elapsed</code> <span class="math inline">\(= u_t = t/12\)</span> counts the same months in units of years.</li>
+</ul>
+<p><code>years_elapsed</code> is <strong>not</strong> the calendar year. It is the time elapsed since December 1948, the month before the data begin. Each month adds <span class="math inline">\(1/12\)</span>:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Month</th>
+<th style="text-align: right;"><code>t</code></th>
+<th style="text-align: right;"><code>years_elapsed</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Jan 1949</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0.083</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Feb 1949</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0.167</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Dec 1949</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">1.000</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Jan 1950</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: right;">1.083</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Dec 1960</td>
+<td style="text-align: right;">144</td>
+<td style="text-align: right;">12.000</td>
+</tr>
+</tbody>
+</table>
+<p>So <span class="math inline">\(u_t = 0\)</span> is December 1948, and a one-unit change in <span class="math inline">\(u_t\)</span> is one year.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Under the Hood: Why `years_elapsed` and Not `trend()` or the Calendar Year?">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-6-contents" aria-controls="callout-6" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Under the Hood: Why <code>years_elapsed</code> and Not <code>trend()</code> or the Calendar Year?
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-6" class="callout-6-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p><strong>fable’s <code>trend()</code>.</strong> fable has shortcuts for these variables. <code>trend()</code> creates <code>t</code>, counting observations 1, 2, 3, … in the units of the data, which here are months. <code>season()</code> creates the month indicators with January as the reference. The code below fits the linear candidate both ways.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>air_units <span class="ot">&lt;-</span> air_ts <span class="sc">|&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">years_elapsed =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> years_elapsed <span class="sc">+</span> month),</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">trend         =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> <span class="fu">trend</span>() <span class="sc">+</span> <span class="fu">season</span>())</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>units_coef <span class="ot">&lt;-</span> <span class="fu">tidy</span>(air_units) <span class="sc">|&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;(Intercept)&quot;</span>, <span class="st">&quot;years_elapsed&quot;</span>, <span class="st">&quot;trend()&quot;</span>, <span class="st">&quot;monthFeb&quot;</span>, <span class="st">&quot;season()year2&quot;</span>))</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>units_coef <span class="sc">|&gt;</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">Model =</span> .model, <span class="at">Term =</span> term, <span class="at">Estimate =</span> estimate) <span class="sc">|&gt;</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">round_df</span>(<span class="dv">4</span>) <span class="sc">|&gt;</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>slope_years  <span class="ot">&lt;-</span> units_coef <span class="sc">|&gt;</span> <span class="fu">filter</span>(term <span class="sc">==</span> <span class="st">&quot;years_elapsed&quot;</span>) <span class="sc">|&gt;</span> <span class="fu">pull</span>(estimate)</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>slope_months <span class="ot">&lt;-</span> units_coef <span class="sc">|&gt;</span> <span class="fu">filter</span>(term <span class="sc">==</span> <span class="st">&quot;trend()&quot;</span>) <span class="sc">|&gt;</span> <span class="fu">pull</span>(estimate)</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>fitted_diff  <span class="ot">&lt;-</span> <span class="fu">max</span>(<span class="fu">abs</span>(</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">fitted</span>(air_units <span class="sc">|&gt;</span> <span class="fu">select</span>(years_elapsed))<span class="sc">$</span>.fitted <span class="sc">-</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">fitted</span>(air_units <span class="sc">|&gt;</span> <span class="fu">select</span>(trend))<span class="sc">$</span>.fitted</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div id="tbl-airUnits" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-airUnits-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table 2: Three coefficients from the linear candidate, fitted with <code>years_elapsed</code> and <code>month</code> or with <code>trend()</code> and <code>season()</code>
+</figcaption>
+<div aria-describedby="tbl-airUnits-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="table table-striped cell caption-top table-sm small">
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">Model</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Term</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">years_elapsed</td>
+<td style="text-align: center; min-width: 0in;">(Intercept)</td>
+<td style="text-align: center; min-width: 0in;">4.7268</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">years_elapsed</td>
+<td style="text-align: center; min-width: 0in;">years_elapsed</td>
+<td style="text-align: center; min-width: 0in;">0.1208</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">years_elapsed</td>
+<td style="text-align: center; min-width: 0in;">monthFeb</td>
+<td style="text-align: center; min-width: 0in;">-0.0221</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">trend</td>
+<td style="text-align: center; min-width: 0in;">(Intercept)</td>
+<td style="text-align: center; min-width: 0in;">4.7268</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">trend</td>
+<td style="text-align: center; min-width: 0in;">trend()</td>
+<td style="text-align: center; min-width: 0in;">0.0101</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">trend</td>
+<td style="text-align: center; min-width: 0in;">season()year2</td>
+<td style="text-align: center; min-width: 0in;">-0.0221</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>These are the same model. Their fitted values differ by less than <span class="math inline">\(10^{-12}\)</span>, which is rounding error, so they also give the same forecasts. The intercepts match. The February coefficients match too; <code>season()year2</code> is fable’s name for <code>monthFeb</code>. Only the slopes differ, by a factor of 12:</p>
+<ul>
+<li><code>trend()</code> counts months, so its slope, 0.0101, is the change in <span class="math inline">\(\log(x_t)\)</span> per <strong>month</strong>.</li>
+<li><code>years_elapsed</code> counts years, so its slope, 0.1208 <span class="math inline">\(= 12 \times\)</span> 0.0101, is the change per <strong>year</strong>.</li>
+</ul>
+<p>We use <code>years_elapsed</code> in this lesson for two reasons. Its coefficients describe change per year, which is easier to talk about. It also keeps powers of time small: by the end of the series, <span class="math inline">\(u_t^3 = 1{,}728\)</span>, while <span class="math inline">\(t^3\)</span> is about 3,000,000. Numbers that large can cause numerical problems, including in the regression with <span class="math inline">\(AR(1)\)</span> errors we fit later in this lesson. The cost is that when we forecast, we must create the future values of <code>years_elapsed</code> ourselves. <code>trend()</code> would do that for us.</p>
+<p><strong>The calendar year.</strong> For the global temperatures in <a href="https://byuistats.github.io/timeseries/chapter_5_lesson_1.html">Chapter 5 Lesson 1</a>, we measured time with the calendar year (<code>stats_time</code> = 1970.00, 1970.08, …). That works for a straight line, but it breaks down here.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>air_calendar <span class="ot">&lt;-</span> air_ts <span class="sc">|&gt;</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">calendar_year =</span> <span class="fu">year</span>(date) <span class="sc">+</span> (<span class="fu">month</span>(date) <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">/</span> <span class="dv">12</span>) <span class="sc">|&gt;</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">linear    =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> calendar_year <span class="sc">+</span> month),</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">quadratic =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> calendar_year <span class="sc">+</span> <span class="fu">I</span>(calendar_year<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month),</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">cubic     =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> calendar_year <span class="sc">+</span> <span class="fu">I</span>(calendar_year<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">I</span>(calendar_year<span class="sc">^</span><span class="dv">3</span>) <span class="sc">+</span> month)</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="fu">tidy</span>(air_calendar) <span class="sc">|&gt;</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">str_detect</span>(term, <span class="st">&quot;^month&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">Model =</span> .model, <span class="at">Term =</span> term, <span class="at">Estimate =</span> estimate) <span class="sc">|&gt;</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Estimate =</span> <span class="fu">map_chr</span>(Estimate, \(x) <span class="fu">format</span>(<span class="fu">signif</span>(x, <span class="dv">3</span>), <span class="at">scientific =</span> <span class="cn">FALSE</span>, <span class="at">big.mark =</span> <span class="st">&quot;,&quot;</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-striped caption-top table-sm small">
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">Model</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Term</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">linear</td>
+<td style="text-align: center; min-width: 0in;">(Intercept)</td>
+<td style="text-align: center; min-width: 0in;">-231</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">linear</td>
+<td style="text-align: center; min-width: 0in;">calendar_year</td>
+<td style="text-align: center; min-width: 0in;">0.121</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">quadratic</td>
+<td style="text-align: center; min-width: 0in;">(Intercept)</td>
+<td style="text-align: center; min-width: 0in;">-12,100</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">quadratic</td>
+<td style="text-align: center; min-width: 0in;">calendar_year</td>
+<td style="text-align: center; min-width: 0in;">12.2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">quadratic</td>
+<td style="text-align: center; min-width: 0in;">I(calendar_year^2)</td>
+<td style="text-align: center; min-width: 0in;">-0.00309</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">cubic</td>
+<td style="text-align: center; min-width: 0in;">(Intercept)</td>
+<td style="text-align: center; min-width: 0in;">-12,100</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">cubic</td>
+<td style="text-align: center; min-width: 0in;">calendar_year</td>
+<td style="text-align: center; min-width: 0in;">12.2</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">cubic</td>
+<td style="text-align: center; min-width: 0in;">I(calendar_year^2)</td>
+<td style="text-align: center; min-width: 0in;">-0.00309</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">cubic</td>
+<td style="text-align: center; min-width: 0in;">I(calendar_year^3)</td>
+<td style="text-align: center; min-width: 0in;">NA</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<ul>
+<li><strong>The intercept is the value in year 0 AD.</strong> In the linear model, <span class="math inline">\(\alpha_0\)</span> is the predicted log number of passengers two thousand years before airplanes.</li>
+<li><strong>With a quadratic, <span class="math inline">\(\alpha_1\)</span> becomes the slope in year 0 AD.</strong> It is about 12 per year, a growth rate that never happened anywhere near the data.</li>
+<li><strong>The powers are nearly identical.</strong> Over 1949–1960, <code>calendar_year</code> and its square have a correlation of 0.9999997. <code>TSLM()</code> cannot separate the cubic term from the others, so it silently drops that term and reports <code>NA</code>.</li>
+</ul>
+<p>Measuring time from the start of the series avoids all three problems.</p>
+</div>
+</div>
+</div>
+</section>
+<section id="reading-the-estimates" class="level4">
+<h4 class="anchored" data-anchor-id="reading-the-estimates">Reading the Estimates</h4>
+<p><a href="#tbl-airQuadCoef" class="quarto-xref">Table 3</a> gives the trend coefficients and one seasonal coefficient from the quadratic model. These are the OLS estimates. When we add <span class="math inline">\(AR(1)\)</span> errors in the next activity, the estimates barely change, so the interpretation below still holds.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>quad_coef <span class="ot">&lt;-</span> air_models <span class="sc">|&gt;</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(quadratic) <span class="sc">|&gt;</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;(Intercept)&quot;</span>, <span class="st">&quot;years_elapsed&quot;</span>, <span class="st">&quot;I(years_elapsed^2)&quot;</span>, <span class="st">&quot;monthJul&quot;</span>))</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>quad_coef <span class="sc">|&gt;</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">Term =</span> term, <span class="at">Estimate =</span> estimate) <span class="sc">|&gt;</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">round_df</span>(<span class="dv">4</span>) <span class="sc">|&gt;</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>get_est <span class="ot">&lt;-</span> <span class="cf">function</span>(name) quad_coef <span class="sc">|&gt;</span> <span class="fu">filter</span>(term <span class="sc">==</span> name) <span class="sc">|&gt;</span> <span class="fu">pull</span>(estimate)</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>a0  <span class="ot">&lt;-</span> <span class="fu">get_est</span>(<span class="st">&quot;(Intercept)&quot;</span>)</span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>a1  <span class="ot">&lt;-</span> <span class="fu">get_est</span>(<span class="st">&quot;years_elapsed&quot;</span>)</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>a2  <span class="ot">&lt;-</span> <span class="fu">get_est</span>(<span class="st">&quot;I(years_elapsed^2)&quot;</span>)</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>jul <span class="ot">&lt;-</span> <span class="fu">get_est</span>(<span class="st">&quot;monthJul&quot;</span>)</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>slope_start <span class="ot">&lt;-</span> a1                 <span class="co"># slope of the trend at u_t = 0</span></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>slope_end   <span class="ot">&lt;-</span> a1 <span class="sc">+</span> <span class="dv">2</span> <span class="sc">*</span> a2 <span class="sc">*</span> <span class="dv">12</span>   <span class="co"># slope of the trend at u_t = 12 (Dec 1960)</span></span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>pct <span class="ot">&lt;-</span> <span class="cf">function</span>(x) <span class="fu">round</span>(<span class="dv">100</span> <span class="sc">*</span> (<span class="fu">exp</span>(x) <span class="sc">-</span> <span class="dv">1</span>), <span class="dv">1</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div id="tbl-airQuadCoef" class="cell quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-airQuadCoef-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table 3: Selected coefficients from the quadratic model for the logarithm of airline passengers
+</figcaption>
+<div aria-describedby="tbl-airQuadCoef-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="table table-striped cell caption-top table-sm small">
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">Term</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Estimate</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">(Intercept)</td>
+<td style="text-align: center; min-width: 0in;">4.6514</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">years_elapsed</td>
+<td style="text-align: center; min-width: 0in;">0.1582</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">I(years_elapsed^2)</td>
+<td style="text-align: center; min-width: 0in;">-0.0031</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">monthJul</td>
+<td style="text-align: center; min-width: 0in;">0.3000</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>Because the response is <span class="math inline">\(\log(x_t)\)</span>, a change of <span class="math inline">\(c\)</span> on the log scale multiplies <span class="math inline">\(x_t\)</span> by <span class="math inline">\(e^c\)</span>. That turns each coefficient into a statement about percent change.</p>
+<ul>
+<li><strong>The intercept.</strong> <span class="math inline">\(\hat\alpha_0 =\)</span> 4.651 is the fitted value of <span class="math inline">\(\log(x_t)\)</span> at <span class="math inline">\(u_t = 0\)</span> for the reference month, January. On the original scale, <span class="math inline">\(e^{\hat\alpha_0} \approx\)</span> 105 thousand passengers. This is where the trend starts, just before the data begin.</li>
+<li><strong>The trend.</strong> With a quadratic, the slope of the trend changes over time. It is <span class="math inline">\(\hat\alpha_1 + 2\hat\alpha_2 u_t\)</span>, so <span class="math inline">\(\hat\alpha_1\)</span> alone is only the slope at <span class="math inline">\(u_t = 0\)</span>. At the start of the series, the trend grows by about 17.1% per year. By December 1960 (<span class="math inline">\(u_t = 12\)</span>), the growth rate has slowed to about 8.8% per year. This is the slowing growth that the negative quadratic term describes.</li>
+<li><strong>The seasonal terms.</strong> <span class="math inline">\(\Delta\hat\beta_7 =\)</span> 0.3 for July. Holding the trend fixed, July has about 35% more passengers than January, every year. On the original scale, the seasonal terms multiply the trend instead of adding to it, so the seasonal swings grow as the series grows. This is the pattern in <a href="#fig-airTimePlot" class="quarto-xref">Figure 1</a> that led us to take the logarithm.</li>
+</ul>
+<div class="callout callout-style-default callout-tip no-icon callout-titled" title="Check Your Understanding">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon no-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>Check Your Understanding
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li>The quadratic term is negative. What does that mean for the growth of airline passengers?</li>
+<li>Why can’t we read <span class="math inline">\(\hat\alpha_1\)</span> by itself as “the growth rate of the trend”?</li>
+<li>Use <a href="#tbl-airQuadCoef" class="quarto-xref">Table 3</a> to find the percent difference between July and January. Why do we need <span class="math inline">\(e^{\Delta\hat\beta_7} - 1\)</span> instead of <span class="math inline">\(\Delta\hat\beta_7\)</span> itself?</li>
+</ul>
+</div>
+</div>
+</section>
+</section>
 </section>
 <section id="class-activity-modeling-the-autocorrelated-errors-15-min" class="level2">
 <h2 class="anchored" data-anchor-id="class-activity-modeling-the-autocorrelated-errors-15-min">Class Activity: Modeling the Autocorrelated Errors (15 min)</h2>
@@ -5479,25 +5798,25 @@ Table 1: Fit statistics for the candidate models fitted to the logarithm of the
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>air_quad_resid <span class="ot">&lt;-</span> air_models <span class="sc">|&gt;</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(quadratic) <span class="sc">|&gt;</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>()</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>air_acf_plot <span class="ot">&lt;-</span> air_quad_resid <span class="sc">|&gt;</span></span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>(.resid, <span class="at">lag_max =</span> <span class="dv">36</span>) <span class="sc">|&gt;</span></span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;ACF of Residuals&quot;</span>) <span class="sc">+</span></span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>air_pacf_plot <span class="ot">&lt;-</span> air_quad_resid <span class="sc">|&gt;</span></span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">PACF</span>(.resid, <span class="at">lag_max =</span> <span class="dv">36</span>) <span class="sc">|&gt;</span></span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;PACF of Residuals&quot;</span>) <span class="sc">+</span></span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>air_acf_plot <span class="sc">|</span> air_pacf_plot</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>air_quad_resid <span class="ot">&lt;-</span> air_models <span class="sc">|&gt;</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(quadratic) <span class="sc">|&gt;</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>()</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>air_acf_plot <span class="ot">&lt;-</span> air_quad_resid <span class="sc">|&gt;</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>(.resid, <span class="at">lag_max =</span> <span class="dv">36</span>) <span class="sc">|&gt;</span></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;ACF of Residuals&quot;</span>) <span class="sc">+</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>air_pacf_plot <span class="ot">&lt;-</span> air_quad_resid <span class="sc">|&gt;</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">PACF</span>(.resid, <span class="at">lag_max =</span> <span class="dv">36</span>) <span class="sc">|&gt;</span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;PACF of Residuals&quot;</span>) <span class="sc">+</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>air_acf_plot <span class="sc">|</span> air_pacf_plot</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div id="fig-airQuadResid" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -5527,53 +5846,104 @@ Figure 2: Correlogram (left) and partial correlogram (right) of the residuals f
 \end{align*}\]</span></p>
 <p>As in <a href="https://byuistats.github.io/timeseries/chapter_5_lesson_1.html">Chapter 5 Lesson 1</a>, we do this with the <code>ARIMA()</code> function. The <code>pdq(1, 0, 0)</code> term asks for <span class="math inline">\(AR(1)\)</span> errors, and <code>PDQ(0, 0, 0)</code> turns off the seasonal ARIMA terms, since the indicator variables already handle seasonality. You will learn the rest of what <code>ARIMA()</code> can do in Chapter 7.</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>air_ar <span class="ot">&lt;-</span> air_ts <span class="sc">|&gt;</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">quad_ar1 =</span> <span class="fu">ARIMA</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> years <span class="sc">+</span> <span class="fu">I</span>(years<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>))</span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>air_ar <span class="sc">|&gt;</span></span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">str_detect</span>(term, <span class="st">&quot;month&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>air_ar <span class="ot">&lt;-</span> air_ts <span class="sc">|&gt;</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">quad_ar1 =</span> <span class="fu">ARIMA</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> years_elapsed <span class="sc">+</span> <span class="fu">I</span>(years_elapsed<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>))</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>air_ar <span class="sc">|&gt;</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">str_detect</span>(term, <span class="st">&quot;month&quot;</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 4 × 6
-  .model   term       estimate std.error statistic   p.value
-  &lt;chr&gt;    &lt;chr&gt;         &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
-1 quad_ar1 ar1         0.674    0.0613       11.0  7.85e- 21
-2 quad_ar1 years       0.156    0.00942      16.6  2.94e- 35
-3 quad_ar1 I(years^2) -0.00298  0.000756     -3.94 1.25e-  4
-4 quad_ar1 intercept   4.66     0.0260      179.   4.58e-171</code></pre>
+  .model   term               estimate std.error statistic   p.value
+  &lt;chr&gt;    &lt;chr&gt;                 &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+1 quad_ar1 ar1                 0.674    0.0613       11.0  7.85e- 21
+2 quad_ar1 years_elapsed       0.156    0.00942      16.6  2.94e- 35
+3 quad_ar1 I(years_elapsed^2) -0.00298  0.000756     -3.94 1.25e-  4
+4 quad_ar1 intercept           4.66     0.0260      179.   4.58e-171</code></pre>
 </div>
 </div>
-<p><a href="#tbl-airSE" class="quarto-xref">Table 2</a> compares the trend estimates and standard errors from the OLS model with those from the model with <span class="math inline">\(AR(1)\)</span> errors.</p>
+<div class="callout callout-style-default callout-note callout-titled" title="Under the Hood: Why Not `trend()` Here?">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-8-contents" aria-controls="callout-8" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Under the Hood: Why Not <code>trend()</code> Here?
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-8" class="callout-8-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p><code>TSLM()</code> accepts <code>I(trend()^2)</code>, but <code>ARIMA()</code> handles the large values poorly. By the end of the series, <code>trend()</code> reaches 144 and its square reaches 20,736, while <code>years_elapsed</code> only reaches 12. Below, we fit the same model using <code>trend()</code>. The standard error of the squared term comes back <code>NaN</code>. The model above, fitted with <code>years_elapsed</code>, has no such problem.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>  air_models <span class="sc">|&gt;</span> <span class="fu">select</span>(quadratic) <span class="sc">|&gt;</span> <span class="fu">tidy</span>(),</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  air_ar <span class="sc">|&gt;</span> <span class="fu">tidy</span>()</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;years&quot;</span>, <span class="st">&quot;I(years^2)&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">term =</span> <span class="fu">if_else</span>(term <span class="sc">==</span> <span class="st">&quot;years&quot;</span>, <span class="st">&quot;alpha_1 (years)&quot;</span>, <span class="st">&quot;alpha_2 (years^2)&quot;</span>),</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">.model =</span> <span class="fu">if_else</span>(.model <span class="sc">==</span> <span class="st">&quot;quadratic&quot;</span>, <span class="st">&quot;OLS&quot;</span>, <span class="st">&quot;AR(1) errors&quot;</span>)</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, term, estimate, std.error) <span class="sc">|&gt;</span></span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> .model, <span class="at">values_from =</span> <span class="fu">c</span>(estimate, std.error)) <span class="sc">|&gt;</span></span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">Parameter =</span> term,</span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;OLS Estimate&quot;</span> <span class="ot">=</span> estimate_OLS,</span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;OLS SE&quot;</span> <span class="ot">=</span> std.error_OLS,</span>
-<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;AR(1) Estimate&quot;</span> <span class="ot">=</span> <span class="st">`</span><span class="at">estimate_AR(1) errors</span><span class="st">`</span>,</span>
-<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;AR(1) SE&quot;</span> <span class="ot">=</span> <span class="st">`</span><span class="at">std.error_AR(1) errors</span><span class="st">`</span></span>
-<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">round_df</span>(<span class="dv">4</span>) <span class="sc">|&gt;</span></span>
-<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>air_ts <span class="sc">|&gt;</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(<span class="fu">ARIMA</span>(<span class="fu">log</span>(passengers) <span class="sc">~</span> <span class="fu">trend</span>() <span class="sc">+</span> <span class="fu">I</span>(<span class="fu">trend</span>()<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">season</span>() <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;trend()&quot;</span>, <span class="st">&quot;I(trend()^2)&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="at">Term =</span> term, <span class="at">Estimate =</span> estimate, <span class="at">SE =</span> std.error) <span class="sc">|&gt;</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">c</span>(Estimate, SE), \(col) <span class="fu">map_chr</span>(col, \(x) <span class="fu">format</span>(<span class="fu">signif</span>(x, <span class="dv">3</span>), <span class="at">scientific =</span> <span class="cn">FALSE</span>)))) <span class="sc">|&gt;</span></span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<table class="table table-striped caption-top table-sm small">
+<thead>
+<tr class="header">
+<th style="text-align: center;" data-quarto-table-cell-role="th">Term</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">Estimate</th>
+<th style="text-align: center;" data-quarto-table-cell-role="th">SE</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center; min-width: 0in;">trend()</td>
+<td style="text-align: center; min-width: 0in;">0.013</td>
+<td style="text-align: center; min-width: 0in;">0.000526</td>
+</tr>
+<tr class="even">
+<td style="text-align: center; min-width: 0in;">I(trend()^2)</td>
+<td style="text-align: center; min-width: 0in;">-0.0000207</td>
+<td style="text-align: center; min-width: 0in;">NaN</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+<p><a href="#tbl-airSE" class="quarto-xref">Table 4</a> compares the trend estimates and standard errors from the OLS model with those from the model with <span class="math inline">\(AR(1)\)</span> errors.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Show the code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  air_models <span class="sc">|&gt;</span> <span class="fu">select</span>(quadratic) <span class="sc">|&gt;</span> <span class="fu">tidy</span>(),</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  air_ar <span class="sc">|&gt;</span> <span class="fu">tidy</span>()</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;years_elapsed&quot;</span>, <span class="st">&quot;I(years_elapsed^2)&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">term =</span> <span class="fu">if_else</span>(term <span class="sc">==</span> <span class="st">&quot;years_elapsed&quot;</span>, <span class="st">&quot;alpha_1 (years_elapsed)&quot;</span>, <span class="st">&quot;alpha_2 (years_elapsed^2)&quot;</span>),</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">.model =</span> <span class="fu">if_else</span>(.model <span class="sc">==</span> <span class="st">&quot;quadratic&quot;</span>, <span class="st">&quot;OLS&quot;</span>, <span class="st">&quot;AR(1) errors&quot;</span>)</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, term, estimate, std.error) <span class="sc">|&gt;</span></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> .model, <span class="at">values_from =</span> <span class="fu">c</span>(estimate, std.error)) <span class="sc">|&gt;</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">Parameter =</span> term,</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;OLS Estimate&quot;</span> <span class="ot">=</span> estimate_OLS,</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;OLS SE&quot;</span> <span class="ot">=</span> std.error_OLS,</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;AR(1) Estimate&quot;</span> <span class="ot">=</span> <span class="st">`</span><span class="at">estimate_AR(1) errors</span><span class="st">`</span>,</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">&quot;AR(1) SE&quot;</span> <span class="ot">=</span> <span class="st">`</span><span class="at">std.error_AR(1) errors</span><span class="st">`</span></span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">round_df</span>(<span class="dv">4</span>) <span class="sc">|&gt;</span></span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div id="tbl-airSE" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-airSE-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Table 2: Trend estimates and standard errors from OLS and from the regression with AR(1) errors
+Table 4: Trend estimates and standard errors from OLS and from the regression with AR(1) errors
 </figcaption>
 <div aria-describedby="tbl-airSE-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
@@ -5589,14 +5959,14 @@ Table 2: Trend estimates and standard errors from OLS and from the regression w
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: center; min-width: 0in;">alpha_1 (years)</td>
+<td style="text-align: center; min-width: 0in;">alpha_1 (years_elapsed)</td>
 <td style="text-align: center; min-width: 0in;">0.1582</td>
 <td style="text-align: center; min-width: 0in;">0.0047</td>
 <td style="text-align: center; min-width: 0in;">0.1563</td>
 <td style="text-align: center; min-width: 0in;">0.0094</td>
 </tr>
 <tr class="even">
-<td style="text-align: center; min-width: 0in;">alpha_2 (years^2)</td>
+<td style="text-align: center; min-width: 0in;">alpha_2 (years_elapsed^2)</td>
 <td style="text-align: center; min-width: 0in;">-0.0031</td>
 <td style="text-align: center; min-width: 0in;">0.0004</td>
 <td style="text-align: center; min-width: 0in;">-0.0030</td>
@@ -5623,17 +5993,40 @@ Warning
 <p>Do not compare the AICc of this model with the AICc values in <a href="#tbl-airIC" class="quarto-xref">Table 1</a>. <code>TSLM()</code> and <code>ARIMA()</code> compute the likelihood differently, so their information criteria are on different scales. Compare information criteria only among models fitted with the same function and the same response.</p>
 </div>
 </div>
-<p>Finally, we check that the <span class="math inline">\(AR(1)\)</span> term has dealt with the autocorrelation. The <strong>innovation residuals</strong> are the estimates of <span class="math inline">\(w_t\)</span>, the part of the series that the full model, including the AR term, cannot explain. These should look like white noise.</p>
+<p>Finally, we check that the <span class="math inline">\(AR(1)\)</span> term has dealt with the autocorrelation. This model has two kinds of residuals, one for each line of the model.</p>
+<p>The <strong>regression residuals</strong> estimate <span class="math inline">\(z_t\)</span>. They are what is left after removing the trend and seasonal terms:</p>
+<p><span class="math display">\[
+  \hat z_t = \log(x_t) - \left( \hat\alpha_0 + \hat\alpha_1 u_t + \hat\alpha_2 u_t^2 + \hat s_t \right)
+\]</span></p>
+<p>These are like the residuals in <a href="#fig-airQuadResid" class="quarto-xref">Figure 2</a>. We expect them to be autocorrelated, because that autocorrelation is what the <span class="math inline">\(AR(1)\)</span> term models.</p>
+<p>The <strong>innovation residuals</strong> estimate <span class="math inline">\(w_t\)</span>. They are what is left after also removing the part of <span class="math inline">\(z_t\)</span> that can be predicted from the previous month:</p>
+<p><span class="math display">\[
+  \hat w_t = \hat z_t - \hat\phi_1 \hat z_{t-1}
+\]</span></p>
+<p>The innovation residuals are the part of the series that the full model, including the AR term, cannot explain. If the model is adequate, they should look like white noise. Both kinds of residuals are on the log scale. In fable, <code>augment()</code> returns the innovation residuals in the <code>.innov</code> column.</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Warning
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>For a model with a transformed response, the <code>.resid</code> column from <code>augment()</code> is neither of these. It holds the <strong>response residuals</strong>, <span class="math inline">\(x_t - \hat x_t\)</span>, on the original scale (passengers, not log passengers). Use <code>.innov</code> to check the model.</p>
+</div>
+</div>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>air_ar <span class="sc">|&gt;</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">augment</span>() <span class="sc">|&gt;</span></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>(.innov, <span class="at">lag_max =</span> <span class="dv">36</span>) <span class="sc">|&gt;</span></span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;ACF of Innovation Residuals&quot;</span>) <span class="sc">+</span></span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>air_ar <span class="sc">|&gt;</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">augment</span>() <span class="sc">|&gt;</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ACF</span>(.innov, <span class="at">lag_max =</span> <span class="dv">36</span>) <span class="sc">|&gt;</span></span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>() <span class="sc">+</span></span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;ACF of Innovation Residuals&quot;</span>) <span class="sc">+</span></span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div id="fig-airInnovACF" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -5673,45 +6066,45 @@ Figure 3: Correlogram of the innovation residuals from the regression with AR(1
 <section id="forecasting-on-the-original-scale" class="level3">
 <h3 class="anchored" data-anchor-id="forecasting-on-the-original-scale">Forecasting on the Original Scale</h3>
 <p>Our model describes <span class="math inline">\(\log(x_t)\)</span>, but we want forecasts of the number of passengers. Because we wrote <code>log(passengers)</code> in the model formula, fable undoes the transformation for us. The forecasts it returns are already on the original scale.</p>
-<p>To forecast, we need future values of every predictor in the model. We create three years of future months, continue the time index <span class="math inline">\(t\)</span> from where the data end, and assign each future month its month label.</p>
+<p>To forecast, we need future values of every predictor in the model. Because we measured time with <code>years_elapsed</code> instead of fable’s <code>trend()</code>, we have to build these ourselves; <code>trend()</code> would have extended itself automatically. We create three years of future months, continue the time index <span class="math inline">\(t\)</span> from where the data end, and assign each future month its month label.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>n_months_forecast <span class="ot">&lt;-</span> <span class="dv">36</span></span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>air_future <span class="ot">&lt;-</span> <span class="fu">new_data</span>(air_ts, <span class="at">n =</span> n_months_forecast) <span class="sc">|&gt;</span></span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">t     =</span> <span class="fu">nrow</span>(air_ts) <span class="sc">+</span> <span class="fu">row_number</span>(),</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">years =</span> t <span class="sc">/</span> <span class="dv">12</span>,</span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> <span class="fu">factor</span>(month.abb[<span class="fu">month</span>(date)], <span class="at">levels =</span> month.abb)</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>air_fc <span class="ot">&lt;-</span> air_ar <span class="sc">|&gt;</span></span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">new_data =</span> air_future)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>n_months_forecast <span class="ot">&lt;-</span> <span class="dv">36</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>air_future <span class="ot">&lt;-</span> <span class="fu">new_data</span>(air_ts, <span class="at">n =</span> n_months_forecast) <span class="sc">|&gt;</span></span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">t             =</span> <span class="fu">nrow</span>(air_ts) <span class="sc">+</span> <span class="fu">row_number</span>(),</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">years_elapsed =</span> t <span class="sc">/</span> <span class="dv">12</span>,</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">month         =</span> <span class="fu">factor</span>(month.abb[<span class="fu">month</span>(date)], <span class="at">levels =</span> month.abb)</span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>air_fc <span class="ot">&lt;-</span> air_ar <span class="sc">|&gt;</span></span>
+<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">new_data =</span> air_future)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p><a href="#fig-airForecast" class="quarto-xref">Figure 4</a> shows the fitted values (blue) and the forecasts with a 95% prediction interval.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>air_fc <span class="sc">|&gt;</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(air_ts, <span class="at">level =</span> <span class="dv">95</span>) <span class="sc">+</span></span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> <span class="fu">augment</span>(air_ar),</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> .fitted),</span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">&quot;#56B4E9&quot;</span></span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;Month&quot;</span>,</span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">&quot;Passengers (Thousands)&quot;</span>,</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Airline Passengers with Three-Year Forecast&quot;</span>,</span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">&quot;Quadratic trend, monthly indicators, and AR(1) errors fitted to log(passengers)&quot;</span></span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
-<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
-<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
-<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>air_fc <span class="sc">|&gt;</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(air_ts, <span class="at">level =</span> <span class="dv">95</span>) <span class="sc">+</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">data =</span> <span class="fu">augment</span>(air_ar),</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">aes</span>(<span class="at">x =</span> date, <span class="at">y =</span> .fitted),</span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">color =</span> <span class="st">&quot;#56B4E9&quot;</span></span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb24-9"><a href="#cb24-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;Month&quot;</span>,</span>
+<span id="cb24-10"><a href="#cb24-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">&quot;Passengers (Thousands)&quot;</span>,</span>
+<span id="cb24-11"><a href="#cb24-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Airline Passengers with Three-Year Forecast&quot;</span>,</span>
+<span id="cb24-12"><a href="#cb24-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="st">&quot;Quadratic trend, monthly indicators, and AR(1) errors fitted to log(passengers)&quot;</span></span>
+<span id="cb24-13"><a href="#cb24-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb24-14"><a href="#cb24-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb24-15"><a href="#cb24-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(</span>
+<span id="cb24-16"><a href="#cb24-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>),</span>
+<span id="cb24-17"><a href="#cb24-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">plot.subtitle =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>)</span>
+<span id="cb24-18"><a href="#cb24-18" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div id="fig-airForecast" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -5739,26 +6132,26 @@ Figure 4: Airline passengers (black), fitted values (blue), and three-year fore
 </section>
 <section id="fable-corrects-the-bias-for-you" class="level3">
 <h3 class="anchored" data-anchor-id="fable-corrects-the-bias-for-you">fable Corrects the Bias for You</h3>
-<p>When the model formula contains a transformation, the <code>.mean</code> column that fable returns is already bias-adjusted. The forecast distribution column, <code>passengers</code>, holds the full distribution, so we can also ask it for the median, <span class="math inline">\(e^{\mu}\)</span>. <a href="#tbl-airBias" class="quarto-xref">Table 3</a> compares the two.</p>
+<p>When the model formula contains a transformation, the <code>.mean</code> column that fable returns is already bias-adjusted. The forecast distribution column, <code>passengers</code>, holds the full distribution, so we can also ask it for the median, <span class="math inline">\(e^{\mu}\)</span>. <a href="#tbl-airBias" class="quarto-xref">Table 5</a> compares the two.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>air_bias <span class="ot">&lt;-</span> air_fc <span class="sc">|&gt;</span></span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">median =</span> <span class="fu">median</span>(passengers),   <span class="co"># e^mu: back-transformed, no correction</span></span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">ratio  =</span> .mean <span class="sc">/</span> median        <span class="co"># the bias correction fable applied</span></span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(date, median, .mean, ratio)</span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>air_bias</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>air_bias <span class="ot">&lt;-</span> air_fc <span class="sc">|&gt;</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">median =</span> <span class="fu">median</span>(passengers),   <span class="co"># e^mu: back-transformed, no correction</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">ratio  =</span> .mean <span class="sc">/</span> median        <span class="co"># the bias correction fable applied</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(date, median, .mean, ratio)</span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>air_bias</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <div class="cell">
 <div id="tbl-airBias" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-airBias-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Table 3: Back-transformed forecast medians and bias-adjusted means from fable
+Table 5: Back-transformed forecast medians and bias-adjusted means from fable
 </figcaption>
 <div aria-describedby="tbl-airBias-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
@@ -5840,7 +6233,7 @@ Table 3: Back-transformed forecast medians and bias-adjusted means from fable
 </div>
 </div>
 <div class="callout callout-style-default callout-note callout-titled" title="Under the Hood: The Textbook&#39;s Correction Factors">
-<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-9-contents" aria-controls="callout-9" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-header d-flex align-content-center collapsed" data-bs-toggle="collapse" data-bs-target=".callout-13-contents" aria-controls="callout-13" aria-expanded="false" aria-label="Toggle callout">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
@@ -5849,7 +6242,7 @@ Table 3: Back-transformed forecast medians and bias-adjusted means from fable
 </div>
 <div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
 </div>
-<div id="callout-9" class="callout-9-contents callout-collapse collapse">
+<div id="callout-13" class="callout-13-contents callout-collapse collapse">
 <div class="callout-body-container callout-body">
 <p>Section 5.10 of the textbook gives two correction factors for back-transformed values. Both multiply the uncorrected (median) value, <span class="math inline">\(e^{\mu}\)</span>. fable uses a version of the first one.</p>
 <p><strong>Log-normal correction.</strong> If the residuals on the log scale are approximately normal with variance <span class="math inline">\(\sigma^2\)</span>:</p>
@@ -5865,23 +6258,23 @@ Table 3: Back-transformed forecast medians and bias-adjusted means from fable
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>air_innov <span class="ot">&lt;-</span> air_ar <span class="sc">|&gt;</span></span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">augment</span>() <span class="sc">|&gt;</span></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(.innov)</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">x =</span> air_innov) <span class="sc">|&gt;</span></span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">density =</span> <span class="fu">dnorm</span>(x, <span class="fu">mean</span>(air_innov), <span class="fu">sd</span>(air_innov))) <span class="sc">|&gt;</span></span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> x)) <span class="sc">+</span></span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="fu">aes</span>(<span class="at">y =</span> <span class="fu">after_stat</span>(density)),</span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>                 <span class="at">color =</span> <span class="st">&quot;white&quot;</span>, <span class="at">fill =</span> <span class="st">&quot;#56B4E9&quot;</span>, <span class="at">bins =</span> <span class="dv">20</span>) <span class="sc">+</span></span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> density)) <span class="sc">+</span></span>
-<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;Innovation Residual&quot;</span>,</span>
-<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">&quot;Density&quot;</span>,</span>
-<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Histogram of Innovation Residuals&quot;</span></span>
-<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>air_innov <span class="ot">&lt;-</span> air_ar <span class="sc">|&gt;</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">augment</span>() <span class="sc">|&gt;</span></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pull</span>(.innov)</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(<span class="at">x =</span> air_innov) <span class="sc">|&gt;</span></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">density =</span> <span class="fu">dnorm</span>(x, <span class="fu">mean</span>(air_innov), <span class="fu">sd</span>(air_innov))) <span class="sc">|&gt;</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> x)) <span class="sc">+</span></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="fu">aes</span>(<span class="at">y =</span> <span class="fu">after_stat</span>(density)),</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>                 <span class="at">color =</span> <span class="st">&quot;white&quot;</span>, <span class="at">fill =</span> <span class="st">&quot;#56B4E9&quot;</span>, <span class="at">bins =</span> <span class="dv">20</span>) <span class="sc">+</span></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="fu">aes</span>(<span class="at">y =</span> density)) <span class="sc">+</span></span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb26-12"><a href="#cb26-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;Innovation Residual&quot;</span>,</span>
+<span id="cb26-13"><a href="#cb26-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">&quot;Density&quot;</span>,</span>
+<span id="cb26-14"><a href="#cb26-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Histogram of Innovation Residuals&quot;</span></span>
+<span id="cb26-15"><a href="#cb26-15" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb26-16"><a href="#cb26-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb26-17"><a href="#cb26-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div id="fig-airResidHist" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -5903,22 +6296,22 @@ Figure 5: Histogram of the innovation residuals from the regression with AR(1) 
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>air_skew <span class="ot">&lt;-</span> <span class="fu">mean</span>(((air_innov <span class="sc">-</span> <span class="fu">mean</span>(air_innov)) <span class="sc">/</span> <span class="fu">sd</span>(air_innov))<span class="sc">^</span><span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>air_skew <span class="ot">&lt;-</span> <span class="fu">mean</span>(((air_innov <span class="sc">-</span> <span class="fu">mean</span>(air_innov)) <span class="sc">/</span> <span class="fu">sd</span>(air_innov))<span class="sc">^</span><span class="dv">3</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <p>The skewness of the residuals is -0.219. A skewness between -0.5 and 0.5 suggests the distribution is roughly symmetric. Skewness between 0.5 and 1 in absolute value is moderate, and above 1 is high.</p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>air_sigma2 <span class="ot">&lt;-</span> <span class="fu">glance</span>(air_ar)<span class="sc">$</span>sigma2</span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">lognormal_cf =</span> <span class="fu">exp</span>(air_sigma2 <span class="sc">/</span> <span class="dv">2</span>),   <span class="co"># log-normal correction factor</span></span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">empirical_cf =</span> <span class="fu">mean</span>(<span class="fu">exp</span>(air_innov)),  <span class="co"># empirical correction factor</span></span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">fable_1_step =</span> air_bias<span class="sc">$</span>ratio[<span class="dv">1</span>]      <span class="co"># ratio fable applied one month ahead</span></span>
-<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
-<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">round_df</span>(<span class="dv">5</span>) <span class="sc">|&gt;</span></span>
-<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>air_sigma2 <span class="ot">&lt;-</span> <span class="fu">glance</span>(air_ar)<span class="sc">$</span>sigma2</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tibble</span>(</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">lognormal_cf =</span> <span class="fu">exp</span>(air_sigma2 <span class="sc">/</span> <span class="dv">2</span>),   <span class="co"># log-normal correction factor</span></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">empirical_cf =</span> <span class="fu">mean</span>(<span class="fu">exp</span>(air_innov)),  <span class="co"># empirical correction factor</span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  <span class="at">fable_1_step =</span> air_bias<span class="sc">$</span>ratio[<span class="dv">1</span>]      <span class="co"># ratio fable applied one month ahead</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">round_df</span>(<span class="dv">5</span>) <span class="sc">|&gt;</span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">display_table</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <table class="table table-striped caption-top table-sm small">
@@ -5942,8 +6335,8 @@ Figure 5: Histogram of the innovation residuals from the regression with AR(1) 
 <p>The log-normal factor and the ratio fable applied one month ahead are nearly identical. The textbook factors use the variance of the residuals, so they are appropriate for fitted values and one-step forecasts. fable uses the forecast variance at each horizon, which is why its correction grows over time.</p>
 <p>If the residuals were clearly skewed and you wanted the empirical correction instead, you would apply it to the <strong>median</strong>, not to <code>.mean</code>:</p>
 <div class="cell">
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>air_fc <span class="sc">|&gt;</span></span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">empirical_mean =</span> <span class="fu">median</span>(passengers) <span class="sc">*</span> <span class="fu">mean</span>(<span class="fu">exp</span>(air_innov)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>air_fc <span class="sc">|&gt;</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">empirical_mean =</span> <span class="fu">median</span>(passengers) <span class="sc">*</span> <span class="fu">mean</span>(<span class="fu">exp</span>(air_innov)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 </div>
 </div>
@@ -5973,37 +6366,37 @@ Figure 5: Histogram of the innovation residuals from the regression with AR(1) 
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>elec_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">&quot;https://byuistats.github.io/timeseries/data/electricity_tx.csv&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>comments) <span class="sc">|&gt;</span></span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">date  =</span> <span class="fu">yearmonth</span>(<span class="fu">my</span>(month)),</span>
-<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">t     =</span> <span class="fu">row_number</span>(),</span>
-<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">years =</span> t <span class="sc">/</span> <span class="dv">12</span>,</span>
-<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> <span class="fu">factor</span>(month.abb[<span class="fu">month</span>(date)], <span class="at">levels =</span> month.abb)</span>
-<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> date)</span>
-<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a>elec_plot_raw <span class="ot">&lt;-</span> elec_ts <span class="sc">|&gt;</span></span>
-<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> megawatthours) <span class="sc">+</span></span>
-<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;Month&quot;</span>,</span>
-<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">&quot;Megawatt-hours&quot;</span>,</span>
-<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Texas Industrial Electricity Use&quot;</span></span>
-<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
-<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a>elec_plot_log <span class="ot">&lt;-</span> elec_ts <span class="sc">|&gt;</span></span>
-<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> <span class="fu">log</span>(megawatthours)) <span class="sc">+</span></span>
-<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;Month&quot;</span>,</span>
-<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">&quot;log(Megawatt-hours)&quot;</span>,</span>
-<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Log of Texas Industrial Electricity Use&quot;</span></span>
-<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
-<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb25-31"><a href="#cb25-31" aria-hidden="true" tabindex="-1"></a>elec_plot_raw <span class="sc">|</span> elec_plot_log</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>elec_ts <span class="ot">&lt;-</span> rio<span class="sc">::</span><span class="fu">import</span>(<span class="st">&quot;https://byuistats.github.io/timeseries/data/electricity_tx.csv&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(<span class="sc">-</span>comments) <span class="sc">|&gt;</span></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">date          =</span> <span class="fu">yearmonth</span>(<span class="fu">my</span>(month)),</span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">t             =</span> <span class="fu">row_number</span>(),</span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">years_elapsed =</span> t <span class="sc">/</span> <span class="dv">12</span>,</span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">month         =</span> <span class="fu">factor</span>(month.abb[<span class="fu">month</span>(date)], <span class="at">levels =</span> month.abb)</span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tsibble</span>(<span class="at">index =</span> date)</span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>elec_plot_raw <span class="ot">&lt;-</span> elec_ts <span class="sc">|&gt;</span></span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> megawatthours) <span class="sc">+</span></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;Month&quot;</span>,</span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">&quot;Megawatt-hours&quot;</span>,</span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Texas Industrial Electricity Use&quot;</span></span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a>elec_plot_log <span class="ot">&lt;-</span> elec_ts <span class="sc">|&gt;</span></span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(<span class="at">.vars =</span> <span class="fu">log</span>(megawatthours)) <span class="sc">+</span></span>
+<span id="cb30-23"><a href="#cb30-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb30-24"><a href="#cb30-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;Month&quot;</span>,</span>
+<span id="cb30-25"><a href="#cb30-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">&quot;log(Megawatt-hours)&quot;</span>,</span>
+<span id="cb30-26"><a href="#cb30-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Log of Texas Industrial Electricity Use&quot;</span></span>
+<span id="cb30-27"><a href="#cb30-27" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb30-28"><a href="#cb30-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb30-29"><a href="#cb30-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span>
+<span id="cb30-30"><a href="#cb30-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-31"><a href="#cb30-31" aria-hidden="true" tabindex="-1"></a>elec_plot_raw <span class="sc">|</span> elec_plot_log</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div id="fig-elecTimePlot" class="quarto-float quarto-figure quarto-figure-center anchored">
@@ -6070,46 +6463,46 @@ Figure 6: Monthly industrial electricity use in Texas (left) and the natural lo
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>elec_models <span class="ot">&lt;-</span> elec_ts <span class="sc">|&gt;</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">linear    =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(megawatthours) <span class="sc">~</span> years <span class="sc">+</span> month),</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">quadratic =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(megawatthours) <span class="sc">~</span> years <span class="sc">+</span> <span class="fu">I</span>(years<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month),</span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">cubic     =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(megawatthours) <span class="sc">~</span> years <span class="sc">+</span> <span class="fu">I</span>(years<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">I</span>(years<span class="sc">^</span><span class="dv">3</span>) <span class="sc">+</span> month)</span>
-<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>elec_models <span class="sc">|&gt;</span></span>
-<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
-<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;years&quot;</span>, <span class="st">&quot;I(years^2)&quot;</span>, <span class="st">&quot;I(years^3)&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, term, estimate, std.error, p.value)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>elec_models <span class="ot">&lt;-</span> elec_ts <span class="sc">|&gt;</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">linear    =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(megawatthours) <span class="sc">~</span> years_elapsed <span class="sc">+</span> month),</span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">quadratic =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(megawatthours) <span class="sc">~</span> years_elapsed <span class="sc">+</span> <span class="fu">I</span>(years_elapsed<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month),</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">cubic     =</span> <span class="fu">TSLM</span>(<span class="fu">log</span>(megawatthours) <span class="sc">~</span> years_elapsed <span class="sc">+</span> <span class="fu">I</span>(years_elapsed<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> <span class="fu">I</span>(years_elapsed<span class="sc">^</span><span class="dv">3</span>) <span class="sc">+</span> month)</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>elec_models <span class="sc">|&gt;</span></span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tidy</span>() <span class="sc">|&gt;</span></span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;years_elapsed&quot;</span>, <span class="st">&quot;I(years_elapsed^2)&quot;</span>, <span class="st">&quot;I(years_elapsed^3)&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, term, estimate, std.error, p.value)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 6 × 5
-  .model    term        estimate std.error  p.value
-  &lt;chr&gt;     &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
-1 linear    years       0.0353   0.00126   2.36e-62
-2 quadratic years       0.00848  0.00457   6.56e- 2
-3 quadratic I(years^2)  0.00190  0.000314  1.04e- 8
-4 cubic     years       0.0274   0.0115    1.85e- 2
-5 cubic     I(years^2) -0.00144  0.00189   4.48e- 1
-6 cubic     I(years^3)  0.000158 0.0000885 7.55e- 2</code></pre>
+  .model    term                estimate std.error  p.value
+  &lt;chr&gt;     &lt;chr&gt;                  &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+1 linear    years_elapsed       0.0353   0.00126   2.36e-62
+2 quadratic years_elapsed       0.00848  0.00457   6.56e- 2
+3 quadratic I(years_elapsed^2)  0.00190  0.000314  1.04e- 8
+4 cubic     years_elapsed       0.0274   0.0115    1.85e- 2
+5 cubic     I(years_elapsed^2) -0.00144  0.00189   4.48e- 1
+6 cubic     I(years_elapsed^3)  0.000158 0.0000885 7.55e- 2</code></pre>
 </div>
 </div>
 <p><strong>Model comparison.</strong></p>
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>elec_ic <span class="ot">&lt;-</span> elec_models <span class="sc">|&gt;</span></span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">glance</span>() <span class="sc">|&gt;</span></span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, r_squared, adj_r_squared, AIC, AICc, BIC)</span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>elec_ic</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>elec_ic <span class="ot">&lt;-</span> elec_models <span class="sc">|&gt;</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">glance</span>() <span class="sc">|&gt;</span></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, r_squared, adj_r_squared, AIC, AICc, BIC)</span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a>elec_ic</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 </div>
 <div class="cell">
 <div id="tbl-elecIC" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-elecIC-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Table 4: Fit statistics for the candidate models fitted to the logarithm of Texas industrial electricity use
+Table 6: Fit statistics for the candidate models fitted to the logarithm of Texas industrial electricity use
 </figcaption>
 <div aria-describedby="tbl-elecIC-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
@@ -6161,12 +6554,12 @@ Table 4: Fit statistics for the candidate models fitted to the logarithm of Tex
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>elec_quad_resid <span class="ot">&lt;-</span> elec_models <span class="sc">|&gt;</span></span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(quadratic) <span class="sc">|&gt;</span></span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>()</span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>(elec_quad_resid <span class="sc">|&gt;</span> <span class="fu">ACF</span>(.resid, <span class="at">lag_max =</span> <span class="dv">36</span>) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;ACF of Residuals&quot;</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()) <span class="sc">|</span></span>
-<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  (elec_quad_resid <span class="sc">|&gt;</span> <span class="fu">PACF</span>(.resid, <span class="at">lag_max =</span> <span class="dv">36</span>) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;PACF of Residuals&quot;</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>elec_quad_resid <span class="ot">&lt;-</span> elec_models <span class="sc">|&gt;</span></span>
+<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(quadratic) <span class="sc">|&gt;</span></span>
+<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">residuals</span>()</span>
+<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>(elec_quad_resid <span class="sc">|&gt;</span> <span class="fu">ACF</span>(.resid, <span class="at">lag_max =</span> <span class="dv">36</span>) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;ACF of Residuals&quot;</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>()) <span class="sc">|</span></span>
+<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>  (elec_quad_resid <span class="sc">|&gt;</span> <span class="fu">PACF</span>(.resid, <span class="at">lag_max =</span> <span class="dv">36</span>) <span class="sc">|&gt;</span> <span class="fu">autoplot</span>() <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">&quot;PACF of Residuals&quot;</span>) <span class="sc">+</span> <span class="fu">theme_minimal</span>())</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>
@@ -6181,27 +6574,27 @@ Table 4: Fit statistics for the candidate models fitted to the logarithm of Tex
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>elec_ar <span class="ot">&lt;-</span> elec_ts <span class="sc">|&gt;</span></span>
-<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
-<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">quad_ar1 =</span> <span class="fu">ARIMA</span>(<span class="fu">log</span>(megawatthours) <span class="sc">~</span> years <span class="sc">+</span> <span class="fu">I</span>(years<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>))</span>
-<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(</span>
-<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a>  elec_models <span class="sc">|&gt;</span> <span class="fu">select</span>(quadratic) <span class="sc">|&gt;</span> <span class="fu">tidy</span>(),</span>
-<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a>  elec_ar <span class="sc">|&gt;</span> <span class="fu">tidy</span>()</span>
-<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
-<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;years&quot;</span>, <span class="st">&quot;I(years^2)&quot;</span>, <span class="st">&quot;ar1&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, term, estimate, std.error)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>elec_ar <span class="ot">&lt;-</span> elec_ts <span class="sc">|&gt;</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">quad_ar1 =</span> <span class="fu">ARIMA</span>(<span class="fu">log</span>(megawatthours) <span class="sc">~</span> years_elapsed <span class="sc">+</span> <span class="fu">I</span>(years_elapsed<span class="sc">^</span><span class="dv">2</span>) <span class="sc">+</span> month <span class="sc">+</span> <span class="fu">pdq</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>) <span class="sc">+</span> <span class="fu">PDQ</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>))</span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb35-5"><a href="#cb35-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-6"><a href="#cb35-6" aria-hidden="true" tabindex="-1"></a><span class="fu">bind_rows</span>(</span>
+<span id="cb35-7"><a href="#cb35-7" aria-hidden="true" tabindex="-1"></a>  elec_models <span class="sc">|&gt;</span> <span class="fu">select</span>(quadratic) <span class="sc">|&gt;</span> <span class="fu">tidy</span>(),</span>
+<span id="cb35-8"><a href="#cb35-8" aria-hidden="true" tabindex="-1"></a>  elec_ar <span class="sc">|&gt;</span> <span class="fu">tidy</span>()</span>
+<span id="cb35-9"><a href="#cb35-9" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb35-10"><a href="#cb35-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(term <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;years_elapsed&quot;</span>, <span class="st">&quot;I(years_elapsed^2)&quot;</span>, <span class="st">&quot;ar1&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb35-11"><a href="#cb35-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(.model, term, estimate, std.error)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 5 × 4
-  .model    term       estimate std.error
-  &lt;chr&gt;     &lt;chr&gt;         &lt;dbl&gt;     &lt;dbl&gt;
-1 quadratic years       0.00848  0.00457 
-2 quadratic I(years^2)  0.00190  0.000314
-3 quad_ar1  ar1         0.653    0.0579  
-4 quad_ar1  years       0.00911  0.00903 
-5 quad_ar1  I(years^2)  0.00187  0.000624</code></pre>
+  .model    term               estimate std.error
+  &lt;chr&gt;     &lt;chr&gt;                 &lt;dbl&gt;     &lt;dbl&gt;
+1 quadratic years_elapsed       0.00848  0.00457 
+2 quadratic I(years_elapsed^2)  0.00190  0.000314
+3 quad_ar1  ar1                 0.653    0.0579  
+4 quad_ar1  years_elapsed       0.00911  0.00903 
+5 quad_ar1  I(years_elapsed^2)  0.00187  0.000624</code></pre>
 </div>
 </div>
 <p>As with the airline data, the trend estimates are similar but the standard errors are larger once the <span class="math inline">\(AR(1)\)</span> errors are included.</p>
@@ -6209,23 +6602,23 @@ Table 4: Fit statistics for the candidate models fitted to the logarithm of Tex
 <div class="cell">
 <details class="code-fold">
 <summary>Show the code</summary>
-<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>elec_future <span class="ot">&lt;-</span> <span class="fu">new_data</span>(elec_ts, <span class="at">n =</span> <span class="dv">5</span> <span class="sc">*</span> <span class="dv">12</span>) <span class="sc">|&gt;</span></span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">t     =</span> <span class="fu">nrow</span>(elec_ts) <span class="sc">+</span> <span class="fu">row_number</span>(),</span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">years =</span> t <span class="sc">/</span> <span class="dv">12</span>,</span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">month =</span> <span class="fu">factor</span>(month.abb[<span class="fu">month</span>(date)], <span class="at">levels =</span> month.abb)</span>
-<span id="cb32-6"><a href="#cb32-6" aria-hidden="true" tabindex="-1"></a>  )</span>
-<span id="cb32-7"><a href="#cb32-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb32-8"><a href="#cb32-8" aria-hidden="true" tabindex="-1"></a>elec_ar <span class="sc">|&gt;</span></span>
-<span id="cb32-9"><a href="#cb32-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">new_data =</span> elec_future) <span class="sc">|&gt;</span></span>
-<span id="cb32-10"><a href="#cb32-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(elec_ts, <span class="at">level =</span> <span class="dv">95</span>) <span class="sc">+</span></span>
-<span id="cb32-11"><a href="#cb32-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb32-12"><a href="#cb32-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;Month&quot;</span>,</span>
-<span id="cb32-13"><a href="#cb32-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">&quot;Megawatt-hours&quot;</span>,</span>
-<span id="cb32-14"><a href="#cb32-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Texas Industrial Electricity Use with Five-Year Forecast&quot;</span></span>
-<span id="cb32-15"><a href="#cb32-15" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
-<span id="cb32-16"><a href="#cb32-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
-<span id="cb32-17"><a href="#cb32-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>elec_future <span class="ot">&lt;-</span> <span class="fu">new_data</span>(elec_ts, <span class="at">n =</span> <span class="dv">5</span> <span class="sc">*</span> <span class="dv">12</span>) <span class="sc">|&gt;</span></span>
+<span id="cb37-2"><a href="#cb37-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb37-3"><a href="#cb37-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">t             =</span> <span class="fu">nrow</span>(elec_ts) <span class="sc">+</span> <span class="fu">row_number</span>(),</span>
+<span id="cb37-4"><a href="#cb37-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">years_elapsed =</span> t <span class="sc">/</span> <span class="dv">12</span>,</span>
+<span id="cb37-5"><a href="#cb37-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">month         =</span> <span class="fu">factor</span>(month.abb[<span class="fu">month</span>(date)], <span class="at">levels =</span> month.abb)</span>
+<span id="cb37-6"><a href="#cb37-6" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb37-7"><a href="#cb37-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb37-8"><a href="#cb37-8" aria-hidden="true" tabindex="-1"></a>elec_ar <span class="sc">|&gt;</span></span>
+<span id="cb37-9"><a href="#cb37-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">forecast</span>(<span class="at">new_data =</span> elec_future) <span class="sc">|&gt;</span></span>
+<span id="cb37-10"><a href="#cb37-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">autoplot</span>(elec_ts, <span class="at">level =</span> <span class="dv">95</span>) <span class="sc">+</span></span>
+<span id="cb37-11"><a href="#cb37-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb37-12"><a href="#cb37-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">&quot;Month&quot;</span>,</span>
+<span id="cb37-13"><a href="#cb37-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">&quot;Megawatt-hours&quot;</span>,</span>
+<span id="cb37-14"><a href="#cb37-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">&quot;Texas Industrial Electricity Use with Five-Year Forecast&quot;</span></span>
+<span id="cb37-15"><a href="#cb37-15" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span></span>
+<span id="cb37-16"><a href="#cb37-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>() <span class="sc">+</span></span>
+<span id="cb37-17"><a href="#cb37-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">plot.title =</span> <span class="fu">element_text</span>(<span class="at">hjust =</span> <span class="fl">0.5</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output-display">
 <div>

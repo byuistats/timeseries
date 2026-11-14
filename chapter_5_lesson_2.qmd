@@ -88,9 +88,9 @@ The textbook uses this data set in Section 5.7. It gives the monthly totals of i
 air_ts <- as_tsibble(AirPassengers) |>
   rename(date = index, passengers = value) |>
   mutate(
-    t     = row_number(),                                # t = 1 is January 1949
-    years = t / 12,                                      # time measured in years
-    month = factor(month.abb[month(date)], levels = month.abb)  # January is the reference month
+    t             = row_number(),                                # t = 1 is January 1949
+    years_elapsed = t / 12,                                      # years since Dec 1948 (not the calendar year)
+    month         = factor(month.abb[month(date)], levels = month.abb)  # January is the reference month
   )
 ```
 
@@ -177,7 +177,7 @@ $$
     \end{cases}
 $$
 
-The candidates differ only in the trend, $m_t$. For the trend, we measure time in years, $u_t = t/12$, rather than in months. Measured in months, $t^3$ would reach about 3,000,000 by the end of the series. Numbers that large can cause numerical problems when fitting some models, including the one we fit later in this lesson. Measuring in years keeps the values small, and each trend coefficient describes change per year.
+The candidates differ only in the trend, $m_t$. Here $u_t$ is the time elapsed in years since December 1948, stored in `air_ts` as `years_elapsed`. We look more closely at this choice, and at what the coefficients mean, after we choose a model.
 
 | Candidate | Trend, $m_t$ |
 |:----------|:-------------|
@@ -192,9 +192,9 @@ We fit all three candidates at once. Each model is fitted with ordinary least sq
 ```{r}
 air_models <- air_ts |>
   model(
-    linear    = TSLM(log(passengers) ~ years + month),
-    quadratic = TSLM(log(passengers) ~ years + I(years^2) + month),
-    cubic     = TSLM(log(passengers) ~ years + I(years^2) + I(years^3) + month)
+    linear    = TSLM(log(passengers) ~ years_elapsed + month),
+    quadratic = TSLM(log(passengers) ~ years_elapsed + I(years_elapsed^2) + month),
+    cubic     = TSLM(log(passengers) ~ years_elapsed + I(years_elapsed^2) + I(years_elapsed^3) + month)
   )
 ```
 
@@ -254,7 +254,6 @@ The cubic term is not statistically significant. Notice that the quadratic term 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
 -   Based on the plots and the p-values, which trend do you think is most appropriate? Why?
--   The quadratic term is negative. What does that mean for the growth of airline passengers?
 
 :::
 
@@ -369,8 +368,8 @@ log_shift <- 2 * sum(log(air_ts$passengers))
 
 air_scale_ic <- air_ts |>
   model(
-    original = TSLM(passengers ~ years + I(years^2) + month),
-    log      = TSLM(log(passengers) ~ years + I(years^2) + month)
+    original = TSLM(passengers ~ years_elapsed + I(years_elapsed^2) + month),
+    log      = TSLM(log(passengers) ~ years_elapsed + I(years_elapsed^2) + month)
   ) |>
   glance()
 
@@ -409,6 +408,145 @@ We will use the quadratic trend. It has the lowest value on all three criteria, 
 -   Why is it misleading to compare the AICc of a model for $x_t$ directly with the AICc of a model for $\log(x_t)$?
 
 :::
+
+### Interpreting the Coefficients
+
+Now that we have chosen the quadratic model, what do its coefficients tell us about airline travel?
+
+#### Measuring Time
+
+The answer depends on how we measured time. A trend needs a variable that measures time. When we created `air_ts`, we made two:
+
+-   `t` counts months. $t = 1$ is January 1949, $t = 2$ is February 1949, and so on.
+-   `years_elapsed` $= u_t = t/12$ counts the same months in units of years.
+
+`years_elapsed` is **not** the calendar year. It is the time elapsed since December 1948, the month before the data begin. Each month adds $1/12$:
+
+| Month    | `t` | `years_elapsed` |
+|:---------|----:|----------------:|
+| Jan 1949 |   1 |           0.083 |
+| Feb 1949 |   2 |           0.167 |
+| Dec 1949 |  12 |           1.000 |
+| Jan 1950 |  13 |           1.083 |
+| Dec 1960 | 144 |          12.000 |
+
+So $u_t = 0$ is December 1948, and a one-unit change in $u_t$ is one year.
+
+::: {.callout-note title="Under the Hood: Why `years_elapsed` and Not `trend()` or the Calendar Year?" collapse="true"}
+
+**fable's `trend()`.** fable has shortcuts for these variables. `trend()` creates `t`, counting observations 1, 2, 3, … in the units of the data, which here are months. `season()` creates the month indicators with January as the reference. The code below fits the linear candidate both ways.
+
+```{r}
+air_units <- air_ts |>
+  model(
+    years_elapsed = TSLM(log(passengers) ~ years_elapsed + month),
+    trend         = TSLM(log(passengers) ~ trend() + season())
+  )
+```
+
+```{r}
+#| label: tbl-airUnits
+#| tbl-cap: "Three coefficients from the linear candidate, fitted with `years_elapsed` and `month` or with `trend()` and `season()`"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+units_coef <- tidy(air_units) |>
+  filter(term %in% c("(Intercept)", "years_elapsed", "trend()", "monthFeb", "season()year2"))
+
+units_coef |>
+  select(Model = .model, Term = term, Estimate = estimate) |>
+  round_df(4) |>
+  display_table()
+
+slope_years  <- units_coef |> filter(term == "years_elapsed") |> pull(estimate)
+slope_months <- units_coef |> filter(term == "trend()") |> pull(estimate)
+fitted_diff  <- max(abs(
+  fitted(air_units |> select(years_elapsed))$.fitted -
+    fitted(air_units |> select(trend))$.fitted
+))
+```
+
+These are the same model. Their fitted values differ by less than $10^{-`r -ceiling(log10(fitted_diff))`}$, which is rounding error, so they also give the same forecasts. The intercepts match. The February coefficients match too; `season()year2` is fable's name for `monthFeb`. Only the slopes differ, by a factor of 12:
+
+-   `trend()` counts months, so its slope, `r round(slope_months, 4)`, is the change in $\log(x_t)$ per **month**.
+-   `years_elapsed` counts years, so its slope, `r round(slope_years, 4)` $= 12 \times$ `r round(slope_months, 4)`, is the change per **year**.
+
+We use `years_elapsed` in this lesson for two reasons. Its coefficients describe change per year, which is easier to talk about. It also keeps powers of time small: by the end of the series, $u_t^3 = 1{,}728$, while $t^3$ is about 3,000,000. Numbers that large can cause numerical problems, including in the regression with $AR(1)$ errors we fit later in this lesson. The cost is that when we forecast, we must create the future values of `years_elapsed` ourselves. `trend()` would do that for us.
+
+**The calendar year.** For the global temperatures in [Chapter 5 Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html), we measured time with the calendar year (`stats_time` = 1970.00, 1970.08, …). That works for a straight line, but it breaks down here.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+air_calendar <- air_ts |>
+  mutate(calendar_year = year(date) + (month(date) - 1) / 12) |>
+  model(
+    linear    = TSLM(log(passengers) ~ calendar_year + month),
+    quadratic = TSLM(log(passengers) ~ calendar_year + I(calendar_year^2) + month),
+    cubic     = TSLM(log(passengers) ~ calendar_year + I(calendar_year^2) + I(calendar_year^3) + month)
+  )
+
+tidy(air_calendar) |>
+  filter(!str_detect(term, "^month")) |>
+  select(Model = .model, Term = term, Estimate = estimate) |>
+  mutate(Estimate = map_chr(Estimate, \(x) format(signif(x, 3), scientific = FALSE, big.mark = ","))) |>
+  display_table()
+```
+
+-   **The intercept is the value in year 0 AD.** In the linear model, $\alpha_0$ is the predicted log number of passengers two thousand years before airplanes.
+-   **With a quadratic, $\alpha_1$ becomes the slope in year 0 AD.** It is about 12 per year, a growth rate that never happened anywhere near the data.
+-   **The powers are nearly identical.** Over 1949–1960, `calendar_year` and its square have a correlation of 0.9999997. `TSLM()` cannot separate the cubic term from the others, so it silently drops that term and reports `NA`.
+
+Measuring time from the start of the series avoids all three problems.
+
+:::
+
+#### Reading the Estimates
+
+@tbl-airQuadCoef gives the trend coefficients and one seasonal coefficient from the quadratic model. These are the OLS estimates. When we add $AR(1)$ errors in the next activity, the estimates barely change, so the interpretation below still holds.
+
+```{r}
+#| label: tbl-airQuadCoef
+#| tbl-cap: "Selected coefficients from the quadratic model for the logarithm of airline passengers"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+quad_coef <- air_models |>
+  select(quadratic) |>
+  tidy() |>
+  filter(term %in% c("(Intercept)", "years_elapsed", "I(years_elapsed^2)", "monthJul"))
+
+quad_coef |>
+  select(Term = term, Estimate = estimate) |>
+  round_df(4) |>
+  display_table()
+
+get_est <- function(name) quad_coef |> filter(term == name) |> pull(estimate)
+a0  <- get_est("(Intercept)")
+a1  <- get_est("years_elapsed")
+a2  <- get_est("I(years_elapsed^2)")
+jul <- get_est("monthJul")
+
+slope_start <- a1                 # slope of the trend at u_t = 0
+slope_end   <- a1 + 2 * a2 * 12   # slope of the trend at u_t = 12 (Dec 1960)
+pct <- function(x) round(100 * (exp(x) - 1), 1)
+```
+
+Because the response is $\log(x_t)$, a change of $c$ on the log scale multiplies $x_t$ by $e^c$. That turns each coefficient into a statement about percent change.
+
+-   **The intercept.** $\hat\alpha_0 =$ `r round(a0, 3)` is the fitted value of $\log(x_t)$ at $u_t = 0$ for the reference month, January. On the original scale, $e^{\hat\alpha_0} \approx$ `r round(exp(a0), 0)` thousand passengers. This is where the trend starts, just before the data begin.
+-   **The trend.** With a quadratic, the slope of the trend changes over time. It is $\hat\alpha_1 + 2\hat\alpha_2 u_t$, so $\hat\alpha_1$ alone is only the slope at $u_t = 0$. At the start of the series, the trend grows by about `r pct(slope_start)`% per year. By December 1960 ($u_t = 12$), the growth rate has slowed to about `r pct(slope_end)`% per year. This is the slowing growth that the negative quadratic term describes.
+-   **The seasonal terms.** $\Delta\hat\beta_7 =$ `r round(jul, 3)` for July. Holding the trend fixed, July has about `r pct(jul)`% more passengers than January, every year. On the original scale, the seasonal terms multiply the trend instead of adding to it, so the seasonal swings grow as the series grows. This is the pattern in @fig-airTimePlot that led us to take the logarithm.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   The quadratic term is negative. What does that mean for the growth of airline passengers?
+-   Why can't we read $\hat\alpha_1$ by itself as "the growth rate of the trend"?
+-   Use @tbl-airQuadCoef to find the percent difference between July and January. Why do we need $e^{\Delta\hat\beta_7} - 1$ instead of $\Delta\hat\beta_7$ itself?
+
+:::
+
 
 
 
@@ -470,13 +608,33 @@ As in [Chapter 5 Lesson 1](https://byuistats.github.io/timeseries/chapter_5_less
 ```{r}
 air_ar <- air_ts |>
   model(
-    quad_ar1 = ARIMA(log(passengers) ~ years + I(years^2) + month + pdq(1, 0, 0) + PDQ(0, 0, 0))
+    quad_ar1 = ARIMA(log(passengers) ~ years_elapsed + I(years_elapsed^2) + month + pdq(1, 0, 0) + PDQ(0, 0, 0))
   )
 
 air_ar |>
   tidy() |>
   filter(!str_detect(term, "month"))
 ```
+
+::: {.callout-note title="Under the Hood: Why Not `trend()` Here?" collapse="true"}
+
+`TSLM()` accepts `I(trend()^2)`, but `ARIMA()` handles the large values poorly. By the end of the series, `trend()` reaches 144 and its square reaches 20,736, while `years_elapsed` only reaches 12. Below, we fit the same model using `trend()`. The standard error of the squared term comes back `NaN`. The model above, fitted with `years_elapsed`, has no such problem.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| warning: false
+
+air_ts |>
+  model(ARIMA(log(passengers) ~ trend() + I(trend()^2) + season() + pdq(1, 0, 0) + PDQ(0, 0, 0))) |>
+  tidy() |>
+  filter(term %in% c("trend()", "I(trend()^2)")) |>
+  select(Term = term, Estimate = estimate, SE = std.error) |>
+  mutate(across(c(Estimate, SE), \(col) map_chr(col, \(x) format(signif(x, 3), scientific = FALSE)))) |>
+  display_table()
+```
+
+:::
 
 @tbl-airSE compares the trend estimates and standard errors from the OLS model with those from the model with $AR(1)$ errors.
 
@@ -490,9 +648,9 @@ bind_rows(
   air_models |> select(quadratic) |> tidy(),
   air_ar |> tidy()
 ) |>
-  filter(term %in% c("years", "I(years^2)")) |>
+  filter(term %in% c("years_elapsed", "I(years_elapsed^2)")) |>
   mutate(
-    term = if_else(term == "years", "alpha_1 (years)", "alpha_2 (years^2)"),
+    term = if_else(term == "years_elapsed", "alpha_1 (years_elapsed)", "alpha_2 (years_elapsed^2)"),
     .model = if_else(.model == "quadratic", "OLS", "AR(1) errors")
   ) |>
   select(.model, term, estimate, std.error) |>
@@ -514,7 +672,27 @@ The estimates barely change, but the standard errors roughly double. This is the
 Do not compare the AICc of this model with the AICc values in @tbl-airIC. `TSLM()` and `ARIMA()` compute the likelihood differently, so their information criteria are on different scales. Compare information criteria only among models fitted with the same function and the same response.
 :::
 
-Finally, we check that the $AR(1)$ term has dealt with the autocorrelation. The **innovation residuals** are the estimates of $w_t$, the part of the series that the full model, including the AR term, cannot explain. These should look like white noise.
+Finally, we check that the $AR(1)$ term has dealt with the autocorrelation. This model has two kinds of residuals, one for each line of the model.
+
+The **regression residuals** estimate $z_t$. They are what is left after removing the trend and seasonal terms:
+
+$$
+  \hat z_t = \log(x_t) - \left( \hat\alpha_0 + \hat\alpha_1 u_t + \hat\alpha_2 u_t^2 + \hat s_t \right)
+$$
+
+These are like the residuals in @fig-airQuadResid. We expect them to be autocorrelated, because that autocorrelation is what the $AR(1)$ term models.
+
+The **innovation residuals** estimate $w_t$. They are what is left after also removing the part of $z_t$ that can be predicted from the previous month:
+
+$$
+  \hat w_t = \hat z_t - \hat\phi_1 \hat z_{t-1}
+$$
+
+The innovation residuals are the part of the series that the full model, including the AR term, cannot explain. If the model is adequate, they should look like white noise. Both kinds of residuals are on the log scale. In fable, `augment()` returns the innovation residuals in the `.innov` column.
+
+::: {.callout-warning}
+For a model with a transformed response, the `.resid` column from `augment()` is neither of these. It holds the **response residuals**, $x_t - \hat x_t$, on the original scale (passengers, not log passengers). Use `.innov` to check the model.
+:::
 
 ```{r}
 #| label: fig-airInnovACF
@@ -550,7 +728,7 @@ The strong short-lag autocorrelation is gone. Lag 16 crosses the significance bo
 
 Our model describes $\log(x_t)$, but we want forecasts of the number of passengers. Because we wrote `log(passengers)` in the model formula, fable undoes the transformation for us. The forecasts it returns are already on the original scale.
 
-To forecast, we need future values of every predictor in the model. We create three years of future months, continue the time index $t$ from where the data end, and assign each future month its month label.
+To forecast, we need future values of every predictor in the model. Because we measured time with `years_elapsed` instead of fable's `trend()`, we have to build these ourselves; `trend()` would have extended itself automatically. We create three years of future months, continue the time index $t$ from where the data end, and assign each future month its month label.
 
 ```{r}
 #| code-fold: true
@@ -560,9 +738,9 @@ n_months_forecast <- 36
 
 air_future <- new_data(air_ts, n = n_months_forecast) |>
   mutate(
-    t     = nrow(air_ts) + row_number(),
-    years = t / 12,
-    month = factor(month.abb[month(date)], levels = month.abb)
+    t             = nrow(air_ts) + row_number(),
+    years_elapsed = t / 12,
+    month         = factor(month.abb[month(date)], levels = month.abb)
   )
 
 air_fc <- air_ar |>
@@ -764,10 +942,10 @@ These data give the amount of electricity (in megawatt-hours) used each month fo
 elec_ts <- rio::import("https://byuistats.github.io/timeseries/data/electricity_tx.csv") |>
   dplyr::select(-comments) |>
   mutate(
-    date  = yearmonth(my(month)),
-    t     = row_number(),
-    years = t / 12,
-    month = factor(month.abb[month(date)], levels = month.abb)
+    date          = yearmonth(my(month)),
+    t             = row_number(),
+    years_elapsed = t / 12,
+    month         = factor(month.abb[month(date)], levels = month.abb)
   ) |>
   as_tsibble(index = date)
 
@@ -850,14 +1028,14 @@ style="font-size:.8em;">Small-Group Activity</a>
 
 elec_models <- elec_ts |>
   model(
-    linear    = TSLM(log(megawatthours) ~ years + month),
-    quadratic = TSLM(log(megawatthours) ~ years + I(years^2) + month),
-    cubic     = TSLM(log(megawatthours) ~ years + I(years^2) + I(years^3) + month)
+    linear    = TSLM(log(megawatthours) ~ years_elapsed + month),
+    quadratic = TSLM(log(megawatthours) ~ years_elapsed + I(years_elapsed^2) + month),
+    cubic     = TSLM(log(megawatthours) ~ years_elapsed + I(years_elapsed^2) + I(years_elapsed^3) + month)
   )
 
 elec_models |>
   tidy() |>
-  filter(term %in% c("years", "I(years^2)", "I(years^3)")) |>
+  filter(term %in% c("years_elapsed", "I(years_elapsed^2)", "I(years_elapsed^3)")) |>
   select(.model, term, estimate, std.error, p.value)
 ```
 
@@ -919,14 +1097,14 @@ The partial correlogram has one large spike at lag 1, so we use $AR(1)$ errors.
 
 elec_ar <- elec_ts |>
   model(
-    quad_ar1 = ARIMA(log(megawatthours) ~ years + I(years^2) + month + pdq(1, 0, 0) + PDQ(0, 0, 0))
+    quad_ar1 = ARIMA(log(megawatthours) ~ years_elapsed + I(years_elapsed^2) + month + pdq(1, 0, 0) + PDQ(0, 0, 0))
   )
 
 bind_rows(
   elec_models |> select(quadratic) |> tidy(),
   elec_ar |> tidy()
 ) |>
-  filter(term %in% c("years", "I(years^2)", "ar1")) |>
+  filter(term %in% c("years_elapsed", "I(years_elapsed^2)", "ar1")) |>
   select(.model, term, estimate, std.error)
 ```
 
@@ -940,9 +1118,9 @@ As with the airline data, the trend estimates are similar but the standard error
 
 elec_future <- new_data(elec_ts, n = 5 * 12) |>
   mutate(
-    t     = nrow(elec_ts) + row_number(),
-    years = t / 12,
-    month = factor(month.abb[month(date)], levels = month.abb)
+    t             = nrow(elec_ts) + row_number(),
+    years_elapsed = t / 12,
+    month         = factor(month.abb[month(date)], levels = month.abb)
   )
 
 elec_ar |>
