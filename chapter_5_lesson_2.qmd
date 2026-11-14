@@ -1,5 +1,5 @@
 ---
-title: "Transformations, Forecasting and Bias Correction"
+title: "Log Transformations, Model Selection, and Bias Correction"
 subtitle: "Chapter 5: Lesson 2"
 format:
   html:
@@ -15,7 +15,7 @@ sidebar: false
     var e = document.getElementById(id);
     e.style.display = (e.style.display == 'block') ? 'none' : 'block';
  }
- 
+
  function openTab(evt, tabName) {
     var i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName("tabcontent");
@@ -28,7 +28,7 @@ sidebar: false
     }
     document.getElementById(tabName).style.display = "block";
     evt.currentTarget.className += " active";
- }    
+ }
 </script>
 ```
 
@@ -40,7 +40,7 @@ source("_backend_functions.R")
 
 ## Learning Outcomes
 
-{{< include outcomes/_chapter_5_lesson_4_outcomes.qmd >}}
+{{< include outcomes/_chapter_5_lesson_2_outcomes.qmd >}}
 
 
 ## Preparation
@@ -61,1130 +61,735 @@ source("_backend_functions.R")
 ## Packages
 
 ```{r}
-# Additional packages this lesson
-pacman::p_load(PerformanceAnalytics) # skewness()
-```
-
-```{r}
 #| code-summary: "Common Packages"
 #| file: "_common_packages.R"
 source("_common_packages.R")
 ```
 
-## Class Activity: Simulate an Exponential Trend with a Seasonal Component (15 min)
 
+## Class Activity: Why Take the Logarithm? (10 min)
 
-There are a lot of processes that grow over time at a regular rate. These growing variables
-may be modeled as exponential functions. Exponential functions can be difficult to model in a linear regression,
-so we can use a logarithmic transformation to make the function linear and easier to work with. 
+In this lesson, we will build one model from start to finish. Each section answers one question:
 
-We will simulate code that has a seasonal component and impose an exponential trend.
+1.  **Why take the logarithm?** The log turns a multiplicative series into an additive one that a linear model can fit.
+2.  **What shape is the trend?** We fit several candidate trends and compare them.
+3.  **Which candidate should we use?** Information criteria help us weigh fit against complexity.
+4.  **Are the errors autocorrelated?** If so, we add an $AR(p)$ model for the errors.
+5.  **How do we forecast on the original scale?** We undo the logarithm and account for the bias that introduces.
 
-::: {.callout-note icon=false title="Figures" collapse="false"}
-<!-- Begin hiding code for Figures -->
+### The Air Passenger Data
 
-@fig-simTSplot shows the simulated time series and it's natural logarithm.
+The textbook uses this data set in Section 5.7. It gives the monthly totals of international airline passengers (in thousands) from January 1949 to December 1960. The data come with R as a `ts` object called `AirPassengers`, so we convert them to a tsibble.
 
 ```{r}
-#| label: fig-simTSplot
-#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
 #| code-fold: true
 #| code-summary: "Show the code"
-#| results: asis
+
+air_ts <- as_tsibble(AirPassengers) |>
+  rename(date = index, passengers = value) |>
+  mutate(
+    t     = row_number(),                                # t = 1 is January 1949
+    years = t / 12,                                      # time measured in years
+    month = factor(month.abb[month(date)], levels = month.abb)  # January is the reference month
+  )
+```
+
+@fig-airTimePlot shows the time series (left) and the natural logarithm of the time series (right).
+
+```{r}
+#| label: fig-airTimePlot
+#| fig-cap: "Monthly international airline passengers (left) and the natural logarithm of the series (right)"
+#| code-fold: true
+#| code-summary: "Show the code"
 #| fig-height: 3.5
 
-n_years  <- 9
-n_months <- n_years * 12
-sigma    <- 0.05
-
-# Dates
-dates_seq <- seq(
-  floor_date(now(), unit = "year"),
-  length.out = n_months + 1,
-  by = "-1 month"
-) |>
-  floor_date(unit = "month") |>
-  ymd() |> 
-  sort() |>
-  head(n_months)
-
-t <- 1:n_months
-
-# Month-of-year index: 1 = Jan, ..., 12 = Dec
-month_index  <- ((t - 1) %% 12) + 1
-month_factor <- factor(month_index, levels = 1:12, labels = month.abb)
-
-# ----- KEY PART: indicator-style seasonal effects by month -----
-
-# Compute the seasonal effect for each month-of-year
-# using your original harmonic coefficients, but evaluated
-# once per month instead of for every t.
-seasonal_effect_by_month <- sapply(1:12, function(m) {
-  0.03 * sin(2 * pi * 1 * m / 12) + 0.04 * cos(2 * pi * 1 * m / 12) +
-  0.05 * sin(2 * pi * 2 * m / 12) + 0.03 * cos(2 * pi * 2 * m / 12) +
-  0.01 * sin(2 * pi * 3 * m / 12) + 0.005 * cos(2 * pi * 3 * m / 12)
-})
-
-# Map each time point to its month-specific seasonal effect
-seasonal_term <- seasonal_effect_by_month[month_index]
-
-# AR(2) noise as before
-random_ar <- arima.sim(model = list(ar = c(0.5, 0.2)),
-                       n = n_months, sd = 0.02)
-
-# Build tsibble
-sim_ts <- tibble(
-  t       = t,
-  dates   = dates_seq,
-  yearmonth = yearmonth(dates),
-  month   = month_factor,
-  random  = random_ar,
-  seasonal = seasonal_term,
-  x_t     = exp(2 + 0.015 * t + seasonal + random)
-) |>
-  mutate(std_t = (t - mean(t)) / sd(t)) |>
-  as_tsibble(index = yearmonth)
-
-# (Optional) create explicit 0/1 indicator columns for each month
-sim_ts <- sim_ts |>
-  bind_cols(
-    model.matrix(~ month - 1, data = sim_ts) |>
-      as_tibble()
-  )
-
-# Plots
-plot_raw <- sim_ts |>
-  autoplot(x_t) +
+air_plot_raw <- air_ts |>
+  autoplot(.vars = passengers) +
   labs(
     x = "Month",
-    y = "x_t",
-    title = "Simulated Time Series"
+    y = "Passengers (Thousands)",
+    title = "Airline Passengers"
   ) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))
 
-plot_log <- sim_ts |>
-  autoplot(log(x_t)) +
+air_plot_log <- air_ts |>
+  autoplot(.vars = log(passengers)) +
   labs(
     x = "Month",
-    y = "log(x_t)",
-    title = "Logarithm of Simulated Time Series"
+    y = "log(Passengers)",
+    title = "Logarithm of Airline Passengers"
   ) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))
 
-plot_raw | plot_log
+air_plot_raw | air_plot_log
 ```
 
+Look at the left plot. The trend bends upward, and the seasonal swings get larger as the level of the series increases. In [Chapter 3 Lesson 5](https://byuistats.github.io/timeseries/chapter_3_lesson_5.html), we called this **multiplicative** seasonality. A multiplicative model has the form
 
+$$
+  x_t = m_t \cdot s_t \cdot z_t
+$$
 
+The linear models from [Chapter 5 Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html) are additive. They add the trend, seasonal, and random components together. We cannot fit a multiplicative model directly with `TSLM()`. However, taking the logarithm of both sides turns the products into sums:
 
-We will use (natural) logarithm of the time series before fitting any linear models. So, our response variable will be $\log(x_t)$, rather than $x_t$.
+$$
+  \log(x_t) = \log(m_t) + \log(s_t) + \log(z_t)
+$$
 
-Even though there is no visual evidence of curvature in the trend for the logarithm of the time series, we will start by fitting a model that allows for a cubic trend. (In practice, we would probably not fit this model. However, we want to understand how to evaluate among different model specifications. 
-:::
+The logarithm also straightens out an exponential trend. If $m_t = e^{\alpha_0 + \alpha_1 t}$, then $\log(m_t) = \alpha_0 + \alpha_1 t$, which is linear in the parameters.
 
-### Model Selection Information Criteria: Balancing Fit and Complexity
-
-In a previous activity, we compared the Cubic, Quadratic, and Linear models. You might have noticed that adding more variables (like $t^2$ and $t^3$) almost always increases the $R^2$ value and reduces the residual sum of squares. However, a model that hugs the training data too tightly (overfitting) often fails when forecasting new data.The question that Inforcation Criteria answer is how to select the best forecasting model, we need a way to penalize complexity. We use Information Criteria to find the "Goldilocks" model: one that fits the data well but remains simple enough to generalize.
-
-The motivation behind Information Criteria is based on Parsimony. Parsimony is often associated with Occam's Razor: Given two models with similar predictive power, the simpler one is preferred. We want the model that explains the signal with the fewest possible parameters. The structures of all Information Criteria follow the same basic structure:
-
-$$\text{IC} = \text{Badness of Fit} + \text{Penalty for Complexity}$$
-We want to minimize this value. The "Badness of Fit" is measured by $-2\log(\mathcal{L})$, where $\mathcal{L}$ is the likelihood (how probable the data is given the model). The "Penalty" increases as we add parameters ($k$).1. 
-
-#### AIC (Akaike Information Criterion)
-$$AIC = -2\log(\mathcal{L}) + 2k$$
-
-The AIC is founded on Information Theory. It estimates the relative amount of information lost when a model is used to represent the process that generated the data (using Kullback-Leibler divergence). Intuitively, it tries to predict which model will have the lowest prediction error on future data. The AIC is xxcellent for forecasting. It tends to prefer slightly more complex models than BIC.
-
-#### AICc (Corrected AIC)
-
-$$AICc = AIC + \frac{2k(k+1)}{n - k - 1}$$
-
-When the sample size ($n$) is small, the standard AIC tends to select models that are too complex (overfitting). In practice, use AICc instead of AIC when $n$ is finite. As $n \to \infty$, AICc converges to AIC. Since time series data is often limited, AICc is a great metric.
-
-#### BIC (Bayesian Information Criterion)
-
-$$BIC = -2\log(\mathcal{L}) + k\ln(n)$$
-The BIC is founded on Bayesian Inference. It attempts to estimate the probability that a specific model is the "true" model among the set of candidates.Notice the penalty is $k\ln(n)$ rather than $2k$. Since $\ln(n) > 2$ for any dataset with $n > 7$, BIC penalizes complexity much more strictly than AIC. Use BIC when you want your model choice to be conservative given uncertainty in modeling or forecasting. It is great for explanatory modeling (understanding relationships), but sometimes under-fits for forecasting purposes.Summary Rule of ThumbLower is Better. The absolute number means nothing; only the difference between models matters.If AICc and BIC disagree, rely on AICc for forecasting and BIC for explanation.
-
-In our specific simulated example below, the Linear model had the lowest AICc and BIC. Even though the Cubic model had more parameters to "wiggle" and fit the training data, the Information Criteria penalized those extra parameters ($\beta_2$ and $\beta_3$) because they did not contribute enough information to justify their "cost."
-
-
-
-
-::: {.panel-tabset}
-
-## Cubic
-
-
-#### Cubic Model
-
-After taking the (natural) logarithm of $x_t$, we fit a cubic model to the log-transformed time series.
-
-##### Full Cubic Model
-
-\begin{align*}
-  \log(x_t) &= \beta_0 
-            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
-            + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 
-            + \beta_3 \left( \frac{t - \mu_t}{\sigma_t} \right)^3 + s_t + z_t
-\end{align*}
-
-
-
-\begin{align*}
-  s_t=
-    
-    \begin{cases}
-        \Delta\beta_2 , & t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
-        \Delta\beta_3 , & t = 2, 14, 26, \ldots ~~~~ ~~(March) \\
-        ~~~~~~~~⋮ & ~~~~~~~~~~~~⋮ \\
-        \Delta\beta_{12} , & t = 12, 24, 36, \ldots ~~~~ (December) 
-      \end{cases}
-\end{align*}
-
-```{r}
-#| label: simulatedExponentialTS1
-#| code-fold: true
-#| code-summary: "Show the code"
-
-# Cubic model with standardized time variable
-
-cubic_lm <- sim_ts |>
-  model(cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) + month )) #Jan is ommited 
-cubic_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-
-Note that neither the quadratic nor the cubic terms are statistically significant in this model. 
-
-
-<!-- End of cubic model -->
-
-## Quadratic
-
-
-#### Quadratic Model
-
-We now fit a quadratic model to the log-transformed time series.
-
-##### Full Quadratic Model
-
-The full model with a quadratic trend is written as:
-
-\begin{align*}
-  \log(x_t) &= \beta_0 
-            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) 
-            + \beta_2 \left( \frac{t - \mu_t}{\sigma_t} \right)^2 + s_t  + z_t
-\end{align*}
-
-\begin{align*}
-  s_t=
-    
-    \begin{cases}
-        \Delta\beta_2 , & t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
-        \Delta\beta_3 , & t = 2, 14, 26, \ldots ~~~~ ~~(March) \\
-        ~~~~~~~~⋮ & ~~~~~~~~~~~~⋮ \\
-        \Delta\beta_{12} , & t = 12, 24, 36, \ldots ~~~~ (December) 
-      \end{cases}
-\end{align*}
-
-```{r}
-#| label: simulatedExponentialQuadraticFull
-#| code-fold: true
-#| code-summary: "Show the code"
-
-quad_lm <- sim_ts |>
-  model(quad = TSLM(log(x_t) ~ std_t + I(std_t^2)  + month)) # Note sin6 is omitted
-quad_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
-```
-
-Note the quadratic term is not significant.
-<!-- End of quadratic model -->
-
-## Linear
-
-
-#### Linear Model
-
-Even though the quadratic terms were statistically significant, there is no visual indication that there is a quadratic trend in the time series after taking the logarithm.
-Hence, we will now fit a linear model to the log-transformed time series. We want to be able to compare the fit of models with a linear trend to the models with quadratic trends.
-
-##### Full Linear Model
-
-First, we fit a full model with a linear trend. We can express this model as:
-
-\begin{align*}
-  \log(x_t) &= \beta_0 
-            + \beta_1 \left( \frac{t - \mu_t}{\sigma_t} \right) + s_t  + z_t
-\end{align*}
-
-\begin{align*}
-  s_t=
-    
-    \begin{cases}
-        \Delta\beta_2 , & t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
-        \Delta\beta_3 , & t = 2, 14, 26, \ldots ~~~~ ~~(March) \\
-        ~~~~~~~~⋮ & ~~~~~~~~~~~~⋮ \\
-        \Delta\beta_{12} , & t = 12, 24, 36, \ldots ~~~~ (December) 
-      \end{cases}
-\end{align*}
-
-
-```{r}
-#| label: simulatedExponentialLinearFull
-#| code-fold: true
-#| code-summary: "Show the code"
-
-linear_lm <- sim_ts |>
-  model(linear = TSLM(log(x_t) ~ std_t + month)) # Note sin6 is omitted
-linear_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-
-<!-- End of linear model -->
-
-:::
-
-
-#### Comparison of Fitted Models
-
-##### AIC, AICc, and BIC
-
-We will now compare the models we fitted above. @tbl-ModelComparison gives the AIC, AICc, and BIC of the models fitted above.
-
-```{r}
-#| label: modelComparison
-#| output: false
-#| code-fold: true
-#| code-summary: "Show the code"
-
-model_combined <- sim_ts |>
-  model(
-    cubic = TSLM(log(x_t) ~ std_t + I(std_t^2) + I(std_t^3) +month),
-    quad = TSLM(log(x_t) ~ std_t + I(std_t^2) + month),
-    linear = TSLM(log(x_t) ~ std_t + month )
-  )
-
-glance(model_combined) |>
-  select(.model, AIC, AICc, BIC)
-```
-
-```{r}
-#| label: tbl-ModelComparison
-#| tbl-cap: "Comparison of the AIC, AICc, and BIC values for the models fitted to the logarithm of the simulated time series."
-#| echo: false
-
-combined_models <- glance(model_combined) |> 
-  select(.model, AIC, AICc, BIC)
-
-minimum <- combined_models |>
-  reframe(
-    AIC = which(min(AIC)==AIC),
-    AICc = which(min(AICc)==AICc),
-    BIC = which(min(BIC)==BIC)
-  )
-
-combined_models |>
-  rename(Model = ".model") |>
-  round_df(1) |>
-  format_cells(rows = minimum$AIC, cols = 2, "bold") |>
-  format_cells(rows = minimum$AICc, cols = 3, "bold") |>
-  format_cells(rows = minimum$BIC, cols = 4, "bold") |>
-  display_table()
-
-
-
-```
-
-
-
-
-
-#### Investigating Autocorrelation of the Random Component
-
-Recall that if there is autocorrelation in the random component, the standard error of the parameter estimates tends to be underestimated. We can account for this autocorrelation using an AR process, if needed.
-
-##### Linear Trend
-
-@fig-QuadACF illustrates the ACF of the model with a linear trend.
-
-```{r}
-#| label: fig-QuadACF
-#| fig-cap: "ACF of model linear trend"
-#| code-fold: true
-#| code-summary: "Show the code"
-
-linear_ts <- linear_lm |>
-  residuals() 
-
-acf(linear_ts$.resid, plot=TRUE, lag.max = 25)
-```
-
-Notice that the residual correlogram indicates a positive autocorrelation in the values. This suggests that the standard errors of the regression coefficients will be underestimated, which means that some predictors can appear to be statistically significant when they are not. 
-
-
-@fig-QuadPACF illustrates the PACF of the model with a linear trend.
-
-```{r}
-#| label: fig-QuadPACF
-#| fig-cap: "PACF of model linear trend"
-#| code-fold: true
-#| code-summary: "Show the code"
-
-pacf(linear_ts$.resid, plot=TRUE, lag.max = 25)
-```
-
-Only the first partial autocorrelation is statistically significant. The partial autocorrelation plot indicates that an $AR(1)$ model could adequately model the random component of the logarithm of the time series.
-
-```{r}
-#| output: false
-#| code-summary: "Show the code"
-
-log_ar <- sim_ts |> 
-  model(AR(log(x_t) ~ std_t + season(12) + order(1)))
-
-tidy(log_ar) |> select(!.model)
-```
-
-```{r}
-#| code-summary: "Show the code: Improved month labels simple"
-#| code-fold: true
-#| output: false
-
-# Cleaned up version
-tidy(log_ar) |>
-  select(!.model) |> 
-  mutate(
-    term = if_else( # Find season label, replace with month abb using regex
-      str_detect(term, "season"), 
-      month.abb[as.integer(str_extract(term, "12(\\d+)$", 1))],
-      term
-    ),
-    lower = estimate + qnorm(0.025) * std.error,
-    upper = estimate + qnorm(0.975) * std.error
-  ) 
-```
-
-```{r}
-#| code-summary: "Show the code: Improved month labels readable"
-#| code-fold: true
-
-# Helper function to pretty the labels from season(12)
-# `term` is a string that looks like: "season(12).season_122"
-convert_season_label_to_month <- function(term) {
-  # Pull out the end number using regex (ie 2, 3, ..., 12)
-  month_num <- as.integer(str_extract(term, "12(\\d+)$", 1))
-  
-  # Return the month name for that number (ie "Feb" for 2)
-  month.abb[month_num]
-}
-
-# Cleaned up table
-tidy(log_ar) |>
-  select(!.model) |> 
-  mutate(
-    # Pretty the month labels with regex and month.abb
-    term = if_else(               
-      str_detect(term, "season"),          # IF the term label has "season" in it
-      convert_season_label_to_month(term), # Make the label readable (function above)
-      term                                 # ELSE keep the label as is
-    ),
-    # Get confidence intervals
-    lower = estimate + qnorm(0.025) * std.error,
-    upper = estimate + qnorm(0.975) * std.error
-  ) 
-```
-
-::: {.callout-important title="Warning: Interpreting season(12)"}
-`season(12)` is an identical substitute for the mutated `month` column used previously with **ONE EXCEPTION**. Because it treats the first row in the tsibble as the omitted month, the labels don't tell you what month it is. It tells you the number month relative to the first month.
-
-If the first month is *February*, `season(12).season_122` represents *March* and `season(12).season_1212` represents *January*.
-:::
-
-
-@fig-finalFittedPlot illustrates the original time series (in black) and the fitted model (in blue). 
-For reference, a dotted line illustrating the simple least squares line is plotted on this figure for reference. It helps highlight the exponential shape of the trend.
-
-```{r}
-#| label: fig-finalFittedPlot
-#| fig-cap: "Time plot of the time series and the fitted linear regression model"
-#| code-fold: true
-#| code-summary: "Show the code"
-
-forecast_df <- log_ar |> 
-  forecast(sim_ts) |>
-  as_tibble() |> 
-  dplyr::select(std_t, .mean) |> 
-  rename(pred = .mean)
-
-sim_ts |>
-  left_join(forecast_df, by = "std_t") |>
-  as_tsibble(index = dates) |>
-  autoplot(.vars = x_t) +
-  geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
-    labs(
-      x = "Month",
-      y = "Simulated Time Series",
-      title = "Time Plot of Simulated Time Series with an Exponential Trend",
-      subtitle = "Predicted values based on the full linear model are given in blue"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.subtitle = element_text(hjust = 0.5)
-    )
-```
-
-
-
-
-## Small-Group Activity: Retail Sales (20 min)
-
-@fig-RetailSalesGeneralMerch gives the total sales (in millions of U.S. dollars) for the category "all other general merchandise stores (45299)."
-
-```{r}
-#| label: fig-RetailSalesGeneralMerch
-#| fig-cap: "Time plot of the total monthly retail sales for all other general merchandise stores (45299)"
-#| code-fold: true
-#| code-summary: "Show the code"
-
-# Read in retail sales data for "all other general merchandise stores"
-retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
-  filter(naics == 45299) |>
-  filter(as_date(month) >= my("Jan 1998")) |>
-  as_tsibble(index = month)
-
-retail_ts |>
-  autoplot(.vars = sales_millions) +
-    labs(
-      x = "Month",
-      y = "Sales (Millions of U.S. Dollars)",
-      title = paste0(retail_ts$business[1], " (", retail_ts$naics[1], ")")
-    ) +
-    theme_minimal() +
-    theme(plot.title = element_text(hjust = 0.5))
-
-```
-
-
-<!-- Check Your Understanding -->
+Now look at the right plot. After taking the logarithm, the seasonal swings are roughly the same size throughout, and the trend looks close to a straight line. This is a series we can model with the tools from the last lesson. From here on, our response variable is $\log(x_t)$, not $x_t$.
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
-Use @fig-RetailSalesGeneralMerch to explain the following questions to a partner.
-
--   What is the shape of the trend of this time series?
--   Which decomposition would be more appropriate: additive or multiplicative? Justify your answer.
--   Apply the appropriate transformation to the time series. 
--   Fit appropriate  models utilizing the indicator terms for seasonal components.
--   Determine the "best" model for these data. Justify your decision.
--   Check for autocorrelation in the random terms.
--   Use AR to fit the model, if there is evidence of autocorrelation in the random component.
--   Plot the fitted values and the time series on the same figure.
-
+-   What two features of the left plot suggest that a log transformation is appropriate?
+-   How do those two features change in the right plot?
+-   Recall Model 10 from [Chapter 5 Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html): $x_t = \alpha_0 ~ e^{ \alpha_1 t + \alpha_2 t^2 + z_t }$. Take the logarithm of both sides. Is the result a linear model?
 
 :::
 
-## Class Activity: Anti-Log Transformation and Bias Correction on Simulated Data (10 min)
-
-### Forecasts for a Simulated Time Series
-We can use the `forecast()` function to predict future values of this time series. The code fold below displays the output of the `forecast()` command. Note that the column labeled `x_t` (i.e. $x_t$), representing the time series is populated with information tied to a normal distribution. The mean and standard deviation specified are the estimated parameters for the distribution of the predicted values of $\log(x_t)$. If you raise $e$ to the power of the mean, you get the values in the `.mean` column.
-
-```{r}
-#| code-fold: true
-#| code-summary: "Forecast of Simulated Data: Show the code"
-#| results: false
-
-# Fit model (OLS)
-sim_reduced_linear_lm1 <- sim_ts |>
-  model(sim_reduced_linear1 = TSLM(log(x_t) ~ std_t + month))
 
 
-# Number of years / months to forecast
-n_years_forecast  <- 5
-n_months_forecast <- 12 * n_years_forecast
+## Class Activity: Candidate Models for the Trend (10 min)
 
-# Last observed t and date from the simulated data
-last_t    <- max(sim_ts$t)
-last_date <- max(sim_ts$dates)
+The log-transformed series *looks* linear, but our eyes are not a precise tool. A slight curve in the trend is easy to miss. Rather than assume a shape, we will fit a few reasonable **candidate models** and let the data help us choose among them. We will consider a linear, quadratic, and cubic trend.
 
-# Build new data consistent with the indicator-variable spec
-new_dat <- tibble(
-  # Future time index (no overlap with observed sample)
-  t = last_t + seq_len(n_months_forecast),
-  
-  # Future monthly dates, starting one month after the last observed date
-  dates = seq(
-    from = last_date %m+% months(1),
-    by   = "1 month",
-    length.out = n_months_forecast
-  )
-) |>
-  mutate(
-    # Month-of-year index and factor (same as in sim_ts)
-    month_index = ((t - 1) %% 12) + 1,
-    month = factor(month_index, levels = 1:12, labels = month.abb),
-    
-    # Standardized time using the *training* t from sim_ts
-    std_t = (t - mean(pull(sim_ts, t))) / sd(pull(sim_ts, t))
-  ) |>
-  as_tsibble(index = dates)
+### The Model
 
-sim_reduced_linear_lm1 |> 
-  forecast(new_data = new_dat)
-```
+All three candidates have the same structure as the models in [Chapter 5 Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html), but the response is $\log(x_t)$:
 
-
-
-@fig-forecastSim-2 illustrates the forecasted values for the time series.
-
-```{r}
-#| label: fig-forecastSim-2
-#| fig-cap: "Forecasted values of the time series with 95% confidence bands"
-#| code-fold: true
-#| code-summary: "Show the code"
-
-sim_forecast_plot_regular <- sim_reduced_linear_lm1 |> 
-  forecast(new_data = new_dat) |>
-  autoplot(sim_ts, level = 95) +
-  labs(
-    x = "Month",
-    y = "x_t",
-    title = "Simulated Time Series"
-  ) +
-  theme_minimal() +
-  theme(legend.position = "inset") +
-  theme(
-    plot.title = element_text(hjust = 0.5)
-  )
-
-sim_forecast_plot_logged <- sim_reduced_linear_lm1 |> 
-  forecast(new_data = new_dat) |>
-  autoplot(sim_ts, level = 95) +
-  scale_y_continuous(trans = "log", labels = scales::label_log()) +
-  labs(
-    x = "Month",
-    y = "log(x_t)",
-    title = "Logarithm of Simulated Time Series"
-  ) +
-  theme_minimal() +
-  theme(legend.position = "inset")  +
-  theme(
-    plot.title = element_text(hjust = 0.5)
-  )
-
-sim_forecast_plot_regular | sim_forecast_plot_logged
-```
-
-
-### Bias Correction
-
-The forecasts presented on the left figure were computed by raising $e$ to the power of the predicted log-values. Unfortunately, this introduces bias in the forecasted means. This bias tends to be large if the regression model does not fit the data closely.
-
-The textbook points out that the bias correction should only be applied for means, not for simulated values. This means that if you are simulating transformed values, and you apply the inverse of your original transformation, the resulting values are inappropriate.
-
-When we apply the inverse transform to the residual series, we introduce a bias. We can account for this bias applying one of two adjustments to our mean values. The theory behind this transformations is alluded to in the textbook, but is not essential.
-
-There are two common patterns observed in the residual series: (1) Gaussian white noise or (2) Non-Normal values. 
-
-We can use the skewness statistic to assess the shape of the residual series.
-When the skewness is less than -1 or greater than 1, we say that the distribution is highly skewed. For skewness values between -1 and -0.5 or between 0.5 and 1, we say there is moderate skewness. If skewness lies between -0.5 and 0.5, the distribution is considered roughly symmetric.
-
-<!-- Beginning of two columns -->
-::: columns
-::: {.column width="45%"}
-
-#### Log-Normal Correction
-
-##### Normally-Distributed Residual Series
-
-If the residual series follows a normal distribution, we multiply the means of the forecasted values $\hat x_t$ by the factor $e^{\frac{1}{2} \sigma^2}$:
-  
 $$
-  \hat x_t' = e^{\frac{1}{2} \sigma^2} \cdot \hat x_t
+  \log(x_t) = m_t + s_t + z_t
 $$
 
-where 
-$\left\{ \hat x_t: t = 1, \ldots, n \right\}$ 
-gives the values of the forecasted series, and 
-$\left\{ \hat x_t': t = 1, \ldots, n \right\}$ 
-is the adjusted forecasted values.
+The seasonal component $s_t$ uses indicator variables with January as the reference month, so each $\Delta\beta_i$ is the difference between that month and January:
 
-:::
-
-::: {.column width="10%"}
-<!-- empty column to create gap -->
-:::
-  
-::: {.column width="45%"}
-
-#### Emperical Correction
-
-##### Non-Normally Distributed Residual Series
-
-If the residual series lacks normality , then we can adjust the forecasts $\left\{ \hat x_t \right\}$ as follows:
-  
 $$
-  \hat x_t' = e^{\widehat{\log x_t}} \sum_{t=1}^{n} \frac{e^{z_t}}{n}
+  s_t =
+    \begin{cases}
+      0, & t = 1, 13, 25, \ldots ~~~~ ~~(January) \\
+      \Delta\beta_2, & t = 2, 14, 26, \ldots ~~~~ ~~(February) \\
+      \Delta\beta_3, & t = 3, 15, 27, \ldots ~~~~ ~~(March) \\
+      ~~~~⋮ & ~~~~~~~~~~~~⋮ \\
+      \Delta\beta_{12}, & t = 12, 24, 36, \ldots ~~~~ (December)
+    \end{cases}
 $$
 
-where $\left\{ \widehat{\log x_t}: t = 1, \ldots, n \right\}$ is the forecasted series obtained by fitting the log-regression model.
+The candidates differ only in the trend, $m_t$. For the trend, we measure time in years, $u_t = t/12$, rather than in months. Measured in months, $t^3$ would reach about 3,000,000 by the end of the series. Numbers that large can cause numerical problems when fitting some models, including the one we fit later in this lesson. Measuring in years keeps the values small, and each trend coefficient describes change per year.
 
-$\left\{ z_t \right\}$ is the residual series from this fitted model in the log-transformed units.
+| Candidate | Trend, $m_t$ |
+|:----------|:-------------|
+| Linear    | $\alpha_0 + \alpha_1 u_t$ |
+| Quadratic | $\alpha_0 + \alpha_1 u_t + \alpha_2 u_t^2$ |
+| Cubic     | $\alpha_0 + \alpha_1 u_t + \alpha_2 u_t^2 + \alpha_3 u_t^3$ |
 
-:::
-:::
-<!-- End of two columns -->
+### Fitting the Candidates
 
-
-
-The code given below can be used to compute the corrected mean values for the simulated data.
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-sim_model_values <- sim_reduced_linear_lm1 |>
-  glance()
-
-sim_model_check <- sim_model_values |>
-  mutate(
-    sigma = sqrt(sigma2),
-    lognorm_cf = exp((1/2) * sigma2),
-    empirical_cf = sim_reduced_linear_lm1 |>
-      residuals() |>
-      pull(.resid) |>
-      exp() |>
-      mean()) |>
-  select(lognorm_cf, empirical_cf)
-
-# sim_pred <- sim_reduced_linear_lm1 |> 
-#   forecast(new_data = new_dat) |>
-#   mutate(.mean_correction = .mean * sim_model_check$empirical_cf) |>
-#   select(t, x_t, .mean, .mean_correction)
-
-```
-
-The log-normal adjustment is 
-$`r sim_model_check |> select(lognorm_cf) |> pull() |> round(5)`$, 
-and the emperical adjustment is 
-$`r sim_model_check |> select(empirical_cf) |> pull() |> round(5)`$. 
-Both of these values are extremely close to 1, so they will have a negligible impact on the predicted values.
-
-This result does not generalize. In other situations, there can be a substantial effect of this bias on the predicted means.
-
-
-
-
-
-
-
-
-
-
-
-### Histogram of residuals
-
-@fig-ResidualHistogramSimulatedTS-2 gives a histogram of the residuals and compute the skewness of the residual series.
+We fit all three candidates at once. Each model is fitted with ordinary least squares (OLS).
 
 ```{r}
-#| label: fig-ResidualHistogramSimulatedTS-2
-#| fig-cap: "Histogram of the values in the residual series based on the model with a linear trend and seasonal Fourier terms where i≤3"
-#| code-fold: true
-#| code-summary: "Show the code"
-
-sim_resid_df <- sim_reduced_linear_lm1 |> 
-  residuals() |> 
-  as_tibble() |> 
-  dplyr::select(.resid) |>
-  rename(x = .resid) 
-  
-sim_resid_df |>
-  mutate(density = dnorm(x, mean(sim_resid_df$x), sd(sim_resid_df$x))) |>
-  ggplot(aes(x = x)) +
-    geom_histogram(aes(y = after_stat(density)),
-        color = "white", fill = "#56B4E9", binwidth = 0.01) +
-    geom_line(aes(x = x, y = density)) +
-    theme_bw() +
-    labs(
-      x = "Values",
-      y = "Frequency",
-      title = "Histogram of Residuals from the Reduced Linear Model"
-    ) +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-```
-
-
-We can use the command `skewness(sim_resid_df$x)` to compute the skewness of these residuals: `r skewness(sim_resid_df$x) |> round(3)`. This number is close to zero (specifically between -0.5 and 0.5,) so we conclude that the residual series is approximately normally distributed. We can apply the log-normal correction to our mean forecast values.
-
-
-
-
-
-## Class Activity: Apple Revenue (10 min)
-
-We take another look at the quarterly revenue reported by Apple Inc. from Q1 of 2005 through Q1 of 2012
-
-### Visualizing the Time Series
-
-@fig-appleTS-2 gives the time plot illustrating the quarterly revenue reported by Apple from the first quarter of 2005 through the first quarter of 2012. 
-
-```{r}
-#| label: fig-appleTS-2
-#| fig-cap: "Apple quarterly revenue figures (in billions of U.S. dollars) from Q1 of 2005 to Q1 of 2012; the figure on the left presents the revenue in dollars and the figure on the right gives the logarithm of the quarterly revenue; a simple linear regression line is given for reference"
-#| code-fold: true
-#| code-summary: "Show the code"
-
-apple_raw <- rio::import("https://byuistats.github.io/timeseries/data/apple_revenue.csv") |>
-  mutate(dates = round_date(mdy(date), unit = "quarter")) |>
-  arrange(dates)
-
-apple_ts <- apple_raw |>
-  filter(dates <= my("Jan 2012")) |>
-  dplyr::select(dates, revenue_billions) |>
-  mutate(
-    t     = row_number(),
-    std_t = (t - mean(t)) / sd(t),
-    # quarter-of-year as indicator-style factor
-    qtr   = factor(quarter(dates), levels = 1:4, labels = paste0("Q", 1:4))
-  ) |>
-  as_tsibble(index = dates)
-
-# Plots stay the same, now just using the updated apple_ts
-
-apple_plot_regular <- apple_ts |>
-  autoplot(.vars = revenue_billions) +
-  stat_smooth(
-    method  = "lm",
-    formula = y ~ x,
-    geom    = "smooth",
-    se      = FALSE,
-    color   = "#E69F00",
-    linetype = "dotted"
-  ) +
-  labs(
-    x = "Quarter",
-    y = "Revenue (Billions USD)",
-    title = "Apple Revenue (in Billions USD)"
-  ) +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))
-
-apple_plot_transformed <- apple_ts |>
-  autoplot(.vars = log(revenue_billions)) +
-  stat_smooth(
-    method  = "lm",
-    formula = y ~ x,
-    geom    = "smooth",
-    se      = FALSE,
-    color   = "#E69F00",
-    linetype = "dotted"
-  ) +
-  labs(
-    x = "Quarter",
-    y = "Logarithm of Revenue",
-    title = "Logarithm of Apple Revenue"
-  ) +
-  theme_minimal() +
-  theme(plot.title = element_text(hjust = 0.5))
-
-apple_plot_regular | apple_plot_transformed
-```
-
-
-### Finding a Suitable Model
-
-We start by fitting a cubic trend to the logarithm of the quarterly revenues. The full model is fitted here:
-
-```{r}
-#| label: appleCubicFull
-#| code-fold: true
-#| code-summary: "Show the code"
-
-# Cubic model with standardized time variable
-
-apple_cubic_lm <- apple_ts |>
-  model(apple_cubic = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + I(std_t^3) +qtr )) 
-apple_cubic_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-The quadratic and cubic trend terms are not statistically significant. We now eliminate the cubic term and fit a full model with a quadratic trend.
-
-```{r}
-#| label: appleQuadraticFull
-#| code-fold: true
-#| code-summary: "Show the code"
-
-apple_quad_lm <- apple_ts |>
-  model(apple_quad = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + qtr )) 
-apple_quad_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05) 
-```
-
-The quadratic trend term is not statistically significant. We will fit a full model with a linear trend.
-
-```{r}
-#| label: appleLinearFull
-#| code-fold: true
-#| code-summary: "Show the code"
-
-# Linear trend with standardized time variable
-
-apple_linear_lm <- apple_ts |>
-  model(apple_linear = TSLM(log(revenue_billions) ~ std_t + qtr ))
-apple_linear_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-```
-
-
-All the terms are statistically significant in this model. We now compare the models we have fitted using the AIC, AICc, and BIC criterion.
-
-```{r}
-#| label: modelComparisonApple
-#| output: false
-#| code-fold: true
-#| code-summary: "Show the code"
-
-model_combined <- apple_ts |>
+air_models <- air_ts |>
   model(
-    apple_cubic = TSLM(log(revenue_billions) ~ std_t + I(std_t^2) + I(std_t^3) +qtr),
-    apple_quad = TSLM(log(revenue_billions) ~ std_t + I(std_t^2)+qtr),
-    apple_linear = TSLM(log(revenue_billions) ~ std_t +qtr)
+    linear    = TSLM(log(passengers) ~ years + month),
+    quadratic = TSLM(log(passengers) ~ years + I(years^2) + month),
+    cubic     = TSLM(log(passengers) ~ years + I(years^2) + I(years^3) + month)
   )
+```
 
-glance(model_combined) |>
-  select(.model, AIC, AICc, BIC)
+The tabs below give the estimated trend parameters for each candidate. The 11 monthly terms are left out to save space. Delete the `filter()` line to see them.
+
+::: {.panel-tabset}
+
+## Linear
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+air_models |>
+  select(linear) |>
+  tidy() |>
+  filter(!str_detect(term, "month")) |>
+  mutate(sig = p.value < 0.05)
+```
+
+## Quadratic
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+air_models |>
+  select(quadratic) |>
+  tidy() |>
+  filter(!str_detect(term, "month")) |>
+  mutate(sig = p.value < 0.05)
+```
+
+The quadratic term is statistically significant, and its estimate is negative. On the log scale, the trend bends slightly downward. In other words, the growth rate of passengers slows a little over time.
+
+## Cubic
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+air_models |>
+  select(cubic) |>
+  tidy() |>
+  filter(!str_detect(term, "month")) |>
+  mutate(sig = p.value < 0.05)
+```
+
+The cubic term is not statistically significant. Notice that the quadratic term is not significant in this model either, even though it was in the quadratic model. The terms $u_t$, $u_t^2$, and $u_t^3$ rise together and are highly correlated, so the model struggles to separate their individual effects. This is one reason we compare whole models in the next section rather than relying only on individual p-values.
+
+:::
+
+::: {.callout-note title="Reminder"}
+`TSLM()` estimates its parameters with ordinary least squares, exactly like `lm()`. As we saw in [Chapter 5 Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html), if the errors are autocorrelated, these standard errors and p-values are too small. We will check the residuals and account for any autocorrelation after we choose a trend.
+:::
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Based on the plots and the p-values, which trend do you think is most appropriate? Why?
+-   The quadratic term is negative. What does that mean for the growth of airline passengers?
+
+:::
+
+
+
+## Model Selection Information Criteria: Balancing Fit and Complexity (15 min)
+
+We now have three candidate models. How do we choose?
+
+### Why We Need a Penalty
+
+Adding terms to a regression model never makes the in-sample fit worse. The $R^2$ value can only go up, and the residual sum of squares can only go down. If we chose models by $R^2$ alone, we would always choose the most complicated model. But a model that follows the training data too closely (**overfitting**) often forecasts poorly, because some of what it learned was noise.
+
+You may remember **adjusted $R^2$** from a regression course, which does include a penalty for extra terms. Its penalty is weak, though. Adjusted $R^2$ goes up whenever a new term has a t-statistic larger than 1 in absolute value, so it still tends to keep terms that add little. It is also specific to regression. It does not exist for the models with autocorrelated errors that we fit later in this lesson. Information criteria solve both problems.
+
+The idea behind information criteria is **parsimony**: when two models explain the data about equally well, we prefer the simpler one. Every information criterion has the same structure:
+
+$$
+  \text{IC} = \underbrace{-2 \log(\mathcal{L})}_{\text{lack of fit}} + \underbrace{\text{penalty}(k)}_{\text{complexity}}
+$$
+
+where $\mathcal{L}$ is the likelihood of the data under the model (how probable the observed data are, given the fitted model) and $k$ is the number of estimated parameters. Better fit makes the first term smaller. More parameters make the second term larger. **Smaller values are better.**
+
+### Three Common Criteria
+
+**AIC (Akaike Information Criterion)**
+
+$$
+  AIC = -2 \log(\mathcal{L}) + 2k
+$$
+
+The AIC estimates how much information is lost when we use the model to represent the process that generated the data. It is designed to choose the model that will predict new data best, so it is well suited to forecasting.
+
+**AICc (Corrected AIC)**
+
+$$
+  AICc = AIC + \frac{2k(k+1)}{n - k - 1}
+$$
+
+When the sample size $n$ is small relative to $k$, the AIC tends to choose models that are too complex. The AICc adds an extra penalty to correct for this. As $n$ grows, the correction shrinks and the AICc approaches the AIC. Because time series are often short, the AICc is a good default.
+
+**BIC (Bayesian Information Criterion)**
+
+$$
+  BIC = -2 \log(\mathcal{L}) + k \ln(n)
+$$
+
+The BIC penalizes each parameter by $\ln(n)$ instead of 2. Since $\ln(n) > 2$ whenever $n > 7$, the BIC is stricter than the AIC and tends to choose simpler models. It is often preferred when the goal is to understand or explain a process rather than to forecast it.
+
+### Comparing the Candidates
+
+@tbl-airIC gives $R^2$, adjusted $R^2$, and the three information criteria for each candidate. The lowest value in each criterion column is in bold.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| output: false
+
+air_ic <- air_models |>
+  glance() |>
+  select(.model, r_squared, adj_r_squared, AIC, AICc, BIC)
+
+air_ic
 ```
 
 ```{r}
-#| label: tbl-ModelComparisonApple
-#| tbl-cap: "Comparison of the AIC, AICc, and BIC values for the models fitted to the logarithm of the simulated time series."
+#| label: tbl-airIC
+#| tbl-cap: "Fit statistics for the candidate models fitted to the logarithm of the airline passenger series"
 #| echo: false
 
-combined_models <- glance(model_combined) |> 
-  select(.model, AIC, AICc, BIC)
-
-minimum <- combined_models |>
-  summarize(
-    AIC = which(min(AIC)==AIC),
-    AICc = which(min(AICc)==AICc),
-    BIC = which(min(BIC)==BIC)
-  )
-
-combined_models |>
-  rename(Model = ".model") |>
-  round_df(1) |>
-  format_cells(rows = minimum$AIC, cols = 2, "bold") |>
-  format_cells(rows = minimum$AICc, cols = 3, "bold") |>
-  format_cells(rows = minimum$BIC, cols = 4, "bold") |>
+air_ic |>
+  mutate(
+    across(c(r_squared, adj_r_squared), \(x) round(x, 4)),
+    across(c(AIC, AICc, BIC), \(x) round(x, 1))
+  ) |>
+  rename(Model = .model, "R-squared" = r_squared, "Adj. R-squared" = adj_r_squared) |>
+  format_cells(rows = which.min(air_ic$AIC), cols = 4, "bold") |>
+  format_cells(rows = which.min(air_ic$AICc), cols = 5, "bold") |>
+  format_cells(rows = which.min(air_ic$BIC), cols = 6, "bold") |>
   display_table()
 ```
 
-We will apply the `apple_linear` model.
+Notice the following:
 
-### Using the Residuals to Determine the Appropriate Correction
+-   $R^2$ increases with every term we add, as expected. It cannot tell us when to stop. Adjusted $R^2$ barely separates the quadratic and cubic models.
+-   The linear model is far behind the other two on every criterion. The quadratic term is earning its keep.
+-   The quadratic model has the lowest AIC, AICc, and BIC. Adding a cubic term improves the fit slightly, but not enough to justify the extra parameter.
 
-The residuals of this model are illustrated in @fig-residualHistogramAppleRevenue.
+### Reading Information Criteria Carefully
 
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-#| label: fig-residualHistogramAppleRevenue
-#| fig-cap: "Histogram of the residuals from the reduced model with a linear trend component"
+::: {.callout-important title="Information criteria inform a decision. They do not make it."}
 
-apple_resid_df <- model_combined |> 
-  dplyr::select(apple_linear) |>
-  residuals() |> 
-  as_tibble() |> 
-  dplyr::select(.resid) |>
-  rename(x = .resid) 
-  
-apple_resid_df |>
-  mutate(density = dnorm(x, mean(apple_resid_df$x), sd(apple_resid_df$x))) |>
-  ggplot(aes(x = x)) +
-    geom_histogram(aes(y = after_stat(density)),
-        color = "white", fill = "#56B4E9", binwidth = 0.05) +
-    geom_line(aes(x = x, y = density)) +
-    theme_bw() +
-    labs(
-      x = "Values",
-      y = "Frequency",
-      title = "Histogram of Residuals from the Reduced Model with a Linear Trend"
-    ) +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-```
+It is tempting to treat information criteria as a score to optimize: fit everything, choose the smallest number, and stop. Resist this. The criteria are one piece of evidence in a broader discussion of what the model is for and what trade-offs you are willing to make.
 
-Using the command `skewness(apple_resid_df$x)`, we compute the skewness of these residuals as: `r skewness(apple_resid_df$x) |> round(3)`. This number is not close to zero (it is between -1 and -0.5) indicating moderate skewness. We would therefore apply the empirical correction to our mean forecast values.
+-   **Only differences matter.** The value of the AIC on its own means nothing. What matters is how far apart two models are. As a rough guide, models within about 2 units of each other are about equally supported by the data. A difference of 10 or more is strong evidence for the lower model.
+-   **A small difference is a tie.** When two models are close, the criteria have not chosen for you. Use other considerations, such as simplicity, interpretability, and whether the model makes sense for the process.
+-   **The criteria can disagree.** The AICc leans toward models that forecast well, and the BIC leans toward simpler models. A disagreement tells you something about the trade-off. It is not a problem to be resolved by picking a favorite.
+-   **They say nothing about assumptions.** A model can have the lowest AICc and still have autocorrelated residuals. You still need to check the residuals.
+-   **Think about the purpose.** The quadratic model has a negative $u_t^2$ term. If we extended it far enough into the future, it would predict that air travel eventually *declines*. For a forecast a few years ahead, this is not a concern. For a forecast decades ahead, the linear model might be the more sensible choice, even though it fits these data worse.
+-   **Only compare models fitted to the same response.** See the example below.
 
-### Applying the Correction Factor
+:::
 
-@tbl-correctedModelApple summarizes some of the corrected mean values. Note that in this particular case, the corrected values are very close to the uncorrected values.
+The last point deserves an example. Below, we compare a quadratic model fitted to the original series with the same model fitted to the logarithm.
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 
-apple_model_values <- model_combined |> 
-  dplyr::select(apple_linear) |>
+# Shift that puts the log model's AICc in the units of x_t (explained below)
+log_shift <- 2 * sum(log(air_ts$passengers))
+
+air_scale_ic <- air_ts |>
+  model(
+    original = TSLM(passengers ~ years + I(years^2) + month),
+    log      = TSLM(log(passengers) ~ years + I(years^2) + month)
+  ) |>
   glance()
 
-apple_model_check <- apple_model_values |>
+air_scale_ic |>
+  transmute(
+    Model = c("Quadratic, original scale", "Quadratic, log scale"),
+    Response = c("x_t", "log(x_t)"),
+    "Units of response" = c("thousands of passengers", "log(thousands of passengers)"),
+    AICc = round(AICc, 1),
+    "AICc in units of x_t" = round(AICc + c(0, log_shift), 1)
+  ) |>
+  pander(split.table = Inf)
+```
+
+Look at the AICc column first. The two values are about 1,800 units apart. Taken at face value, this would be overwhelming evidence for the log model, but the comparison is not fair.
+
+The likelihood measures how probable the observed data are, so it is measured in the units of the response. A density for $\log(x_t)$ and a density for $x_t$ are on different scales. Converting from one to the other multiplies the density of each observation by $1/x_t$. Over the whole series, that shifts $-2\log(\mathcal{L})$, and therefore the AICc, by
+
+$$
+  2 \sum_{t=1}^{n} \log(x_t) = `r round(log_shift, 1)`
+$$
+
+for these data. Adding this amount to the log model's AICc puts both models in the units of $x_t$, as shown in the last column. On a common scale, the log model is still better, but by about `r round(air_scale_ic$AICc[1] - (air_scale_ic$AICc[2] + log_shift), 0)` units, not 1,800. Most of the original gap came from the change of units, not from the models.
+
+In practice, we rarely make this adjustment. We choose a transformation based on the time plot and the residuals, and then use information criteria to compare models that share that transformation.
+
+### Our Decision
+
+We will use the quadratic trend. It has the lowest value on all three criteria, the quadratic term is meaningful, and the cubic term adds nothing. Its slowing growth rate is reasonable for the short-term forecasts we will make.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Why can't we use $R^2$ to choose between these models?
+-   Explain the trade-off that every information criterion is trying to balance.
+-   Suppose the cubic model had an AICc 1 unit *lower* than the quadratic model. Would you choose the cubic model? What else would you consider?
+-   Why is it misleading to compare the AICc of a model for $x_t$ directly with the AICc of a model for $\log(x_t)$?
+
+:::
+
+
+
+## Class Activity: Modeling the Autocorrelated Errors (15 min)
+
+We have chosen a trend and a seasonal component. Now we check the errors. Recall from [Chapter 5 Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html) that if the errors are autocorrelated, OLS underestimates the standard errors of the parameter estimates. Our confidence intervals will be too narrow, and some terms may appear significant when they are not.
+
+### Checking the Residuals
+
+@fig-airQuadResid gives the correlogram and partial correlogram of the residuals from the quadratic model.
+
+```{r}
+#| label: fig-airQuadResid
+#| fig-cap: "Correlogram (left) and partial correlogram (right) of the residuals from the OLS model with a quadratic trend"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| fig-height: 3.5
+
+air_quad_resid <- air_models |>
+  select(quadratic) |>
+  residuals()
+
+air_acf_plot <- air_quad_resid |>
+  ACF(.resid, lag_max = 36) |>
+  autoplot() +
+  labs(title = "ACF of Residuals") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+air_pacf_plot <- air_quad_resid |>
+  PACF(.resid, lag_max = 36) |>
+  autoplot() +
+  labs(title = "PACF of Residuals") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+air_acf_plot | air_pacf_plot
+```
+
+The correlogram shows strong positive autocorrelation at short lags that dies out after a few months. The partial correlogram has a single large spike at lag 1 and is small after that. This is the pattern of an $AR(1)$ process, so we will model the errors as
+
+$$
+  z_t = \phi_1 z_{t-1} + w_t
+$$
+
+where $\{w_t\}$ is white noise.
+
+### Regression with AR(1) Errors
+
+We do not fit the regression and then fit a separate AR model to its residuals. Instead, we fit **one model** that estimates the trend, the seasonal terms, and the AR coefficient together:
+
+\begin{align*}
+  \log(x_t) &= \alpha_0 + \alpha_1 u_t + \alpha_2 u_t^2 + s_t + z_t \\
+  z_t &= \phi_1 z_{t-1} + w_t
+\end{align*}
+
+As in [Chapter 5 Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html), we do this with the `ARIMA()` function. The `pdq(1, 0, 0)` term asks for $AR(1)$ errors, and `PDQ(0, 0, 0)` turns off the seasonal ARIMA terms, since the indicator variables already handle seasonality. You will learn the rest of what `ARIMA()` can do in Chapter 7.
+
+```{r}
+air_ar <- air_ts |>
+  model(
+    quad_ar1 = ARIMA(log(passengers) ~ years + I(years^2) + month + pdq(1, 0, 0) + PDQ(0, 0, 0))
+  )
+
+air_ar |>
+  tidy() |>
+  filter(!str_detect(term, "month"))
+```
+
+@tbl-airSE compares the trend estimates and standard errors from the OLS model with those from the model with $AR(1)$ errors.
+
+```{r}
+#| label: tbl-airSE
+#| tbl-cap: "Trend estimates and standard errors from OLS and from the regression with AR(1) errors"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+bind_rows(
+  air_models |> select(quadratic) |> tidy(),
+  air_ar |> tidy()
+) |>
+  filter(term %in% c("years", "I(years^2)")) |>
   mutate(
-    sigma = sqrt(sigma2),
-    lognorm_cf = exp((1/2) * sigma2),
-    empirical_cf = apple_linear_lm |>
-      residuals() |>
-      pull(.resid) |>
-      exp() |>
-      mean()) |>
-  select(.model, r_squared, sigma2, sigma, lognorm_cf, empirical_cf)
-
-apple_pred <- model_combined |> 
-  dplyr::select(apple_linear) |>
-  forecast(new_data = apple_ts) |>
-  mutate(.mean_correction = .mean * apple_model_check$empirical_cf) |>
-  select(t, revenue_billions, .mean, .mean_correction)
-
-
+    term = if_else(term == "years", "alpha_1 (years)", "alpha_2 (years^2)"),
+    .model = if_else(.model == "quadratic", "OLS", "AR(1) errors")
+  ) |>
+  select(.model, term, estimate, std.error) |>
+  pivot_wider(names_from = .model, values_from = c(estimate, std.error)) |>
+  select(
+    Parameter = term,
+    "OLS Estimate" = estimate_OLS,
+    "OLS SE" = std.error_OLS,
+    "AR(1) Estimate" = `estimate_AR(1) errors`,
+    "AR(1) SE" = `std.error_AR(1) errors`
+  ) |>
+  round_df(4) |>
+  display_table()
 ```
-The log-normal adjustment is 
-$`r sim_model_check |> select(lognorm_cf) |> pull() |> round(5)`$, 
-and the emperical adjustment is 
-$`r sim_model_check |> select(empirical_cf) |> pull() |> round(5)`$. 
+
+The estimates barely change, but the standard errors roughly double. This is the problem from Chapter 5 Lesson 1 in a real data set: OLS made us more confident in the trend than the data justify. The quadratic term is still clearly significant, so our choice of trend holds up.
+
+::: {.callout-warning}
+Do not compare the AICc of this model with the AICc values in @tbl-airIC. `TSLM()` and `ARIMA()` compute the likelihood differently, so their information criteria are on different scales. Compare information criteria only among models fitted with the same function and the same response.
+:::
+
+Finally, we check that the $AR(1)$ term has dealt with the autocorrelation. The **innovation residuals** are the estimates of $w_t$, the part of the series that the full model, including the AR term, cannot explain. These should look like white noise.
+
+```{r}
+#| label: fig-airInnovACF
+#| fig-cap: "Correlogram of the innovation residuals from the regression with AR(1) errors"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| fig-height: 3.5
+
+air_ar |>
+  augment() |>
+  ACF(.innov, lag_max = 36) |>
+  autoplot() +
+  labs(title = "ACF of Innovation Residuals") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+The strong short-lag autocorrelation is gone. Lag 16 crosses the significance bounds and lag 12 touches them. With 36 lags, we expect one or two to cross by chance (about 5% of them), and there is no remaining pattern at the short lags the $AR(1)$ term was meant to handle. The $AR(1)$ error model is adequate for our purposes. The small spike at lag 12 is a hint that the seasonal pattern may not be perfectly constant over the 12 years, which is something we could revisit with more advanced models.
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   What feature of the partial correlogram led us to choose an $AR(1)$ model for the errors?
+-   Why did the standard errors increase when we added $AR(1)$ errors, while the estimates stayed about the same?
+-   What is the difference between the residuals in @fig-airQuadResid and the innovation residuals in @fig-airInnovACF?
+
+:::
+
+
+
+## Class Activity: Forecasting and Bias Correction (10 min)
+
+### Forecasting on the Original Scale
+
+Our model describes $\log(x_t)$, but we want forecasts of the number of passengers. Because we wrote `log(passengers)` in the model formula, fable undoes the transformation for us. The forecasts it returns are already on the original scale.
+
+To forecast, we need future values of every predictor in the model. We create three years of future months, continue the time index $t$ from where the data end, and assign each future month its month label.
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 
-apple_pred <- model_combined |> 
-  dplyr::select(apple_linear) |>
-  forecast(new_data = apple_ts) |>
-  mutate(.mean_correction = .mean * apple_model_check$empirical_cf) |>     
-  select(t, revenue_billions, .mean, .mean_correction)
+n_months_forecast <- 36
+
+air_future <- new_data(air_ts, n = n_months_forecast) |>
+  mutate(
+    t     = nrow(air_ts) + row_number(),
+    years = t / 12,
+    month = factor(month.abb[month(date)], levels = month.abb)
+  )
+
+air_fc <- air_ar |>
+  forecast(new_data = air_future)
 ```
 
-```{r}
-#| label: tbl-correctedModelApple
-#| tbl-cap: "Fitted values for the model representing Apple's quarterly revenue"
-#| echo: false
-
-apple_pred |>
-  as_tibble() |>
-  select(!revenue_billions) |>
-  select(!dates) |>
-  display_partial_table(4,2)
-```
-
-### Plotting the Fitted Values
-
-These fitted values are illustrated in @fig-AppleRevenueFittedPlot.
+@fig-airForecast shows the fitted values (blue) and the forecasts with a 95% prediction interval.
 
 ```{r}
-#| label: fig-AppleRevenueFittedPlot
-#| fig-cap: "Apple Inc.'s quarterly revenue in billions of U.S. dollars through first quarter of 2012 (in black) and the fitted regression model (in blue)"
+#| label: fig-airForecast
+#| fig-cap: "Airline passengers (black), fitted values (blue), and three-year forecast with 95% prediction interval"
 #| code-fold: true
 #| code-summary: "Show the code"
 
-apple_ts |>
-  autoplot(.vars = revenue_billions) +
-  geom_line(data = apple_pred, aes(x = dates, y = .mean_correction), color = "#56B4E9") +
-    labs(
-      x = "Quarter",
-      y = "Revenue (Billions USD)",
-      title = "Apple Revenue in Billions of U.S. Dollars"
-    ) +
-    theme_minimal() +
-    theme(plot.title = element_text(hjust = 0.5))
-```
-
-This time series was used as an example. We are obviously not interested in forecasting future values using this model. However, this is an excellent example of real-world exponential growth in a time series with a seasonal component. Limiting factors prevent exponential growth from being sustainable in the long run. After 2012, the Apple quarterly revenues follow a different, but very impressive, model. This is illustrated in @fig-AppleRevenueAllTime.
-
-```{r}
-#| label: fig-AppleRevenueAllTime
-#| fig-cap: "Apple Inc.'s quarterly revenue in billions of U.S. dollars; values beginning with the first quarter of 2012 are shown in orange"
-#| code-fold: true
-#| code-summary: "Show the code"
-
-apple_raw |>
-  dplyr::select(dates, revenue_billions) |>
-  as_tsibble(index = dates) |>
-  autoplot(.vars = revenue_billions) +
+air_fc |>
+  autoplot(air_ts, level = 95) +
   geom_line(
-    data = apple_raw |> filter(dates >= my("Jan 2012")), 
-    aes(x = dates, y = revenue_billions), 
-    color = "#D55E00"
+    data = augment(air_ar),
+    aes(x = date, y = .fitted),
+    color = "#56B4E9"
   ) +
   labs(
-    x = "Quarter",
-    y = "Revenue (Billions USD)",
-    title = "Apple Revenue (in Billions USD)"
+    x = "Month",
+    y = "Passengers (Thousands)",
+    title = "Airline Passengers with Three-Year Forecast",
+    subtitle = "Quadratic trend, monthly indicators, and AR(1) errors fitted to log(passengers)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+Notice that the prediction interval is not symmetric. It stretches farther above the forecast than below it. A symmetric interval on the log scale becomes lopsided when we exponentiate it.
+
+### Why Back-Transforming Introduces Bias
+
+The model gives us a forecast distribution for $\log(x_t)$ with a mean, $\mu$, and a variance, $\sigma^2$. The simplest way to get back to the original scale is to compute $e^{\mu}$. But averaging and exponentiating do not commute: the exponential of the mean is *not* the mean of the exponential.
+
+On the log scale, the forecast distribution is symmetric, so $\mu$ is both its mean and its median. Exponentiating keeps values in the same order, so $e^{\mu}$ is still the **median** on the original scale. But the exponential function stretches large values more than small ones, which pulls the **mean** above the median. Using $e^{\mu}$ as a forecast of the mean would be biased low. If the log values are normally distributed, the mean on the original scale is
+
+$$
+  e^{\mu + \frac{1}{2}\sigma^2} = e^{\mu} \cdot e^{\frac{1}{2}\sigma^2}
+$$
+
+The factor $e^{\frac{1}{2}\sigma^2}$ is the **bias correction**.
+
+### fable Corrects the Bias for You
+
+When the model formula contains a transformation, the `.mean` column that fable returns is already bias-adjusted. The forecast distribution column, `passengers`, holds the full distribution, so we can also ask it for the median, $e^{\mu}$. @tbl-airBias compares the two.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| output: false
+
+air_bias <- air_fc |>
+  as_tibble() |>
+  mutate(
+    median = median(passengers),   # e^mu: back-transformed, no correction
+    ratio  = .mean / median        # the bias correction fable applied
+  ) |>
+  select(date, median, .mean, ratio)
+
+air_bias
+```
+
+```{r}
+#| label: tbl-airBias
+#| tbl-cap: "Back-transformed forecast medians and bias-adjusted means from fable"
+#| echo: false
+
+air_bias |>
+  mutate(date = as.character(date)) |>
+  rename(Month = date, "Median (no correction)" = median, "Mean (fable .mean)" = .mean, Ratio = ratio) |>
+  display_partial_table(4, 2, decimals = 4)
+```
+
+The `.mean` column is slightly larger than the median, and the ratio between them is the bias correction. The correction grows slightly with the forecast horizon, because the forecast variance $\sigma^2$ grows as we forecast farther ahead. For these data, the correction is small (well under 1%), because the model fits the log series closely. For a noisier series, it can be much larger.
+
+::: {.callout-important title="Key Points"}
+
+-   fable's forecast `.mean` is **already bias-corrected** when the model formula includes a transformation like `log()`.
+-   **Do not multiply `.mean` by a correction factor.** That corrects the bias twice.
+-   The fitted values from `augment()` are back-transformed *without* a correction. They are medians, not means.
+
+:::
+
+::: {.callout-note title="Under the Hood: The Textbook's Correction Factors" collapse="true"}
+
+Section 5.10 of the textbook gives two correction factors for back-transformed values. Both multiply the uncorrected (median) value, $e^{\mu}$. fable uses a version of the first one.
+
+**Log-normal correction.** If the residuals on the log scale are approximately normal with variance $\sigma^2$:
+
+$$
+  \hat x_t' = e^{\frac{1}{2} \sigma^2} \cdot e^{\widehat{\log x_t}}
+$$
+
+**Empirical correction.** If the residuals are not approximately normal (for example, if they are noticeably skewed), we replace the normal-theory factor with the average of the exponentiated residuals:
+
+$$
+  \hat x_t' = e^{\widehat{\log x_t}} \cdot \frac{1}{n} \sum_{t=1}^{n} e^{w_t}
+$$
+
+where $\{w_t\}$ is the residual series on the log scale.
+
+To decide which applies, we look at the shape of the residuals. @fig-airResidHist gives a histogram of the innovation residuals with a normal curve for comparison.
+
+```{r}
+#| label: fig-airResidHist
+#| fig-cap: "Histogram of the innovation residuals from the regression with AR(1) errors"
+#| code-fold: true
+#| code-summary: "Show the code"
+
+air_innov <- air_ar |>
+  augment() |>
+  pull(.innov)
+
+tibble(x = air_innov) |>
+  mutate(density = dnorm(x, mean(air_innov), sd(air_innov))) |>
+  ggplot(aes(x = x)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 color = "white", fill = "#56B4E9", bins = 20) +
+  geom_line(aes(y = density)) +
+  labs(
+    x = "Innovation Residual",
+    y = "Density",
+    title = "Histogram of Innovation Residuals"
   ) +
   theme_minimal() +
   theme(plot.title = element_text(hjust = 0.5))
 ```
 
+We can also measure the asymmetry with the skewness, the average cubed standardized residual:
 
-
-
-## Small-Group Activity: Industrial Electricity Consumption in Texas
-
-
-These data represent the amount of electricity used each month for industrial applications in Texas.
+$$
+  \text{skewness} = \frac{1}{n} \sum_{t=1}^{n} \left( \frac{w_t - \bar w}{s_w} \right)^3
+$$
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
 
+air_skew <- mean(((air_innov - mean(air_innov)) / sd(air_innov))^3)
+```
+
+The skewness of the residuals is `r air_skew |> round(3)`. A skewness between -0.5 and 0.5 suggests the distribution is roughly symmetric. Skewness between 0.5 and 1 in absolute value is moderate, and above 1 is high.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+air_sigma2 <- glance(air_ar)$sigma2
+
+tibble(
+  lognormal_cf = exp(air_sigma2 / 2),   # log-normal correction factor
+  empirical_cf = mean(exp(air_innov)),  # empirical correction factor
+  fable_1_step = air_bias$ratio[1]      # ratio fable applied one month ahead
+) |>
+  round_df(5) |>
+  display_table()
+```
+
+The log-normal factor and the ratio fable applied one month ahead are nearly identical. The textbook factors use the variance of the residuals, so they are appropriate for fitted values and one-step forecasts. fable uses the forecast variance at each horizon, which is why its correction grows over time.
+
+If the residuals were clearly skewed and you wanted the empirical correction instead, you would apply it to the **median**, not to `.mean`:
+
+```{r}
+#| eval: false
+
+air_fc |>
+  mutate(empirical_mean = median(passengers) * mean(exp(air_innov)))
+```
+
+:::
+
+::: {.callout-tip icon=false title="Check Your Understanding"}
+
+-   Explain in your own words why $e^{\mu}$ is a biased forecast of the mean on the original scale.
+-   Your teammate computes `.mean * exp(sigma2 / 2)` from a fable forecast. What is wrong with this?
+-   Why does the bias correction grow as the forecast horizon increases?
+
+:::
+
+
+
+## Small-Group Activity: Industrial Electricity Consumption in Texas (20 min)
+
+These data give the amount of electricity (in megawatt-hours) used each month for industrial purposes in Texas from 2010 through 2023.
+
+```{r}
+#| label: fig-elecTimePlot
+#| fig-cap: "Monthly industrial electricity use in Texas (left) and the natural logarithm of the series (right)"
+#| code-fold: true
+#| code-summary: "Show the code"
+#| fig-height: 3.5
+
 elec_ts <- rio::import("https://byuistats.github.io/timeseries/data/electricity_tx.csv") |>
   dplyr::select(-comments) |>
-  mutate(date = my(month),
-         month = as.factor(month(date))) |>
   mutate(
-    t = 1:n(),
-    std_t = (t - mean(t)) / sd(t)
+    date  = yearmonth(my(month)),
+    t     = row_number(),
+    years = t / 12,
+    month = factor(month.abb[month(date)], levels = month.abb)
   ) |>
   as_tsibble(index = date)
 
 elec_plot_raw <- elec_ts |>
-    autoplot(.vars = megawatthours) +
-    labs(
-      x = "Month",
-      y = "Megawatt-hours",
-      title = "Texas' Industrial Electricity Use"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
+  autoplot(.vars = megawatthours) +
+  labs(
+    x = "Month",
+    y = "Megawatt-hours",
+    title = "Texas Industrial Electricity Use"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 
 elec_plot_log <- elec_ts |>
-    autoplot(.vars = log(megawatthours)) +
-    labs(
-      x = "Month",
-      y = "log(Megwatt-hours)",
-      title = "Log of Texas' Industrial Electricity Use"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
+  autoplot(.vars = log(megawatthours)) +
+  labs(
+    x = "Month",
+    y = "log(Megawatt-hours)",
+    title = "Log of Texas Industrial Electricity Use"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 
 elec_plot_raw | elec_plot_log
 ```
@@ -1193,13 +798,14 @@ elec_plot_raw | elec_plot_log
 
 ::: {.callout-tip icon=false title="Check Your Understanding"}
 
-Use the Texas industrial electricity consumption data to do the following.
+Work through the same steps we used for the airline passenger data.
 
--   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
--   Use the residuals to determine the appropriate correction for the data.
--   Forecast the data for the next 5 years.
--   Apply the appropriate correction to the forecasted values.
--   Plot the fitted (forecasted) values along with the time series.
+-   Describe the trend and seasonal variation in the time plot.
+-   Fit linear, quadratic, and cubic trend models with monthly indicator variables to $\log(x_t)$.
+-   Compare the candidates using AIC, AICc, and BIC. Which model would you choose? Justify your choice using the criteria *and* at least one other consideration.
+-   Check the correlogram and partial correlogram of the residuals from your chosen model. What $AR(p)$ model is appropriate for the errors?
+-   Fit your chosen model with $AR(p)$ errors using `ARIMA()`. How do the standard errors of the trend terms change?
+-   Forecast the next 5 years and plot the forecasts with the time series. Are the forecasts from fable already bias-corrected?
 
 :::
 
@@ -1225,7 +831,6 @@ Use the Texas industrial electricity consumption data to do the following.
 
 
 
-  
   <!-- Solutions at the bottom of the page -->
 
 <a href="javascript:showhide('Solutions')"
@@ -1233,377 +838,125 @@ style="font-size:.8em;">Small-Group Activity</a>
 
 ::: {#Solutions style="display:none;"}
 
-#### Small-Group Activity: Retail Sales Code
+#### Small-Group Activity: Industrial Electricity Consumption in Texas
 
-::: {.callout-caution icon=false title="Figures" collapse="false"}
+**Trend and seasonality.** Electricity use rises over time, and the growth appears to speed up in the later years. There is a clear seasonal pattern, with a peak in late summer. The log transformation keeps the seasonal swings at a similar size throughout the series.
 
-@fig-RetailSalesGeneralMerch2 gives the total sales (in millions of U.S. dollars) for the category "all other general merchandise stores (45299)," beginning with January 1998.
+**Candidate models.**
 
 ```{r}
-#| label: fig-RetailSalesGeneralMerch2
-#| fig-cap: "Time plot of the total monthly retail sales for all other general merchandise stores (45299)"
 #| code-fold: true
 #| code-summary: "Show the code"
 
-# Read in retail sales data for "all other general merchandise stores"
-retail_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
-  filter(naics == 45299) |>
-  mutate(t = 1:n(),
-         month = as.factor((t - 1) %% 12 + 1),
-         month = factor(month, levels = 1:12, labels = month.abb)) |>
-  mutate(std_t = (t - mean(t)) / sd(t)) |>
-  as_tsibble(index = t)
-
-autoplot(retail_ts)
-```
-
-@fig-retailSideBySidePlot shows the "All other general merchandise" retail sales data.
-
-```{r}
-#| label: fig-retailSideBySidePlot
-#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
-#| code-fold: true
-#| code-summary: "Show the code"
-#| results: asis
-#| fig-height: 3.5
-
-plot_raw <- retail_ts |>
-    autoplot(.vars = sales_millions) +
-    labs(
-      x = "Time",
-      y = "sales_millions",
-      title = "Other General Merchandise Sales"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-
-plot_log <- retail_ts |>
-    autoplot(.vars = log(sales_millions)) +
-    labs(
-      x = "Time",
-      y = "log(sales_millions)",
-      title = "Logarithm of Other Gen. Merch. Sales"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-
-plot_raw | plot_log
-```
-
-:::
-<!-- Figures -->
-
-
-::: {.callout-caution icon=false title="Cubic Trend" collapse="false"}
-
-```{r}
-#| label: fullCubicFittedModel
-#| code-fold: true
-#| code-summary: "Show the code"
-
-# Cubic model with standardized time variable
-
-cubic_lm <- retail_ts |>
-  model(cubic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) + month)) # Note sin6 is omitted
-cubic_lm |>
-  tidy() |>
-  select(!`.model`)|>
-  mutate(sig = p.value < 0.05)
-```
-
-
-:::
-<!-- Cubic -->
-
-
-::: {.callout-caution icon=false title="Quadratic Trend" collapse="false"}
-
-```{r}
-#| label: ExponentialQuadraticFull1a-3
-#| code-fold: true
-#| code-summary: "Show the code"
-
-quad_lm <- retail_ts |>
-  model(quad = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + 
-    month )) # Note sin6 is omitted
-quad_lm |>
-  tidy() |>
-  select(!`.model`)|>
-  mutate(sig = p.value < 0.05) 
-```
-
-
-:::
-<!-- Quadratic -->
-
-
-::: {.callout-caution icon=false title="Linear Trend" collapse="false"}
-
-```{r}
-#| label: ExponentialQuadraticFull2a
-#| code-fold: true
-#| code-summary: "Show the code"
-
-linear_lm <- retail_ts |>
-  model(linear = TSLM(log(sales_millions) ~ std_t +month )) # Note sin6 is omitted
-linear_lm |>
-  tidy() |>
-  select(!`.model`)|>
-  mutate(sig = p.value < 0.05) 
-```
-
-:::
-<!-- Linear -->
-
-
-::: {.callout-caution icon=false title="Model Comparison" collapse="false"}
-
-We will now compare the models we fitted above. #tbl-ModelComparison2 gives the AIC, AICc, and BIC of the models fitted above. In addition, other models with a reduced number of Fourier terms are included. For example, the model labeled `reduced_quadratic_fourier_i5` includes linear and quadratic trend terms but also the Fourier terms where $i \le 5$.
-
-```{r}
-#| label: modelComparison2
-#| output: false
-#| code-fold: true
-#| code-summary: "Show the code"
-
-model_combined <- retail_ts |>
+elec_models <- elec_ts |>
   model(
-    cubic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) + month),
-    quadratic = TSLM(log(sales_millions) ~ std_t + I(std_t^2) + month),
-    linear = TSLM(log(sales_millions) ~ std_t + month )
+    linear    = TSLM(log(megawatthours) ~ years + month),
+    quadratic = TSLM(log(megawatthours) ~ years + I(years^2) + month),
+    cubic     = TSLM(log(megawatthours) ~ years + I(years^2) + I(years^3) + month)
   )
 
-glance(model_combined) |>
-  select(.model, AIC, AICc, BIC)
+elec_models |>
+  tidy() |>
+  filter(term %in% c("years", "I(years^2)", "I(years^3)")) |>
+  select(.model, term, estimate, std.error, p.value)
+```
+
+**Model comparison.**
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+#| output: false
+
+elec_ic <- elec_models |>
+  glance() |>
+  select(.model, r_squared, adj_r_squared, AIC, AICc, BIC)
+
+elec_ic
 ```
 
 ```{r}
-#| label: tbl-ModelComparison2
-#| tbl-cap: "Comparison of the AIC, AICc, and BIC values for the models fitted to the logarithm of the retail sales time series."
+#| label: tbl-elecIC
+#| tbl-cap: "Fit statistics for the candidate models fitted to the logarithm of Texas industrial electricity use"
 #| echo: false
 
-combined_models <- glance(model_combined) |> 
-  select(.model, AIC, AICc, BIC)
-
-minimum <- combined_models |>
-  summarize(
-    AIC = which(min(AIC)==AIC),
-    AICc = which(min(AICc)==AICc),
-    BIC = which(min(BIC)==BIC)
-  )
-
-combined_models |>
-  rename(Model = ".model") |>
-  round_df(1) |>
-  format_cells(rows = minimum$AIC, cols = 2, "bold") |>
-  format_cells(rows = minimum$AICc, cols = 3, "bold") |>
-  format_cells(rows = minimum$BIC, cols = 4, "bold") |>
+elec_ic |>
+  mutate(
+    across(c(r_squared, adj_r_squared), \(x) round(x, 4)),
+    across(c(AIC, AICc, BIC), \(x) round(x, 1))
+  ) |>
+  rename(Model = .model, "R-squared" = r_squared, "Adj. R-squared" = adj_r_squared) |>
+  format_cells(rows = which.min(elec_ic$AIC), cols = 4, "bold") |>
+  format_cells(rows = which.min(elec_ic$AICc), cols = 5, "bold") |>
+  format_cells(rows = which.min(elec_ic$BIC), cols = 6, "bold") |>
   display_table()
 ```
 
-The model with the lowest AIC, AICc, and BIC values is the full cubic model.
+The linear model is clearly worse than the other two. The cubic and quadratic models are close: the AICc slightly prefers the cubic model, while the BIC prefers the quadratic model. This is the kind of near-tie where the criteria do not make the decision for us. The cubic term is not significant even under OLS, which already understates the standard errors, and a cubic trend can behave erratically when extrapolated. We choose the **quadratic** model. A group that chose the cubic model for its slightly lower AICc and explained the trade-off would also be reasoning well.
 
-:::
-<!-- model comparison -->
-
-
-::: {.callout-caution icon=false title="Autocorrelation of the Random Component" collapse="false"}
-
-We check for autocorrelation in the random component to determine if using additional fitting is warranted.
-
-@fig-FullQuadACF illustrates the ACF of the full model with a quadratic trend.
-
-```{r}
-#| label: fig-FullQuadACF
-#| fig-cap: "ACF of the full model with a quadratic trend"
-
-cubic_ts <- cubic_lm |>
-  residuals() 
-
-acf(cubic_ts$.resid, plot=TRUE, lag.max = 25)
-```
-
-We observe evidence of autocorrelation in the random terms. In fact, there is something happening on an annual 
-
-@fig-FullQuadPACF illustrates the PACF of the reduced model 1 with linear trend.
-
-```{r}
-#| label: fig-FullQuadPACF
-#| fig-cap: "PACF of the full model with a quadratic trend"
-#| code-fold: true
-#| code-summary: "Show the code"
-
-alphas_quad <- pacf(cubic_ts$.resid, plot=FALSE, lag.max = 25) 
-pacf(cubic_ts$.resid, plot=TRUE, lag.max = 25)
-```
-
-:::
-<!-- Autocorrelation of the random component -->
-
-
-::: {.callout-caution icon=false title="Applying Autoregression, AR" collapse="false"}
-
-Recall that in [Chapter 5, Lesson 1](https://byuistats.github.io/timeseries/chapter_5_lesson_1.html#FittingRegModelWithPACF), we fitted a linear regression model using the value of the partial autocorrelation function for $k=2$. This helps account for the autocorrelation in the residuals.
-
-Here we will add 
-
-```{r}
-#| output: false
-
-log_cube_ar <- retail_ts |> 
-  model(AR(log(sales_millions) ~ std_t + I(std_t^2) + I(std_t^3) + season(12) + order(2)))
-
-tidy(log_cube_ar) |> select(!.model)
-```
+**Residuals.**
 
 ```{r}
 #| code-fold: true
 #| code-summary: "Show the code"
-tidy(log_cube_ar) |>
-  select(!.model) |> 
+#| fig-height: 3.5
+
+elec_quad_resid <- elec_models |>
+  select(quadratic) |>
+  residuals()
+
+(elec_quad_resid |> ACF(.resid, lag_max = 36) |> autoplot() + labs(title = "ACF of Residuals") + theme_minimal()) |
+  (elec_quad_resid |> PACF(.resid, lag_max = 36) |> autoplot() + labs(title = "PACF of Residuals") + theme_minimal())
+```
+
+The partial correlogram has one large spike at lag 1, so we use $AR(1)$ errors.
+
+**Regression with AR(1) errors.**
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+elec_ar <- elec_ts |>
+  model(
+    quad_ar1 = ARIMA(log(megawatthours) ~ years + I(years^2) + month + pdq(1, 0, 0) + PDQ(0, 0, 0))
+  )
+
+bind_rows(
+  elec_models |> select(quadratic) |> tidy(),
+  elec_ar |> tidy()
+) |>
+  filter(term %in% c("years", "I(years^2)", "ar1")) |>
+  select(.model, term, estimate, std.error)
+```
+
+As with the airline data, the trend estimates are similar but the standard errors are larger once the $AR(1)$ errors are included.
+
+**Forecast.**
+
+```{r}
+#| code-fold: true
+#| code-summary: "Show the code"
+
+elec_future <- new_data(elec_ts, n = 5 * 12) |>
   mutate(
-    # Pretty the month labels with regex and month.abb
-    term = if_else(               
-      str_detect(term, "season"),          # IF the term label has "season" in it
-      convert_season_label_to_month(term), # Make the label readable (function above)
-      term                                 # ELSE keep the label as is
-    ),
-    lower = estimate + qnorm(0.025) * std.error,
-    upper = estimate + qnorm(0.975) * std.error
-  ) 
+    t     = nrow(elec_ts) + row_number(),
+    years = t / 12,
+    month = factor(month.abb[month(date)], levels = month.abb)
+  )
+
+elec_ar |>
+  forecast(new_data = elec_future) |>
+  autoplot(elec_ts, level = 95) +
+  labs(
+    x = "Month",
+    y = "Megawatt-hours",
+    title = "Texas Industrial Electricity Use with Five-Year Forecast"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
-
-@fig-finalFittedPlot2 illustrates the original time series (in black) and the fitted model (in blue). 
-For reference, a dotted line illustrating the simple least squares line is plotted on this figure for reference. It helps highlight the exponential shape of the trend.
-
-```{r}
-#| label: fig-finalFittedPlot2
-#| fig-cap: "Time plot of the time series (left) and the natural logarithm of the time series (right)"
-#| code-fold: true
-#| code-summary: "Show the code"
-
-forecast_df <- log_cube_ar |> 
-  forecast(retail_ts) |>  # computes the anti-log of the predicted values and returns them as .mean
-  as_tibble() |> 
-  dplyr::select(std_t, .mean) |> 
-  rename(pred = .mean)
-
-retail_ts |>
-  left_join(forecast_df, by = "std_t") |>
-  as_tsibble(index = t) |>
-  autoplot(.vars = sales_millions) +
-  geom_line(aes(y = pred), color = "#56B4E9", alpha = 0.75) +
-    labs(
-      x = "Time",
-      y = "Simulated Time Series",
-      title = "Time Plot of Simulated Time Series with an Cubic Trend",
-      subtitle = "Predicted values based on the full cubic model are given in blue"
-    ) +
-    theme_minimal() +
-    theme(
-      plot.title = element_text(hjust = 0.5),
-      plot.subtitle = element_text(hjust = 0.5)
-    )
-```
-
-
-
-```{r}
-#| label: ExponentialQuadraticFull1a-2
-#| code-fold: true
-#| code-summary: "Show the code"
-
-
-retail_resid_df <-  cubic_lm |> 
-  residuals() |> 
-  as_tibble() |> 
-  dplyr::select(.resid) |>
-  rename(x = .resid) 
-  
-retail_resid_df |>
-  mutate(density = dnorm(x, mean(retail_resid_df$x), sd(retail_resid_df$x))) |>
-  ggplot(aes(x = x)) +
-    geom_histogram(aes(y = after_stat(density)),
-        color = "white", fill = "#56B4E9", binwidth = 0.02) +
-    geom_line(aes(x = x, y = density)) +
-    theme_bw() +
-    labs(
-      x = "Values",
-      y = "Frequency",
-      title = "Histogram of Residuals from the Full Cubic Model"
-    ) +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-
-skewness(retail_resid_df$x)
-```
-:::
-
-
-
-## Small-Group Activity: Industrial Electricity Consumption in Texas Solution
-
-::: {.callout-tip icon=false title="Check Your Understanding"}
-
-Use the Texas industrial electricity consumption data to do the following.
-
--   Select an appropriate fitted model using the AIC, AICc, or BIC critera.
--   Use the residuals to determine the appropriate correction for the data.
--   Forecast the data for the next 5 years.
--   Apply the appropriate correction to the forecasted values.
--   Plot the fitted (forecasted) values along with the time series.
-
-:::
-
-```{r}
-#| code-fold: true
-#| code-summary: "Show the code"
-
-# Cubic model with standardized time variable
-
-elec_cubic_lm <- elec_ts |>
-  model(elec_cubic = TSLM(log(megawatthours) ~ std_t + I(std_t^2) + I(std_t^3) + month)) # Note sin6 is omitted
-elec_cubic_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-
-# Quadratic model with standardized time variable
-
-elec_quadratic_lm <- elec_ts |>
-  model(elec_cubic = TSLM(log(megawatthours) ~ std_t + I(std_t^2) + month)) # Note sin6 is omitted
-elec_quadratic_lm |>
-  tidy() |>
-  mutate(sig = p.value < 0.05)
-
-elec_resid_df <- elec_quadratic_lm |> 
-  residuals() |> 
-  as_tibble() |> 
-  dplyr::select(.resid) |>
-  rename(x = .resid) 
-  
-elec_resid_df |>
-  mutate(density = dnorm(x, mean(elec_resid_df$x), sd(elec_resid_df$x))) |>
-  ggplot(aes(x = x)) +
-    geom_histogram(aes(y = after_stat(density)),
-        color = "white", fill = "#56B4E9", binwidth = 0.02) +
-    geom_line(aes(x = x, y = density)) +
-    theme_bw() +
-    labs(
-      x = "Values",
-      y = "Frequency",
-      title = "Histogram of Residuals from the Full Quadratic Model"
-    ) +
-    theme(
-      plot.title = element_text(hjust = 0.5)
-    )
-
-skewness(elec_resid_df$x)
-```
+Because the model formula includes `log()`, the `.mean` forecasts from fable are already bias-corrected. No additional correction factor should be applied.
 
 :::
