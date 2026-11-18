@@ -318,18 +318,22 @@ acf_plot | pacf_plot
 
 ### Adding AR to the Model
 
-The autocorrelation in the data shows that OLS is insufficient on its own. To fix it, we can add an AR(p) process to the residuals.
+The autocorrelation in the data shows that OLS is insufficient on its own. To fix it, we fit a single model in which the errors follow an AR(p) process.
 
 $$ y_t = \beta_0 + \beta_1 x_t + \eta_t $$
 
 where $\eta_t$ is an $AR(p)$ error. Note that $\eta_t$ can represent more than just $AR$ processes, but we have specified it here as an $AR(p)$.
 
-Our above analysis identified an $AR(1)$ process as appropriate. We also know this because the data was simulated. We can easily add that to the residuals with the following code.
+Our above analysis identified an $AR(1)$ process as appropriate. We also know this because the data was simulated. In fable, we fit a regression with $AR(p)$ errors using the `ARIMA()` function. The term `pdq(1, 0, 0)` asks for $AR(1)$ errors, and `PDQ(0, 0, 0)` turns off the seasonal parts of the model. You will learn the rest of what `ARIMA()` can do in Chapter 7.
+
+::: {.callout-note title="Why not `AR()`?"}
+fable also has an `AR()` function, but `AR(x ~ Time + order(1))` fits a different model. It adds the lagged *response*, $x_{t-1}$, as a predictor, rather than modeling the *errors* as an $AR(1)$ process. With a lagged response in the model, the trend coefficients no longer mean the same thing as in the OLS model. `AR()` also does not accept factor variables, which we will need for seasonal indicators.
+:::
 
 ```{r}
 #| output: false
 lm_ar <- dat |>
-  model(AR(x ~ Time + order(1))) # AR(1) fit to residuals of LM
+  model(ARIMA(x ~ Time + pdq(1, 0, 0) + PDQ(0, 0, 0))) # regression with AR(1) errors
 
 tidy(lm_ar)
 ```
@@ -346,8 +350,8 @@ tidy(lm_ar) |>
   mutate(
     # Relabel terms to use LaTeX
     term = case_when(
-      term == "constant" ~ "$\\alpha_0$",
-      term == "stats_time" ~ "$\\alpha_1$",
+      term %in% c("constant", "intercept") ~ "$\\alpha_0$",
+      term %in% c("stats_time", "Time") ~ "$\\alpha_1$",
       TRUE ~ term
     )#,
     # lower = estimate + qnorm(0.025) * std.error,
@@ -514,13 +518,13 @@ p2 <- resids |>
 p1 + p2
 ```
 
-The PACF above shows 2 significant lags, so we will refit the linear model with an AR(2) process for the residuals.
+The PACF above shows 2 significant lags, so we will refit the linear model with AR(2) errors.
 
 ```{r}
 #| output: false
 
 lm_ar <- temp_tidy |> 
-  model(AR(x ~ stats_time + order(2))) # AR(2) fit to residuals of LM
+  model(ARIMA(x ~ stats_time + pdq(2, 0, 0) + PDQ(0, 0, 0))) # regression with AR(2) errors
 
 tidy(lm_ar)
 ```
@@ -537,8 +541,8 @@ tidy(lm_ar) |>
   mutate(
     # Relabel terms to use LaTeX
     term = case_when(
-      term == "constant" ~ "$\\alpha_0$",
-      term == "stats_time" ~ "$\\alpha_1$",
+      term %in% c("constant", "intercept") ~ "$\\alpha_0$",
+      term %in% c("stats_time", "Time") ~ "$\\alpha_1$",
       TRUE ~ term
     )#,
     # lower = estimate + qnorm(0.025) * std.error,
@@ -955,7 +959,7 @@ filter(term == "(Intercept)")
 
 ```
 
-The estimated value of the trend $\alpha_1$ (term month_seq) is `r trend_est |> pull(estimate) |> round(3)`, equal to the previous model specification.
+The estimated value of the trend $\alpha_1$ (term month_seq) is `r trend_est |> pull(estimate) |> round(3)`, equal to the previous model specification. Because `month_seq` counts months, $\alpha_1$ is the change in searches per month.
 
 The estimated value of the overall intercept $\alpha_0$ (term (Intercept)) is `r intercept_est |> pull(estimate) |> round(3)`. This represents the intercept for January (the reference month), equal to $\beta_1$ in the previous model specification.
 

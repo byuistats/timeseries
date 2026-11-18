@@ -1,0 +1,407 @@
+---
+title: "Time Series Homework: Chapter 5 Lesson 2"
+subtitle: "Please_put_your_name_here"
+format:
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+    warning: false
+---
+
+```{r, message=FALSE, warning=FALSE}
+
+# Loading R packages
+pacman::p_load(
+  tidyverse,  # ggplot, mutate(), cleaning...
+  tsibble,    # as_tsibble()
+  fable,      # model(...), forecast(), tidy(), glance()...
+  feasts,     # ACF(), PACF()
+  ggtime,     # autoplot() for tsibbles
+  rio,        # import()
+  pander,     # pander() markdown tables
+  patchwork   # + and / for ggplots
+)
+```
+
+## Data
+
+This assignment uses monthly sales (in millions of U.S. dollars) for jewelry stores (NAICS: 44831) from January 1993 through December 2004. The columns `t` (months), `years_elapsed` (years since December 1992, counted in monthly steps; this is not the calendar year), and `month` (a factor with January as the reference month) are created for you, just as in the lesson.
+
+```{r, message=FALSE, warning=FALSE}
+
+jewelry_ts <- rio::import("https://byuistats.github.io/timeseries/data/retail_by_business_type.parquet") |>
+  filter(naics == 44831) |>                                  # Jewelry stores
+  mutate(date = yearmonth(as_date(month))) |>
+  filter(date >= yearmonth("1993 Jan"), date <= yearmonth("2004 Dec")) |>
+  mutate(
+    t             = row_number(),                                    # time in months
+    years_elapsed = t / 12,                                          # years since Dec 1992
+    month         = factor(month.abb[month(date)], levels = month.abb) # January is the reference month
+  ) |>
+  select(date, t, years_elapsed, month, sales_millions) |>
+  as_tsibble(index = date)
+```
+
+## Questions
+
+### Question 1 - Key Definitions (15 points)
+
+Answer the prompt to the learning outcome below. Include any mathematical expressions or illustrations that may accompany the definitions and ideas if available.
+
+::: {.callout-note title="Answer" icon="false"}
+-   **Explain when to use a log-transformation, and how it changes a multiplicative model**
+
+    A log transformation is appropriate when the seasonal swings (or the random variation) grow as the level of the series grows, or when the trend looks exponential. Both are signs of a multiplicative model, $x_t = m_t \cdot s_t \cdot z_t$. Taking the logarithm turns the products into sums, $\log(x_t) = \log(m_t) + \log(s_t) + \log(z_t)$, which is an additive model we can fit with linear regression. It also linearizes an exponential trend: if $m_t = e^{\alpha_0 + \alpha_1 t}$, then $\log(m_t) = \alpha_0 + \alpha_1 t$.
+
+-   **State the general structure of an information criterion, and explain why information criteria should inform, not replace, judgment when choosing a model**
+
+    Every information criterion has the form $\text{IC} = -2\log(\mathcal{L}) + \text{penalty}(k)$: a measure of lack of fit plus a penalty for the number of parameters $k$. For example, $AIC = -2\log(\mathcal{L}) + 2k$ and $BIC = -2\log(\mathcal{L}) + k\ln(n)$. Smaller is better. The criteria only measure the trade-off between fit and complexity. Small differences (within about 2) are effectively ties, the criteria can disagree, they say nothing about whether the residuals meet the model's assumptions, and they ignore the purpose of the model (such as how it behaves when extrapolated). They can only be compared across models fitted to the same response. They are evidence for a decision, not the decision itself.
+
+-   **Explain why back-transforming the forecasted mean of the logarithm gives a biased forecast, and what fable does about it**
+
+    If the forecast of $\log(x_t)$ has mean $\mu$ and variance $\sigma^2$, then $e^{\mu}$ is the *median* of the forecast on the original scale, not the mean. Because the exponential function stretches large values more than small ones, the mean is larger: under normality it is $e^{\mu} \cdot e^{\frac{1}{2}\sigma^2}$. Using $e^{\mu}$ as the forecast mean is therefore biased low. When the model formula contains a transformation such as `log()`, fable's `.mean` forecasts are already bias-adjusted, so no additional correction should be applied to them.
+:::
+
+### Question 2 - Log Transformation and Model Selection (45 points)
+
+##### a) Plot the jewelry store sales and the natural logarithm of the sales side by side.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+#| fig-height: 3.5
+
+jewelry_plot_raw <- jewelry_ts |>
+  autoplot(.vars = sales_millions) +
+  labs(
+    x = "Month",
+    y = "Sales (Millions USD)",
+    title = "Jewelry Store Sales"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+jewelry_plot_log <- jewelry_ts |>
+  autoplot(.vars = log(sales_millions)) +
+  labs(
+    x = "Month",
+    y = "log(Sales)",
+    title = "Logarithm of Jewelry Store Sales"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+jewelry_plot_raw | jewelry_plot_log
+```
+:::
+
+##### b) Based on your plots, explain why a log transformation is appropriate for this series.
+
+::: {.callout-note title="Answer" icon="false"}
+On the original scale, the December spikes grow from about 3,800 million in 1993 to about 6,500 million in 2004, while sales in the rest of the year grow by a much smaller absolute amount. The seasonal swings get larger as the level of the series increases, which indicates multiplicative seasonality. On the log scale, the December spikes are roughly the same height throughout the series, so an additive model with seasonal indicator variables is reasonable for $\log(x_t)$.
+:::
+
+##### c) Fit four candidate models, each with monthly indicator variables. Fit one model to the original series $x_t$ with a linear trend. Then fit three models to $\log(x_t)$: one with a linear trend, one with a quadratic trend, and one with a cubic trend. Use `years_elapsed` for the trend. Report the AIC, AICc, and BIC of the four models in a professionally formatted table. So that the original-scale model can be compared fairly with the log models, also report each model's AICc in the units of $x_t$, as shown in the lesson.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+
+jewelry_models <- jewelry_ts |>
+  model(
+    original  = TSLM(sales_millions ~ years_elapsed + month),                            # linear trend, original scale
+    linear    = TSLM(log(sales_millions) ~ years_elapsed + month),                       # linear trend, log scale
+    quadratic = TSLM(log(sales_millions) ~ years_elapsed + I(years_elapsed^2) + month),          # quadratic trend, log scale
+    cubic     = TSLM(log(sales_millions) ~ years_elapsed + I(years_elapsed^2) + I(years_elapsed^3) + month) # cubic trend, log scale
+  )
+
+# Shift that puts a log model's information criteria in the units of x_t
+log_shift <- 2 * sum(log(jewelry_ts$sales_millions))
+
+jewelry_ic <- jewelry_models |>
+  glance() |>
+  select(.model, adj_r_squared, AIC, AICc, BIC) |>
+  mutate(
+    response    = if_else(.model == "original", "x_t", "log(x_t)"),
+    AICc_common = AICc + if_else(.model == "original", 0, log_shift)
+  )
+
+jewelry_ic |>
+  transmute(
+    Model                  = c("Linear, original scale", "Linear, log scale",
+                               "Quadratic, log scale", "Cubic, log scale"),
+    Response               = response,
+    "Adj. R-squared"       = round(adj_r_squared, 3),
+    AIC                    = round(AIC, 1),
+    AICc                   = round(AICc, 1),
+    BIC                    = round(BIC, 1),
+    "AICc in units of x_t" = round(AICc_common, 1)
+  ) |>
+  pander(split.table = Inf)
+```
+
+```{r}
+#| echo: false
+
+# Values used in the answers below
+ic_diff <- function(model_a, model_b, crit) {
+  jewelry_ic[[crit]][jewelry_ic$.model == model_a] - jewelry_ic[[crit]][jewelry_ic$.model == model_b]
+}
+
+cubic_p <- jewelry_models |>
+  select(cubic) |>
+  tidy() |>
+  filter(term == "I(years_elapsed^3)") |>
+  pull(p.value)
+
+linear_slope <- jewelry_models |>
+  select(linear) |>
+  tidy() |>
+  filter(term == "years_elapsed") |>
+  pull(estimate)
+```
+
+The trend terms of each model are below. (The monthly indicators are omitted to save space.)
+
+```{r}
+jewelry_models |>
+  tidy() |>
+  filter(!str_detect(term, "month")) |>
+  select(.model, term, estimate, std.error, p.value) |>
+  pander()
+```
+:::
+
+##### d) Which model do you prefer? Justify your choice using the information criteria *and* at least one other consideration (for example, the significance of the terms, simplicity, interpretability, or how the model would behave if extended into the future). Would your choice change if the only goal were to forecast the next few years?
+
+::: {.callout-note title="Answer" icon="false"}
+**Original scale versus log scale.** Once the AICc values are put in the same units, the original-scale model is far behind: its AICc is about `r round(ic_diff("original", "linear", "AICc_common"), 0)` units higher than the log-linear model's. (The raw AICc values differ by about `r round(ic_diff("original", "linear", "AICc"), 0)`, but most of that gap is only the change of units.) This agrees with the time plots: the seasonal swings are multiplicative, so the log transformation is clearly the right choice.
+
+**Among the log models.** The quadratic model has a lower AICc than the log-linear model by `r round(ic_diff("linear", "quadratic", "AICc"), 1)` units, and a lower BIC by `r round(ic_diff("linear", "quadratic", "BIC"), 1)`. This is real evidence that the trend bends. The quadratic and cubic models are essentially tied (their AICc values differ by `r round(abs(ic_diff("cubic", "quadratic", "AICc")), 1)`), and the cubic term is not significant (p = `r round(cubic_p, 3)`), so the cubic model is out.
+
+I prefer the **log-linear** model, even though its information criteria are worse than the quadratic model's:
+
+-   **Interpretability.** The log-linear model has one trend coefficient, and it means one thing: sales grow by a constant percentage each year (about `r round(100 * (exp(linear_slope) - 1), 1)`%). In the quadratic model, the growth rate changes every year, and neither trend coefficient can be explained on its own. That is much harder to communicate to a decision maker.
+-   **Size of the gap.** A difference of about `r round(ic_diff("linear", "quadratic", "AICc"), 0)` units is meaningful, but it is small next to the `r round(ic_diff("original", "linear", "AICc_common"), 0)`-unit gap between the original-scale model and the log-linear model. Choosing the log transformation was the decision that mattered. The extra curvature is a refinement.
+-   **Simplicity and extrapolation.** The log-linear model has one fewer parameter. The quadratic term is negative, so if it were extended far enough, it would eventually predict that jewelry sales decline. A constant growth rate is a more sensible long-run assumption.
+
+**If the only goal were forecasting**, I would choose the quadratic model instead. The AICc is designed to favor models that forecast well, and it clearly prefers the quadratic model. Over a horizon of a few years, the negative curvature is not yet a concern, and it captures the slowing growth in the later years of the data.
+
+*Grading note: Either the log-linear or the log-quadratic model can earn full credit if the justification weighs the information criteria against another consideration. Choosing the original-scale model, or comparing the raw AICc values across scales without adjustment, should not receive full credit. The rest of this key uses the log-linear model.*
+:::
+
+### Question 3 - Autocorrelated Errors, Interpretation, and Forecasting (40 points)
+
+##### a) Plot the correlogram and partial correlogram of the residuals from your preferred model. Is there evidence of autocorrelation? What $AR(p)$ model is appropriate for the errors?
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+#| fig-height: 3.5
+
+jewelry_linear_resid <- jewelry_models |>
+  select(linear) |>
+  residuals()
+
+jewelry_acf_plot <- jewelry_linear_resid |>
+  ACF(lag_max = 36) |>
+  autoplot() +
+  labs(title = "ACF of Residuals") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+jewelry_pacf_plot <- jewelry_linear_resid |>
+  PACF(lag_max = 36) |>
+  autoplot() +
+  labs(title = "PACF of Residuals") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+jewelry_acf_plot | jewelry_pacf_plot
+```
+
+Yes. The correlogram shows strong positive autocorrelation at the first few lags, so the OLS standard errors from part 2c are too small. The partial correlogram has one large spike at lag 1 (about 0.66). A few later lags (such as lags 4 and 13) are slightly beyond the significance bounds, but they are much smaller and follow no clear pattern, so an $AR(1)$ model is appropriate for the errors.
+:::
+
+##### b) Refit your preferred model with $AR(p)$ errors using `ARIMA()`. Compare the trend estimates and standard errors with those from part 2c in a professionally formatted table. Then plot the correlogram of the innovation residuals. Did the $AR(p)$ errors account for the autocorrelation? Is anything left?
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+
+jewelry_ar <- jewelry_ts |>
+  model(
+    linear_ar1 = ARIMA(log(sales_millions) ~ years_elapsed + month + pdq(1, 0, 0) + PDQ(0, 0, 0))
+  )
+
+bind_rows(
+  jewelry_models |> select(linear) |> tidy(),
+  jewelry_ar |> tidy()
+) |>
+  filter(term %in% c("years_elapsed", "ar1")) |>
+  mutate(.model = if_else(.model == "linear", "OLS", "AR(1) errors")) |>
+  select(Model = .model, Term = term, Estimate = estimate, "Std. Error" = std.error, "p-value" = p.value) |>
+  pander()
+```
+
+```{r}
+#| fig-height: 3
+
+jewelry_ar |>
+  augment() |>
+  ACF(.innov, lag_max = 36) |>
+  autoplot() +
+  labs(title = "ACF of Innovation Residuals") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+The trend estimate barely changes, but its standard error roughly doubles once the $AR(1)$ errors are included. This is the autocorrelation bias: OLS made us more confident in the trend than the data justify. The trend is still overwhelmingly significant, so the conclusion that sales are growing holds up.
+
+The $AR(1)$ term removed the strong short-lag autocorrelation. However, there is still a large spike at lag 12, and a few smaller ones (such as lag 19) near the bounds. This suggests that the seasonal pattern is not perfectly constant: the size of each month's effect relative to January varies somewhat from year to year, and fixed monthly indicators cannot capture that. The model is adequate for our purposes, but a more flexible seasonal model could improve it.
+
+*Grading note: Students do not need to explain the cause of the lag-12 spike for full credit, but they should notice it.*
+:::
+
+##### c) Interpret the trend and December coefficients of your model from part b. Pretend you are presenting the results to an executive who took a linear regression course in college but is not an expert.
+
+*Hint: In a model for $\log(x_t)$, adding $b$ to the log is the same as multiplying $x_t$ by $e^b$.*
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+#| echo: false
+
+jewelry_coef <- jewelry_ar |>
+  tidy() |>
+  select(term, estimate) |>
+  deframe()
+
+a1  <- jewelry_coef[["years_elapsed"]]
+dec <- jewelry_coef[["monthDec"]]
+```
+
+**Trend.** The trend coefficient is `r round(a1, 4)`. Since $e^{`r round(a1, 4)`} \approx `r round(exp(a1), 3)`$, the model estimates that jewelry sales grow by about `r round(100 * (exp(a1) - 1), 1)`% per year, after accounting for the time of year. Because the model is for the logarithm of sales, this growth is a percentage, not a fixed dollar amount: the same `r round(100 * (exp(a1) - 1), 1)`% applies every year, so the dollar increase gets larger as sales grow.
+
+**December.** The December coefficient is `r round(dec, 3)`. Since $e^{`r round(dec, 3)`} \approx `r round(exp(dec), 2)`$, the model estimates that December sales are about `r round(exp(dec), 1)` times January sales in the same year, after accounting for the overall trend. In other words, the holiday season roughly quadruples monthly jewelry sales.
+
+*Grading note: Students who chose the log-quadratic model in part 2d should explain that the growth rate changes over time (approximately $e^{\alpha_1 + 2\alpha_2 u_t} - 1$ per year, which slows because $\alpha_2 < 0$). Full credit requires a correct multiplicative interpretation of the trend and December coefficients and plain language suited to the audience.*
+:::
+
+##### d) Forecast the next 3 years and plot the forecasts with the time series. Then evaluate the shape of the innovation residuals. Are the forecasted means from fable already bias-corrected? Should you apply any additional correction? Justify your answer.
+
+::: {.callout-note title="Answer" icon="false"}
+```{r}
+
+jewelry_future <- new_data(jewelry_ts, n = 36) |>
+  mutate(
+    t             = nrow(jewelry_ts) + row_number(),
+    years_elapsed = t / 12,
+    month         = factor(month.abb[month(date)], levels = month.abb)
+  )
+
+jewelry_fc <- jewelry_ar |>
+  forecast(new_data = jewelry_future)
+
+jewelry_fc |>
+  autoplot(jewelry_ts, level = 95) +
+  labs(
+    x = "Month",
+    y = "Sales (Millions USD)",
+    title = "Jewelry Store Sales with Three-Year Forecast"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+
+jewelry_innov <- jewelry_ar |>
+  augment() |>
+  pull(.innov)
+
+tibble(x = jewelry_innov) |>
+  mutate(density = dnorm(x, mean(jewelry_innov), sd(jewelry_innov))) |>
+  ggplot(aes(x = x)) +
+  geom_histogram(aes(y = after_stat(density)),
+                 color = "white", fill = "#56B4E9", bins = 20) +
+  geom_line(aes(y = density)) +
+  labs(
+    x = "Innovation Residual",
+    y = "Density",
+    title = "Histogram of Innovation Residuals"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+
+jewelry_skew <- mean(((jewelry_innov - mean(jewelry_innov)) / sd(jewelry_innov))^3)
+
+# Compare the uncorrected median with fable's bias-adjusted mean
+jewelry_fc |>
+  as_tibble() |>
+  mutate(
+    median = median(sales_millions),
+    ratio  = .mean / median
+  ) |>
+  select(date, median, .mean, ratio) |>
+  head(4) |>
+  mutate(date = as.character(date)) |>
+  pander()
+```
+
+The innovation residuals are roughly symmetric and close to the normal curve, with a skewness of `r round(jewelry_skew, 3)` (between -0.5 and 0.5). The log-normal correction is therefore appropriate.
+
+Yes, the forecasts are already bias-corrected. Because the model formula contains `log()`, fable reports `.mean` as the bias-adjusted mean of the back-transformed forecast distribution, which is slightly larger than the uncorrected median $e^{\mu}$. The ratio between them is the bias correction. For these data it is very small (about `r round(100 * (exp(glance(jewelry_ar)$sigma2 / 2) - 1), 2)`% one month ahead), because the model fits the log series closely.
+
+No additional correction should be applied. Multiplying `.mean` by $e^{\frac{1}{2}\sigma^2}$ or by the empirical correction factor would correct the bias twice.
+:::
+
+### Rubric
+
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+|                                                    | **Mastery (15)**                                                                                               | **Incomplete (0)**                                                                                             |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+| #### **Question 1: Definitions**                   | The student correctly answered each prompt and included mathematical expressions or illustrations if available | The student did not provide sufficient evidence to evaluate the outcome prompt.                                |
+|                                                    | in the text or the Time Series Notebook.                                                                       |                                                                                                                |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+|                                                    | **Mastery (5)**                                                                                                | **Incomplete (0)**                                                                                             |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+| #### **Question 2a: Plot**                         | Students plot the original and log-transformed series side by side, with clear labels and titles.              | Submissions have low-quality visualizations or unclear labeling, or one of the plots is missing.               |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+|                                                    | **Mastery (10)**                                                                                               | **Incomplete (0)**                                                                                             |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+| #### **Question 2b: Log Transformation**           | Students identify that the seasonal swings grow with the level of the series (multiplicative seasonality) and  | The justification is missing, vague, or does not connect the features of the plot to the transformation.       |
+|                                                    | explain how the log transformation makes the seasonal component additive.                                      |                                                                                                                |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+|                                                    | **Mastery (15)**                                                                                               | **Incomplete (0)**                                                                                             |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+| #### **Question 2c: Candidate Models**             | Students fit a linear trend model to the original series and linear, quadratic, and cubic trend models to the  | One or more models are missing or misspecified (for example, all fitted to the same scale). The table is       |
+|                                                    | log-transformed series, all with monthly indicator variables. The AIC, AICc, and BIC are presented in a        | missing or hard to read, or the AICc values are not put on a common scale.                                     |
+|                                                    | professionally formatted table, with the AICc also shown in the units of $x_t$. The code is well-commented and |                                                                                                                |
+|                                                    | easy to read.                                                                                                  |                                                                                                                |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+|                                                    | **Mastery (15)**                                                                                               | **Incomplete (0)**                                                                                             |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+| #### **Question 2d: Model Selection**              | Students justify their preferred model using the information criteria and at least one other consideration,    | The justification relies only on choosing the smallest value of one criterion, or it does not use the          |
+|                                                    | such as significance, simplicity, interpretability, or behavior when extrapolated. They weigh the size of the  | information criteria at all.                                                                                   |
+|                                                    | differences in the criteria, and they address whether the choice would change if the goal were forecasting.    |                                                                                                                |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+|                                                    | **Mastery (10)**                                                                                               | **Incomplete (0)**                                                                                             |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+| #### **Question 3a: Residual Autocorrelation**     | Students plot a clearly labeled correlogram and partial correlogram of the residuals, identify the             | Plots are missing or unlabeled, or the choice of $p$ is not justified.                                         |
+|                                                    | autocorrelation, and choose the order $p$ based on the partial correlogram.                                    |                                                                                                                |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+|                                                    | **Mastery (10)**                                                                                               | **Incomplete (0)**                                                                                             |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+| #### **Question 3b: AR(p) Errors**                 | Students fit the model with $AR(p)$ errors as a single model using `ARIMA()`, compare OLS and $AR(p)$ standard | The model is fitted incorrectly (for example, a separate AR model fitted to the residuals), the comparison     |
+|                                                    | errors in a professionally formatted table, and evaluate the innovation residuals, noting any remaining        | table is missing, or the innovation residuals are not evaluated.                                               |
+|                                                    | autocorrelation.                                                                                               |                                                                                                                |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+|                                                    | **Mastery (10)**                                                                                               | **Incomplete (0)**                                                                                             |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+| #### **Question 3c: Interpretation**               | Students give a correct multiplicative interpretation of the trend and December coefficients in plain language | Interpretations are incorrect (for example, treating log-scale coefficients as additive changes in sales),     |
+|                                                    | suited to a non-expert audience.                                                                               | unclear, or overly technical.                                                                                  |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+|                                                    | **Mastery (10)**                                                                                               | **Incomplete (0)**                                                                                             |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+| #### **Question 3d: Forecast and Bias Correction** | Students produce a clearly labeled three-year forecast, evaluate the shape of the residuals, and correctly     | The forecast or plot is missing, or the student applies a second correction to fable's `.mean` forecasts or    |
+|                                                    | explain that fable's forecast means are already bias-corrected, so no additional correction should be applied. | does not address bias correction.                                                                              |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
+| **Total Points**                                   | **100**                                                                                                        |                                                                                                                |
++----------------------------------------------------+----------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------+
